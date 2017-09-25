@@ -4,8 +4,11 @@
 #include <vector>
 #include "types/domain.h"
 #include "types/value.h"
-struct SetValue {
-    SetValueContainer members;
-};
+
+//template<typename Inner>
+//struct SetValue {
+//    std::vector<Inner> members;
+//
+//};
 
 #endif /* SRC_TYPES_SET_H_ */

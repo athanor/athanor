@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.0)
-
 project(sns)
+
+#libs
+#auto arg parse
+
+add_subdirectory (include/auto-arg-parse)
+add_subdirectory (include/3rdparty/variant)
+
+
 #use c++ 14
 set(CMAKE_CXX_STANDARD 14)
 
@@ -9,8 +16,7 @@ file(GLOB_RECURSE sources      src/*.cpp src/*.h src/*.inc)
 #allow includes relative to src
 include_directories( src )
 
-#include libs
-include_directories( include )
+
 
 ####
 #exec or static lib
@@ -59,3 +65,5 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "release")
         message( FATAL_ERROR "CMAKE_BUILD_TYPE must be \"release\" or \"debug\".  Received: \"${CMAKE_BUILD_TYPE}\".  Leave CMAKE_BUILD_TYPE unspecified to have it default to release." )
 endif()
 message("")
+target_link_libraries(sns mpark_variant)
+target_link_libraries (sns autoArgParse-header-only)

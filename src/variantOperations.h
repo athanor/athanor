@@ -1,7 +1,7 @@
 #ifndef SRC_VARIANTOPERATIONS_H_
 #define SRC_VARIANTOPERATIONS_H_
+#include <mpark/variant.hpp>
 #include <type_traits>
-#include "variant.hpp"
 
 template <class... Fs>
 struct OverLoaded;

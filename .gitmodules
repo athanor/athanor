@@ -1,0 +1,9 @@
+[submodule "include/3rdparty/variant"]
+	path = include/3rdparty/variant
+	url = https://github.com/mpark/variant.git
+[submodule "include/auto-arg-parse"]
+	path = include/auto-arg-parse
+	url = https://github.com/SaadAttieh/auto-arg-parse
+[submodule "include/PicoSHA2"]
+	path = include/PicoSHA2
+	url = https://github.com/okdshin/PicoSHA2.git

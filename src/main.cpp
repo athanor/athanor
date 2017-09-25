@@ -1,5 +1,8 @@
 #include <iostream>
 
 #include "types/allTypes.h"
-
-int main() { std::cout << "hello\n"; }
+void hashExperiments();
+int main() {
+    std::cout << "hello\n";
+    hashExperiments();
+}

@@ -2,7 +2,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "variantOperations.h"
+
+#include "utils/variantOperations.h"
 using var_t = mpark::variant<double, int, std::string, long>;
 void variantExperiments() {
     std::vector<var_t> vec = {10, 15l, 1.5, "hello"};

@@ -2,10 +2,12 @@
 #define SRC_UTILS_HASHUTILS_H_
 #include <utility>
 #include "picosha2.h"
-static const uint32_t FNV1A_SEED = 0x811C9DC5;  // 2166136261
 // default values recommended by http://isthe.com/chongo/tech/comp/fnv/
+
+static const uint32_t FNV1A_PRIME = 0x01000193;  //   16777619
+static const uint32_t FNV1A_SEED = 0x811C9DC5;   // 2166136261
 inline uint64_t fnv1a(unsigned char oneByte, uint64_t hash = FNV1A_SEED) {
-    return (oneByte ^ hash) * Prime;
+    return (oneByte ^ hash) * FNV1A_PRIME;
 }
 template <typename T>
 inline u_int64_t mix_single(const T& value, uint64_t hash = FNV1A_SEED) {
@@ -17,7 +19,7 @@ inline u_int64_t mix_single(const T& value, uint64_t hash = FNV1A_SEED) {
 }
 
 template <typename... Types>
-inline u_int64_t mix(const Types&... items, uint64_t hash = FNV1A_SEED) {
+inline u_int64_t mix(const Types&... args, uint64_t hash = FNV1A_SEED) {
     // hack to apply mix_single to all types
 
     int unpack[]{0, (hash = mix_single(args, hash), 0)...};
@@ -32,8 +34,8 @@ inline u_int64_t truncatedSha256(const T& item) {
     u_int64_t truncatedHash = 0;
     for (int i = 0; i < 8; ++i) {
         unsigned int temp = hash[i];
-        value |= (temp << (7 - i));
+        truncatedHash |= (temp << (7 - i));
     }
-    return value;
+    return truncatedHash;
 }
 #endif /* SRC_UTILS_HASHUTILS_H_ */

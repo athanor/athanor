@@ -26,8 +26,29 @@ using Domain = mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
 // calll back used by nested values to determine if their parent allows such a
 // value
 
-// size attr for domains
-struct SizeAttr {
+// mapping from values to domains and back
+
+template <typename T>
+struct AssociatedDomain;
+template <typename T>
+struct AssociatedValueType;
+
+#define makeAssociations(name)                 \
+    template <>                                \
+    struct AssociatedDomain<name##Value> {     \
+        typedef name##Domain type;             \
+    };                                         \
+                                               \
+    template <>                                \
+    struct AssociatedValueType<name##Domain> { \
+        typedef name##Value type;              \
+    };
+
+buildForAllTypes(makeAssociations, )
+#undef makeAssociations
+
+    // size attr for domains
+    struct SizeAttr {
     enum class SizeAttrType {
         NO_SIZE,
         EXACT_SIZE,

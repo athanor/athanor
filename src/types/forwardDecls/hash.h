@@ -3,7 +3,7 @@
 #define SRC_TYPES_FORWARDDECLS_HASH_H_
 #include "types/forwardDecls/typesAndDomains.h"
 #define makeGetHashDecl(valueName) u_int64_t getHash(const valueName##Value&);
-buildForAllTypes(makeGetHashDecl)
+buildForAllTypes(makeGetHashDecl, )
 #undef makeGetHashDecl
 
 #endif /* SRC_TYPES_FORWARDDECLS_HASH_H_ */

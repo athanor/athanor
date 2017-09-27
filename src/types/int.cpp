@@ -1,10 +1,12 @@
 #include "types/int.h"
 #include "common/common.h"
 #include "types/parentCheck.h"
-void assignInitialValueInDomain(IntValue& val, const IntDomain& domain) {
+std::shared_ptr<IntValue> makeInitialValueInDomain(const IntDomain& domain) {
+    auto val = std::make_shared<IntValue>();
     debug_code(assert(domain.bounds.size() > 0));
-    val.containingBoundIndex = 0;
-    val.value = domain.bounds[0].first;
+    val->containingBoundIndex = 0;
+    val->value = domain.bounds[0].first;
+    return val;
 }
 
 bool moveToNextValueInDomain(IntValue& val, const IntDomain& domain,

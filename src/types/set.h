@@ -8,6 +8,7 @@
 struct SetDomain {
     SizeAttr sizeAttr;
     Domain inner;
+    SetDomain() : sizeAttr(noSize()) {}
 };
 template <typename Inner>
 struct SetValueImpl {

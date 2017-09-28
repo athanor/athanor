@@ -84,4 +84,10 @@ buildForAllTypes(makeAssociations, )
     }
 };
 
+SizeAttr noSize();
+inline SizeAttr exactSize(size_t size);
+SizeAttr minSize(size_t minSize);
+SizeAttr maxSize(size_t maxSize);
+SizeAttr sizeRange(size_t minSize, size_t maxSize);
+
 #endif /* SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_ */

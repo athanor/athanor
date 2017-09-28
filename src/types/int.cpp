@@ -1,8 +1,10 @@
 #include "types/int.h"
 #include "common/common.h"
 #include "types/parentCheck.h"
-std::shared_ptr<IntValue> makeInitialValueInDomain(const IntDomain& domain) {
-    auto val = std::make_shared<IntValue>();
+using namespace std;
+
+shared_ptr<IntValue> makeInitialValueInDomain(const IntDomain& domain) {
+    auto val = make_shared<IntValue>();
     debug_code(assert(domain.bounds.size() > 0));
     val->containingBoundIndex = 0;
     val->value = domain.bounds[0].first;
@@ -29,3 +31,12 @@ bool moveToNextValueInDomain(IntValue& val, const IntDomain& domain,
 }
 
 u_int64_t getHash(const IntValue& val) { return val.value; }
+
+ostream& prettyPrint(ostream& os, const IntValue& v) {
+    os << v.value;
+    return os;
+}
+
+shared_ptr<IntValue> deepCopy(const IntValue& v) {
+    return make_shared<IntValue>(v);
+}

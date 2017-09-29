@@ -3,12 +3,10 @@
 #include "types/parentCheck.h"
 using namespace std;
 
-shared_ptr<IntValue> makeInitialValueInDomain(const IntDomain& domain) {
-    auto val = make_shared<IntValue>();
+void assignInitialValueInDomain(const IntDomain& domain, IntValue& val) {
     debug_code(assert(domain.bounds.size() > 0));
-    val->containingBoundIndex = 0;
-    val->value = domain.bounds[0].first;
-    return val;
+    val.containingBoundIndex = 0;
+    val.value = domain.bounds[0].first;
 }
 
 bool moveToNextValueInDomain(IntValue& val, const IntDomain& domain,
@@ -37,6 +35,4 @@ ostream& prettyPrint(ostream& os, const IntValue& v) {
     return os;
 }
 
-shared_ptr<IntValue> deepCopy(const IntValue& v) {
-    return make_shared<IntValue>(v);
-}
+void deepCopy(const IntValue& src, IntValue& target) { target = src; }

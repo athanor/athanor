@@ -5,8 +5,12 @@
 #include <vector>
 
 #include "forwardDecls/typesAndDomains.h"
+
+inline auto intBound(int64_t a, int64_t b) { return std::make_pair(a, b); }
 struct IntDomain {
-    std::vector<std::pair<int, int>> bounds;
+    std::vector<std::pair<int64_t, int64_t>> bounds;
+    IntDomain(std::vector<std::pair<int64_t, int64_t>> bounds)
+        : bounds(std::move(bounds)) {}
 };
 
 struct IntValue {

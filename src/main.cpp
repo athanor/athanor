@@ -2,13 +2,14 @@
 #include "types/allTypes.h"
 #include "types/forwardDecls/changeValue.h"
 #include "types/forwardDecls/print.h"
-
+using namespace std;
+#define EInt(...)                \
+    std::make_shared<IntDomain>( \
+        std::vector<std::pair<u_int64_t, int64_t>>({__VA_ARGS__}))
 int main() {
-    SetDomain domain;
-    domain.sizeAttr = minSize(5);
-    auto intDom = std::make_shared<IntDomain>();
-    intDom->bounds = {std::make_pair(1, 3), std::make_pair(5, 8)};
-    domain.inner = std::move(intDom);
-    auto v = makeInitialValueInDomain(domain);
-    prettyPrint(std::cout, *v) << std::endl;
+    SetDomain s(noSize(), SetDomain(noSize(), IntDomain({intBound(1, 3)})));
+    auto v = makeInitialValueInDomain(s);
+    do {
+        prettyPrint(cout, *v) << endl;
+    } while (moveToNextValueInDomain(*v, s, []() { return true; }));
 }

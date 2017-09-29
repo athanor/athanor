@@ -33,16 +33,27 @@ struct AssociatedDomain;
 template <typename T>
 struct AssociatedValueType;
 
-#define makeAssociations(name)                 \
-    template <>                                \
-    struct AssociatedDomain<name##Value> {     \
-        typedef name##Domain type;             \
-    };                                         \
-                                               \
-    template <>                                \
-    struct AssociatedValueType<name##Domain> { \
-        typedef name##Value type;              \
-    };
+template <typename T>
+struct IsDomainPtrType : public std::false_type {};
+template <typename T>
+struct IsDomainType : public std::false_type {};
+
+#define makeAssociations(name)                            \
+    template <>                                           \
+    struct AssociatedDomain<name##Value> {                \
+        typedef name##Domain type;                        \
+    };                                                    \
+                                                          \
+    template <>                                           \
+    struct AssociatedValueType<name##Domain> {            \
+        typedef name##Value type;                         \
+    };                                                    \
+    template <>                                           \
+    struct IsDomainPtrType<std::shared_ptr<name##Domain>> \
+        : public std::true_type {};                       \
+                                                          \
+    template <>                                           \
+    struct IsDomainType<name##Domain> : public std::true_type {};
 
 buildForAllTypes(makeAssociations, )
 #undef makeAssociations

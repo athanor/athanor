@@ -1,10 +1,17 @@
 
 #ifndef SRC_TYPES_FORWARDDECLS_COPY_H_
 #define SRC_TYPES_FORWARDDECLS_COPY_H_
+#include "types/forwardDecls/changeValue.h"
 #include "types/forwardDecls/typesAndDomains.h"
 #define makeDeepCopyDecl(name) \
-    std::shared_ptr<name##Value> deepCopy(const name##Value&);
+    void deepCopy(const name##Value& src, name##Value& target);
 buildForAllTypes(makeDeepCopyDecl, )
 #undef makeDeepCopyDecl
 
+    template <typename ValueType>
+    std::shared_ptr<ValueType> deepCopy(const ValueType& src) {
+    auto target = construct<ValueType>();
+    deepCopy(src, *target);
+    return target;
+}
 #endif /* SRC_TYPES_FORWARDDECLS_COPY_H_ */

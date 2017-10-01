@@ -2,7 +2,6 @@
 #ifndef SRC_TYPES_FORWARDDECLS_CHANGEVALUE_H_
 #define SRC_TYPES_FORWARDDECLS_CHANGEVALUE_H_
 #include "types/forwardDecls/typesAndDomains.h"
-#include "types/parentCheck.h"
 
 template <typename ValueType>
 std::shared_ptr<ValueType> construct();

@@ -1,7 +1,6 @@
 #include "types/bool.h"
 #include <cassert>
 #include "common/common.h"
-#include "types/parentCheck.h"
 using namespace std;
 
 void assignInitialValueInDomain(const BoolDomain&, BoolValue& val) {

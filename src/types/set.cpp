@@ -6,7 +6,6 @@
 #include "types/forwardDecls/copy.h"
 #include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/print.h"
-#include "types/parentCheck.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
 using namespace std;

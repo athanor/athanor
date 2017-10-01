@@ -1,5 +1,6 @@
 #ifndef SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_
 #define SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_
+#include <utils/stackFunction.h>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -29,7 +30,7 @@ using Domain = mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
 #undef variantDomains
 // calll back used by nested values to determine if their parent allows such a
 // value
-
+typedef StackFunction<bool()> ParentCheck;
 // mapping from values to domains and back
 
 template <typename T>

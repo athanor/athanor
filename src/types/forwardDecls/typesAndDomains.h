@@ -4,7 +4,7 @@
 #include <iostream>
 #include <memory>
 #include "utils/variantOperations.h"
-#define buildForAllTypes(f, sep) f(Int) sep f(Set)
+#define buildForAllTypes(f, sep) f(Bool) sep f(Int) sep f(Set)
 
 #define MACRO_COMMA ,
 

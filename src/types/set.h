@@ -31,16 +31,17 @@ struct SetValueImpl {
     std::vector<Inner> members;
     std::unordered_set<u_int64_t> memberHashes;
     u_int64_t cachedHashTotal = 0;
-
     inline bool containsMember(const Inner& member) {
         return memberHashes.count(mix(getHash(*member)));
     }
 };
-
-struct SetValue {
 #define variantValues(T) SetValueImpl<std::shared_ptr<T##Value>>
-    mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)> setValueImpl;
+typedef mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>
+    SetValueImplWrapper;
 #undef variantValues
+
+struct SetValue : public DirtyFlag {
+    SetValueImplWrapper setValueImpl;
 };
 
 #endif /* SRC_TYPES_SET_H_ */

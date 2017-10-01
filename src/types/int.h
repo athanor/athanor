@@ -13,7 +13,7 @@ struct IntDomain {
         : bounds(std::move(bounds)) {}
 };
 
-struct IntValue {
+struct IntValue : DirtyFlag {
     int64_t value;
     size_t containingBoundIndex;  // a cache of which bound this value lies in
 };

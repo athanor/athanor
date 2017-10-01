@@ -7,7 +7,9 @@ using namespace std;
     std::make_shared<IntDomain>( \
         std::vector<std::pair<u_int64_t, int64_t>>({__VA_ARGS__}))
 int main() {
-    SetDomain s(noSize(), SetDomain(noSize(), IntDomain({intBound(1, 3)})));
+    SetDomain s(exactSize(8), SetDomain(noSize(), IntDomain({intBound(1, 3)})));
+    cout << "Building values with domain: ";
+    prettyPrint(cout, s) << endl;
     auto v = makeInitialValueInDomain(s);
     do {
         prettyPrint(cout, *v) << endl;

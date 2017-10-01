@@ -1,12 +1,16 @@
 #ifndef SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_
 #define SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_
 #include <functional>
+#include <iostream>
 #include <memory>
 #include "utils/variantOperations.h"
 #define buildForAllTypes(f, sep) f(Int) sep f(Set)
 
 #define MACRO_COMMA ,
 
+template <typename T>
+using BaseType =
+    typename std::remove_cv<typename std::remove_reference<T>::type>::type;
 // forward declare structs
 #define declDomainsAndValues(name) \
     struct name##Value;            \
@@ -38,6 +42,8 @@ struct IsDomainPtrType : public std::false_type {};
 template <typename T>
 struct IsDomainType : public std::false_type {};
 
+template <typename T>
+struct TypeAsString;
 #define makeAssociations(name)                            \
     template <>                                           \
     struct AssociatedDomain<name##Value> {                \
@@ -49,6 +55,15 @@ struct IsDomainType : public std::false_type {};
         typedef name##Value type;                         \
     };                                                    \
     template <>                                           \
+    struct TypeAsString<name##Value> {                    \
+        static const std::string value;                   \
+    };                                                    \
+    template <>                                           \
+    struct TypeAsString<name##Domain> {                   \
+        static const std::string value;                   \
+    };                                                    \
+                                                          \
+    template <>                                           \
     struct IsDomainPtrType<std::shared_ptr<name##Domain>> \
         : public std::true_type {};                       \
                                                           \
@@ -57,6 +72,31 @@ struct IsDomainType : public std::false_type {};
 
 buildForAllTypes(makeAssociations, )
 #undef makeAssociations
+
+    template <typename DomainType>
+    inline std::shared_ptr<typename AssociatedValueType<
+        DomainType>::type>& getAssociatedValue(DomainType&, Value& value) {
+    return mpark::get<
+        std::shared_ptr<typename AssociatedValueType<DomainType>::type>>(value);
+}
+template <typename DomainType>
+inline const std::shared_ptr<typename AssociatedValueType<DomainType>::type>&
+getAssociatedValue(DomainType&, const Value& value) {
+    return mpark::get<
+        std::shared_ptr<typename AssociatedValueType<DomainType>::type>>(value);
+}
+enum class ValueState { CLEAN, DIRTY, UNDEFINED };
+struct DirtyFlag {
+    ValueState state = ValueState::UNDEFINED;
+    DirtyFlag() {}
+    DirtyFlag(ValueState state) : state(state) {}
+};
+#define dirtyStateFunctions(name)                    \
+    ValueState dirtyState(const name##Value& value); \
+                                                     \
+    ValueState& dirtyState(name##Value& value);
+buildForAllTypes(dirtyStateFunctions, )
+#undef dirtyStateFunctions
 
     // size attr for domains
     struct SizeAttr {
@@ -92,6 +132,26 @@ buildForAllTypes(makeAssociations, )
 
     friend inline SizeAttr sizeRange(size_t minSize, size_t maxSize) {
         return SizeAttr(SizeAttrType::SIZE_RANGE, minSize, maxSize);
+    }
+    friend inline std::ostream& operator<<(std::ostream& os,
+                                           const SizeAttr& s) {
+        switch (s.sizeType) {
+            case SizeAttrType::NO_SIZE:
+                os << "noSize";
+                break;
+            case SizeAttrType::MIN_SIZE:
+                os << "minSize " << s.minSize;
+                break;
+            case SizeAttrType::MAX_SIZE:
+                os << "maxSize " << s.maxSize;
+                break;
+            case SizeAttrType::EXACT_SIZE:
+                os << "size " << s.minSize;
+                break;
+            case SizeAttrType::SIZE_RANGE:
+                os << "minSize " << s.minSize << ", maxSize " << s.maxSize;
+        }
+        return os;
     }
 };
 

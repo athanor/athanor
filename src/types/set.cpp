@@ -11,21 +11,51 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 
-/**
- * Assign member of this set at position startingIndex to the given initial
- * value.  Assign all subsequent values in the range startIndex + 1 to endIndex
- * in  a strictly monotonically increasing fashion, that is, a value at position
- * i is obtained by calling moveToNextValueInDomain(...) on the value at
- * position
- * i-1.
- * The hashes for each changed member is updated along with the cachedHashTotal.
- * If there are not enough elements in the domain to fill the range
- * startIndex..endIndex, the values and their associated caches in the range are
- * in an unknown state, they may or may not have been changed.  Note however
- * that the caches are always consistent with the member values along with the
- * cachedHashTotal.
- *
- */
+template <typename DomainPtrType>
+inline auto& getAssociatedValue(DomainPtrType&, SetValueImplWrapper& value) {
+    return mpark::get<SetValueImpl<shared_ptr<typename AssociatedValueType<
+        typename DomainPtrType::element_type>::type>>>(value);
+}
+
+template <typename Func, typename InnerValuePtrType>
+void changeMemberValue(Func&& func, SetValueImpl<InnerValuePtrType>& valImpl,
+                       size_t memberIndex) {
+    if (dirtyState(*valImpl.members[memberIndex]) != ValueState::UNDEFINED) {
+        u_int64_t hash = mix(getHash(*valImpl.members[memberIndex]));
+        valImpl.memberHashes.erase(hash);
+        valImpl.cachedHashTotal -= hash;
+    }
+    func();
+    if (dirtyState(*valImpl.members[memberIndex]) != ValueState::UNDEFINED) {
+        u_int64_t hash = mix(getHash(*valImpl.members[memberIndex]));
+        valImpl.memberHashes.insert(hash);
+        valImpl.cachedHashTotal += hash;
+    }
+}
+
+template <typename InnerDomainPtrType,
+          typename InnerValuePtrType = typename AssociatedValueType<
+              typename InnerDomainPtrType::type>::type>
+bool assignIncreasingValues(const InnerDomainPtrType& innerDomain,
+                            const size_t startIndex, const size_t endIndex,
+                            SetValueImpl<InnerValuePtrType>& val) {
+    for (size_t i = startIndex; i < endIndex; ++i) {
+        bool success;
+        changeMemberValue(
+            [&]() {
+                deepCopy(*val.members[i - 1], *val.members[i]);
+                success = moveToNextValueInDomain(
+                    *val.members[i], innerDomain,
+                    [&]() { return !val.containsMember(val.members[i]); });
+            },
+            val, i);
+        if (!success) {
+            return false;
+        }
+    }
+    return true;
+}
+
 template <typename InnerDomainPtrType, typename InnerValuePtrDeducedType,
           typename InnerValuePtrType =
               typename remove_reference<InnerValuePtrDeducedType>::type>
@@ -33,64 +63,90 @@ bool assignIncreasingValues(const InnerDomainPtrType& innerDomain,
                             const size_t startIndex, const size_t endIndex,
                             InnerValuePtrDeducedType&& startingValue,
                             SetValueImpl<InnerValuePtrType>& val) {
-    for (size_t i = startIndex; i < endIndex; ++i) {
-        if (i == startIndex) {
-            val.members[i] = std::forward<InnerValuePtrType>(startingValue);
-        } else {
-            deepCopy(*val.members[i - 1], *val.members[i]);
-            bool success = moveToNextValueInDomain(
-                *val.members[i], innerDomain,
-                [&]() { return !val.containsMember(val.members[i]); });
-            if (!success) {
-                return false;
-            }
-        }
-        u_int64_t hash = mix(getHash(*val.members[i]));
-        val.memberHashes.insert(hash);
-        val.cachedHashTotal += hash;
+    if (startIndex >= val.members.size()) {
+        return true;
     }
-    return true;
+    changeMemberValue(
+        [&]() {
+            val.members[startIndex] =
+                forward<InnerValuePtrDeducedType>(startingValue);
+        },
+        val, startIndex);
+    return assignIncreasingValues(innerDomain, startIndex + 1, endIndex, val);
 }
 
-template <typename InnerValuePtrType>
+template <typename InnerDomainPtrType,
+          typename InnerValuePtrType = shared_ptr<typename AssociatedValueType<
+              typename InnerDomainPtrType::element_type>::type>>
 void assignInitialValueInDomainImpl(const SetDomain& domain,
-                                    SetValueImpl<InnerValuePtrType>& val) {
-    typedef shared_ptr<typename AssociatedDomain<
-        typename InnerValuePtrType::element_type>::type>
-        InnerDomainPtrType;
-    auto& innerDomainPtr = mpark::get<InnerDomainPtrType>(domain.inner);
-    if (val.members.size() > domain.sizeAttr.minSize) {
-        val.members.erase(val.members.begin() + domain.sizeAttr.minSize,
-                          val.members.end());
-    } else if (val.members.size() < domain.sizeAttr.minSize) {
-        val.members.reserve(domain.sizeAttr.minSize);
-
-        while (val.members.size() < domain.sizeAttr.minSize) {
-            val.members.push_back(
+                                    const InnerDomainPtrType& innerDomainPtr,
+                                    SetValue& val,
+                                    SetValueImpl<InnerValuePtrType>& valImpl) {
+    size_t oldSize = valImpl.members.size();
+    if (valImpl.members.size() > domain.sizeAttr.minSize) {
+        valImpl.members.erase(valImpl.members.begin() + domain.sizeAttr.minSize,
+                              valImpl.members.end());
+    } else if (valImpl.members.size() < domain.sizeAttr.minSize) {
+        valImpl.members.reserve(domain.sizeAttr.minSize);
+        while (valImpl.members.size() < domain.sizeAttr.minSize) {
+            valImpl.members.push_back(
                 construct<typename InnerValuePtrType::element_type>());
         }
     }
-    val.cachedHashTotal = 0;
-    val.memberHashes.clear();
-    bool success =
-        assignIncreasingValues(*innerDomainPtr, 0, val.members.size(),
-                               makeInitialValueInDomain(*innerDomainPtr), val);
+    valImpl.cachedHashTotal = 0;
+    valImpl.memberHashes.clear();
+    for (size_t i = 0; i < oldSize; ++i) {
+        dirtyState(*valImpl.members[i]) = ValueState::UNDEFINED;
+    }
+    bool success = assignIncreasingValues(
+        *innerDomainPtr, 0, valImpl.members.size(),
+        makeInitialValueInDomain(*innerDomainPtr), valImpl);
     if (!success) {
-        cerr << "Error: could not assign initial value\n";
+        cerr << "Error: could not assign initial value.  Trying to print "
+                "domain and value...\nDomain: ";
+        prettyPrint(cerr, domain) << "\nValue: ";
+        prettyPrint(cerr, val) << endl;
         assert(false);
     }
 }
 
 void assignInitialValueInDomain(const SetDomain& domain, SetValue& val) {
-    return mpark::visit(
-        [&](auto& valImpl) {
-            return assignInitialValueInDomainImpl(domain, valImpl);
+    mpark::visit(
+        [&](auto& domainImpl) {
+            assignInitialValueInDomainImpl(
+                domain, domainImpl, val,
+                getAssociatedValue(domainImpl, val.setValueImpl));
         },
-        val.setValueImpl);
+        domain.inner);
+    val.state = ValueState::DIRTY;
+}
+
+template <typename InnerDomainPtrType,
+          typename InnerValuePtrType = shared_ptr<typename AssociatedValueType<
+              typename InnerDomainPtrType::element_type>::type>>
+
+shared_ptr<SetValue> makeInitialValueInDomainImpl(
+    const SetDomain& domain, const InnerDomainPtrType& innerDomainPtr,
+    std::shared_ptr<SetValue>& val) {
+    auto& valImpl =
+        val->setValueImpl.emplace<SetValueImpl<InnerValuePtrType>>();
+    assignInitialValueInDomainImpl(domain, innerDomainPtr, *val, valImpl);
+    val->state = ValueState::DIRTY;
+    return val;
+}
+
+shared_ptr<SetValue> makeInitialValueInDomain(const SetDomain& domain) {
+    auto val = construct<SetValue>();
+    return mpark::visit(
+        [&](auto& innerDomainImpl) {
+            return makeInitialValueInDomainImpl(domain, innerDomainImpl, val);
+        },
+        domain.inner);
 }
 
 template <typename InnerValuePtrType>
-bool moveToNextValueInDomainImpl(SetValueImpl<InnerValuePtrType>& val,
+bool moveToNextValueInDomainImpl(SetValue& val,
+                                 SetValueImpl<InnerValuePtrType>& valImpl,
                                  const SetDomain& domain,
                                  const ParentCheck& parentCheck) {
     typedef shared_ptr<typename AssociatedDomain<
@@ -98,39 +154,47 @@ bool moveToNextValueInDomainImpl(SetValueImpl<InnerValuePtrType>& val,
         InnerDomainPtrType;
     auto& innerDomainPtr = mpark::get<InnerDomainPtrType>(domain.inner);
     while (true) {
-        size_t index = val.members.size();
+        size_t index = valImpl.members.size();
         while (index > 0) {
-            if (moveToNextValueInDomain(
-                    *val.members[index - 1], *innerDomainPtr,
-                    [&]() {
-                        return !val.containsMember(val.members[index - 1]);
-                    }) &&
-                (index == val.members.size() ||
+            bool successfulChange;
+            changeMemberValue(
+                [&]() {
+                    successfulChange = moveToNextValueInDomain(
+                        *valImpl.members[index - 1], *innerDomainPtr, [&]() {
+                            return !valImpl.containsMember(
+                                valImpl.members[index - 1]);
+                        });
+                },
+                valImpl, index - 1);
+            if (successfulChange &&
+                (index == valImpl.members.size() ||
                  assignIncreasingValues(*innerDomainPtr, index,
-                                        val.members.size(),
-                                        val.members[index - 1], val))) {
+                                        valImpl.members.size(), valImpl))) {
                 if (parentCheck()) {
+                    val.state = ValueState::DIRTY;
                     return true;
                 } else {
-                    index = val.members.size();
+                    index = valImpl.members.size();
                     continue;
                 }
             }
             --index;
         }
-        if (val.members.size() < domain.sizeAttr.maxSize) {
-            val.members.push_back(
+        if (valImpl.members.size() < domain.sizeAttr.maxSize) {
+            valImpl.members.push_back(
                 construct<typename InnerValuePtrType::element_type>());
             bool success = assignIncreasingValues(
-                *innerDomainPtr, 0, val.members.size(),
-                makeInitialValueInDomain(*innerDomainPtr), val);
+                *innerDomainPtr, 0, valImpl.members.size(),
+                makeInitialValueInDomain(*innerDomainPtr), valImpl);
             if (!success) {
+                val.state = ValueState::UNDEFINED;
                 return false;  // inner domain size limit reached
             }
             if (parentCheck()) {
+                val.state = ValueState::DIRTY;
                 return true;
             } else {
-                index = val.members.size();
+                index = valImpl.members.size();
                 continue;
             }
         }
@@ -140,8 +204,9 @@ bool moveToNextValueInDomainImpl(SetValueImpl<InnerValuePtrType>& val,
 bool moveToNextValueInDomain(SetValue& val, const SetDomain& domain,
                              const ParentCheck& parentCheck) {
     return mpark::visit(
-        [&](auto& v) {
-            return moveToNextValueInDomainImpl(v, domain, parentCheck);
+        [&](auto& valImpl) {
+            return moveToNextValueInDomainImpl(val, valImpl, domain,
+                                               parentCheck);
         },
         val.setValueImpl);
 }
@@ -163,7 +228,6 @@ ostream& prettyPrint(ostream& os, const SetValue& v) {
                     os << ",";
                 }
                 prettyPrint(os, *memberPtr);
-                ;
             }
         },
         v.setValueImpl);
@@ -187,4 +251,12 @@ void deepCopyImpl(const SetValueImpl<InnerValuePtrType>& srcImpl,
 void deepCopy(const SetValue& src, SetValue& target) {
     return visit([&](auto& srcImpl) { return deepCopyImpl(srcImpl, target); },
                  src.setValueImpl);
+}
+
+ostream& prettyPrint(ostream& os, const SetDomain& d) {
+    os << "set(";
+    os << d.sizeAttr << ",";
+    prettyPrint(os, d.inner);
+    os << ")";
+    return os;
 }

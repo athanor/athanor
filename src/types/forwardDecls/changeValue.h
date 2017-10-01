@@ -12,16 +12,11 @@ std::shared_ptr<ValueType> construct();
     std::shared_ptr<name##Value> construct<name##Value>();                 \
     void assignInitialValueInDomain(const name##Domain& domain,            \
                                     name##Value& value);                   \
+    std::shared_ptr<name##Value> makeInitialValueInDomain(                 \
+        const name##Domain& domain);                                       \
     bool moveToNextValueInDomain(name##Value&, const name##Domain& domain, \
                                  const ParentCheck& parentCheck);
 buildForAllTypes(changeValueFunctions, )
 #undef changeValueFunctions
 
-    template <typename DomainType>
-    std::shared_ptr<typename AssociatedValueType<
-        DomainType>::type> makeInitialValueInDomain(const DomainType& domain) {
-    auto value = construct<typename AssociatedValueType<DomainType>::type>();
-    assignInitialValueInDomain(domain, *value);
-    return value;
-}
 #endif /* SRC_TYPES_FORWARDDECLS_CHANGEVALUE_H_ */

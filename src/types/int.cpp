@@ -1,4 +1,5 @@
 #include "types/int.h"
+#include <cassert>
 #include "common/common.h"
 #include "types/parentCheck.h"
 using namespace std;
@@ -7,8 +8,14 @@ void assignInitialValueInDomain(const IntDomain& domain, IntValue& val) {
     debug_code(assert(domain.bounds.size() > 0));
     val.containingBoundIndex = 0;
     val.value = domain.bounds[0].first;
+    val.state = ValueState::DIRTY;
 }
 
+std::shared_ptr<IntValue> makeInitialValueInDomain(const IntDomain& domain) {
+    auto val = make_shared<IntValue>();
+    assignInitialValueInDomain(domain, *val);
+    return val;
+}
 bool moveToNextValueInDomain(IntValue& val, const IntDomain& domain,
                              const ParentCheck& parentCheck) {
     while (true) {
@@ -20,9 +27,11 @@ bool moveToNextValueInDomain(IntValue& val, const IntDomain& domain,
             ++val.containingBoundIndex;
             val.value = domain.bounds[val.containingBoundIndex].first;
         } else {
+            val.state = ValueState::UNDEFINED;
             return false;
         }
         if (parentCheck()) {
+            val.state = ValueState::DIRTY;
             return true;
         }
     }
@@ -36,3 +45,22 @@ ostream& prettyPrint(ostream& os, const IntValue& v) {
 }
 
 void deepCopy(const IntValue& src, IntValue& target) { target = src; }
+
+ostream& prettyPrint(ostream& os, const IntDomain& d) {
+    os << "int(";
+    bool first = true;
+    for (auto& bound : d.bounds) {
+        if (first) {
+            first = false;
+        } else {
+            os << ",";
+        }
+        if (bound.first == bound.second) {
+            os << bound.first;
+        } else {
+            os << bound.first << ".." << bound.second;
+        }
+    }
+    os << ")";
+    return os;
+}

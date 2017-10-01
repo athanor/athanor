@@ -180,7 +180,10 @@ bool moveToNextValueInDomainImpl(SetValue& val,
             }
             --index;
         }
-        if (valImpl.members.size() < domain.sizeAttr.maxSize) {
+        if (valImpl.members.size() >= domain.sizeAttr.maxSize) {
+            val.state = ValueState::UNDEFINED;
+            return false;  // inner domain size limit reached
+        } else {
             valImpl.members.push_back(
                 construct<typename InnerValuePtrType::element_type>());
             bool success = assignIncreasingValues(

@@ -34,6 +34,36 @@ struct SetValueImpl {
     inline bool containsMember(const Inner& member) {
         return memberHashes.count(mix(getHash(*member)));
     }
+
+    template <typename Func>
+    inline void changeMemberValue(Func&& func, size_t memberIndex) {
+        if (dirtyState(*members[memberIndex]) != ValueState::UNDEFINED) {
+            u_int64_t hash = mix(getHash(*members[memberIndex]));
+            memberHashes.erase(hash);
+            cachedHashTotal -= hash;
+        }
+        func();
+        if (dirtyState(*members[memberIndex]) != ValueState::UNDEFINED) {
+            u_int64_t hash = mix(getHash(*members[memberIndex]));
+            memberHashes.insert(hash);
+            cachedHashTotal += hash;
+        }
+    }
+
+    inline void removeValue(size_t memberIndex) {
+        u_int64_t hash = mix(getHash(*members[memberIndex]));
+        memberHashes.erase(hash);
+        cachedHashTotal -= hash;
+        members[memberIndex] = members.back();
+        members.pop_back();
+    }
+
+    inline void addValue(const Inner& member) {
+        u_int64_t hash = mix(getHash(*member));
+        memberHashes.insert(hash);
+        cachedHashTotal += hash;
+        members.push_back(member);
+    }
 };
 #define variantValues(T) SetValueImpl<std::shared_ptr<T##Value>>
 typedef mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>

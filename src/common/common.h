@@ -29,25 +29,11 @@
         debug_thread_log << x << std::endl;                            \
     }
 #define debug_code(x) x
-#ifdef LOG_TRACE
-#define debug_log_trace(x) debug_log(x)
-#else
-#define debug_log_trace(x)  //
-#endif
-#ifdef LOG_PARTITION
-#define debug_log_partition(x) debug_log(x)
-#else
-#define debug_log_partition(x)  //
-#endif
 #else
 #define debug_log(x)
 #define debug_log_no_endl(x)
 #define debug_code(x)
-#define debug_log_trace(x)  //
-#define debug_log_partition(x)  //
 #endif
-
-
 
 template <std::size_t I = 0, typename FuncT, typename... Tp>
 inline typename std::enable_if<I == sizeof...(Tp), bool>::type forEach(

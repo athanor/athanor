@@ -2,6 +2,7 @@
 #include <list>
 #include <map>
 #include <set>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -17,7 +18,8 @@ std::string toString(Args const&... args) {
 }
 
 template <typename T>
-std::ostream& containerToArrayString(std::ostream& os, const T container, const std::string& separator = ",");
+std::ostream& containerToArrayString(std::ostream& os, const T container,
+                                     const std::string& separator = ",");
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::list<T> listIn);
 template <typename T1, typename T2>
@@ -39,7 +41,8 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T1, T2> pairIn) {
 }
 
 template <typename T>
-std::ostream& containerToArrayString(std::ostream& os, const T container, const std::string& separator) {
+std::ostream& containerToArrayString(std::ostream& os, const T container,
+                                     const std::string& separator) {
     bool first = true;
     os << '[';
     for (auto value : container) {
@@ -66,6 +69,11 @@ std::ostream& operator<<(std::ostream& os, const std::list<T> listIn) {
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::set<T> setIn) {
+    return containerToArrayString(os, setIn);
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::unordered_set<T> setIn) {
     return containerToArrayString(os, setIn);
 }
 

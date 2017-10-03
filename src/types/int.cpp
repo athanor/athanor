@@ -63,3 +63,5 @@ ostream& prettyPrint(ostream& os, const IntDomain& d) {
     os << ")";
     return os;
 }
+
+vector<shared_ptr<IntTrigger>>& getTriggers(IntValue& v) { return v.triggers; }

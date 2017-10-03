@@ -21,17 +21,19 @@ template <typename InnerDomainPtrType,
               typename InnerDomainPtrType::type>::type>
 bool assignIncreasingValues(const InnerDomainPtrType& innerDomain,
                             const size_t startIndex, const size_t endIndex,
-                            SetValueImpl<InnerValuePtrType>& val) {
+                            SetValue& val,
+                            SetValueImpl<InnerValuePtrType>& valImpl) {
     for (size_t i = startIndex; i < endIndex; ++i) {
         bool success;
-        val.changeMemberValue(
+        valImpl.changeMemberValue(
             [&]() {
-                deepCopy(*val.members[i - 1], *val.members[i]);
+                deepCopy(*valImpl.members[i - 1], *valImpl.members[i]);
                 success = moveToNextValueInDomain(
-                    *val.members[i], innerDomain,
-                    [&]() { return !val.containsMember(val.members[i]); });
+                    *valImpl.members[i], innerDomain, [&]() {
+                        return !valImpl.containsMember(valImpl.members[i]);
+                    });
             },
-            i);
+            val, i);
         if (!success) {
             return false;
         }
@@ -45,17 +47,19 @@ template <typename InnerDomainPtrType, typename InnerValuePtrDeducedType,
 bool assignIncreasingValues(const InnerDomainPtrType& innerDomain,
                             const size_t startIndex, const size_t endIndex,
                             InnerValuePtrDeducedType&& startingValue,
-                            SetValueImpl<InnerValuePtrType>& val) {
-    if (startIndex >= val.members.size()) {
+                            SetValue& val,
+                            SetValueImpl<InnerValuePtrType>& valImpl) {
+    if (startIndex >= valImpl.members.size()) {
         return true;
     }
-    val.changeMemberValue(
+    valImpl.changeMemberValue(
         [&]() {
-            val.members[startIndex] =
+            valImpl.members[startIndex] =
                 forward<InnerValuePtrDeducedType>(startingValue);
         },
-        startIndex);
-    return assignIncreasingValues(innerDomain, startIndex + 1, endIndex, val);
+        val, startIndex);
+    return assignIncreasingValues(innerDomain, startIndex + 1, endIndex, val,
+                                  valImpl);
 }
 
 template <typename InnerDomainPtrType,
@@ -67,16 +71,17 @@ void assignInitialValueInDomainImpl(const SetDomain& domain,
                                     SetValueImpl<InnerValuePtrType>& valImpl) {
     // remove values if set larger than minSize
     while (valImpl.members.size() > domain.sizeAttr.minSize) {
-        valImpl.removeValue(valImpl.members.size() - 1);
+        valImpl.removeValue(val, valImpl.members.size() - 1);
     }
     // if set does not have enough elements for minSize
     valImpl.members.reserve(domain.sizeAttr.minSize);
     while (valImpl.members.size() < domain.sizeAttr.minSize) {
-        valImpl.addValue(construct<typename InnerValuePtrType::element_type>());
+        valImpl.addValue(val,
+                         construct<typename InnerValuePtrType::element_type>());
     }
     bool success = assignIncreasingValues(
         *innerDomainPtr, 0, valImpl.members.size(),
-        makeInitialValueInDomain(*innerDomainPtr), valImpl);
+        makeInitialValueInDomain(*innerDomainPtr), val, valImpl);
     if (!success) {
         cerr << "Error: could not assign initial value.  Trying to print "
                 "domain and value...\nDomain: ";
@@ -141,11 +146,12 @@ bool moveToNextValueInDomainImpl(SetValue& val,
                                 valImpl.members[index - 1]);
                         });
                 },
-                index - 1);
+                val, index - 1);
             if (successfulChange &&
                 (index == valImpl.members.size() ||
                  assignIncreasingValues(*innerDomainPtr, index,
-                                        valImpl.members.size(), valImpl))) {
+                                        valImpl.members.size(), val,
+                                        valImpl))) {
                 if (parentCheck()) {
                     val.state = ValueState::DIRTY;
                     return true;
@@ -160,11 +166,11 @@ bool moveToNextValueInDomainImpl(SetValue& val,
             val.state = ValueState::UNDEFINED;
             return false;  // inner domain size limit reached
         } else {
-            valImpl.members.push_back(
-                construct<typename InnerValuePtrType::element_type>());
+            valImpl.addValue(
+                val, construct<typename InnerValuePtrType::element_type>());
             bool success = assignIncreasingValues(
                 *innerDomainPtr, 0, valImpl.members.size(),
-                makeInitialValueInDomain(*innerDomainPtr), valImpl);
+                makeInitialValueInDomain(*innerDomainPtr), val, valImpl);
             if (!success) {
                 val.state = ValueState::UNDEFINED;
                 return false;  // inner domain size limit reached
@@ -239,3 +245,5 @@ ostream& prettyPrint(ostream& os, const SetDomain& d) {
     os << ")";
     return os;
 }
+
+vector<shared_ptr<SetTrigger>>& getTriggers(SetValue& v) { return v.triggers; }

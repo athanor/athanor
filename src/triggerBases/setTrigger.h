@@ -12,4 +12,6 @@ struct SetTrigger {
                                  const Value& member) = 0;
 };
 
+std::vector<std::shared_ptr<SetTrigger>>& getTriggers(SetValue& value);
+
 #endif /* SRC_TRIGGERBASES_SETTRIGGER_H_ */

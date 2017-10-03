@@ -18,6 +18,17 @@ struct IntValue : DirtyFlag {
     int64_t value;
     size_t containingBoundIndex;  // a cache of which bound this value lies in
     std::vector<std::shared_ptr<IntTrigger>> triggers;
+
+    template <typename Func>
+    inline void changeValue(Func&& func) {
+        for (std::shared_ptr<IntTrigger>& t : triggers) {
+            t->preValueChange(*this);
+        }
+        func();
+        for (std::shared_ptr<IntTrigger>& t : triggers) {
+            t->postValueChange(*this);
+        }
+    }
 };
 
 #endif /* SRC_TYPES_INT_H_ */

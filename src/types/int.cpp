@@ -17,23 +17,29 @@ std::shared_ptr<IntValue> makeInitialValueInDomain(const IntDomain& domain) {
 }
 bool moveToNextValueInDomain(IntValue& val, const IntDomain& domain,
                              const ParentCheck& parentCheck) {
-    while (true) {
-        debug_code(assert(val.containingBoundIndex >= 0 &&
-                          val.containingBoundIndex < domain.bounds.size()));
-        if (val.value < domain.bounds[val.containingBoundIndex].second) {
-            ++val.value;
-        } else if (val.containingBoundIndex < domain.bounds.size() - 1) {
-            ++val.containingBoundIndex;
-            val.value = domain.bounds[val.containingBoundIndex].first;
-        } else {
-            val.state = ValueState::UNDEFINED;
-            return false;
+    bool success;
+    val.changeValue([&]() {
+        while (true) {
+            debug_code(assert(val.containingBoundIndex >= 0 &&
+                              val.containingBoundIndex < domain.bounds.size()));
+            if (val.value < domain.bounds[val.containingBoundIndex].second) {
+                ++val.value;
+            } else if (val.containingBoundIndex < domain.bounds.size() - 1) {
+                ++val.containingBoundIndex;
+                val.value = domain.bounds[val.containingBoundIndex].first;
+            } else {
+                val.state = ValueState::UNDEFINED;
+                success = false;
+                return;
+            }
+            if (parentCheck()) {
+                val.state = ValueState::DIRTY;
+                success = true;
+                return;
+            }
         }
-        if (parentCheck()) {
-            val.state = ValueState::DIRTY;
-            return true;
-        }
-    }
+    });
+    return success;
 }
 
 u_int64_t getValueHash(const IntValue& val) { return val.value; }

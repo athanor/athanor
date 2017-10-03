@@ -8,4 +8,5 @@ struct IntTrigger {
     virtual void postValueChange(const IntValue& newValue) = 0;
 };
 
+std::vector<std::shared_ptr<IntTrigger>>& getTriggers(IntValue& value);
 #endif /* SRC_TRIGGERBASES_INTTRIGGER_H_ */

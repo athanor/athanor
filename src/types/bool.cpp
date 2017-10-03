@@ -29,7 +29,7 @@ bool moveToNextValueInDomain(BoolValue& val, const BoolDomain&,
     }
 }
 
-u_int64_t getHash(const BoolValue& val) { return val.value; }
+u_int64_t getValueHash(const BoolValue& val) { return val.value; }
 
 ostream& prettyPrint(ostream& os, const BoolValue& v) {
     os << v.value;

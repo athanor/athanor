@@ -190,7 +190,7 @@ bool moveToNextValueInDomain(SetValue& val, const SetDomain& domain,
         val.setValueImpl);
 }
 
-u_int64_t getHash(const SetValue& val) {
+u_int64_t getValueHash(const SetValue& val) {
     return mpark::visit([](auto& valImpl) { return valImpl.cachedHashTotal; },
                         val.setValueImpl);
 }

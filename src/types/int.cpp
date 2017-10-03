@@ -36,7 +36,7 @@ bool moveToNextValueInDomain(IntValue& val, const IntDomain& domain,
     }
 }
 
-u_int64_t getHash(const IntValue& val) { return val.value; }
+u_int64_t getValueHash(const IntValue& val) { return val.value; }
 
 ostream& prettyPrint(ostream& os, const IntValue& v) {
     os << v.value;

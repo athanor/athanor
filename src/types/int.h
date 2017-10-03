@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "forwardDecls/typesAndDomains.h"
+#include "triggerBases/intTrigger.h"
 
 inline auto intBound(int64_t a, int64_t b) { return std::make_pair(a, b); }
 struct IntDomain {
@@ -16,6 +17,7 @@ struct IntDomain {
 struct IntValue : DirtyFlag {
     int64_t value;
     size_t containingBoundIndex;  // a cache of which bound this value lies in
+    std::vector<std::shared_ptr<IntTrigger>> triggers;
 };
 
 #endif /* SRC_TYPES_INT_H_ */

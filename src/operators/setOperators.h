@@ -1,9 +1,8 @@
-
-#ifndef SOURCE_DIRECTORY__SRC_OPERATORS_SETOPERATORS_H_
-#define SOURCE_DIRECTORY__SRC_OPERATORS_SETOPERATORS_H_
-#include <functional>
+#ifndef SRC_OPERATORS_SETOPERATORS_H_
+#define SRC_OPERATORS_SETOPERATORS_H_
 #include <iostream>
 #include <memory>
-#include "utils/variantOperations.h"
+#include "operators/operators.h"
+#include "triggers/setTrigger.h"
 
-#endif /* SOURCE_DIRECTORY__SRC_OPERATORS_SETOPERATORS_H_ */
+#endif /* SRC_OPERATORS_SETOPERATORS_H_ */

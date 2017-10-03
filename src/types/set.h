@@ -32,26 +32,26 @@ struct SetValueImpl {
     std::unordered_set<u_int64_t> memberHashes;
     u_int64_t cachedHashTotal = 0;
     inline bool containsMember(const Inner& member) {
-        return memberHashes.count(mix(getHash(*member)));
+        return memberHashes.count(mix(getValueHash(*member)));
     }
 
     template <typename Func>
     inline void changeMemberValue(Func&& func, size_t memberIndex) {
         if (dirtyState(*members[memberIndex]) != ValueState::UNDEFINED) {
-            u_int64_t hash = mix(getHash(*members[memberIndex]));
+            u_int64_t hash = mix(getValueHash(*members[memberIndex]));
             memberHashes.erase(hash);
             cachedHashTotal -= hash;
         }
         func();
         if (dirtyState(*members[memberIndex]) != ValueState::UNDEFINED) {
-            u_int64_t hash = mix(getHash(*members[memberIndex]));
+            u_int64_t hash = mix(getValueHash(*members[memberIndex]));
             memberHashes.insert(hash);
             cachedHashTotal += hash;
         }
     }
 
     inline void removeValue(size_t memberIndex) {
-        u_int64_t hash = mix(getHash(*members[memberIndex]));
+        u_int64_t hash = mix(getValueHash(*members[memberIndex]));
         memberHashes.erase(hash);
         cachedHashTotal -= hash;
         members[memberIndex] = members.back();
@@ -59,7 +59,7 @@ struct SetValueImpl {
     }
 
     inline void addValue(const Inner& member) {
-        u_int64_t hash = mix(getHash(*member));
+        u_int64_t hash = mix(getValueHash(*member));
         memberHashes.insert(hash);
         cachedHashTotal += hash;
         members.push_back(member);

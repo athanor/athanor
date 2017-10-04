@@ -247,3 +247,12 @@ ostream& prettyPrint(ostream& os, const SetDomain& d) {
 }
 
 vector<shared_ptr<SetTrigger>>& getTriggers(SetValue& v) { return v.triggers; }
+
+SetView getSetView(SetValue& val) {
+    return mpark::visit(
+        [&](auto& valImpl) {
+            return SetView(valImpl.memberHashes, valImpl.cachedHashTotal,
+                           val.triggers);
+        },
+        val.setValueImpl);
+}

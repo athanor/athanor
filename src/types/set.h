@@ -4,8 +4,7 @@
 #include <vector>
 #include "utils/hashUtils.h"
 
-#include "triggerBases/setTrigger.h"
-
+#include "operators/setProducing.h"
 #include "types/forwardDecls/typesAndDomains.h"
 struct SetDomain {
     SizeAttr sizeAttr;
@@ -28,6 +27,7 @@ struct SetDomain {
         : sizeAttr(sizeAttr), inner(std::forward<DomainPtrType>(inner)) {}
 };
 
+std::vector<std::shared_ptr<SetTrigger>>& getSetTriggers(SetValue& v);
 template <typename Inner>
 struct SetValueImpl {
     std::vector<Inner> members;
@@ -45,7 +45,7 @@ struct SetValueImpl {
             memberHashes.erase(hash);
             cachedHashTotal -= hash;
         }
-        for (std::shared_ptr<SetTrigger>& t : getTriggers(value)) {
+        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
             t->preValueChange(value, members[memberIndex]);
         }
         func();
@@ -54,7 +54,7 @@ struct SetValueImpl {
             memberHashes.insert(hash);
             cachedHashTotal += hash;
         }
-        for (std::shared_ptr<SetTrigger>& t : getTriggers(value)) {
+        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
             t->postValueChange(value, members[memberIndex]);
         }
     }
@@ -68,7 +68,7 @@ struct SetValueImpl {
         Inner member = std::move(members[memberIndex]);
         members[memberIndex] = std::move(members.back());
         members.pop_back();
-        for (std::shared_ptr<SetTrigger>& t : getTriggers(value)) {
+        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
             t->valueRemoved(value, member);
         }
     }
@@ -80,7 +80,7 @@ struct SetValueImpl {
             cachedHashTotal += hash;
         }
         members.push_back(member);
-        for (std::shared_ptr<SetTrigger>& t : getTriggers(value)) {
+        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
             t->valueAdded(value, members.back());
         }
     }
@@ -95,4 +95,7 @@ struct SetValue : public DirtyFlag {
     std::vector<std::shared_ptr<SetTrigger>> triggers;
 };
 
+inline std::vector<std::shared_ptr<SetTrigger>>& getSetTriggers(SetValue& v) {
+    return v.triggers;
+}
 #endif /* SRC_TYPES_SET_H_ */

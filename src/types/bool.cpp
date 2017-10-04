@@ -15,18 +15,21 @@ std::shared_ptr<BoolValue> makeInitialValueInDomain(const BoolDomain& domain) {
 }
 bool moveToNextValueInDomain(BoolValue& val, const BoolDomain&,
                              const ParentCheck& parentCheck) {
-    while (true) {
+    bool success;
+    val.changeValue([&]() {
         if (val.value == false) {
             val.value = true;
-        } else {
-            val.state = ValueState::UNDEFINED;
-            return false;
+            if (parentCheck()) {
+                success = true;
+                val.state = ValueState::DIRTY;
+                return;
+            }
         }
-        if (parentCheck()) {
-            val.state = ValueState::DIRTY;
-            return true;
-        }
-    }
+        val.state = ValueState::UNDEFINED;
+        success = false;
+        return;
+    });
+    return success;
 }
 
 u_int64_t getValueHash(const BoolValue& val) { return val.value; }
@@ -41,3 +44,5 @@ ostream& prettyPrint(ostream& os, const BoolDomain&) {
     os << "bool";
     return os;
 }
+
+BoolView getBoolView(BoolValue& val) { return BoolView(val.triggers); }

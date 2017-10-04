@@ -70,4 +70,4 @@ ostream& prettyPrint(ostream& os, const IntDomain& d) {
     return os;
 }
 
-IntView getIntView(IntValue& val) { return IntView(val.triggers); }
+IntView getIntView(IntValue& val) { return IntView(val.value, val.triggers); }

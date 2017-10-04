@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include "operators/intProducing.h"
 #include "operators/setProducing.h"
 #include "types/forwardDecls/hash.h"
 struct OpSetIntersect {
@@ -59,6 +60,29 @@ struct OpSetIntersect {
             std::make_shared<Trigger<true>>(*this));
         rightSetView.triggers.emplace_back(
             std::make_shared<Trigger<false>>(*this));
+    }
+};
+
+struct OpSetSize {
+    int64_t value = 0;
+    SetProducing operand;
+    std::vector<std::shared_ptr<IntTrigger>> triggers;
+
+   private:
+    class Trigger : public SetTrigger {
+        OpSetSize& op;
+
+       public:
+        Trigger(OpSetSize& op) : op(op) {}
+        void valueRemoved(const Value&) final { --op.value; }
+
+        void valueAdded(const Value&) final { ++op.value; }
+    };
+
+   public:
+    OpSetSize(SetProducing operandIn) : operand(operandIn) {
+        getSetView(operand).triggers.emplace_back(
+            std::make_shared<Trigger>(*this));
     }
 };
 #endif /* SRC_OPERATORS_SETOPERATORS_H_ */

@@ -11,20 +11,19 @@ using namespace std;
 
 int main() {
     SetDomain s(noSize(), IntDomain({intBound(1, 3)}));
-    auto l = construct<SetValue>();
-    auto r = construct<SetValue>();
+    auto l = makeInitialValueInDomain(s);
+    auto r = makeInitialValueInDomain(s);
     IntProducing intersectSize =
         make_shared<OpSetSize>(make_shared<OpSetIntersect>(l, r));
     IntView sizeView = getIntView(intersectSize);
-    assignInitialValueInDomain(s, *l);
-    assignInitialValueInDomain(s, *r);
     do {
+        assignInitialValueInDomain(s, *r);
         do {
             cout << "l: ";
             prettyPrint(cout, *l) << endl;
             cout << "r: ";
             prettyPrint(cout, *r) << endl;
             cout << "Intersect size: " << sizeView.value << endl;
-        } while (moveToNextValueInDomain(*r, s, []() { return true; }));
-    } while (moveToNextValueInDomain(*l, s, []() { return true; }));
+        } while (moveToNextValueInDomain(*r, s, noParentCheck));
+    } while (moveToNextValueInDomain(*l, s, noParentCheck));
 }

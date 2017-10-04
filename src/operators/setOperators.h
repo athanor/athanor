@@ -1,6 +1,8 @@
 #ifndef SRC_OPERATORS_SETOPERATORS_H_
 #define SRC_OPERATORS_SETOPERATORS_H_
 #include <operators/setProducing.h>
+#include "utils/hashUtils.h"
+
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -22,7 +24,7 @@ struct OpSetIntersect {
        public:
         Trigger(OpSetIntersect& op) : op(op) {}
         void valueRemoved(const Value& member) final {
-            u_int64_t hash = getValueHash(member);
+            u_int64_t hash = mix(getValueHash(member));
             std::unordered_set<u_int64_t>::iterator hashIter;
             if ((hashIter = op.memberHashes.find(hash)) !=
                 op.memberHashes.end()) {
@@ -36,7 +38,7 @@ struct OpSetIntersect {
 
         void valueAdded(const Value& member) final {
             SetProducing& unchanged = (left) ? op.right : op.left;
-            u_int64_t hash = getValueHash(member);
+            u_int64_t hash = mix(getValueHash(member));
             if (op.memberHashes.count(hash)) {
                 return;
             }

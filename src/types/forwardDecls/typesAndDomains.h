@@ -31,6 +31,7 @@ using Domain = mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
 // calll back used by nested values to determine if their parent allows such a
 // value
 typedef StackFunction<bool()> ParentCheck;
+static const ParentCheck noParentCheck = []() { return true; };
 // mapping from values to domains and back
 
 template <typename T>

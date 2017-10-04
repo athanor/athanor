@@ -60,13 +60,13 @@ struct SetValueImpl {
     }
 
     inline void removeValue(SetValue& value, size_t memberIndex) {
-        if (dirtyState(*members[memberIndex]) != ValueState::UNDEFINED) {
-            u_int64_t hash = mix(getValueHash(*members[memberIndex]));
+        Inner member = std::move(members[memberIndex]);
+        members[memberIndex] = std::move(members.back());
+        members.pop_back();
+        if (dirtyState(*member) != ValueState::UNDEFINED) {
+            u_int64_t hash = mix(getValueHash(*member));
             memberHashes.erase(hash);
             cachedHashTotal -= hash;
-            Inner member = std::move(members[memberIndex]);
-            members[memberIndex] = std::move(members.back());
-            members.pop_back();
             for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
                 t->valueRemoved(member);
             }
@@ -74,11 +74,12 @@ struct SetValueImpl {
     }
 
     inline void addValue(SetValue& value, const Inner& member) {
+        members.push_back(member);
+
         if (dirtyState(*member) != ValueState::UNDEFINED) {
             u_int64_t hash = mix(getValueHash(*member));
             memberHashes.insert(hash);
             cachedHashTotal += hash;
-            members.push_back(member);
             for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
                 t->valueAdded(members.back());
             }

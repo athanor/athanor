@@ -171,6 +171,7 @@ bool moveToNextValueInDomainImpl(SetValue& val,
             bool success = assignIncreasingValues(
                 *innerDomainPtr, 0, valImpl.members.size(),
                 makeInitialValueInDomain(*innerDomainPtr), val, valImpl);
+                        ;
             if (!success) {
                 val.state = ValueState::UNDEFINED;
                 return false;  // inner domain size limit reached

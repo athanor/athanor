@@ -13,12 +13,11 @@ struct BoolValue : DirtyFlag {
 
     template <typename Func>
     inline void changeValue(Func&& func) {
-        for (std::shared_ptr<BoolTrigger>& t : triggers) {
-            t->preValueChange(*this);
-        }
         func();
-        for (std::shared_ptr<BoolTrigger>& t : triggers) {
-            t->postValueChange(*this);
+        if (state != ValueState::UNDEFINED) {
+            for (std::shared_ptr<BoolTrigger>& t : triggers) {
+                t->postValueChange();
+            }
         }
     }
 };

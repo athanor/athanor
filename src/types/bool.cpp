@@ -45,4 +45,8 @@ ostream& prettyPrint(ostream& os, const BoolDomain&) {
     return os;
 }
 
-BoolView getBoolView(BoolValue& val) { return BoolView(val.triggers); }
+u_int64_t VIOLATION_1 = 1;
+u_int64_t VIOLATION_0 = 0;
+BoolView getBoolView(BoolValue& val) {
+    return BoolView((val.value) ? VIOLATION_0 : VIOLATION_1, val.triggers);
+}

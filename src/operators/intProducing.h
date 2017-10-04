@@ -4,8 +4,7 @@
 struct OpSetSize;
 
 struct IntTrigger {
-    virtual void preValueChange(const IntValue& oldValue) = 0;
-    virtual void postValueChange(const IntValue& newValue) = 0;
+    virtual void postValueChange() = 0;
 };
 
 using IntProducing =

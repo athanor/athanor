@@ -21,12 +21,11 @@ struct IntValue : DirtyFlag {
 
     template <typename Func>
     inline void changeValue(Func&& func) {
-        for (std::shared_ptr<IntTrigger>& t : triggers) {
-            t->preValueChange(*this);
-        }
         func();
-        for (std::shared_ptr<IntTrigger>& t : triggers) {
-            t->postValueChange(*this);
+        if (state != ValueState::UNDEFINED) {
+            for (std::shared_ptr<IntTrigger>& t : triggers) {
+                t->postValueChange();
+            }
         }
     }
 };

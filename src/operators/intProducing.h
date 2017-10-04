@@ -12,9 +12,9 @@ using IntProducing =
     mpark::variant<std::shared_ptr<IntValue>, std::shared_ptr<OpSetSize>>;
 
 struct IntView {
-    int64_t value;
+    int64_t& value;
     std::vector<std::shared_ptr<IntTrigger>>& triggers;
-    IntView(int64_t value, std::vector<std::shared_ptr<IntTrigger>>& triggers)
+    IntView(int64_t& value, std::vector<std::shared_ptr<IntTrigger>>& triggers)
         : value(value), triggers(triggers) {}
 };
 IntView getIntView(IntValue& value);

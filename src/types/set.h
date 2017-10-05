@@ -84,7 +84,8 @@ typedef mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>
 #undef variantValues
 
 struct SetValue {
-    SetValueImplWrapper setValueImpl;
+    SetValueImplWrapper setValueImpl =
+        SetValueImpl<std::shared_ptr<IntValue>>();
     std::vector<std::shared_ptr<SetTrigger>> triggers;
 };
 

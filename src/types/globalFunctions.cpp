@@ -6,19 +6,13 @@
 #include "types/forwardDecls/changeValue.h"
 #define quote(x) #x
 
-#define specialised(name)                                                      \
-    template <>                                                                \
-    std::shared_ptr<name##Value> construct<name##Value>() {                    \
-        return std::make_shared<name##Value>();                                \
-    }                                                                          \
-    const std::string TypeAsString<name##Value>::value = quote(name##Value);   \
-    const std::string TypeAsString<name##Domain>::value = quote(name##Domain); \
-    ValueState dirtyState(const name##Value& v) {                              \
-        return static_cast<const DirtyFlag&>(v).state;                         \
-    }                                                                          \
-    ValueState& dirtyState(name##Value& v) {                                   \
-        return static_cast<DirtyFlag&>(v).state;                               \
-    }
+#define specialised(name)                                                    \
+    template <>                                                              \
+    std::shared_ptr<name##Value> construct<name##Value>() {                  \
+        return std::make_shared<name##Value>();                              \
+    }                                                                        \
+    const std::string TypeAsString<name##Value>::value = quote(name##Value); \
+    const std::string TypeAsString<name##Domain>::value = quote(name##Domain);
 
 buildForAllTypes(specialised, )
 #undef specialised

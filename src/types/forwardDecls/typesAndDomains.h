@@ -87,18 +87,6 @@ getAssociatedValue(DomainType&, const Value& value) {
     return mpark::get<
         std::shared_ptr<typename AssociatedValueType<DomainType>::type>>(value);
 }
-enum class ValueState { CLEAN, DIRTY, UNDEFINED };
-struct DirtyFlag {
-    ValueState state = ValueState::UNDEFINED;
-    DirtyFlag() {}
-    DirtyFlag(ValueState state) : state(state) {}
-};
-#define dirtyStateFunctions(name)                    \
-    ValueState dirtyState(const name##Value& value); \
-                                                     \
-    ValueState& dirtyState(name##Value& value);
-buildForAllTypes(dirtyStateFunctions, )
-#undef dirtyStateFunctions
 
     // size attr for domains
     struct SizeAttr {

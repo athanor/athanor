@@ -40,22 +40,18 @@ struct SetValueImpl {
     template <typename Func>
     inline void changeMemberValue(Func&& func, SetValue& value,
                                   size_t memberIndex) {
-        if (dirtyState(*members[memberIndex]) != ValueState::UNDEFINED) {
-            u_int64_t hash = mix(getValueHash(*members[memberIndex]));
-            memberHashes.erase(hash);
-            cachedHashTotal -= hash;
-            for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
-                t->valueRemoved(members[memberIndex]);
-            }
+        u_int64_t hash = mix(getValueHash(*members[memberIndex]));
+        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
+            t->possibleValueChange(members[memberIndex]);
         }
         func();
-        if (dirtyState(*members[memberIndex]) != ValueState::UNDEFINED) {
-            u_int64_t hash = mix(getValueHash(*members[memberIndex]));
-            memberHashes.insert(hash);
-            cachedHashTotal += hash;
-            for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
-                t->valueAdded(members[memberIndex]);
-            }
+        memberHashes.erase(hash);
+        cachedHashTotal -= hash;
+        hash = mix(getValueHash(*members[memberIndex]));
+        memberHashes.insert(hash);
+        cachedHashTotal += hash;
+        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
+            t->valueChanged(members[memberIndex]);
         }
     }
 
@@ -63,26 +59,21 @@ struct SetValueImpl {
         Inner member = std::move(members[memberIndex]);
         members[memberIndex] = std::move(members.back());
         members.pop_back();
-        if (dirtyState(*member) != ValueState::UNDEFINED) {
-            u_int64_t hash = mix(getValueHash(*member));
-            memberHashes.erase(hash);
-            cachedHashTotal -= hash;
-            for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
-                t->valueRemoved(member);
-            }
+        u_int64_t hash = mix(getValueHash(*member));
+        memberHashes.erase(hash);
+        cachedHashTotal -= hash;
+        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
+            t->valueRemoved(member);
         }
     }
 
     inline void addValue(SetValue& value, const Inner& member) {
         members.push_back(member);
-
-        if (dirtyState(*member) != ValueState::UNDEFINED) {
-            u_int64_t hash = mix(getValueHash(*member));
-            memberHashes.insert(hash);
-            cachedHashTotal += hash;
-            for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
-                t->valueAdded(members.back());
-            }
+        u_int64_t hash = mix(getValueHash(*member));
+        memberHashes.insert(hash);
+        cachedHashTotal += hash;
+        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
+            t->valueAdded(members.back());
         }
     }
 };
@@ -92,7 +83,7 @@ typedef mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>
     SetValueImplWrapper;
 #undef variantValues
 
-struct SetValue : public DirtyFlag {
+struct SetValue {
     SetValueImplWrapper setValueImpl;
     std::vector<std::shared_ptr<SetTrigger>> triggers;
 };

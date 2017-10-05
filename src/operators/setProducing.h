@@ -8,6 +8,8 @@ struct OpSetUnion;
 struct SetTrigger {
     virtual void valueRemoved(const Value& member) = 0;
     virtual void valueAdded(const Value& member) = 0;
+    virtual void possibleValueChange(const Value& member) = 0;
+    virtual void valueChanged(const Value& member) = 0;
 };
 
 using SetProducing =

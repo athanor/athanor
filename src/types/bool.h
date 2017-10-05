@@ -7,17 +7,18 @@
 #include "forwardDecls/typesAndDomains.h"
 #include "operators/boolProducing.h"
 struct BoolDomain {};
-struct BoolValue : DirtyFlag {
+struct BoolValue {
     bool value;
     std::vector<std::shared_ptr<BoolTrigger>> triggers;
 
     template <typename Func>
     inline void changeValue(Func&& func) {
+        for (auto& trigger : triggers) {
+            trigger->possibleValueChange(value);
+        }
         func();
-        if (state != ValueState::UNDEFINED) {
-            for (std::shared_ptr<BoolTrigger>& t : triggers) {
-                t->postValueChange();
-            }
+        for (auto& trigger : triggers) {
+            trigger->valueChanged(value);
         }
     }
 };

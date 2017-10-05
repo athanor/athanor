@@ -14,18 +14,19 @@ struct IntDomain {
         : bounds(std::move(bounds)) {}
 };
 
-struct IntValue : DirtyFlag {
+struct IntValue {
     int64_t value;
     size_t containingBoundIndex;  // a cache of which bound this value lies in
     std::vector<std::shared_ptr<IntTrigger>> triggers;
 
     template <typename Func>
     inline void changeValue(Func&& func) {
+        for (std::shared_ptr<IntTrigger>& t : triggers) {
+            t->possibleValueChange(value);
+        }
         func();
-        if (state != ValueState::UNDEFINED) {
-            for (std::shared_ptr<IntTrigger>& t : triggers) {
-                t->postValueChange();
-            }
+        for (std::shared_ptr<IntTrigger>& t : triggers) {
+            t->valueChanged(value);
         }
     }
 };

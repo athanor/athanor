@@ -4,7 +4,8 @@
 struct OpIntEq;
 
 struct BoolTrigger {
-    virtual void postValueChange() = 0;
+    virtual void possibleValueChange(bool value) = 0;
+    virtual void valueChanged(bool value) = 0;
 };
 
 using BoolProducing =

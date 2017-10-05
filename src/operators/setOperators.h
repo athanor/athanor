@@ -20,10 +20,11 @@ struct OpSetIntersect {
     template <bool left>
     class Trigger : public SetTrigger {
         OpSetIntersect& op;
+        std::unordered_set<u_int64_t>::iterator oldHashIter;
 
        public:
         Trigger(OpSetIntersect& op) : op(op) {}
-        void valueRemoved(const Value& member) final {
+        inline void valueRemoved(const Value& member) final {
             u_int64_t hash = mix(getValueHash(member));
             std::unordered_set<u_int64_t>::iterator hashIter;
             if ((hashIter = op.memberHashes.find(hash)) !=
@@ -36,7 +37,7 @@ struct OpSetIntersect {
             }
         }
 
-        void valueAdded(const Value& member) final {
+        inline void valueAdded(const Value& member) final {
             SetProducing& unchanged = (left) ? op.right : op.left;
             u_int64_t hash = mix(getValueHash(member));
             if (op.memberHashes.count(hash)) {
@@ -46,6 +47,46 @@ struct OpSetIntersect {
             if (viewOfUnchangedSet.memberHashes.count(hash)) {
                 op.memberHashes.insert(hash);
                 op.cachedHashTotal += hash;
+                for (auto& trigger : op.triggers) {
+                    trigger->valueAdded(member);
+                }
+            }
+        }
+        inline void possibleValueChange(const Value& member) final {
+            u_int64_t hash = mix(getValueHash(member));
+            oldHashIter = op.memberHashes.find(hash);
+            if (oldHashIter != op.memberHashes.end()) {
+                for (auto& trigger : op.triggers) {
+                    trigger->possibleValueChange(member);
+                }
+            }
+        }
+
+        inline void valueChanged(const Value& member) final {
+            u_int64_t newHashOfMember = mix(getValueHash(member));
+            if (newHashOfMember == *oldHashIter) {
+                return;
+            }
+            SetProducing& unchanged = (left) ? op.right : op.left;
+            bool containedInUnchangedSet =
+                getSetView(unchanged).memberHashes.count(newHashOfMember);
+            if (oldHashIter != op.memberHashes.end()) {
+                op.cachedHashTotal -= *oldHashIter;
+                op.memberHashes.erase(oldHashIter);
+                if (containedInUnchangedSet) {
+                    op.memberHashes.insert(newHashOfMember);
+                    op.cachedHashTotal += newHashOfMember;
+                    for (auto& trigger : op.triggers) {
+                        trigger->valueChanged(member);
+                    }
+                } else {
+                    for (auto& trigger : op.triggers) {
+                        trigger->valueRemoved(member);
+                    }
+                }
+            } else if (containedInUnchangedSet) {
+                op.memberHashes.insert(newHashOfMember);
+                op.cachedHashTotal += newHashOfMember;
                 for (auto& trigger : op.triggers) {
                     trigger->valueAdded(member);
                 }
@@ -76,9 +117,26 @@ struct OpSetSize {
 
        public:
         Trigger(OpSetSize& op) : op(op) {}
-        void valueRemoved(const Value&) final { --op.value; }
-
-        void valueAdded(const Value&) final { ++op.value; }
+        inline void valueRemoved(const Value&) final {
+            for (auto& trigger : op.triggers) {
+                trigger->possibleValueChange(op.value);
+            }
+            --op.value;
+            for (auto& trigger : op.triggers) {
+                trigger->valueChanged(op.value);
+            }
+        }
+        inline void valueAdded(const Value&) final {
+            for (auto& trigger : op.triggers) {
+                trigger->possibleValueChange(op.value);
+            }
+            ++op.value;
+            for (auto& trigger : op.triggers) {
+                trigger->valueChanged(op.value);
+            }
+        }
+        inline void possibleValueChange(const Value&) {}
+        inline void valueChanged(const Value&) {}
     };
 
    public:

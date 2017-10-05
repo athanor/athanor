@@ -3,7 +3,7 @@
 #include "common/common.h"
 #include "operators/setOperators.h"
 #include "types/allTypes.h"
-#include "types/forwardDecls/changeValue.h"
+#include "types/forwardDecls/constructValue.h"
 #include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/print.h"
 #include "utils/hashUtils.h"

@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include "common/common.h"
-#include "types/forwardDecls/changeValue.h"
+#include "types/forwardDecls/constructValue.h"
 #include "types/forwardDecls/copy.h"
 #include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/print.h"
@@ -38,12 +38,22 @@ template <typename InnerValuePtrType>
 void deepCopyImpl(const SetValueImpl<InnerValuePtrType>& srcImpl,
                   SetValue& target) {
     auto& targetImpl =
-        target.setValueImpl.emplace<SetValueImpl<InnerValuePtrType>>();
+        mpark::get<SetValueImpl<InnerValuePtrType>>(target.setValueImpl);
     targetImpl.memberHashes = srcImpl.memberHashes;
     targetImpl.cachedHashTotal = srcImpl.cachedHashTotal;
-    targetImpl.members.reserve(srcImpl.members.size());
+    if (srcImpl.members.size() < targetImpl.members.size()) {
+        targetImpl.members.erase(
+            targetImpl.members.begin() + srcImpl.members.size(),
+            targetImpl.members.end());
+    }
+    while (srcImpl.members.size() > targetImpl.members.size()) {
+        auto member = construct<typename InnerValuePtrType::element_type>();
+        matchInnerType(*srcImpl.members[0], *member);
+        targetImpl.members.push_back(std::move(member));
+    }
+
     transform(srcImpl.members.begin(), srcImpl.members.end(),
-              back_inserter(targetImpl.members),
+              targetImpl.members.begin(),
               [](auto& srcMemberPtr) { return deepCopy(*srcMemberPtr); });
 }
 
@@ -69,4 +79,18 @@ SetView getSetView(SetValue& val) {
                            val.triggers);
         },
         val.setValueImpl);
+}
+
+template <typename InnerValuePtrType>
+void matchInnerTypeImpl(const SetValueImpl<InnerValuePtrType>&,
+                        SetValue& target) {
+    if (mpark::get_if<SetValueImpl<InnerValuePtrType>>(
+            &(target.setValueImpl)) == NULL) {
+        target.setValueImpl = SetValueImpl<InnerValuePtrType>();
+    }
+}
+
+void matchInnerType(const SetValue& src, SetValue& target) {
+    mpark::visit([&](auto& srcImpl) { matchInnerTypeImpl(srcImpl, target); },
+                 src.setValueImpl);
 }

@@ -32,3 +32,5 @@ ostream& prettyPrint(ostream& os, const IntDomain& d) {
 }
 
 IntView getIntView(IntValue& val) { return IntView(val.value, val.triggers); }
+
+void matchInnerType(const IntValue&, IntValue&) {}

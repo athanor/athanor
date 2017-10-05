@@ -21,3 +21,5 @@ u_int64_t VIOLATION_0 = 0;
 BoolView getBoolView(BoolValue& val) {
     return BoolView((val.value) ? VIOLATION_0 : VIOLATION_1, val.triggers);
 }
+
+void matchInnerType(const BoolValue&, BoolValue&) {}

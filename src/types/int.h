@@ -15,7 +15,7 @@ struct IntDomain {
     IntDomain(std::vector<std::pair<int64_t, int64_t>> bounds)
         : bounds(std::move(bounds)),
           domainSize(std::accumulate(
-              bounds.begin(), bounds.end(), 0,
+              this->bounds.begin(), this->bounds.end(), 0,
               [](u_int64_t total, auto& range) {
                   return total + (range.second - range.first) + 1;
               })) {}

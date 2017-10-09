@@ -35,7 +35,7 @@ void assignRandomValueInDomainImpl(const SetDomain& domain,
     while (!newMembers.empty()) {
         do {
             assignRandomValueInDomain(*innerDomainPtr, *newMembers.back());
-        } while (valImpl.addValue(val, newMembers.back()));
+        } while (!valImpl.addValue(val, newMembers.back()));
         newMembers.pop_back();
     }
 }

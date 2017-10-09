@@ -23,3 +23,6 @@ BoolView getBoolView(BoolValue& val) {
 }
 
 void matchInnerType(const BoolValue&, BoolValue&) {}
+void matchInnerType(const BoolDomain&, BoolValue&) {}
+
+u_int64_t getDomainSize(const BoolDomain&) { return 2; }

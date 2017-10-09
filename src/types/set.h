@@ -2,10 +2,11 @@
 #define SRC_TYPES_SET_H_
 #include <unordered_set>
 #include <vector>
-#include "utils/hashUtils.h"
-
 #include "operators/setProducing.h"
+#include "types/forwardDecls/getDomainSize.h"
+#include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/typesAndDomains.h"
+#include "utils/hashUtils.h"
 struct SetDomain {
     SizeAttr sizeAttr;
     Domain inner;
@@ -17,14 +18,26 @@ struct SetDomain {
         : sizeAttr(sizeAttr),
           inner(std::make_shared<
                 typename std::remove_reference<DomainType>::type>(
-              std::forward<DomainType>(inner))) {}
+              std::forward<DomainType>(inner))) {
+        trimMaxSize();
+    }
 
     // template hack to accept only pointers to domains
     template <typename DomainPtrType,
               typename std::enable_if<IsDomainPtrType<DomainPtrType>::value,
                                       int>::type = 0>
     SetDomain(SizeAttr sizeAttr, DomainPtrType&& inner)
-        : sizeAttr(sizeAttr), inner(std::forward<DomainPtrType>(inner)) {}
+        : sizeAttr(sizeAttr), inner(std::forward<DomainPtrType>(inner)) {
+        trimMaxSize();
+    }
+
+   private:
+    inline void trimMaxSize() {
+        u_int64_t innerDomainSize = getDomainSize(inner);
+        if (innerDomainSize < sizeAttr.maxSize) {
+            sizeAttr.maxSize = innerDomainSize;
+        }
+    }
 };
 
 std::vector<std::shared_ptr<SetTrigger>>& getSetTriggers(SetValue& v);
@@ -55,7 +68,7 @@ struct SetValueImpl {
         }
     }
 
-    inline void removeValue(SetValue& value, size_t memberIndex) {
+    inline Inner removeValue(SetValue& value, size_t memberIndex) {
         Inner member = std::move(members[memberIndex]);
         members[memberIndex] = std::move(members.back());
         members.pop_back();
@@ -65,9 +78,26 @@ struct SetValueImpl {
         for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
             t->valueRemoved(member);
         }
+        return member;
     }
 
-    inline void addValue(SetValue& value, const Inner& member) {
+    std::vector<Inner> removeAllValues(SetValue& value) {
+        std::vector<Inner> membersBackup = std::move(members);
+        members = {};
+        for (auto& member : membersBackup) {
+            u_int64_t hash = mix(getValueHash(*member));
+            memberHashes.erase(hash);
+            cachedHashTotal -= hash;
+            for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
+                t->valueRemoved(member);
+            }
+        }
+        return membersBackup;
+    }
+    inline bool addValue(SetValue& value, const Inner& member) {
+        if (containsMember(member)) {
+            return false;
+        }
         members.push_back(member);
         u_int64_t hash = mix(getValueHash(*member));
         memberHashes.insert(hash);
@@ -75,6 +105,7 @@ struct SetValueImpl {
         for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
             t->valueAdded(members.back());
         }
+        return true;
     }
 };
 

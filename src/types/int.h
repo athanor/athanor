@@ -1,6 +1,7 @@
 
 #ifndef SRC_TYPES_INT_H_
 #define SRC_TYPES_INT_H_
+#include <numeric>
 #include <utility>
 #include <vector>
 
@@ -9,14 +10,19 @@
 
 inline auto intBound(int64_t a, int64_t b) { return std::make_pair(a, b); }
 struct IntDomain {
-    std::vector<std::pair<int64_t, int64_t>> bounds;
+    const std::vector<std::pair<int64_t, int64_t>> bounds;
+    const u_int64_t domainSize;
     IntDomain(std::vector<std::pair<int64_t, int64_t>> bounds)
-        : bounds(std::move(bounds)) {}
+        : bounds(std::move(bounds)),
+          domainSize(std::accumulate(
+              bounds.begin(), bounds.end(), 0,
+              [](u_int64_t total, auto& range) {
+                  return total + (range.second - range.first) + 1;
+              })) {}
 };
 
 struct IntValue {
     int64_t value;
-    size_t containingBoundIndex;  // a cache of which bound this value lies in
     std::vector<std::shared_ptr<IntTrigger>> triggers;
 
     template <typename Func>

@@ -4,6 +4,7 @@
 #include "common/common.h"
 #include "types/forwardDecls/constructValue.h"
 #include "types/forwardDecls/copy.h"
+#include "types/forwardDecls/getDomainSize.h"
 #include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/print.h"
 #include "utils/hashUtils.h"
@@ -93,4 +94,27 @@ void matchInnerTypeImpl(const SetValueImpl<InnerValuePtrType>&,
 void matchInnerType(const SetValue& src, SetValue& target) {
     mpark::visit([&](auto& srcImpl) { matchInnerTypeImpl(srcImpl, target); },
                  src.setValueImpl);
+}
+
+template <typename InnerDomainPtrType>
+void matchInnerTypeFromDomain(const InnerDomainPtrType&, SetValue& target) {
+    typedef shared_ptr<typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type>
+        InnerValuePtrType;
+    if (mpark::get_if<SetValueImpl<InnerValuePtrType>>(
+            &(target.setValueImpl)) == NULL) {
+        target.setValueImpl = SetValueImpl<InnerValuePtrType>();
+    }
+}
+
+void matchInnerType(const SetDomain& domain, SetValue& target) {
+    mpark::visit(
+        [&](auto& innerDomainImpl) {
+            matchInnerTypeFromDomain(innerDomainImpl, target);
+        },
+        domain.inner);
+}
+
+u_int64_t getDomainSize(const SetDomain& domain) {
+    return 1 << getDomainSize(domain.inner);
 }

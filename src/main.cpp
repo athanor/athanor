@@ -3,7 +3,7 @@
 #include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/setOperators.h"
-#include "search/solver.h"
+#include "search/searchStrategies.h"
 #include "types/allTypes.h"
 #include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/print.h"

@@ -1,6 +1,7 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
 #include "types/set.h"
+#include "utils/random.h"
 using namespace std;
 template <typename InnerDomainPtrType>
 void assignRandomValueInDomainImpl(const SetDomain& domain,
@@ -11,10 +12,8 @@ void assignRandomValueInDomainImpl(const SetDomain& domain,
         InnerValueRefType;
     auto& valImpl =
         mpark::get<SetValueImpl<InnerValueRefType>>(val.setValueImpl);
-    u_int64_t sizeRange =
-        (domain.sizeAttr.maxSize - domain.sizeAttr.minSize) + 1;
-    // randomly choose a new size, todo, this to be improved
-    size_t newNumberElements = domain.sizeAttr.minSize + (rand() % sizeRange);
+    size_t newNumberElements =
+        globalRandom(domain.sizeAttr.minSize, domain.sizeAttr.maxSize);
     // clear set and populate with new random elements
     valImpl.removeAllValues(val);
     while (newNumberElements > valImpl.members.size()) {

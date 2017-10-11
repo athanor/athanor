@@ -9,7 +9,7 @@ struct IntTrigger {
 };
 
 using IntProducing =
-    mpark::variant<std::shared_ptr<IntValue>, std::shared_ptr<OpSetSize>>;
+    mpark::variant<ValRef<IntValue>, std::shared_ptr<OpSetSize>>;
 
 struct IntView {
     int64_t& value;

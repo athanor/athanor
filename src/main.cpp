@@ -3,6 +3,7 @@
 #include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/setOperators.h"
+#include "search/solver.h"
 #include "types/allTypes.h"
 #include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/print.h"
@@ -10,6 +11,9 @@
 using namespace std;
 
 int main() {
+    ValRef<IntValue> a = construct<IntValue>();
+    ValRef<IntValue> b = construct<IntValue>();
+    a = b;
     SetDomain s(noSize(), IntDomain({intBound(1, 5)}));
     auto val = construct<SetValue>();
     matchInnerType(s, *val);

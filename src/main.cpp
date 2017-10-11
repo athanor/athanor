@@ -4,7 +4,6 @@
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/setOperators.h"
 #include "types/allTypes.h"
-#include "types/forwardDecls/constructValue.h"
 #include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/print.h"
 #include "utils/hashUtils.h"

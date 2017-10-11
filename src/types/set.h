@@ -54,7 +54,7 @@ struct SetValueImpl {
     inline void changeMemberValue(Func&& func, SetValue& value,
                                   size_t memberIndex) {
         u_int64_t hash = mix(getValueHash(*members[memberIndex]));
-        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
+        for (auto& t : getSetTriggers(value)) {
             t->possibleValueChange(members[memberIndex]);
         }
         func();
@@ -63,7 +63,7 @@ struct SetValueImpl {
         hash = mix(getValueHash(*members[memberIndex]));
         memberHashes.insert(hash);
         cachedHashTotal += hash;
-        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
+        for (auto& t : getSetTriggers(value)) {
             t->valueChanged(members[memberIndex]);
         }
     }
@@ -75,24 +75,22 @@ struct SetValueImpl {
         u_int64_t hash = mix(getValueHash(*member));
         memberHashes.erase(hash);
         cachedHashTotal -= hash;
-        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
+        for (auto& t : getSetTriggers(value)) {
             t->valueRemoved(member);
         }
         return member;
     }
 
-    std::vector<Inner> removeAllValues(SetValue& value) {
-        std::vector<Inner> membersBackup = std::move(members);
-        members = {};
-        for (auto& member : membersBackup) {
+    void removeAllValues(SetValue& value) {
+        while (!members.empty()) {
+            auto& member = members.back();
             u_int64_t hash = mix(getValueHash(*member));
             memberHashes.erase(hash);
             cachedHashTotal -= hash;
-            for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
+            for (auto& t : getSetTriggers(value)) {
                 t->valueRemoved(member);
             }
         }
-        return membersBackup;
     }
     inline bool addValue(SetValue& value, const Inner& member) {
         if (containsMember(member)) {
@@ -102,21 +100,20 @@ struct SetValueImpl {
         u_int64_t hash = mix(getValueHash(*member));
         memberHashes.insert(hash);
         cachedHashTotal += hash;
-        for (std::shared_ptr<SetTrigger>& t : getSetTriggers(value)) {
+        for (auto& t : getSetTriggers(value)) {
             t->valueAdded(members.back());
         }
         return true;
     }
 };
 
-#define variantValues(T) SetValueImpl<std::shared_ptr<T##Value>>
+#define variantValues(T) SetValueImpl<ValRef<T##Value>>
 typedef mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>
     SetValueImplWrapper;
 #undef variantValues
 
 struct SetValue {
-    SetValueImplWrapper setValueImpl =
-        SetValueImpl<std::shared_ptr<IntValue>>();
+    SetValueImplWrapper setValueImpl = SetValueImpl<ValRef<IntValue>>();
     std::vector<std::shared_ptr<SetTrigger>> triggers;
 };
 

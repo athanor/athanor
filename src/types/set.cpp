@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <cassert>
 #include "common/common.h"
-#include "types/forwardDecls/constructValue.h"
 #include "types/forwardDecls/copy.h"
 #include "types/forwardDecls/getDomainSize.h"
 #include "types/forwardDecls/hash.h"
@@ -35,27 +34,16 @@ ostream& prettyPrint(ostream& os, const SetValue& v) {
     return os;
 }
 
-template <typename InnerValuePtrType>
-void deepCopyImpl(const SetValueImpl<InnerValuePtrType>& srcImpl,
+template <typename InnerValueRefType>
+void deepCopyImpl(const SetValueImpl<InnerValueRefType>& srcImpl,
                   SetValue& target) {
     auto& targetImpl =
-        mpark::get<SetValueImpl<InnerValuePtrType>>(target.setValueImpl);
-    targetImpl.memberHashes = srcImpl.memberHashes;
-    targetImpl.cachedHashTotal = srcImpl.cachedHashTotal;
-    if (srcImpl.members.size() < targetImpl.members.size()) {
-        targetImpl.members.erase(
-            targetImpl.members.begin() + srcImpl.members.size(),
-            targetImpl.members.end());
+        mpark::get<SetValueImpl<InnerValueRefType>>(target.setValueImpl);
+    // to be optimised later
+    targetImpl.removeAllValues(target);
+    for (auto& member : srcImpl.members) {
+        targetImpl.addValue(target, deepCopy(*member));
     }
-    while (srcImpl.members.size() > targetImpl.members.size()) {
-        auto member = construct<typename InnerValuePtrType::element_type>();
-        matchInnerType(*srcImpl.members[0], *member);
-        targetImpl.members.push_back(std::move(member));
-    }
-
-    transform(srcImpl.members.begin(), srcImpl.members.end(),
-              targetImpl.members.begin(),
-              [](auto& srcMemberPtr) { return deepCopy(*srcMemberPtr); });
 }
 
 void deepCopy(const SetValue& src, SetValue& target) {
@@ -82,12 +70,12 @@ SetView getSetView(SetValue& val) {
         val.setValueImpl);
 }
 
-template <typename InnerValuePtrType>
-void matchInnerTypeImpl(const SetValueImpl<InnerValuePtrType>&,
+template <typename InnerValueRefType>
+void matchInnerTypeImpl(const SetValueImpl<InnerValueRefType>&,
                         SetValue& target) {
-    if (mpark::get_if<SetValueImpl<InnerValuePtrType>>(
+    if (mpark::get_if<SetValueImpl<InnerValueRefType>>(
             &(target.setValueImpl)) == NULL) {
-        target.setValueImpl = SetValueImpl<InnerValuePtrType>();
+        target.setValueImpl = SetValueImpl<InnerValueRefType>();
     }
 }
 
@@ -98,12 +86,12 @@ void matchInnerType(const SetValue& src, SetValue& target) {
 
 template <typename InnerDomainPtrType>
 void matchInnerTypeFromDomain(const InnerDomainPtrType&, SetValue& target) {
-    typedef shared_ptr<typename AssociatedValueType<
+    typedef ValRef<typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type>
-        InnerValuePtrType;
-    if (mpark::get_if<SetValueImpl<InnerValuePtrType>>(
+        InnerValueRefType;
+    if (mpark::get_if<SetValueImpl<InnerValueRefType>>(
             &(target.setValueImpl)) == NULL) {
-        target.setValueImpl = SetValueImpl<InnerValuePtrType>();
+        target.setValueImpl = SetValueImpl<InnerValueRefType>();
     }
 }
 
@@ -117,4 +105,16 @@ void matchInnerType(const SetDomain& domain, SetValue& target) {
 
 u_int64_t getDomainSize(const SetDomain& domain) {
     return 1 << getDomainSize(domain.inner);
+}
+
+template <typename InnerValueRefType>
+void resetImpl(SetValue& val, SetValueImpl<InnerValueRefType>& valImpl) {
+    val.triggers.clear();
+    valImpl.members.clear();
+    valImpl.memberHashes.clear();
+    valImpl.cachedHashTotal = 0;
+}
+void reset(SetValue& val) {
+    mpark::visit([&](auto& valImpl) { resetImpl(val, valImpl); },
+                 val.setValueImpl);
 }

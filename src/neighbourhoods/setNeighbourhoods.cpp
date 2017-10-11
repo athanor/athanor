@@ -1,42 +1,28 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
-#include "types/forwardDecls/constructValue.h"
 #include "types/set.h"
+using namespace std;
 template <typename InnerDomainPtrType>
 void assignRandomValueInDomainImpl(const SetDomain& domain,
                                    const InnerDomainPtrType& innerDomainPtr,
                                    SetValue& val) {
-    typedef std::shared_ptr<typename AssociatedValueType<
+    typedef ValRef<typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type>
-        InnerValuePtrType;
+        InnerValueRefType;
     auto& valImpl =
-        mpark::get<SetValueImpl<InnerValuePtrType>>(val.setValueImpl);
+        mpark::get<SetValueImpl<InnerValueRefType>>(val.setValueImpl);
     u_int64_t sizeRange =
         (domain.sizeAttr.maxSize - domain.sizeAttr.minSize) + 1;
     // randomly choose a new size, todo, this to be improved
-    size_t newNumberElements =
-        domain.sizeAttr.minSize + (std::rand() % sizeRange);
+    size_t newNumberElements = domain.sizeAttr.minSize + (rand() % sizeRange);
     // clear set and populate with new random elements
-    // reuse memory for existing members instead of dealocating them
-    std::vector<InnerValuePtrType> newMembers = valImpl.removeAllValues(val);
-    // remove members that are not needed
-    if (newNumberElements < newMembers.size()) {
-        newMembers.erase(newMembers.begin() + newNumberElements,
-                         newMembers.end());
-    }
-    // otherwise, if not enough elements, add more
-    newMembers.reserve(newNumberElements);
-    while (newNumberElements > newMembers.size()) {
-        newMembers.push_back(
-            construct<typename InnerValuePtrType::element_type>());
-        matchInnerType(*innerDomainPtr, *newMembers.back());
-    }
-    // now randomly assign elements and add to the set
-    while (!newMembers.empty()) {
+    valImpl.removeAllValues(val);
+    while (newNumberElements > valImpl.members.size()) {
+        auto newMember = construct<typename InnerValueRefType::element_type>();
+        matchInnerType(*innerDomainPtr, *newMember);
         do {
-            assignRandomValueInDomain(*innerDomainPtr, *newMembers.back());
-        } while (!valImpl.addValue(val, newMembers.back()));
-        newMembers.pop_back();
+            assignRandomValueInDomain(*innerDomainPtr, *newMember);
+        } while (!valImpl.addValue(val, newMember));
     }
 }
 void assignRandomValueInDomain(const SetDomain& domain, SetValue& val) {

@@ -37,3 +37,5 @@ void matchInnerType(const IntValue&, IntValue&) {}
 void matchInnerType(const IntDomain&, IntValue&) {}
 
 u_int64_t getDomainSize(const IntDomain& domain) { return domain.domainSize; }
+
+void reset(IntValue& val) { val.triggers.clear(); }

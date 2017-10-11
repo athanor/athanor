@@ -19,15 +19,66 @@ using BaseType =
 buildForAllTypes(declDomainsAndValues, )
 #undef declDomainsAndValues
 
+    // ref type used for values, allows memory to be reused
+    template <typename T>
+    class ValRef;
+
+// method declarations used to construct ValRefs as well as methods to reset
+// their state when saving their memory
+template <typename ValueType>
+ValRef<ValueType> construct();
+
+#define constructFunctions(name)                           \
+    template <>                                            \
+    ValRef<name##Value> construct<name##Value>();          \
+    void reset(name##Value& value);                        \
+    void saveMemory(std::shared_ptr<name##Value>& ref);    \
+    void matchInnerType(const name##Value&, name##Value&); \
+                                                           \
+    void matchInnerType(const name##Domain&, name##Value&);
+
+buildForAllTypes(constructFunctions, )
+#undef constructFunctions
+
+    template <typename T>
+    class ValRef {
+   public:
+    typedef T element_type;
+
+   private:
+    std::shared_ptr<T> ref;
+
+   public:
+    ValRef(std::shared_ptr<T> ref) : ref(std::move(ref)) {}
+    ValRef(const ValRef<T>& other) : ref(other.ref) {}
+    ValRef(ValRef<T>&& other) { std::swap(ref, other.ref); }
+    ~ValRef() {
+        if (!ref) {
+            return;
+        }
+        reset(*ref);
+        if (ref.use_count() == 1) {
+            saveMemory(ref);
+        }
+    }
+    inline decltype(auto) operator*() { return ref.operator*(); }
+    inline decltype(auto) operator-> () { return ref.operator->(); }
+    inline decltype(auto) operator*() const { return ref.operator*(); }
+    inline decltype(auto) operator-> () const { return ref.operator->(); }
+};
+
 // declare variant for values
-#define variantValues(T) std::shared_ptr<T##Value>
-    using Value = mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
+#define variantValues(T) ValRef<T##Value>
+using Value = mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
 #undef variantValues
 
 // declare variant for domains
 #define variantDomains(T) std::shared_ptr<T##Domain>
 using Domain = mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
 #undef variantDomains
+
+#undef variantValues
+
 // calll back used by nested values to determine if their parent allows such a
 // value
 typedef StackFunction<bool()> ParentCheck;
@@ -88,8 +139,8 @@ getAssociatedValue(DomainType&, const Value& value) {
         std::shared_ptr<typename AssociatedValueType<DomainType>::type>>(value);
 }
 
-    // size attr for domains
-    struct SizeAttr {
+// size attr for domains
+struct SizeAttr {
     enum class SizeAttrType {
         NO_SIZE,
         EXACT_SIZE,

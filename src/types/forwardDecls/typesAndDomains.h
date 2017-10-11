@@ -52,7 +52,10 @@ buildForAllTypes(constructFunctions, )
     ValRef(std::shared_ptr<T> ref) : ref(std::move(ref)) {}
     ValRef(const ValRef<T>& other) : ref(other.ref) {}
     ValRef(ValRef<T>&& other) { std::swap(ref, other.ref); }
-    inline ValRef& operator=(const ValRef& other) { ref = other.ref; }
+    inline ValRef& operator=(const ValRef& other) {
+        ref = other.ref;
+        return *this;
+    }
     ~ValRef() {
         if (!ref) {
             return;

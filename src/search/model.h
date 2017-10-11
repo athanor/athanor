@@ -5,16 +5,17 @@
 #include "operators/intProducing.h"
 #include "types/forwardDecls/typesAndDomains.h"
 class ModelBuilder;
-
+enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
 class Model {
     friend ModelBuilder;
     std::vector<Value> variables;
     OpAnd csp;
     IntProducing objective;
-    bool optimiseMode;
+    OptimiseMode optimiseMode;
+    ;
 
     Model(std::vector<Value> variables, std::vector<BoolProducing> constraints,
-          IntProducing objective, bool optimiseMode)
+          IntProducing objective, OptimiseMode optimiseMode)
         : variables(std::move(variables)),
           csp(std::move(constraints)),
           objective(std::move(objective)),
@@ -27,7 +28,7 @@ class ModelBuilder {
     IntProducing objective = construct<IntValue>();  // non applicable default
                                                      // to avoid undefined
                                                      // variant
-    bool optimiseMode = false;
+    OptimiseMode optimiseMode = OptimiseMode::NONE;
 
    public:
     ModelBuilder() {}
@@ -40,9 +41,10 @@ class ModelBuilder {
         variables.emplace_back();
         return variables.back().emplace<ValRef<ValueType>>();
     }
-    inline void setObjective(IntProducing obj) {
+    inline void setObjective(OptimiseMode mode, IntProducing obj) {
         objective = std::move(obj);
-        optimiseMode = true;
+        optimiseMode = mode;
+        ;
     }
     Model build() {
         return Model(variables, std::move(constraints), std::move(objective),

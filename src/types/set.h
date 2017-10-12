@@ -57,7 +57,10 @@ struct SetValueImpl {
         for (auto& t : getSetTriggers(value)) {
             t->possibleValueChange(members[memberIndex]);
         }
-        func();
+        bool valueChanged = func();
+        if (!valueChanged) {
+            return;
+        }
         memberHashes.erase(hash);
         cachedHashTotal -= hash;
         hash = mix(getValueHash(*members[memberIndex]));

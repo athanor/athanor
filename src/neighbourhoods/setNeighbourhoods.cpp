@@ -31,3 +31,5 @@ void assignRandomValueInDomain(const SetDomain& domain, SetValue& val) {
         },
         domain.inner);
 }
+const NeighbourhoodGenList<SetDomain>::type
+    NeighbourhoodGenList<SetDomain>::value = {};

@@ -1,5 +1,6 @@
 #include <cassert>
 #include <random>
+#include "neighbourhoods/neighbourhoods.h"
 #include "types/int.h"
 #include "utils/random.h"
 void assignRandomValueInDomain(const IntDomain& domain, IntValue& val) {
@@ -17,3 +18,6 @@ void assignRandomValueInDomain(const IntDomain& domain, IntValue& val) {
     assert(false);
     abort();
 }
+
+const NeighbourhoodGenList<IntDomain>::type
+    NeighbourhoodGenList<IntDomain>::value = {};

@@ -13,7 +13,9 @@ buildForAllTypes(assignRandomFunctions, )
     typedef std::function<bool()> AcceptanceCallBack;
 struct Neighbourhood {
     std::string name;
-    std::function<void(const AcceptanceCallBack&)> apply;
+    std::function<void(const AcceptanceCallBack&, Value& backUpDestination,
+                       SetValue& primary)>
+        apply;
 };
 
 template <typename DomainType>

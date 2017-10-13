@@ -35,19 +35,21 @@ buildForAllTypes(makeGeneratorDecls, )
 #undef makeGeneratorDecls
 
     template <typename DomainPtrType>
-    inline std::vector<Neighbourhood> generateNeighbourhoodsImpl(
-        const DomainPtrType& domainImpl) {
-    std::vector<Neighbourhood> neighbourhoods;
+    inline void generateNeighbourhoodsImpl(
+        const DomainPtrType& domainImpl,
+        std::vector<Neighbourhood> neighbourhoods) {
     for (auto& generator :
          NeighbourhoodGenList<typename DomainPtrType::element_type>::value) {
         generator(*domainImpl, neighbourhoods);
     }
-    return neighbourhoods;
 }
 
-inline std::vector<Neighbourhood> generateNeighbourhoods(const Domain domain) {
-    return mpark::visit(
-        [](auto& domainImpl) { return generateNeighbourhoodsImpl(domainImpl); },
+inline void generateNeighbourhoods(const Domain domain,
+                                   std::vector<Neighbourhood> neighbourhoods) {
+    mpark::visit(
+        [&](auto& domainImpl) {
+            generateNeighbourhoodsImpl(domainImpl, neighbourhoods);
+        },
         domain);
 }
 #endif /* SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_ */

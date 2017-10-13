@@ -14,4 +14,10 @@ buildForAllTypes(makeDeepCopyDecl, )
     deepCopy(src, *target);
     return target;
 }
+
+inline Value deepCopyValue(const Value& val) {
+    return mpark::visit([] (const auto& valImpl) { return Value(deepCopy(*valImpl)); },
+                        val);
+}
+
 #endif /* SRC_TYPES_FORWARDDECLS_COPY_H_ */

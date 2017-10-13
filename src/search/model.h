@@ -9,7 +9,7 @@
 #include "types/forwardDecls/typesAndDomains.h"
 class ModelBuilder;
 enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
-class Model {
+struct Model {
     friend ModelBuilder;
     std::vector<std::pair<Domain, Value>> variables;
     std::vector<std::pair<Domain, Value>> variablesBackup;  // not used at the
@@ -21,8 +21,8 @@ class Model {
     OpAnd csp;
     IntProducing objective;
     OptimiseMode optimiseMode;
-    ;
 
+   private:
     Model(std::vector<std::pair<Domain, Value>> variables,
           std::vector<std::pair<Domain, Value>> variablesBackup,
           std::vector<Neighbourhood> neighbourhoods,
@@ -54,8 +54,14 @@ class ModelBuilder {
     }
     template <typename ValueType>
     inline ValRef<ValueType> addVariable(Domain d) {
-        variables.emplace_back(d, Value(ValRef<IntValue>(nullptr)));
-        return variables.back().second.emplace<ValRef<ValueType>>();
+        variables.emplace_back(d, Value(ValRef<ValueType>(nullptr)));
+        auto& val = variables.back().second.emplace<ValRef<ValueType>>(
+            construct<ValueType>());
+        typedef std::shared_ptr<typename AssociatedDomain<ValueType>::type>
+            DomainPtrType;
+        auto& domainImpl = mpark::get<DomainPtrType>(d);
+        matchInnerType(*domainImpl, *val);
+        return val;
     }
     inline void setObjective(OptimiseMode mode, IntProducing obj) {
         objective = std::move(obj);

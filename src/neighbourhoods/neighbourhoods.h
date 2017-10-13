@@ -10,7 +10,18 @@
 buildForAllTypes(assignRandomFunctions, )
 #undef assignRandomFunctions
 
-    typedef std::function<bool()> AcceptanceCallBack;
+    inline void assignRandomValueInDomain(const Domain& domain, Value& val) {
+    mpark::visit(
+        [&](auto& domainImpl) {
+            typedef typename BaseType<decltype(domainImpl)>::element_type
+                DomainType;
+            typedef ValRef<typename AssociatedValueType<DomainType>::type>
+                ValueType;
+            assignRandomValueInDomain(*domainImpl, *mpark::get<ValueType>(val));
+        },
+        domain);
+}
+typedef std::function<bool()> AcceptanceCallBack;
 struct Neighbourhood {
     typedef std::function<void(const AcceptanceCallBack&,
                                Value& backUpDestination, Value& primary)>

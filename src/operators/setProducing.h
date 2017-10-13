@@ -13,7 +13,7 @@ struct SetTrigger {
 };
 
 using SetProducing =
-    mpark::variant<std::shared_ptr<SetValue>, std::shared_ptr<OpSetIntersect>>;
+    mpark::variant<ValRef<SetValue>, std::shared_ptr<OpSetIntersect>>;
 
 struct SetView {
     std::unordered_set<u_int64_t>& memberHashes;

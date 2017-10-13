@@ -11,14 +11,14 @@
 using namespace std;
 
 int main() {
-    ValRef<IntValue> a = construct<IntValue>();
-    ValRef<IntValue> b = construct<IntValue>();
-    a = b;
-    SetDomain s(noSize(), IntDomain({intBound(1, 5)}));
-    auto val = construct<SetValue>();
-    matchInnerType(s, *val);
-    for (int i = 0; i < 5; ++i) {
-        assignRandomValueInDomain(s, *val);
-        prettyPrint(cout, val) << endl;
-    }
+    ModelBuilder builder;
+    Domain domain =
+        make_shared<SetDomain>(noSize(), IntDomain({intBound(1, 4)}));
+    auto a = builder.addVariable<SetValue>(domain);
+    auto b = builder.addVariable<SetValue>(domain);
+    builder.setObjective(
+        OptimiseMode::MAXIMISE,
+        make_shared<OpSetSize>(make_shared<OpSetIntersect>(a, b)));
+    HillClimber<RandomNeighbourhoodSelection> search(builder.build());
+    search.search();
 }

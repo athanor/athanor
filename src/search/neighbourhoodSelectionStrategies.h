@@ -6,15 +6,14 @@
 #include "utils/random.h"
 class NeighbourhoodResult {};
 class RandomNeighbourhoodSelection {
-    std::vector<u_int32_t> availableNeighbourhoods;
+    const int numberNeighbourhoods;
 
    public:
-    RandomNeighbourhoodSelection(std::vector<u_int32_t> availableNeighbourhoods)
-        : availableNeighbourhoods(std::move(availableNeighbourhoods)) {}
+    RandomNeighbourhoodSelection(const int numberNeighbourhoods)
+        : numberNeighbourhoods(numberNeighbourhoods) {}
 
-    u_int32_t nextNeighbourhood() {
-        return availableNeighbourhoods[globalRandom<u_int32_t>(
-            0, availableNeighbourhoods.size() - 1)];
+    inline u_int32_t nextNeighbourhood() {
+        return globalRandom<u_int32_t>(0, numberNeighbourhoods - 1);
     }
     inline void reportResult(const NeighbourhoodResult&) {}
 };
@@ -22,7 +21,7 @@ class ExhaustiveRandomNeighbourhoodSelection {
     std::vector<u_int32_t> availableNeighbourhoods;
     size_t currentIndex;
 
-    void reshuffle() {
+    inline void reshuffle() {
         currentIndex = 0;
         std::random_shuffle(availableNeighbourhoods.begin(),
                             availableNeighbourhoods.end(),
@@ -30,9 +29,10 @@ class ExhaustiveRandomNeighbourhoodSelection {
     }
 
    public:
-    ExhaustiveRandomNeighbourhoodSelection(
-        std::vector<u_int32_t> availableNeighbourhoods)
-        : availableNeighbourhoods(std::move(availableNeighbourhoods)) {
+    ExhaustiveRandomNeighbourhoodSelection(const int numberNeighbourhoods)
+        : availableNeighbourhoods(numberNeighbourhoods) {
+        std::iota(availableNeighbourhoods.begin(),
+                  availableNeighbourhoods.end(), 0);
         reshuffle();
     }
 

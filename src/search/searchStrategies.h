@@ -28,19 +28,24 @@ class HillClimber {
             prettyPrint(std::cout, var.second) << std::endl;
         }
         int bestObj = objView.value;
-        AcceptanceCallBack callback = [&]() { return objView.value > bestObj; };
+        AcceptanceCallBack callback = [&]() {
+            return objView.value >= bestObj;
+        };
         while (true) {
             int nextNeighbourhoodIndex = selectionStrategy.nextNeighbourhood();
             Neighbourhood& neighbourhood =
                 model.neighbourhoods[nextNeighbourhoodIndex];
-            std::cout << "Trying neighbourhood: " << neighbourhood.name
-                      << std::endl;
             auto& var =
                 model.variables
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
             auto& varBackup =
                 model.variablesBackup
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
+            prettyPrint(std::cout << "Trying neighbourhood: "
+                                  << neighbourhood.name << " on variable ",
+                        var.second)
+                << std::endl;
+
             neighbourhood.apply(callback, varBackup.second, var.second);
             if (objView.value > bestObj) {
                 bestObj = objView.value;

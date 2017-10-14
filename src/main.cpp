@@ -12,10 +12,9 @@ using namespace std;
 
 int main() {
     ModelBuilder builder;
-    Domain domain =
-        make_shared<SetDomain>(noSize(), IntDomain({intBound(1, 4)}));
-    auto a = builder.addVariable<SetValue>(domain);
-    auto b = builder.addVariable<SetValue>(domain);
+    auto domain = make_shared<SetDomain>(noSize(), IntDomain({intBound(1, 4)}));
+    auto a = builder.addVariable(domain);
+    auto b = builder.addVariable(domain);
     builder.setObjective(
         OptimiseMode::MAXIMISE,
         make_shared<OpSetSize>(make_shared<OpSetIntersect>(a, b)));

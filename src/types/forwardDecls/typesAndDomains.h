@@ -26,17 +26,14 @@ buildForAllTypes(declDomainsAndValues, )
 
 // method declarations used to construct ValRefs as well as methods to reset
 // their state when saving their memory
-template <typename ValueType>
-ValRef<ValueType> construct();
+// These methods don't have to be individually implemented in each type, they
+// are implemented already in globalDefinitions.h.
 
-#define constructFunctions(name)                           \
-    template <>                                            \
-    ValRef<name##Value> construct<name##Value>();          \
-    void reset(name##Value& value);                        \
-    void saveMemory(std::shared_ptr<name##Value>& ref);    \
-    void matchInnerType(const name##Value&, name##Value&); \
-                                                           \
-    void matchInnerType(const name##Domain&, name##Value&);
+#define constructFunctions(name)                                       \
+    ValRef<name##Value> constructValueFromDomain(const name##Domain&); \
+    ValRef<name##Value> constructValueOfSameType(const name##Value&);  \
+    void reset(name##Value& value);                                    \
+    void saveMemory(std::shared_ptr<name##Value>& ref);
 
 buildForAllTypes(constructFunctions, )
 #undef constructFunctions

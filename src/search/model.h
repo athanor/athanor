@@ -8,6 +8,7 @@
 #include "operators/intProducing.h"
 #include "types/forwardDecls/copy.h"
 #include "types/forwardDecls/typesAndDomains.h"
+#include "types/int.h"
 class ModelBuilder;
 enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
 struct Model {
@@ -42,9 +43,10 @@ struct Model {
 class ModelBuilder {
     std::vector<std::pair<Domain, Value>> variables;
     std::vector<BoolProducing> constraints;
-    IntProducing objective = construct<IntValue>();  // non applicable default
-                                                     // to avoid undefined
-                                                     // variant
+    IntProducing objective = constructValueFromDomain(
+        IntDomain({intBound(0, 0)}));  // non applicable default
+                                       // to avoid undefined
+                                       // variant
     OptimiseMode optimiseMode = OptimiseMode::NONE;
 
    public:
@@ -53,17 +55,17 @@ class ModelBuilder {
     inline void addConstraint(BoolProducing constraint) {
         constraints.emplace_back(std::move(constraint));
     }
-    template <typename ValueType>
-    inline ValRef<ValueType> addVariable(Domain d) {
-        variables.emplace_back(d, Value(ValRef<ValueType>(nullptr)));
+    template <typename DomainPtrType,
+              typename ValueType = typename AssociatedValueType<
+                  typename DomainPtrType::element_type>::type>
+    inline ValRef<ValueType> addVariable(const DomainPtrType& domainImpl) {
+        variables.emplace_back(Domain(domainImpl),
+                               Value(ValRef<ValueType>(nullptr)));
         auto& val = variables.back().second.emplace<ValRef<ValueType>>(
-            construct<ValueType>());
-        typedef std::shared_ptr<typename AssociatedDomain<ValueType>::type>
-            DomainPtrType;
-        auto& domainImpl = mpark::get<DomainPtrType>(d);
-        matchInnerType(*domainImpl, *val);
+            constructValueFromDomain(*domainImpl));
         return val;
     }
+
     inline void setObjective(OptimiseMode mode, IntProducing obj) {
         objective = std::move(obj);
         optimiseMode = mode;

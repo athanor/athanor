@@ -3,6 +3,7 @@
 #include "neighbourhoods/neighbourhoods.h"
 #include "types/forwardDecls/copy.h"
 #include "types/forwardDecls/getDomainSize.h"
+#include "types/forwardDecls/print.h"
 #include "types/set.h"
 #include "utils/random.h"
 using namespace std;
@@ -20,8 +21,7 @@ void assignRandomValueInDomainImpl(const SetDomain& domain,
     // clear set and populate with new random elements
     valImpl.removeAllValues(val);
     while (newNumberElements > valImpl.members.size()) {
-        auto newMember = construct<typename InnerValueRefType::element_type>();
-        matchInnerType(*innerDomainPtr, *newMember);
+        auto newMember = constructValueFromDomain(*innerDomainPtr);
         do {
             assignRandomValueInDomain(*innerDomainPtr, *newMember);
         } while (!valImpl.addValue(val, newMember));
@@ -35,7 +35,8 @@ void assignRandomValueInDomain(const SetDomain& domain, SetValue& val) {
         },
         domain.inner);
 }
-const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 4;
+
+const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
 int getTryLimit(u_int64_t numberMembers, u_int64_t domainSize) {
     double successChance = (domainSize - numberMembers) / (double)domainSize;
     return (int)(ceil(NUMBER_TRIES_CONSTANT_MULTIPLIER / successChance));
@@ -63,9 +64,7 @@ void setAddGen(const SetDomain& domain,
                     if (valImpl.members.size() == domain.sizeAttr.maxSize) {
                         return;
                     }
-                    auto newMember =
-                        construct<typename InnerValueRefType::element_type>();
-                    matchInnerType(*innerDomainPtr, *newMember);
+                    auto newMember = constructValueFromDomain(*innerDomainPtr);
                     int numberTries = 0;
                     const int tryLimit =
                         getTryLimit(valImpl.members.size(), innerDomainSize);
@@ -144,9 +143,7 @@ void setSwapGen(const SetDomain& domain,
                     bool success = false;
                     auto memberBackup =
                         deepCopy(*valImpl.members[indexToChange]);
-                    auto newMember =
-                        construct<typename InnerValueRefType::element_type>();
-                    matchInnerType(*innerDomainPtr, *newMember);
+                    auto newMember = constructValueFromDomain(*innerDomainPtr);
 
                     valImpl.changeMemberValue(
                         [&]() {

@@ -2,6 +2,7 @@
 #ifndef SRC_SEARCH_NEIGHBOURHOODSELECTIONSTRATEGIES_H_
 #define SRC_SEARCH_NEIGHBOURHOODSELECTIONSTRATEGIES_H_
 #include <algorithm>
+#include <cassert>
 #include <vector>
 #include "utils/random.h"
 class NeighbourhoodResult {};
@@ -10,7 +11,9 @@ class RandomNeighbourhoodSelection {
 
    public:
     RandomNeighbourhoodSelection(const int numberNeighbourhoods)
-        : numberNeighbourhoods(numberNeighbourhoods) {}
+        : numberNeighbourhoods(numberNeighbourhoods) {
+        assert(this->numberNeighbourhoods > 0);
+    }
 
     inline u_int32_t nextNeighbourhood() {
         return globalRandom<u_int32_t>(0, numberNeighbourhoods - 1);

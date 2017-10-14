@@ -48,7 +48,7 @@ buildForAllTypes(makeGeneratorDecls, )
     template <typename DomainPtrType>
     inline void generateNeighbourhoodsImpl(
         const DomainPtrType& domainImpl,
-        std::vector<Neighbourhood> neighbourhoods) {
+        std::vector<Neighbourhood>& neighbourhoods) {
     for (auto& generator :
          NeighbourhoodGenList<typename DomainPtrType::element_type>::value) {
         generator(*domainImpl, neighbourhoods);
@@ -56,7 +56,7 @@ buildForAllTypes(makeGeneratorDecls, )
 }
 
 inline void generateNeighbourhoods(const Domain domain,
-                                   std::vector<Neighbourhood> neighbourhoods) {
+                                   std::vector<Neighbourhood>& neighbourhoods) {
     mpark::visit(
         [&](auto& domainImpl) {
             generateNeighbourhoodsImpl(domainImpl, neighbourhoods);

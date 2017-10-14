@@ -27,7 +27,7 @@ template <class... Fs>
 OverLoaded<Fs...> overloaded(Fs&&... fs) {
     return OverLoaded<Fs...>(std::forward<Fs>(fs)...);
 }
-
+/*
 template <class T>
 struct AlwaysFalse : std::false_type {};
 
@@ -38,5 +38,5 @@ struct AlwaysFalse : std::false_type {};
 #define nonExhaustiveError(variant_value)                                    \
     static_assert(AlwaysFalse<std::decay_t<decltype(variant_value)>>::value, \
                   "non-exhaustive visitor!");
-
+*/
 #endif /* SRC_VARIANTOPERATIONS_H_ */

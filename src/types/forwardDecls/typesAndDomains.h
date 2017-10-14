@@ -3,6 +3,7 @@
 #include <utils/stackFunction.h>
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include "utils/variantOperations.h"
 #define buildForAllTypes(f, sep) f(Bool) sep f(Int) sep f(Set)

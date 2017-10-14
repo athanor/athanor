@@ -14,7 +14,7 @@ class HillClimber {
    public:
     HillClimber(Model model)
         : model(std::move(model)),
-          selectionStrategy(model.neighbourhoods.size()) {}
+          selectionStrategy(this->model.neighbourhoods.size()) {}
     void search() {
         assert(model.optimiseMode != OptimiseMode::NONE);
         IntView objView = getIntView(model.objective);

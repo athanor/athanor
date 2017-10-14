@@ -1,6 +1,7 @@
 #ifndef SRC_OPERATORS_SETPRODUCING_H_
 #define SRC_OPERATORS_SETPRODUCING_H_
 #include <unordered_set>
+#include <vector>
 #include "types/forwardDecls/typesAndDomains.h"
 
 struct OpSetIntersect;

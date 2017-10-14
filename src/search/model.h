@@ -1,6 +1,7 @@
 #ifndef SRC_SEARCH_MODEL_H_
 #define SRC_SEARCH_MODEL_H_
 #include <algorithm>
+#include <cassert>
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/boolOperators.h"
 #include "operators/boolProducing.h"
@@ -79,6 +80,7 @@ class ModelBuilder {
                 neighbourhoodVarMapping.end(),
                 neighbourhoods.size() - previousNumberNeighbourhoods, i);
         }
+        assert(neighbourhoods.size() > 0);
         std::vector<std::pair<Domain, Value>> variablesBackup;
         std::transform(variables.begin(), variables.end(),
                        std::back_inserter(variablesBackup), [](auto& var) {

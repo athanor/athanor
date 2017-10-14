@@ -2,14 +2,15 @@
 #define SRC_OPERATORS_INTPRODUCING_H_
 #include "types/forwardDecls/typesAndDomains.h"
 struct OpSetSize;
-
+struct OpSum;
 struct IntTrigger {
     virtual void possibleValueChange(int64_t value) = 0;
     virtual void valueChanged(int64_t value) = 0;
 };
 
 using IntProducing =
-    mpark::variant<ValRef<IntValue>, std::shared_ptr<OpSetSize>>;
+    mpark::variant<ValRef<IntValue>, std::shared_ptr<OpSetSize>,
+                   std::shared_ptr<OpSum>>;
 
 struct IntView {
     int64_t& value;
@@ -19,6 +20,8 @@ struct IntView {
 };
 IntView getIntView(IntValue& value);
 IntView getIntView(OpSetSize& op);
+IntView getIntView(OpSum& op);
+
 inline IntView getIntView(IntProducing& val) {
     return mpark::visit([&](auto& valImpl) { return getIntView(*valImpl); },
                         val);

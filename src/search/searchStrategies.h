@@ -33,6 +33,8 @@ class HillClimber {
             int nextNeighbourhoodIndex = selectionStrategy.nextNeighbourhood();
             Neighbourhood& neighbourhood =
                 model.neighbourhoods[nextNeighbourhoodIndex];
+            std::cout << "Trying neighbourhood: " << neighbourhood.name
+                      << std::endl;
             auto& var =
                 model.variables
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];

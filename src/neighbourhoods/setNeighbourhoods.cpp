@@ -27,6 +27,7 @@ void assignRandomValueInDomainImpl(const SetDomain& domain,
         } while (!valImpl.addValue(val, newMember));
     }
 }
+
 void assignRandomValueInDomain(const SetDomain& domain, SetValue& val) {
     mpark::visit(
         [&](auto& innerDomainPtr) {
@@ -34,7 +35,7 @@ void assignRandomValueInDomain(const SetDomain& domain, SetValue& val) {
         },
         domain.inner);
 }
-const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
+const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 4;
 int getTryLimit(u_int64_t numberMembers, u_int64_t domainSize) {
     double successChance = (domainSize - numberMembers) / (double)domainSize;
     return (int)(ceil(NUMBER_TRIES_CONSTANT_MULTIPLIER / successChance));
@@ -132,6 +133,9 @@ void setSwapGen(const SetDomain& domain,
                     auto& val = *mpark::get<ValRef<SetValue>>(primary);
                     auto& valImpl = mpark::get<SetValueImpl<InnerValueRefType>>(
                         val.setValueImpl);
+                    if (valImpl.members.size() == 0) {
+                        return;
+                    }
                     const int tryLimit =
                         getTryLimit(valImpl.members.size(), innerDomainSize);
                     int numberTries = 0;

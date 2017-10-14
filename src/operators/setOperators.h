@@ -64,7 +64,8 @@ struct OpSetIntersect {
 
         inline void valueChanged(const Value& member) final {
             u_int64_t newHashOfMember = mix(getValueHash(member));
-            if (newHashOfMember == *oldHashIter) {
+            if (oldHashIter != op.memberHashes.end() &&
+                newHashOfMember == *oldHashIter) {
                 return;
             }
             SetProducing& unchanged = (left) ? op.right : op.left;

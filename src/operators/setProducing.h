@@ -3,10 +3,15 @@
 #include <unordered_set>
 #include <vector>
 #include "types/forwardDecls/typesAndDomains.h"
+// helper macros
+#define buildForSetProducers(f, sep) \
+    f(SetValue) sep f(OpSetIntersect) sep f(OpSetUnion) sep
 
-struct OpSetIntersect;
-struct OpSetUnion;
-struct SetTrigger {
+#define structDecls(name) struct name;
+buildForSetProducers(structDecls, )
+#undef structDecls
+
+    struct SetTrigger {
     virtual void valueRemoved(const Value& member) = 0;
     virtual void valueAdded(const Value& member) = 0;
     virtual void possibleValueChange(const Value& member) = 0;
@@ -28,12 +33,28 @@ struct SetView {
           triggers(triggers) {}
 };
 
-SetView getSetView(SetValue& value);
-SetView getSetView(OpSetIntersect& op);
-SetView getSetView(OpSetUnion& op);
-
-inline SetView getSetView(SetProducing& set) {
+#define setProducerFuncs(name)   \
+    SetView getSetView(name&);   \
+    void evaluate(name&);        \
+    void startTriggering(name&); \
+    void stopTriggering(name&);
+buildForSetProducers(setProducerFuncs, )
+#undef setProducerFuncs
+    inline SetView getSetView(SetProducing& set) {
     return mpark::visit([&](auto& setImpl) { return getSetView(*setImpl); },
                         set);
 }
+
+inline void evaluate(SetProducing& set) {
+    mpark::visit([&](auto& setImpl) { evaluate(*setImpl); }, set);
+}
+
+inline void startTriggering(SetProducing& set) {
+    mpark::visit([&](auto& setImpl) { startTriggering(*setImpl); }, set);
+}
+
+inline void stopTriggering(SetProducing& set) {
+    mpark::visit([&](auto& setImpl) { stopTriggering(*setImpl); }, set);
+}
+
 #endif /* SRC_OPERATORS_SETPRODUCING_H_ */

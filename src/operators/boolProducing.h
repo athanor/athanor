@@ -1,8 +1,13 @@
 #ifndef SRC_OPERATORS_BOOLPRODUCING_H_
 #define SRC_OPERATORS_BOOLPRODUCING_H_
 #include "types/forwardDecls/typesAndDomains.h"
-struct OpAnd;
-struct BoolTrigger {
+#define buildForBoolProducers(f, sep) f(BoolValue) sep f(OpAnd)
+
+#define structDecls(name) struct name;
+buildForBoolProducers(structDecls, )
+#undef structDecls
+
+    struct BoolTrigger {
     virtual void possibleValueChange(u_int64_t OldViolation) = 0;
     virtual void valueChanged(u_int64_t newViolation) = 0;
 };
@@ -18,12 +23,28 @@ struct BoolView {
         : violation(violation), triggers(triggers) {}
 };
 
-BoolView getBoolView(BoolValue& value);
-BoolView getBoolView(OpAnd& op);
+#define boolProducerFuncs(name)  \
+    BoolView getBoolView(name&); \
+    void evaluate(name&);        \
+    void startTriggering(name&); \
+    void stopTriggering(name&);
+buildForBoolProducers(boolProducerFuncs, )
+#undef boolProducerFuncs
+    inline BoolView getBoolView(BoolProducing& boolV) {
+    return mpark::visit([&](auto& boolImpl) { return getBoolView(*boolImpl); },
+                        boolV);
+}
 
-inline BoolView getBoolView(BoolProducing& val) {
-    return mpark::visit([&](auto& valImpl) { return getBoolView(*valImpl); },
-                        val);
+inline void evaluate(BoolProducing& boolV) {
+    mpark::visit([&](auto& boolImpl) { evaluate(*boolImpl); }, boolV);
+}
+
+inline void startTriggering(BoolProducing& boolV) {
+    mpark::visit([&](auto& boolImpl) { startTriggering(*boolImpl); }, boolV);
+}
+
+inline void stopTriggering(BoolProducing& boolV) {
+    mpark::visit([&](auto& boolImpl) { stopTriggering(*boolImpl); }, boolV);
 }
 
 #endif /* SRC_OPERATORS_BOOLPRODUCING_H_ */

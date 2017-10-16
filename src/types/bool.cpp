@@ -28,3 +28,7 @@ void matchInnerType(const BoolDomain&, BoolValue&) {}
 u_int64_t getDomainSize(const BoolDomain&) { return 2; }
 
 void reset(BoolValue& val) { val.triggers.clear(); }
+
+void evaluate(BoolValue&) {}
+void startTriggering(BoolValue&) {}
+void stopTriggering(BoolValue&) {}

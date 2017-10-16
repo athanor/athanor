@@ -118,3 +118,7 @@ void reset(SetValue& val) {
     mpark::visit([&](auto& valImpl) { resetImpl(val, valImpl); },
                  val.setValueImpl);
 }
+
+void evaluate(SetValue&) {}
+void startTriggering(SetValue&) {}
+void stopTriggering(SetValue&) {}

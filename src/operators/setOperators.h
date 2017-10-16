@@ -1,14 +1,14 @@
 #ifndef SRC_OPERATORS_SETOPERATORS_H_
 #define SRC_OPERATORS_SETOPERATORS_H_
-#include "operators/setProducing.h"
-#include "utils/hashUtils.h"
 
 #include <iostream>
 #include <memory>
 #include <vector>
+#include "operators/boolProducing.h"
 #include "operators/intProducing.h"
 #include "operators/setProducing.h"
 #include "types/forwardDecls/hash.h"
+#include "utils/hashUtils.h"
 struct OpSetIntersect {
     SetProducing left;
     SetProducing right;
@@ -27,4 +27,15 @@ struct OpSetSize {
 
     OpSetSize(SetProducing operandIn) : operand(operandIn) {}
 };
+
+struct OpSetNotEq {
+    SetProducing left;
+    SetProducing right;
+    u_int64_t violation;
+    std::vector<std::shared_ptr<BoolTrigger>> triggers;
+
+    OpSetNotEq(SetProducing leftIn, SetProducing rightIn)
+        : left(std::move(leftIn)), right(std::move(rightIn)) {}
+};
+
 #endif /* SRC_OPERATORS_SETOPERATORS_H_ */

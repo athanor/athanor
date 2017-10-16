@@ -1,7 +1,8 @@
 #ifndef SRC_OPERATORS_BOOLPRODUCING_H_
 #define SRC_OPERATORS_BOOLPRODUCING_H_
 #include "types/forwardDecls/typesAndDomains.h"
-#define buildForBoolProducers(f, sep) f(BoolValue) sep f(OpAnd)
+#define buildForBoolProducers(f, sep) \
+    f(BoolValue) sep f(OpAnd) sep f(OpSetNotEq)
 
 #define structDecls(name) struct name;
 buildForBoolProducers(structDecls, )
@@ -13,7 +14,8 @@ buildForBoolProducers(structDecls, )
 };
 
 using BoolProducing =
-    mpark::variant<std::shared_ptr<BoolValue>, std::shared_ptr<OpAnd>>;
+    mpark::variant<std::shared_ptr<BoolValue>, std::shared_ptr<OpAnd>,
+                   std::shared_ptr<OpSetNotEq>>;
 
 struct BoolView {
     u_int64_t& violation;

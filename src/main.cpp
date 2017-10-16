@@ -11,13 +11,18 @@
 using namespace std;
 
 int main() {
+    int n = 4;
     ModelBuilder builder;
-    auto domain = make_shared<SetDomain>(noSize(), IntDomain({intBound(1, 4)}));
-    auto a = builder.addVariable(domain);
-    auto b = builder.addVariable(domain);
-    builder.setObjective(
-        OptimiseMode::MAXIMISE,
-        make_shared<OpSetSize>(make_shared<OpSetIntersect>(a, b)));
+    auto domain = make_shared<SetDomain>(noSize(), IntDomain({intBound(1, n)}));
+    vector<ValRef<SetValue>> vals;
+    for (int i = 0; i < n * n; ++i) {
+        vals.push_back(builder.addVariable(domain));
+    }
+    for (int i = 0; i < (int)vals.size(); ++i) {
+        for (int j = i + 1; j < (int)vals.size(); ++j) {
+            builder.addConstraint(make_shared<OpSetNotEq>(vals[i], vals[j]));
+        }
+    }
     HillClimber<RandomNeighbourhoodSelection> search(builder.build());
     search.search();
 }

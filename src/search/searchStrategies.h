@@ -16,24 +16,23 @@ class HillClimber {
         : model(std::move(model)),
           selectionStrategy(this->model.neighbourhoods.size()) {}
     void search() {
-        assert(model.optimiseMode != OptimiseMode::NONE);
-        IntView objView = getIntView(model.objective);
+        BoolView cspView = getBoolView(model.csp);
         for (auto& var : model.variables) {
             assignRandomValueInDomain(var.first, var.second);
         }
-        evaluate(model.objective);
-        startTriggering(model.objective);
-        std::cout << "After random initialisation, objective is "
-                  << objView.value << std::endl;
+        evaluate(model.csp);
+        startTriggering(model.csp);
+        std::cout << "After random initialisation, violation is "
+                  << cspView.violation << std::endl;
         std::cout << "Values are:\n";
         for (auto& var : model.variables) {
             prettyPrint(std::cout, var.second) << std::endl;
         }
-        int bestObj = objView.value;
+        u_int64_t bestViolation = cspView.violation;
         AcceptanceCallBack callback = [&]() {
-            return objView.value >= bestObj;
+            return cspView.violation <= bestViolation;
         };
-        while (true) {
+        while (cspView.violation != 0) {
             int nextNeighbourhoodIndex = selectionStrategy.nextNeighbourhood();
             Neighbourhood& neighbourhood =
                 model.neighbourhoods[nextNeighbourhoodIndex];
@@ -49,10 +48,10 @@ class HillClimber {
                 << std::endl;
 
             neighbourhood.apply(callback, varBackup.second, var.second);
-            if (objView.value > bestObj) {
-                bestObj = objView.value;
-                std::cout << "Better value found, objective is "
-                          << objView.value << std::endl;
+            if (cspView.violation < bestViolation) {
+                bestViolation = cspView.violation;
+                std::cout << "Better value found, violation is "
+                          << cspView.violation << std::endl;
                 std::cout << "Values are:\n";
                 for (auto& var : model.variables) {
                     prettyPrint(std::cout, var.second) << std::endl;

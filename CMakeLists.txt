@@ -39,7 +39,7 @@ endif()
 
 
 #release flags
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wextra -Wall -Wno-c++1z-extensions")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wextra -Wall -O3 -flto")
 
 
 #debug flags

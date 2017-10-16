@@ -21,6 +21,8 @@ class HillClimber {
         for (auto& var : model.variables) {
             assignRandomValueInDomain(var.first, var.second);
         }
+        evaluate(model.objective);
+        startTriggering(model.objective);
         std::cout << "After random initialisation, objective is "
                   << objView.value << std::endl;
         std::cout << "Values are:\n";

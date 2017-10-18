@@ -23,6 +23,6 @@ int main() {
             builder.addConstraint(make_shared<OpSetNotEq>(vals[i], vals[j]));
         }
     }
-    HillClimber<RandomNeighbourhoodSelection> search(builder.build());
+    HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
     search.search();
 }

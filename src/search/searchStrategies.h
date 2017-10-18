@@ -26,11 +26,13 @@ class HillClimber {
         startTriggering(model.csp);
         u_int64_t bestViolation = cspView.violation;
         newBestSolution(bestViolation);
+        selectionStrategy.initialise(model);
         AcceptanceCallBack callback = [&]() {
             return cspView.violation <= bestViolation;
         };
         while (cspView.violation != 0) {
-            int nextNeighbourhoodIndex = selectionStrategy.nextNeighbourhood();
+            int nextNeighbourhoodIndex =
+                selectionStrategy.nextNeighbourhood(model);
             Neighbourhood& neighbourhood =
                 model.neighbourhoods[nextNeighbourhoodIndex];
             auto& var =
@@ -44,6 +46,7 @@ class HillClimber {
                 bestViolation = cspView.violation;
                 newBestSolution(bestViolation);
             }
+            selectionStrategy.reportResult(NeighbourhoodResult(model));
         }
     }
 

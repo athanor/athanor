@@ -20,6 +20,7 @@ struct Model {
                                                             // neighbourhoods
     std::vector<Neighbourhood> neighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
+    std::vector<std::vector<int>> varNeighbourhoodMapping;
     OpAnd csp;
     IntProducing objective;
     OptimiseMode optimiseMode;
@@ -29,12 +30,14 @@ struct Model {
           std::vector<std::pair<Domain, Value>> variablesBackup,
           std::vector<Neighbourhood> neighbourhoods,
           std::vector<int> neighbourhoodVarMapping,
+          std::vector<std::vector<int>> varNeighbourhoodMapping,
           std::vector<BoolProducing> constraints, IntProducing objective,
           OptimiseMode optimiseMode)
         : variables(std::move(variables)),
           variablesBackup(std::move(variablesBackup)),
           neighbourhoods(std::move(neighbourhoods)),
           neighbourhoodVarMapping(std::move(neighbourhoodVarMapping)),
+          varNeighbourhoodMapping(std::move(varNeighbourhoodMapping)),
           csp(std::move(constraints)),
           objective(std::move(objective)),
           optimiseMode(optimiseMode) {}
@@ -75,6 +78,7 @@ class ModelBuilder {
     Model build() {
         std::vector<Neighbourhood> neighbourhoods;
         std::vector<int> neighbourhoodVarMapping;
+        std::vector<std::vector<int>> varNeighbourhoodMapping;
         for (size_t i = 0; i < variables.size(); ++i) {
             auto& domain = variables[i].first;
             size_t previousNumberNeighbourhoods = neighbourhoods.size();
@@ -82,6 +86,11 @@ class ModelBuilder {
             neighbourhoodVarMapping.insert(
                 neighbourhoodVarMapping.end(),
                 neighbourhoods.size() - previousNumberNeighbourhoods, i);
+            varNeighbourhoodMapping.emplace_back(neighbourhoods.size() -
+                                                 previousNumberNeighbourhoods);
+            std::iota(varNeighbourhoodMapping.back().begin(),
+                      varNeighbourhoodMapping.back().end(),
+                      previousNumberNeighbourhoods);
         }
         assert(neighbourhoods.size() > 0);
         std::vector<std::pair<Domain, Value>> variablesBackup;
@@ -92,7 +101,8 @@ class ModelBuilder {
                        });
         return Model(std::move(variables), std::move(variablesBackup),
                      std::move(neighbourhoods),
-                     std::move(neighbourhoodVarMapping), std::move(constraints),
+                     std::move(neighbourhoodVarMapping),
+                     std::move(varNeighbourhoodMapping), std::move(constraints),
                      std::move(objective), optimiseMode);
     }
 };

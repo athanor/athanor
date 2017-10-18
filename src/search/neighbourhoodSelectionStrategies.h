@@ -4,8 +4,13 @@
 #include <algorithm>
 #include <cassert>
 #include <vector>
+#include "search/model.h"
+#include "search/violationDescription.h"
 #include "utils/random.h"
-class NeighbourhoodResult {};
+struct NeighbourhoodResult {
+    Model& model;
+    NeighbourhoodResult(Model& model) : model(model) {}
+};
 class RandomNeighbourhoodSelection {
     const int numberNeighbourhoods;
 
@@ -19,6 +24,48 @@ class RandomNeighbourhoodSelection {
         return globalRandom<u_int32_t>(0, numberNeighbourhoods - 1);
     }
     inline void reportResult(const NeighbourhoodResult&) {}
+};
+class RandomNeighbourhoodWithViolation {
+    const int numberNeighbourhoods;
+    ViolationDescription vioDesc;
+
+   public:
+    RandomNeighbourhoodWithViolation(const int numberNeighbourhoods)
+        : numberNeighbourhoods(numberNeighbourhoods),
+          vioDesc(numberNeighbourhoods) {
+        assert(this->numberNeighbourhoods > 0);
+    }
+
+    inline u_int32_t nextNeighbourhood(const Model& model) {
+        u_int64_t totalViolation = 0;
+        for (u_int64_t varId : vioDesc.getVarsWithViolation()) {
+            totalViolation += vioDesc.getVarViolationMapping()[varId];
+        }
+        u_int64_t rand = globalRandom<u_int32_t>(0, totalViolation - 1);
+        for (u_int64_t varId : vioDesc.getVarsWithViolation()) {
+            u_int64_t violation = vioDesc.getVarViolationMapping()[varId];
+            if (violation > rand) {
+                return selectNeighbourhoodFromVarId(model, varId);
+                ;
+            } else {
+                rand -= violation;
+            }
+        }
+        assert(false);
+    }
+
+    inline void initialise(const Model& model) {
+        vioDesc.reset();
+        updateViolationDescription(model.csp, 0, vioDesc);
+    }
+    inline void reportResult(const NeighbourhoodResult& result) {
+        initialise(result.model);
+    }
+    inline int selectNeighbourhoodFromVarId(const Model& model,
+                                            u_int64_t varId) {
+        return model.varNeighbourhoodMapping[varId][globalRandom<size_t>(
+            0, model.varNeighbourhoodMapping.size() - 1)];
+    }
 };
 class ExhaustiveRandomNeighbourhoodSelection {
     std::vector<u_int32_t> availableNeighbourhoods;

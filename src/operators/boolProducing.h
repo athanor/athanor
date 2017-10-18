@@ -1,5 +1,6 @@
 #ifndef SRC_OPERATORS_BOOLPRODUCING_H_
 #define SRC_OPERATORS_BOOLPRODUCING_H_
+#include "search/violationDescription.h"
 #include "types/forwardDecls/typesAndDomains.h"
 #define buildForBoolProducers(f, sep) \
     f(BoolValue) sep f(OpAnd) sep f(OpSetNotEq)
@@ -25,14 +26,21 @@ struct BoolView {
         : violation(violation), triggers(triggers) {}
 };
 
-#define boolProducerFuncs(name)  \
-    BoolView getBoolView(name&); \
-    void evaluate(name&);        \
-    void startTriggering(name&); \
-    void stopTriggering(name&);
+#define boolProducerFuncs(name)                                                \
+    BoolView getBoolView(name&);                                               \
+    void evaluate(name&);                                                      \
+    void startTriggering(name&);                                               \
+    void stopTriggering(name&);                                                \
+    void updateViolationDescription(const name& op, u_int64_t parentViolation, \
+                                    ViolationDescription&);
 buildForBoolProducers(boolProducerFuncs, )
 #undef boolProducerFuncs
     inline BoolView getBoolView(BoolProducing& boolV) {
+    return mpark::visit([&](auto& boolImpl) { return getBoolView(*boolImpl); },
+                        boolV);
+}
+
+inline BoolView getBoolView(const BoolProducing& boolV) {
     return mpark::visit([&](auto& boolImpl) { return getBoolView(*boolImpl); },
                         boolV);
 }
@@ -47,6 +55,17 @@ inline void startTriggering(BoolProducing& boolV) {
 
 inline void stopTriggering(BoolProducing& boolV) {
     mpark::visit([&](auto& boolImpl) { stopTriggering(*boolImpl); }, boolV);
+}
+
+inline void updateViolationDescription(
+    const BoolProducing& boolv, u_int64_t parentViolation,
+    ViolationDescription& violationDescription) {
+    mpark::visit(
+        [&](auto& boolImpl) {
+            updateViolationDescription(*boolImpl, parentViolation,
+                                       violationDescription);
+        },
+        boolv);
 }
 
 #endif /* SRC_OPERATORS_BOOLPRODUCING_H_ */

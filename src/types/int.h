@@ -21,7 +21,7 @@ struct IntDomain {
               })) {}
 };
 
-struct IntValue {
+struct IntValue : public ValBase {
     int64_t value;
     std::vector<std::shared_ptr<IntTrigger>> triggers;
 

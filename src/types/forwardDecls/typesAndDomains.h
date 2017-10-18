@@ -122,21 +122,8 @@ struct TypeAsString;
 buildForAllTypes(makeAssociations, )
 #undef makeAssociations
 
-    template <typename DomainType>
-    inline std::shared_ptr<typename AssociatedValueType<
-        DomainType>::type>& getAssociatedValue(DomainType&, Value& value) {
-    return mpark::get<
-        std::shared_ptr<typename AssociatedValueType<DomainType>::type>>(value);
-}
-template <typename DomainType>
-inline const std::shared_ptr<typename AssociatedValueType<DomainType>::type>&
-getAssociatedValue(DomainType&, const Value& value) {
-    return mpark::get<
-        std::shared_ptr<typename AssociatedValueType<DomainType>::type>>(value);
-}
-
-// size attr for domains
-struct SizeAttr {
+    // size attr for domains
+    struct SizeAttr {
     enum class SizeAttrType {
         NO_SIZE,
         EXACT_SIZE,
@@ -198,4 +185,12 @@ SizeAttr minSize(size_t minSize);
 SizeAttr maxSize(size_t maxSize);
 SizeAttr sizeRange(size_t minSize, size_t maxSize);
 
+struct ValBase {
+    int64_t id = -1;
+};
+#define valBaseAccessors(name)           \
+    int64_t getId(const name##Value& n); \
+    void setId(name##Value& n, int64_t id);
+buildForAllTypes(valBaseAccessors, )
+#undef valBaseAccessors
 #endif /* SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_ */

@@ -50,3 +50,12 @@ void stopTriggering(OpAnd& op) {
         stopTriggering(operand);
     }
 }
+
+void updateViolationDescription(const OpAnd& op, u_int64_t,
+                                ViolationDescription& vioDesc) {
+    for (auto& operand : op.operands) {
+        if (getBoolView(operand).violation != 0) {
+            updateViolationDescription(operand, op.violation, vioDesc);
+        }
+    }
+}

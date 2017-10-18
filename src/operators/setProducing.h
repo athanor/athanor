@@ -2,6 +2,7 @@
 #define SRC_OPERATORS_SETPRODUCING_H_
 #include <unordered_set>
 #include <vector>
+#include "search/violationDescription.h"
 #include "types/forwardDecls/typesAndDomains.h"
 // helper macros
 #define buildForSetProducers(f, sep) \
@@ -33,11 +34,13 @@ struct SetView {
           triggers(triggers) {}
 };
 
-#define setProducerFuncs(name)   \
-    SetView getSetView(name&);   \
-    void evaluate(name&);        \
-    void startTriggering(name&); \
-    void stopTriggering(name&);
+#define setProducerFuncs(name)                                                 \
+    SetView getSetView(name&);                                                 \
+    void evaluate(name&);                                                      \
+    void startTriggering(name&);                                               \
+    void stopTriggering(name&);                                                \
+    void updateViolationDescription(const name& op, u_int64_t parentViolation, \
+                                    ViolationDescription&);
 buildForSetProducers(setProducerFuncs, )
 #undef setProducerFuncs
     inline SetView getSetView(SetProducing& set) {
@@ -55,6 +58,16 @@ inline void startTriggering(SetProducing& set) {
 
 inline void stopTriggering(SetProducing& set) {
     mpark::visit([&](auto& setImpl) { stopTriggering(*setImpl); }, set);
+}
+inline void updateViolationDescription(
+    const SetProducing& set, u_int64_t parentViolation,
+    ViolationDescription& violationDescription) {
+    mpark::visit(
+        [&](auto& setImpl) {
+            updateViolationDescription(*setImpl, parentViolation,
+                                       violationDescription);
+        },
+        set);
 }
 
 #endif /* SRC_OPERATORS_SETPRODUCING_H_ */

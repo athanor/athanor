@@ -46,3 +46,8 @@ void stopTriggering(OpSetSize& op) {
     assert(false);  // todo
     stopTriggering(op.operand);
 }
+
+void updateViolationDescription(const OpSetSize& op, u_int64_t parentViolation,
+                                ViolationDescription& vioDesc) {
+    updateViolationDescription(op.operand, parentViolation, vioDesc);
+}

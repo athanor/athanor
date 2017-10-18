@@ -7,7 +7,7 @@
 #include "forwardDecls/typesAndDomains.h"
 #include "operators/boolProducing.h"
 struct BoolDomain {};
-struct BoolValue {
+struct BoolValue : public ValBase {
     bool value;
     std::vector<std::shared_ptr<BoolTrigger>> triggers;
 

@@ -47,3 +47,10 @@ void stopTriggering(OpSum& op) {
         stopTriggering(operand);
     }
 }
+
+void updateViolationDescription(const OpSum& op, u_int64_t parentViolation,
+                                ViolationDescription& vioDesc) {
+    for (auto& operand : op.operands) {
+        updateViolationDescription(operand, parentViolation, vioDesc);
+    }
+}

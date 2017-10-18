@@ -119,3 +119,10 @@ void stopTriggering(OpSetIntersect& op) {
     stopTriggering(op.left);
     stopTriggering(op.right);
 }
+
+void updateViolationDescription(const OpSetIntersect& op,
+                                u_int64_t parentViolation,
+                                ViolationDescription& vioDesc) {
+    updateViolationDescription(op.left, parentViolation, vioDesc);
+    updateViolationDescription(op.right, parentViolation, vioDesc);
+}

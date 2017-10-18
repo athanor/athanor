@@ -94,6 +94,7 @@ struct SetValueImpl {
             return false;
         }
         members.push_back(member);
+        setId(*member, getId(value));
         u_int64_t hash = mix(getValueHash(*member));
         memberHashes.insert(hash);
         cachedHashTotal += hash;
@@ -109,7 +110,7 @@ typedef mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>
     SetValueImplWrapper;
 #undef variantValues
 
-struct SetValue {
+struct SetValue : public ValBase {
     SetValueImplWrapper setValueImpl = SetValueImpl<ValRef<IntValue>>();
     std::vector<std::shared_ptr<SetTrigger>> triggers;
 };

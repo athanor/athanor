@@ -11,7 +11,7 @@
 using namespace std;
 
 int main() {
-    int n = 4;
+    int n = 5;
     ModelBuilder builder;
     auto domain = make_shared<SetDomain>(noSize(), IntDomain({intBound(1, n)}));
     vector<ValRef<SetValue>> vals;

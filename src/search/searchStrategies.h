@@ -50,7 +50,6 @@ class HillClimber {
     inline void newBestSolution(u_int64_t bestViolation) {
         std::cout << "best v " << bestViolation << std::endl;
         for (size_t i = 0; i < model.variables.size(); ++i) {
-            std::cout << "deep copy" << std::endl;
             deepCopyValue(model.variables[i].second,
                           model.variablesBackup[i].second);
             normalise(model.variablesBackup[i].second);

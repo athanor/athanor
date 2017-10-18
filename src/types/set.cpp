@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include "common/common.h"
+#include "types/forwardDecls/compare.h"
 #include "types/forwardDecls/copy.h"
 #include "types/forwardDecls/getDomainSize.h"
 #include "types/forwardDecls/hash.h"
@@ -47,6 +48,7 @@ void deepCopyImpl(const SetValueImpl<InnerValueRefType>& srcImpl,
 }
 
 void deepCopy(const SetValue& src, SetValue& target) {
+    assert(src.setValueImpl.index() == target.setValueImpl.index());
     return visit([&](auto& srcImpl) { return deepCopyImpl(srcImpl, target); },
                  src.setValueImpl);
 }
@@ -122,3 +124,59 @@ void reset(SetValue& val) {
 void evaluate(SetValue&) {}
 void startTriggering(SetValue&) {}
 void stopTriggering(SetValue&) {}
+
+template <typename InnerValueRefType>
+void normaliseImpl(SetValueImpl<InnerValueRefType>& valImpl) {
+    for (auto& v : valImpl.members) {
+        normalise(*v);
+    }
+    sort(valImpl.members.begin(), valImpl.members.end(),
+         [](auto& u, auto& v) { return smallerValue(*u, *v); });
+}
+
+void normalise(SetValue& val) {
+    mpark::visit([](auto& valImpl) { normaliseImpl(valImpl); },
+                 val.setValueImpl);
+}
+
+bool smallerValue(const SetValue& u, const SetValue& v) {
+    return mpark::visit(
+        [&](auto& uImpl) {
+            auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v.setValueImpl);
+            if (uImpl.members.size() < vImpl.members.size()) {
+                return true;
+            } else if (uImpl.members.size() > vImpl.members.size()) {
+                return false;
+            }
+            for (size_t i = 0; i < uImpl.members.size(); ++i) {
+                if (smallerValue(*uImpl.members[i], *vImpl.members[i])) {
+                    return true;
+                } else if (largerValue(*uImpl.members[i], *vImpl.members[i])) {
+                    return false;
+                }
+            }
+            return false;
+        },
+        u.setValueImpl);
+}
+
+bool largerValue(const SetValue& u, const SetValue& v) {
+    return mpark::visit(
+        [&](auto& uImpl) {
+            auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v.setValueImpl);
+            if (uImpl.members.size() > vImpl.members.size()) {
+                return true;
+            } else if (uImpl.members.size() < vImpl.members.size()) {
+                return false;
+            }
+            for (size_t i = 0; i < uImpl.members.size(); ++i) {
+                if (largerValue(*uImpl.members[i], *vImpl.members[i])) {
+                    return true;
+                } else if (smallerValue(*uImpl.members[i], *vImpl.members[i])) {
+                    return false;
+                }
+            }
+            return false;
+        },
+        u.setValueImpl);
+}

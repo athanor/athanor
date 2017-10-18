@@ -3,6 +3,8 @@
 #define SRC_SEARCH_SEARCHSTRATEGIES_H_
 #include <cassert>
 #include "search/model.h"
+#include "types/forwardDecls/compare.h"
+#include "types/forwardDecls/copy.h"
 #include "types/forwardDecls/print.h"
 
 #include "search/neighbourhoodSelectionStrategies.h"
@@ -22,13 +24,8 @@ class HillClimber {
         }
         evaluate(model.csp);
         startTriggering(model.csp);
-        std::cout << "After random initialisation, violation is "
-                  << cspView.violation << std::endl;
-        std::cout << "Values are:\n";
-        for (auto& var : model.variables) {
-            prettyPrint(std::cout, var.second) << std::endl;
-        }
         u_int64_t bestViolation = cspView.violation;
+        newBestSolution(bestViolation);
         AcceptanceCallBack callback = [&]() {
             return cspView.violation <= bestViolation;
         };
@@ -42,21 +39,28 @@ class HillClimber {
             auto& varBackup =
                 model.variablesBackup
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
-            prettyPrint(std::cout << "Trying neighbourhood: "
-                                  << neighbourhood.name << " on variable ",
-                        var.second)
-                << std::endl;
-
             neighbourhood.apply(callback, varBackup.second, var.second);
             if (cspView.violation < bestViolation) {
                 bestViolation = cspView.violation;
-                std::cout << "Better value found, violation is "
-                          << cspView.violation << std::endl;
-                std::cout << "Values are:\n";
-                for (auto& var : model.variables) {
-                    prettyPrint(std::cout, var.second) << std::endl;
-                }
+                newBestSolution(bestViolation);
             }
+        }
+    }
+
+    inline void newBestSolution(u_int64_t bestViolation) {
+        std::cout << "best v " << bestViolation << std::endl;
+        for (size_t i = 0; i < model.variables.size(); ++i) {
+            std::cout << "deep copy" << std::endl;
+            deepCopyValue(model.variables[i].second,
+                          model.variablesBackup[i].second);
+            normalise(model.variablesBackup[i].second);
+        }
+        std::sort(
+            model.variablesBackup.begin(), model.variablesBackup.end(),
+            [](auto& u, auto& v) { return smallerValue(u.second, v.second); });
+        std::cout << "new best violation: " << bestViolation << std::endl;
+        for (auto& v : model.variablesBackup) {
+            prettyPrint(std::cout << "var: ", v.second) << std::endl;
         }
     }
 };

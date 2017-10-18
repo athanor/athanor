@@ -15,7 +15,7 @@ int main() {
     ModelBuilder builder;
     auto domain = make_shared<SetDomain>(noSize(), IntDomain({intBound(1, n)}));
     vector<ValRef<SetValue>> vals;
-    for (int i = 0; i < n * n; ++i) {
+    for (int i = 0; i < (1 << n); ++i) {
         vals.push_back(builder.addVariable(domain));
     }
     for (int i = 0; i < (int)vals.size(); ++i) {

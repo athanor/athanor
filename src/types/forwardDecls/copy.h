@@ -19,4 +19,16 @@ inline Value deepCopyValue(const Value& val) {
         [](const auto& valImpl) { return Value(deepCopy(*valImpl)); }, val);
 }
 
+inline void deepCopyValue(const Value& u, Value& v) {
+    if (u.index() == v.index()) {
+        mpark::visit(
+            [&](auto& uImpl) {
+                auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v);
+                deepCopy(*uImpl, *vImpl);
+            },
+            u);
+    } else {
+        v = deepCopyValue(u);
+    }
+}
 #endif /* SRC_TYPES_FORWARDDECLS_COPY_H_ */

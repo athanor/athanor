@@ -43,3 +43,17 @@ void reset(IntValue& val) { val.triggers.clear(); }
 void evaluate(IntValue&) {}
 void startTriggering(IntValue&) {}
 void stopTriggering(IntValue&) {}
+
+bool smallerValue(const IntValue& u, const IntValue& v) {
+    return u.value < v.value;
+}
+
+bool largerValue(const IntValue& u, const IntValue& v) {
+    return u.value > v.value;
+}
+
+bool equalValue(const IntValue& u, const IntValue& v) {
+    return u.value == v.value;
+}
+
+void normalise(IntValue&) {}

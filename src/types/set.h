@@ -86,13 +86,7 @@ struct SetValueImpl {
 
     void removeAllValues(SetValue& value) {
         while (!members.empty()) {
-            auto& member = members.back();
-            u_int64_t hash = mix(getValueHash(*member));
-            memberHashes.erase(hash);
-            cachedHashTotal -= hash;
-            for (auto& t : getSetTriggers(value)) {
-                t->valueRemoved(member);
-            }
+            removeValue(value, members.size() - 1);
         }
     }
     inline bool addValue(SetValue& value, const Inner& member) {

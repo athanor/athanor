@@ -32,3 +32,17 @@ void reset(BoolValue& val) { val.triggers.clear(); }
 void evaluate(BoolValue&) {}
 void startTriggering(BoolValue&) {}
 void stopTriggering(BoolValue&) {}
+
+void normalise(BoolValue&) {}
+
+bool smallerValue(const BoolValue& u, const BoolValue& v) {
+    return u.value < v.value;
+}
+
+bool largerValue(const BoolValue& u, const BoolValue& v) {
+    return u.value > v.value;
+}
+
+bool equalValue(const BoolValue& u, const BoolValue& v) {
+    return u.value == v.value;
+}

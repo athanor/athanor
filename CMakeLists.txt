@@ -43,7 +43,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wextra -Wall -O3 -flto"
 
 
 #debug flags
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}  -Wextra -Wall  -Wno-c++1z-extensions -DDEBUG_MODE=1")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}  -Wextra -Wall  -DDEBUG_MODE=1")
 
 #default build type:
 if(NOT CMAKE_BUILD_TYPE) 

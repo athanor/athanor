@@ -30,7 +30,8 @@ class HillClimber {
         AcceptanceCallBack callback = [&]() {
             return cspView.violation <= bestViolation;
         };
-        while (cspView.violation != 0) {
+        size_t iterationCount = 0;
+        while (cspView.violation != 0 && iterationCount++ < 3000000) {
             int nextNeighbourhoodIndex =
                 selectionStrategy.nextNeighbourhood(model);
             Neighbourhood& neighbourhood =
@@ -38,6 +39,11 @@ class HillClimber {
             auto& var =
                 model.variables
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
+            if (bestViolation <= 2) {
+                std::cout << "trying neighbourhood " << neighbourhood.name
+                          << std::endl;
+                prettyPrint(std::cout << "on var : ", var.second) << std::endl;
+            }
             auto& varBackup =
                 model.variablesBackup
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
@@ -52,7 +58,9 @@ class HillClimber {
 
     inline void newBestSolution(u_int64_t bestViolation) {
         std::cout << "best v " << bestViolation << std::endl;
-        return;
+        if (bestViolation > 2) {
+            return;
+        }
         for (size_t i = 0; i < model.variables.size(); ++i) {
             deepCopyValue(model.variables[i].second,
                           model.variablesBackup[i].second);

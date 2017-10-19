@@ -2,6 +2,7 @@
 #define SRC_SEARCH_MODEL_H_
 #include <algorithm>
 #include <cassert>
+#include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/boolOperators.h"
 #include "operators/boolProducing.h"

@@ -20,9 +20,10 @@ class RandomNeighbourhoodSelection {
         assert(this->numberNeighbourhoods > 0);
     }
 
-    inline u_int32_t nextNeighbourhood() {
+    inline u_int32_t nextNeighbourhood(const Model&) {
         return globalRandom<u_int32_t>(0, numberNeighbourhoods - 1);
     }
+    inline void initialise(const Model&) {}
     inline void reportResult(const NeighbourhoodResult&) {}
 };
 class RandomNeighbourhoodWithViolation {
@@ -52,6 +53,7 @@ class RandomNeighbourhoodWithViolation {
             }
         }
         assert(false);
+        abort();
     }
 
     inline void initialise(const Model& model) {
@@ -64,7 +66,7 @@ class RandomNeighbourhoodWithViolation {
     inline int selectNeighbourhoodFromVarId(const Model& model,
                                             u_int64_t varId) {
         return model.varNeighbourhoodMapping[varId][globalRandom<size_t>(
-            0, model.varNeighbourhoodMapping.size() - 1)];
+            0, model.varNeighbourhoodMapping[varId].size() - 1)];
     }
 };
 class ExhaustiveRandomNeighbourhoodSelection {

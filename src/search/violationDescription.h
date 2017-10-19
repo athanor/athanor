@@ -1,6 +1,7 @@
 
 #ifndef SRC_SEARCH_VIOLATIONDESCRIPTION_H_
 #define SRC_SEARCH_VIOLATIONDESCRIPTION_H_
+#include <iostream>
 #include <vector>
 class ViolationDescription {
     std::vector<u_int64_t> varViolations;

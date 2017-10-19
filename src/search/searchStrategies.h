@@ -39,7 +39,7 @@ class HillClimber {
             auto& var =
                 model.variables
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
-            if (bestViolation <= 2) {
+            if (false && bestViolation <= 2) {
                 std::cout << "trying neighbourhood " << neighbourhood.name
                           << std::endl;
                 prettyPrint(std::cout << "on var : ", var.second) << std::endl;
@@ -52,13 +52,14 @@ class HillClimber {
                 bestViolation = cspView.violation;
                 newBestSolution(bestViolation);
             }
-            selectionStrategy.reportResult(NeighbourhoodResult(model));
+            selectionStrategy.reportResult(
+                NeighbourhoodResult(model, bestViolation));
         }
     }
 
     inline void newBestSolution(u_int64_t bestViolation) {
         std::cout << "best v " << bestViolation << std::endl;
-        if (bestViolation > 2) {
+        if (true && bestViolation > 2) {
             return;
         }
         for (size_t i = 0; i < model.variables.size(); ++i) {

@@ -55,8 +55,8 @@ void stopTriggering(OpSetNotEq& op) {
     stopTriggering(op.right);
 }
 
-void updateViolationDescription(const OpSetNotEq& op, u_int64_t parentViolation,
+void updateViolationDescription(const OpSetNotEq& op, u_int64_t,
                                 ViolationDescription& vioDesc) {
-    updateViolationDescription(op.left, parentViolation, vioDesc);
-    updateViolationDescription(op.right, parentViolation, vioDesc);
+    updateViolationDescription(op.left, op.violation, vioDesc);
+    updateViolationDescription(op.right, op.violation, vioDesc);
 }

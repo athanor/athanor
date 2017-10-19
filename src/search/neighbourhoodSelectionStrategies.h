@@ -9,7 +9,9 @@
 #include "utils/random.h"
 struct NeighbourhoodResult {
     Model& model;
-    NeighbourhoodResult(Model& model) : model(model) {}
+    u_int64_t bestViolation;
+    NeighbourhoodResult(Model& model, u_int64_t bestViolation)
+        : model(model), bestViolation(bestViolation) {}
 };
 class RandomNeighbourhoodSelection {
     const int numberNeighbourhoods;
@@ -27,13 +29,11 @@ class RandomNeighbourhoodSelection {
     inline void reportResult(const NeighbourhoodResult&) {}
 };
 class RandomNeighbourhoodWithViolation {
-    const int numberNeighbourhoods;
     ViolationDescription vioDesc;
 
    public:
     RandomNeighbourhoodWithViolation(const int numberNeighbourhoods)
-        : numberNeighbourhoods(numberNeighbourhoods),
-          vioDesc(numberNeighbourhoods) {
+        : vioDesc(numberNeighbourhoods) {
         assert(this->numberNeighbourhoods > 0);
     }
 
@@ -62,6 +62,15 @@ class RandomNeighbourhoodWithViolation {
     }
     inline void reportResult(const NeighbourhoodResult& result) {
         initialise(result.model);
+        if (false && result.bestViolation <= 2) {
+            for (auto varId : vioDesc.getVarsWithViolation()) {
+                std::cout << "var " << varId << " with violation of "
+                          << vioDesc.getVarViolationMapping()[varId]
+                          << std::endl;
+                prettyPrint(std::cout, result.model.variables[varId].second)
+                    << std::endl;
+            }
+        }
     }
     inline int selectNeighbourhoodFromVarId(const Model& model,
                                             u_int64_t varId) {

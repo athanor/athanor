@@ -10,7 +10,9 @@ ostream& prettyPrint(ostream& os, const IntValue& v) {
     return os;
 }
 
-void deepCopy(const IntValue& src, IntValue& target) { target = src; }
+void deepCopy(const IntValue& src, IntValue& target) {
+    target.changeValue([&]() { target.value = src.value; });
+}
 
 ostream& prettyPrint(ostream& os, const IntDomain& d) {
     os << "int(";

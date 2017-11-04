@@ -34,7 +34,6 @@ class RandomNeighbourhoodWithViolation {
    public:
     RandomNeighbourhoodWithViolation(const int numberNeighbourhoods)
         : vioDesc(numberNeighbourhoods) {
-        assert(this->numberNeighbourhoods > 0);
     }
 
     inline u_int32_t nextNeighbourhood(const Model& model) {

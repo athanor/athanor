@@ -10,7 +10,10 @@ ostream& prettyPrint(ostream& os, const BoolValue& v) {
     return os;
 }
 
-void deepCopy(const BoolValue& src, BoolValue& target) { target = src; }
+void deepCopy(const BoolValue& src, BoolValue& target) {
+    target.changeValue([&]() { target.value = src.value; });
+}
+
 ostream& prettyPrint(ostream& os, const BoolDomain&) {
     os << "bool";
     return os;

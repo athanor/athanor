@@ -29,17 +29,21 @@ class RandomNeighbourhoodSelection {
     inline void reportResult(const NeighbourhoodResult&) {}
 };
 class RandomNeighbourhoodWithViolation {
+    const int numberNeighbourhoods;
     ViolationDescription vioDesc;
 
    public:
     RandomNeighbourhoodWithViolation(const int numberNeighbourhoods)
-        : vioDesc(numberNeighbourhoods) {
-    }
+        : numberNeighbourhoods(numberNeighbourhoods),
+          vioDesc(numberNeighbourhoods) {}
 
     inline u_int32_t nextNeighbourhood(const Model& model) {
         u_int64_t totalViolation = 0;
         for (u_int64_t varId : vioDesc.getVarsWithViolation()) {
             totalViolation += vioDesc.getVarViolationMapping()[varId];
+        }
+        if (totalViolation == 0) {
+            return globalRandom<int>(0, numberNeighbourhoods - 1);
         }
         u_int64_t rand = globalRandom<u_int32_t>(0, totalViolation - 1);
         for (u_int64_t varId : vioDesc.getVarsWithViolation()) {

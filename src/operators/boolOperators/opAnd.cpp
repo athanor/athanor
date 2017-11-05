@@ -4,24 +4,35 @@ using namespace std;
 
 void evaluate(OpAnd& op) {
     op.violation = 0;
-    for (auto& operand : op.operands) {
+    for (size_t i = 0; i < op.operands.size(); ++i) {
+        auto& operand = op.operands[i];
         evaluate(operand);
+        u_int64_t violation = getBoolView(operand).violation;
+        if (violation > 0) {
+            op.violatingOperands.insert(i);
+        }
         op.violation += getBoolView(operand).violation;
     }
 }
 
 class OpAndTrigger : public BoolTrigger {
     OpAnd& op;
+    const size_t index;
     u_int64_t lastViolation;
 
    public:
-    OpAndTrigger(OpAnd& op) : op(op) {}
+    OpAndTrigger(OpAnd& op, size_t index) : op(op), index(index) {}
     void possibleValueChange(u_int64_t oldVilation) {
         lastViolation = oldVilation;
     }
     void valueChanged(u_int64_t newViolation) {
         if (newViolation == lastViolation) {
             return;
+        }
+        if (newViolation > 0 && lastViolation == 0) {
+            op.violatingOperands.insert(index);
+        } else if (newViolation == 0 && lastViolation > 0) {
+            op.violatingOperands.erase(index);
         }
         for (auto& trigger : op.triggers) {
             trigger->possibleValueChange(op.violation);
@@ -35,8 +46,9 @@ class OpAndTrigger : public BoolTrigger {
 };
 
 void startTriggering(OpAnd& op) {
-    auto trigger = make_shared<OpAndTrigger>(op);
-    for (auto& operand : op.operands) {
+    for (size_t i = 0; i < op.operands.size(); ++i) {
+        auto& operand = op.operands[i];
+        auto trigger = make_shared<OpAndTrigger>(op, i);
         getBoolView(operand).triggers.emplace_back(trigger);
         startTriggering(operand);
     }
@@ -51,9 +63,8 @@ void stopTriggering(OpAnd& op) {
 
 void updateViolationDescription(const OpAnd& op, u_int64_t,
                                 ViolationDescription& vioDesc) {
-    for (auto& operand : op.operands) {
-        if (getBoolView(operand).violation != 0) {
-            updateViolationDescription(operand, op.violation, vioDesc);
-        }
+    for (size_t violatingOperandIndex : op.violatingOperands) {
+        updateViolationDescription(op.operands[violatingOperandIndex],
+                                   op.violation, vioDesc);
     }
 }

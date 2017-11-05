@@ -9,30 +9,25 @@
 #include "operators/setProducing.h"
 #include "types/forwardDecls/hash.h"
 #include "utils/hashUtils.h"
-struct OpSetIntersect {
+
+struct OpSetIntersect : public SetView {
     SetProducing left;
     SetProducing right;
-    std::unordered_set<u_int64_t> memberHashes;
     u_int64_t cachedHashTotal = 0;
-    std::vector<std::shared_ptr<SetTrigger>> triggers;
 
     OpSetIntersect(SetProducing leftIn, SetProducing rightIn)
         : left(std::move(leftIn)), right(std::move(rightIn)) {}
 };
 
-struct OpSetSize {
-    int64_t value = 0;
+struct OpSetSize : public IntView {
     SetProducing operand;
-    std::vector<std::shared_ptr<IntTrigger>> triggers;
 
     OpSetSize(SetProducing operandIn) : operand(operandIn) {}
 };
 
-struct OpSetNotEq {
+struct OpSetNotEq : public BoolView {
     SetProducing left;
     SetProducing right;
-    u_int64_t violation;
-    std::vector<std::shared_ptr<BoolTrigger>> triggers;
 
     OpSetNotEq(SetProducing leftIn, SetProducing rightIn)
         : left(std::move(leftIn)), right(std::move(rightIn)) {}

@@ -2,8 +2,6 @@
 #include "operators/boolOperators.h"
 using namespace std;
 
-BoolView getBoolView(OpAnd& op) { return BoolView(op.violation, op.triggers); }
-
 void evaluate(OpAnd& op) {
     op.violation = 0;
     for (auto& operand : op.operands) {

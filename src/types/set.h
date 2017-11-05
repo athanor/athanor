@@ -2,7 +2,6 @@
 #define SRC_TYPES_SET_H_
 #include <unordered_set>
 #include <vector>
-#include "operators/setProducing.h"
 #include "types/forwardDecls/getDomainSize.h"
 #include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/typesAndDomains.h"
@@ -40,82 +39,88 @@ struct SetDomain {
     }
 };
 
-std::vector<std::shared_ptr<SetTrigger>>& getSetTriggers(SetValue& v);
-template <typename Inner>
-struct SetValueImpl {
-    std::vector<Inner> members;
+struct SetTrigger {
+    virtual void valueRemoved(const Value& member) = 0;
+    virtual void valueAdded(const Value& member) = 0;
+    virtual void possibleValueChange(const Value& member) = 0;
+    virtual void valueChanged(const Value& member) = 0;
+};
+
+struct SetView {
     std::unordered_set<u_int64_t> memberHashes;
-    u_int64_t cachedHashTotal = 0;
+    u_int64_t cachedHashTotal;
+    std::vector<std::shared_ptr<SetTrigger>> triggers;
+
+    template <typename Inner>
     inline bool containsMember(const Inner& member) {
         return memberHashes.count(mix(getValueHash(*member)));
     }
+};
 
-    template <typename Func>
-    inline void changeMemberValue(Func&& func, SetValue& value,
+template <typename Inner>
+struct SetValueImpl {
+    std::vector<Inner> members;
+
+    template <typename Func, typename SetValueType>
+    inline void changeMemberValue(Func&& func, SetValueType& val,
                                   size_t memberIndex) {
         u_int64_t hash = mix(getValueHash(*members[memberIndex]));
-        for (auto& t : getSetTriggers(value)) {
+        for (auto& t : val.triggers) {
             t->possibleValueChange(members[memberIndex]);
         }
         bool valueChanged = func();
         if (!valueChanged) {
             return;
         }
-        memberHashes.erase(hash);
-        cachedHashTotal -= hash;
+        val.memberHashes.erase(hash);
+        val.cachedHashTotal -= hash;
         hash = mix(getValueHash(*members[memberIndex]));
-        memberHashes.insert(hash);
-        cachedHashTotal += hash;
-        for (auto& t : getSetTriggers(value)) {
+        val.memberHashes.insert(hash);
+        val.cachedHashTotal += hash;
+        for (auto& t : val.triggers) {
             t->valueChanged(members[memberIndex]);
         }
     }
-
-    inline Inner removeValue(SetValue& value, size_t memberIndex) {
+    template <typename SetValueType>
+    inline Inner removeValue(SetValueType& val, size_t memberIndex) {
         Inner member = std::move(members[memberIndex]);
         members[memberIndex] = std::move(members.back());
         members.pop_back();
         u_int64_t hash = mix(getValueHash(*member));
-        memberHashes.erase(hash);
-        cachedHashTotal -= hash;
-        for (auto& t : getSetTriggers(value)) {
+        val.memberHashes.erase(hash);
+        val.cachedHashTotal -= hash;
+        for (auto& t : val.triggers) {
             t->valueRemoved(member);
         }
         return member;
     }
-
-    void removeAllValues(SetValue& value) {
+    template <typename SetValueType>
+    void removeAllValues(SetValueType& val) {
         while (!members.empty()) {
-            removeValue(value, members.size() - 1);
+            removeValue(val, members.size() - 1);
         }
     }
-    inline bool addValue(SetValue& value, const Inner& member) {
-        if (containsMember(member)) {
+    template <typename SetValueType>
+    inline bool addValue(SetValueType& val, const Inner& member) {
+        if (val.containsMember(member)) {
             return false;
         }
         members.push_back(member);
-        setId(*member, getId(value));
+        setId(*member, getId(val));
         u_int64_t hash = mix(getValueHash(*member));
-        memberHashes.insert(hash);
-        cachedHashTotal += hash;
-        for (auto& t : getSetTriggers(value)) {
+        val.memberHashes.insert(hash);
+        val.cachedHashTotal += hash;
+        for (auto& t : val.triggers) {
             t->valueAdded(members.back());
         }
         return true;
     }
 };
 
-#define variantValues(T) SetValueImpl<ValRef<T##Value>>
-typedef mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>
-    SetValueImplWrapper;
-#undef variantValues
+typedef Variantised<SetValueImpl> SetValueImplVariant;
 
-struct SetValue : public ValBase {
-    SetValueImplWrapper setValueImpl = SetValueImpl<ValRef<IntValue>>();
-    std::vector<std::shared_ptr<SetTrigger>> triggers;
+struct SetValue : public SetView, ValBase {
+    SetValueImplVariant setValueImpl = SetValueImpl<ValRef<IntValue>>();
 };
 
-inline std::vector<std::shared_ptr<SetTrigger>>& getSetTriggers(SetValue& v) {
-    return v.triggers;
-}
 #endif /* SRC_TYPES_SET_H_ */

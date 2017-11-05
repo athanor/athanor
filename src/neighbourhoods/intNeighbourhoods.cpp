@@ -9,7 +9,8 @@ void assignRandomValueInDomain(const IntDomain& domain, IntValue& val) {
     for (auto& bound : domain.bounds) {
         u_int64_t boundSize = (bound.second - bound.first) + 1;
         if (boundSize > randomDomainIndex) {
-            val.value = bound.first + randomDomainIndex;
+            val.changeValue(
+                [&]() { val.value = bound.first + randomDomainIndex; });
             return;
         } else {
             randomDomainIndex -= boundSize;

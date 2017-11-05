@@ -2,6 +2,7 @@
 #ifndef SRC_SEARCH_SEARCHSTRATEGIES_H_
 #define SRC_SEARCH_SEARCHSTRATEGIES_H_
 #include <cassert>
+#include "operators/boolProducing.h"
 #include "search/model.h"
 #include "types/forwardDecls/compare.h"
 #include "types/forwardDecls/copy.h"
@@ -18,7 +19,7 @@ class HillClimber {
         : model(std::move(model)),
           selectionStrategy(this->model.neighbourhoods.size()) {}
     void search() {
-        BoolView cspView = getBoolView(model.csp);
+        BoolView& cspView = model.csp;
         for (auto& var : model.variables) {
             assignRandomValueInDomain(var.first, var.second);
         }
@@ -59,7 +60,7 @@ class HillClimber {
 
     inline void newBestSolution(u_int64_t bestViolation) {
         std::cout << "best v " << bestViolation << std::endl;
-        if (true && bestViolation > 2) {
+        if (true || bestViolation > 2) {
             return;
         }
         for (size_t i = 0; i < model.variables.size(); ++i) {

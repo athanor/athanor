@@ -3,10 +3,8 @@
 #include <vector>
 #include "operators/boolProducing.h"
 
-struct OpAnd {
-    u_int64_t violation = 0;
+struct OpAnd : public BoolView {
     std::vector<BoolProducing> operands;
-    std::vector<std::shared_ptr<BoolTrigger>> triggers;
 
     OpAnd(std::vector<BoolProducing> operandsIn)
         : operands(std::move(operandsIn)) {}

@@ -150,7 +150,7 @@ void setSwapGen(const SetDomain& domain,
                             do {
                                 assignRandomValueInDomain(*innerDomainPtr,
                                                           *newMember);
-                                success = !valImpl.containsMember(newMember);
+                                success = !val.containsMember(newMember);
                             } while (!success && ++numberTries < tryLimit);
                             if (success) {
                                 valImpl.members[indexToChange] =

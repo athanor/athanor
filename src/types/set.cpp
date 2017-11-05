@@ -11,10 +11,7 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 
-u_int64_t getValueHash(const SetValue& val) {
-    return mpark::visit([](auto& valImpl) { return valImpl.cachedHashTotal; },
-                        val.setValueImpl);
-}
+u_int64_t getValueHash(const SetValue& val) { return val.cachedHashTotal; }
 
 ostream& prettyPrint(ostream& os, const SetValue& v) {
     os << "set({";
@@ -61,23 +58,12 @@ ostream& prettyPrint(ostream& os, const SetDomain& d) {
     return os;
 }
 
-vector<shared_ptr<SetTrigger>>& getTriggers(SetValue& v) { return v.triggers; }
-
-SetView getSetView(SetValue& val) {
-    return mpark::visit(
-        [&](auto& valImpl) {
-            return SetView(valImpl.memberHashes, valImpl.cachedHashTotal,
-                           val.triggers);
-        },
-        val.setValueImpl);
-}
-
 template <typename InnerValueRefType>
 void matchInnerTypeImpl(const SetValueImpl<InnerValueRefType>&,
                         SetValue& target) {
     if (mpark::get_if<SetValueImpl<InnerValueRefType>>(
             &(target.setValueImpl)) == NULL) {
-        target.setValueImpl = SetValueImpl<InnerValueRefType>();
+        target.setValueImpl.emplace<SetValueImpl<InnerValueRefType>>();
     }
 }
 
@@ -93,7 +79,7 @@ void matchInnerTypeFromDomain(const InnerDomainPtrType&, SetValue& target) {
         InnerValueRefType;
     if (mpark::get_if<SetValueImpl<InnerValueRefType>>(
             &(target.setValueImpl)) == NULL) {
-        target.setValueImpl = SetValueImpl<InnerValueRefType>();
+        target.setValueImpl.emplace<SetValueImpl<InnerValueRefType>>();
     }
 }
 
@@ -113,8 +99,8 @@ template <typename InnerValueRefType>
 void resetImpl(SetValue& val, SetValueImpl<InnerValueRefType>& valImpl) {
     val.triggers.clear();
     valImpl.members.clear();
-    valImpl.memberHashes.clear();
-    valImpl.cachedHashTotal = 0;
+    val.memberHashes.clear();
+    val.cachedHashTotal = 0;
 }
 void reset(SetValue& val) {
     mpark::visit([&](auto& valImpl) { resetImpl(val, valImpl); },

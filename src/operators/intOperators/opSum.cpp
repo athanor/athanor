@@ -1,13 +1,11 @@
 #include <cassert>
 #include "operators/intOperators.h"
 using namespace std;
-IntView getIntView(OpSum& op) { return IntView(op.total, op.triggers); }
-
 void evaluate(OpSum& op) {
-    op.total = 0;
+    op.value = 0;
     for (auto& operand : op.operands) {
         evaluate(operand);
-        op.total += getIntView(operand).value;
+        op.value += getIntView(operand).value;
     }
 }
 
@@ -23,12 +21,12 @@ class OpSumTrigger : public IntTrigger {
             return;
         }
         for (auto& trigger : op.triggers) {
-            trigger->possibleValueChange(op.total);
+            trigger->possibleValueChange(op.value);
         }
-        op.total -= lastMemberValue;
-        op.total += newValue;
+        op.value -= lastMemberValue;
+        op.value += newValue;
         for (auto& trigger : op.triggers) {
-            trigger->valueChanged(op.total);
+            trigger->valueChanged(op.value);
         }
     }
 };

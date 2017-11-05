@@ -2,8 +2,6 @@
 #include "operators/setOperators.h"
 using namespace std;
 
-IntView getIntView(OpSetSize& op) { return IntView(op.value, op.triggers); }
-
 void evaluate(OpSetSize& op) {
     evaluate(op.operand);
     op.value = getSetView(op.operand).memberHashes.size();

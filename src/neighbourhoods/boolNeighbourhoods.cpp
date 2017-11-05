@@ -4,7 +4,7 @@
 #include "utils/random.h"
 
 void assignRandomValueInDomain(const BoolDomain&, BoolValue& val) {
-    val.value = globalRandom(0, 1);
+    val.changeValue([&]() { val.violation = globalRandom(0, 1); });
 }
 
 const NeighbourhoodGenList<BoolDomain>::type

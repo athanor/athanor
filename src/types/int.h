@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "forwardDecls/typesAndDomains.h"
-#include "operators/intProducing.h"
 
 inline auto intBound(int64_t a, int64_t b) { return std::make_pair(a, b); }
 struct IntDomain {
@@ -21,16 +20,27 @@ struct IntDomain {
               })) {}
 };
 
-struct IntValue : public ValBase {
+struct IntTrigger {
+    virtual void possibleValueChange(int64_t value) = 0;
+    virtual void valueChanged(int64_t value) = 0;
+};
+
+struct IntView {
     int64_t value;
     std::vector<std::shared_ptr<IntTrigger>> triggers;
+};
 
+struct IntValue : public IntView, ValBase {
     template <typename Func>
     inline void changeValue(Func&& func) {
-        for (std::shared_ptr<IntTrigger>& t : triggers) {
-            t->possibleValueChange(value);
-        }
+        int64_t oldValue = value;
         func();
+        if (value == oldValue) {
+            return;
+        }
+        for (std::shared_ptr<IntTrigger>& t : triggers) {
+            t->possibleValueChange(oldValue);
+        }
         for (std::shared_ptr<IntTrigger>& t : triggers) {
             t->valueChanged(value);
         }

@@ -1,17 +1,13 @@
 #include "operators/setOperators.h"
 using namespace std;
 
-SetView getSetView(OpSetIntersect& op) {
-    return SetView(op.memberHashes, op.cachedHashTotal, op.triggers);
-}
-
 void evaluate(OpSetIntersect& op) {
     evaluate(op.left);
     evaluate(op.right);
     op.cachedHashTotal = 0;
     op.memberHashes.clear();
-    SetView leftSetView = getSetView(op.left);
-    SetView rightSetView = getSetView(op.right);
+    SetView& leftSetView = getSetView(op.left);
+    SetView& rightSetView = getSetView(op.right);
     SetView& smallSetView =
         (leftSetView.memberHashes.size() < rightSetView.memberHashes.size())
             ? leftSetView
@@ -53,7 +49,7 @@ class OpSetIntersectTrigger : public SetTrigger {
         if (op.memberHashes.count(hash)) {
             return;
         }
-        SetView viewOfUnchangedSet = getSetView(unchanged);
+        SetView& viewOfUnchangedSet = getSetView(unchanged);
         if (viewOfUnchangedSet.memberHashes.count(hash)) {
             op.memberHashes.insert(hash);
             op.cachedHashTotal += hash;

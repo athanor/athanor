@@ -3,10 +3,8 @@
 #include <vector>
 #include "operators/intProducing.h"
 
-struct OpSum {
-    int64_t total = 0;
+struct OpSum : public IntView {
     std::vector<IntProducing> operands;
-    std::vector<std::shared_ptr<IntTrigger>> triggers;
 
     OpSum(std::vector<IntProducing> operandsIn)
         : operands(std::move(operandsIn)) {}

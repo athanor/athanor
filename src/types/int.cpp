@@ -33,8 +33,6 @@ ostream& prettyPrint(ostream& os, const IntDomain& d) {
     return os;
 }
 
-IntView getIntView(IntValue& val) { return IntView(val.value, val.triggers); }
-
 void matchInnerType(const IntValue&, IntValue&) {}
 void matchInnerType(const IntDomain&, IntValue&) {}
 

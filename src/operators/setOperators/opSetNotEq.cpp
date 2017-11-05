@@ -1,12 +1,9 @@
 #include "operators/setOperators.h"
 using namespace std;
 
-BoolView getBoolView(OpSetNotEq& op) {
-    return BoolView(op.violation, op.triggers);
-}
 inline void setViolation(OpSetNotEq& op, bool trigger) {
-    SetView leftSetView = getSetView(op.left);
-    SetView rightSetView = getSetView(op.right);
+    SetView& leftSetView = getSetView(op.left);
+    SetView& rightSetView = getSetView(op.right);
     u_int64_t oldViolation = op.violation;
     op.violation =
         (leftSetView.cachedHashTotal == rightSetView.cachedHashTotal) ? 1 : 0;

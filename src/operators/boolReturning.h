@@ -1,5 +1,6 @@
 #ifndef SRC_OPERATORS_BOOLRETURNING_H_
 #define SRC_OPERATORS_BOOLRETURNING_H_
+#include "operators/quantifierBase.h"
 #include "search/violationDescription.h"
 #include "types/bool.h"
 #include "types/forwardDecls/typesAndDomains.h"
@@ -10,8 +11,9 @@
 buildForBoolProducers(structDecls, );
 #undef structDecls
 
-using BoolReturning = mpark::variant<ValRef<BoolValue>, std::shared_ptr<OpAnd>,
-                                     std::shared_ptr<OpSetNotEq>>;
+using BoolReturning =
+    mpark::variant<ValRef<BoolValue>, QuantRef<BoolValue>,
+                   std::shared_ptr<OpAnd>, std::shared_ptr<OpSetNotEq>>;
 
 #define boolProducerFuncs(name)                                                \
     void evaluate(name&);                                                      \

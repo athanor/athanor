@@ -63,19 +63,18 @@ buildForAllTypes(constructFunctions, )
     inline decltype(auto) operator-> () const { return ref.operator->(); }
 };
 
-// declare variant for values
-#define variantValues(T) ValRef<T##Value>
-using Value = mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
-#undef variantValues
-
-// short cut for building a variant of any other templated class
-#define variantValues(V) T<ValRef<V##Value>>
+// short cut for building a variant of any other templated class, where the
+// class is templated over a value (SetValue,IntValue, etc.)
+#define variantValues(V) T<V##Value>
 template <template <typename> class T>
 using Variantised =
     mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
 #undef variantValues
 
-// declare variant for domains
+// variant for values
+using Value = Variantised<ValRef>;
+
+// variant for domains
 #define variantDomains(T) std::shared_ptr<T##Domain>
 using Domain = mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
 #undef variantDomains

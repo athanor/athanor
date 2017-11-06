@@ -1,5 +1,6 @@
 #ifndef SRC_OPERATORS_INTRETURNING_H_
 #define SRC_OPERATORS_INTRETURNING_H_
+#include "operators/quantifierBase.h"
 #include "search/violationDescription.h"
 #include "types/forwardDecls/typesAndDomains.h"
 #include "types/int.h"
@@ -11,8 +12,8 @@ buildForIntProducers(structDecls, );
 #undef structDecls
 
 using IntReturning =
-    mpark::variant<ValRef<IntValue>, std::shared_ptr<OpSetSize>,
-                   std::shared_ptr<OpSum>>;
+    mpark::variant<ValRef<IntValue>, QuantRef<IntValue>,
+                   std::shared_ptr<OpSetSize>, std::shared_ptr<OpSum>>;
 
 #define intProducerFuncs(name)                                                 \
     void evaluate(name&);                                                      \

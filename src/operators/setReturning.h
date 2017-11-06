@@ -2,6 +2,7 @@
 #define SRC_OPERATORS_SETRETURNING_H_
 #include <unordered_set>
 #include <vector>
+#include "operators/quantifierBase.h"
 #include "search/violationDescription.h"
 #include "types/forwardDecls/typesAndDomains.h"
 #include "types/set.h"
@@ -13,8 +14,8 @@
 buildForSetProducers(structDecls, );
 #undef structDecls
 
-using SetReturning =
-    mpark::variant<ValRef<SetValue>, std::shared_ptr<OpSetIntersect>>;
+using SetReturning = mpark::variant<ValRef<SetValue>, QuantRef<SetValue>,
+                                    std::shared_ptr<OpSetIntersect>>;
 
 #define setProducerFuncs(name)                                                 \
     void evaluate(name&);                                                      \

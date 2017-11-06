@@ -1,5 +1,5 @@
-#ifndef SRC_OPERATORS_SETPRODUCING_H_
-#define SRC_OPERATORS_SETPRODUCING_H_
+#ifndef SRC_OPERATORS_SETRETURNING_H_
+#define SRC_OPERATORS_SETRETURNING_H_
 #include <unordered_set>
 #include <vector>
 #include "search/violationDescription.h"
@@ -13,7 +13,7 @@
 buildForSetProducers(structDecls, );
 #undef structDecls
 
-using SetProducing =
+using SetReturning =
     mpark::variant<ValRef<SetValue>, std::shared_ptr<OpSetIntersect>>;
 
 #define setProducerFuncs(name)                                                 \
@@ -25,7 +25,7 @@ using SetProducing =
 buildForSetProducers(setProducerFuncs, )
 #undef setProducerFuncs
 
-    inline SetView& getSetView(const SetProducing& setV) {
+    inline SetView& getSetView(const SetReturning& setV) {
     return mpark::visit(
         [&](auto& setImpl) -> SetView& {
             return reinterpret_cast<SetView&>(*setImpl);
@@ -33,19 +33,19 @@ buildForSetProducers(setProducerFuncs, )
         setV);
 }
 
-inline void evaluate(SetProducing& set) {
+inline void evaluate(SetReturning& set) {
     mpark::visit([&](auto& setImpl) { evaluate(*setImpl); }, set);
 }
 
-inline void startTriggering(SetProducing& set) {
+inline void startTriggering(SetReturning& set) {
     mpark::visit([&](auto& setImpl) { startTriggering(*setImpl); }, set);
 }
 
-inline void stopTriggering(SetProducing& set) {
+inline void stopTriggering(SetReturning& set) {
     mpark::visit([&](auto& setImpl) { stopTriggering(*setImpl); }, set);
 }
 inline void updateViolationDescription(
-    const SetProducing& set, u_int64_t parentViolation,
+    const SetReturning& set, u_int64_t parentViolation,
     ViolationDescription& violationDescription) {
     mpark::visit(
         [&](auto& setImpl) {
@@ -55,4 +55,4 @@ inline void updateViolationDescription(
         set);
 }
 
-#endif /* SRC_OPERATORS_SETPRODUCING_H_ */
+#endif /* SRC_OPERATORS_SETRETURNING_H_ */

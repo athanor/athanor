@@ -1,5 +1,5 @@
-#ifndef SRC_OPERATORS_INTPRODUCING_H_
-#define SRC_OPERATORS_INTPRODUCING_H_
+#ifndef SRC_OPERATORS_INTRETURNING_H_
+#define SRC_OPERATORS_INTRETURNING_H_
 #include "search/violationDescription.h"
 #include "types/forwardDecls/typesAndDomains.h"
 #include "types/int.h"
@@ -10,7 +10,7 @@
 buildForIntProducers(structDecls, );
 #undef structDecls
 
-using IntProducing =
+using IntReturning =
     mpark::variant<ValRef<IntValue>, std::shared_ptr<OpSetSize>,
                    std::shared_ptr<OpSum>>;
 
@@ -23,7 +23,7 @@ using IntProducing =
 buildForIntProducers(intProducerFuncs, )
 #undef intProducerFuncs
 
-    inline IntView& getIntView(const IntProducing& intV) {
+    inline IntView& getIntView(const IntReturning& intV) {
     return mpark::visit(
         [&](auto& intImpl) -> IntView& {
             return reinterpret_cast<IntView&>(*intImpl);
@@ -31,18 +31,18 @@ buildForIntProducers(intProducerFuncs, )
         intV);
 }
 
-inline void evaluate(IntProducing& intV) {
+inline void evaluate(IntReturning& intV) {
     mpark::visit([&](auto& intImpl) { evaluate(*intImpl); }, intV);
 }
 
-inline void startTriggering(IntProducing& intV) {
+inline void startTriggering(IntReturning& intV) {
     mpark::visit([&](auto& intImpl) { startTriggering(*intImpl); }, intV);
 }
-inline void stopTriggering(IntProducing& intV) {
+inline void stopTriggering(IntReturning& intV) {
     mpark::visit([&](auto& intImpl) { stopTriggering(*intImpl); }, intV);
 }
 inline void updateViolationDescription(
-    const IntProducing& intV, u_int64_t parentViolation,
+    const IntReturning& intV, u_int64_t parentViolation,
     ViolationDescription& violationDescription) {
     mpark::visit(
         [&](auto& boolImpl) {
@@ -52,4 +52,4 @@ inline void updateViolationDescription(
         intV);
 }
 
-#endif /* SRC_OPERATORS_INTPRODUCING_H_ */
+#endif /* SRC_OPERATORS_INTRETURNING_H_ */

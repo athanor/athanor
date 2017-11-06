@@ -44,7 +44,7 @@ class OpSetIntersectTrigger : public SetTrigger {
     }
 
     inline void valueAdded(const Value& member) final {
-        SetProducing& unchanged = (left) ? op.right : op.left;
+        SetReturning& unchanged = (left) ? op.right : op.left;
         u_int64_t hash = mix(getValueHash(member));
         if (op.memberHashes.count(hash)) {
             return;
@@ -74,7 +74,7 @@ class OpSetIntersectTrigger : public SetTrigger {
             newHashOfMember == *oldHashIter) {
             return;
         }
-        SetProducing& unchanged = (left) ? op.right : op.left;
+        SetReturning& unchanged = (left) ? op.right : op.left;
         bool containedInUnchangedSet =
             getSetView(unchanged).memberHashes.count(newHashOfMember);
         if (oldHashIter != op.memberHashes.end()) {

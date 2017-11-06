@@ -1,12 +1,12 @@
 #ifndef SRC_OPERATORS_INTOPERATORS_H_
 #define SRC_OPERATORS_INTOPERATORS_H_
 #include <vector>
-#include "operators/intProducing.h"
+#include "operators/intReturning.h"
 
 struct OpSum : public IntView {
-    std::vector<IntProducing> operands;
+    std::vector<IntReturning> operands;
 
-    OpSum(std::vector<IntProducing> operandsIn)
+    OpSum(std::vector<IntReturning> operandsIn)
         : operands(std::move(operandsIn)) {}
 };
 

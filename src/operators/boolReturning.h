@@ -1,5 +1,5 @@
-#ifndef SRC_OPERATORS_BOOLPRODUCING_H_
-#define SRC_OPERATORS_BOOLPRODUCING_H_
+#ifndef SRC_OPERATORS_BOOLRETURNING_H_
+#define SRC_OPERATORS_BOOLRETURNING_H_
 #include "search/violationDescription.h"
 #include "types/bool.h"
 #include "types/forwardDecls/typesAndDomains.h"
@@ -10,7 +10,7 @@
 buildForBoolProducers(structDecls, );
 #undef structDecls
 
-using BoolProducing = mpark::variant<ValRef<BoolValue>, std::shared_ptr<OpAnd>,
+using BoolReturning = mpark::variant<ValRef<BoolValue>, std::shared_ptr<OpAnd>,
                                      std::shared_ptr<OpSetNotEq>>;
 
 #define boolProducerFuncs(name)                                                \
@@ -22,7 +22,7 @@ using BoolProducing = mpark::variant<ValRef<BoolValue>, std::shared_ptr<OpAnd>,
 buildForBoolProducers(boolProducerFuncs, )
 #undef boolProducerFuncs
 
-    inline BoolView& getBoolView(const BoolProducing& boolV) {
+    inline BoolView& getBoolView(const BoolReturning& boolV) {
     return mpark::visit(
         [&](auto& boolImpl) -> BoolView& {
             return reinterpret_cast<BoolView&>(*boolImpl);
@@ -30,20 +30,20 @@ buildForBoolProducers(boolProducerFuncs, )
         boolV);
 }
 
-inline void evaluate(BoolProducing& boolV) {
+inline void evaluate(BoolReturning& boolV) {
     mpark::visit([&](auto& boolImpl) { evaluate(*boolImpl); }, boolV);
 }
 
-inline void startTriggering(BoolProducing& boolV) {
+inline void startTriggering(BoolReturning& boolV) {
     mpark::visit([&](auto& boolImpl) { startTriggering(*boolImpl); }, boolV);
 }
 
-inline void stopTriggering(BoolProducing& boolV) {
+inline void stopTriggering(BoolReturning& boolV) {
     mpark::visit([&](auto& boolImpl) { stopTriggering(*boolImpl); }, boolV);
 }
 
 inline void updateViolationDescription(
-    const BoolProducing& boolv, u_int64_t parentViolation,
+    const BoolReturning& boolv, u_int64_t parentViolation,
     ViolationDescription& violationDescription) {
     mpark::visit(
         [&](auto& boolImpl) {
@@ -53,4 +53,4 @@ inline void updateViolationDescription(
         boolv);
 }
 
-#endif /* SRC_OPERATORS_BOOLPRODUCING_H_ */
+#endif /* SRC_OPERATORS_BOOLRETURNING_H_ */

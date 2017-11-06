@@ -4,32 +4,32 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-#include "operators/boolProducing.h"
-#include "operators/intProducing.h"
-#include "operators/setProducing.h"
+#include "operators/boolReturning.h"
+#include "operators/intReturning.h"
+#include "operators/setReturning.h"
 #include "types/forwardDecls/hash.h"
 #include "utils/hashUtils.h"
 
 struct OpSetIntersect : public SetView {
-    SetProducing left;
-    SetProducing right;
+    SetReturning left;
+    SetReturning right;
     u_int64_t cachedHashTotal = 0;
 
-    OpSetIntersect(SetProducing leftIn, SetProducing rightIn)
+    OpSetIntersect(SetReturning leftIn, SetReturning rightIn)
         : left(std::move(leftIn)), right(std::move(rightIn)) {}
 };
 
 struct OpSetSize : public IntView {
-    SetProducing operand;
+    SetReturning operand;
 
-    OpSetSize(SetProducing operandIn) : operand(operandIn) {}
+    OpSetSize(SetReturning operandIn) : operand(operandIn) {}
 };
 
 struct OpSetNotEq : public BoolView {
-    SetProducing left;
-    SetProducing right;
+    SetReturning left;
+    SetReturning right;
 
-    OpSetNotEq(SetProducing leftIn, SetProducing rightIn)
+    OpSetNotEq(SetReturning leftIn, SetReturning rightIn)
         : left(std::move(leftIn)), right(std::move(rightIn)) {}
 };
 

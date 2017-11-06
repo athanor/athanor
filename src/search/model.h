@@ -5,8 +5,8 @@
 #include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/boolOperators.h"
-#include "operators/boolProducing.h"
-#include "operators/intProducing.h"
+#include "operators/boolReturning.h"
+#include "operators/intReturning.h"
 #include "types/forwardDecls/copy.h"
 #include "types/forwardDecls/typesAndDomains.h"
 #include "types/int.h"
@@ -23,7 +23,7 @@ struct Model {
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
     OpAnd csp;
-    IntProducing objective;
+    IntReturning objective;
     OptimiseMode optimiseMode;
 
    private:
@@ -32,7 +32,7 @@ struct Model {
           std::vector<Neighbourhood> neighbourhoods,
           std::vector<int> neighbourhoodVarMapping,
           std::vector<std::vector<int>> varNeighbourhoodMapping,
-          std::vector<BoolProducing> constraints, IntProducing objective,
+          std::vector<BoolReturning> constraints, IntReturning objective,
           OptimiseMode optimiseMode)
         : variables(std::move(variables)),
           variablesBackup(std::move(variablesBackup)),
@@ -46,8 +46,8 @@ struct Model {
 
 class ModelBuilder {
     std::vector<std::pair<Domain, Value>> variables;
-    std::vector<BoolProducing> constraints;
-    IntProducing objective = constructValueFromDomain(
+    std::vector<BoolReturning> constraints;
+    IntReturning objective = constructValueFromDomain(
         IntDomain({intBound(0, 0)}));  // non applicable default
                                        // to avoid undefined
                                        // variant
@@ -56,7 +56,7 @@ class ModelBuilder {
    public:
     ModelBuilder() {}
 
-    inline void addConstraint(BoolProducing constraint) {
+    inline void addConstraint(BoolReturning constraint) {
         constraints.emplace_back(std::move(constraint));
     }
     template <typename DomainPtrType,
@@ -71,7 +71,7 @@ class ModelBuilder {
         return val;
     }
 
-    inline void setObjective(OptimiseMode mode, IntProducing obj) {
+    inline void setObjective(OptimiseMode mode, IntReturning obj) {
         objective = std::move(obj);
         optimiseMode = mode;
         ;

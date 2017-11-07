@@ -1,9 +1,10 @@
 #ifndef SRC_OPERATORS_BOOLRETURNING_H_
 #define SRC_OPERATORS_BOOLRETURNING_H_
-#include "operators/quantifierBase.h"
+#include "operators/operatorBase.h"
 #include "search/violationDescription.h"
 #include "types/bool.h"
 #include "types/forwardDecls/typesAndDomains.h"
+#include "types/typeTrates.h"
 #define buildForBoolProducers(f, sep) \
     f(BoolValue) sep f(OpAnd) sep f(OpSetNotEq)
 
@@ -20,7 +21,9 @@ using BoolReturning =
     void startTriggering(name&);                                               \
     void stopTriggering(name&);                                                \
     void updateViolationDescription(const name& op, u_int64_t parentViolation, \
-                                    ViolationDescription&);
+                                    ViolationDescription&);                    \
+    std::shared_ptr<name> deepCopyForUnroll(                                   \
+        const name&, const QuantValue& unrollingQuantifier);
 buildForBoolProducers(boolProducerFuncs, )
 #undef boolProducerFuncs
 

@@ -32,5 +32,8 @@ struct SetForAll : public BoolView {
     inline QuantRef<T> newQuantRef() {
         return QuantRef<T>(quantId);
     }
+
+   private:
+    void unroll(const Value&) {}
 };
 #endif /* SRC_OPERATORS_BOOLOPERATORS_H_ */

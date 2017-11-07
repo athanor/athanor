@@ -7,6 +7,7 @@
 #include "types/forwardDecls/getDomainSize.h"
 #include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/print.h"
+#include "types/typeTrates.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
 using namespace std;

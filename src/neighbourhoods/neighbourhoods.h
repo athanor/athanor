@@ -4,6 +4,7 @@
 #include <functional>
 #include <vector>
 #include "types/forwardDecls/typesAndDomains.h"
+#include "types/typeTrates.h"
 #define assignRandomFunctions(name)                            \
     void assignRandomValueInDomain(const name##Domain& domain, \
                                    name##Value& val);

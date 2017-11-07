@@ -20,12 +20,12 @@ inline std::ostream& prettyPrint(std::ostream& os, const Value& v) {
     return os;
 }
 
-template <typename Value,
-          typename std::enable_if<
-              std::is_same<typename AssociatedDomain<Value>::type,
-                           typename AssociatedDomain<Value>::type>::value,
-              int>::type = 0>
-std::ostream& operator<<(std::ostream& os, const std::shared_ptr<Value>& v) {
+template <typename Value>
+std::ostream& operator<<(std::ostream& os, const ValRef<Value>& v) {
+    return prettyPrint(os, v);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const Value& v) {
     return prettyPrint(os, v);
 }
 #endif

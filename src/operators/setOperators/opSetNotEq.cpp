@@ -2,8 +2,8 @@
 using namespace std;
 
 inline void setViolation(OpSetNotEq& op, bool trigger) {
-    SetView& leftSetView = getSetView(op.left);
-    SetView& rightSetView = getSetView(op.right);
+    SetView& leftSetView = getView<SetView>(op.left);
+    SetView& rightSetView = getView<SetView>(op.right);
     u_int64_t oldViolation = op.violation;
     op.violation =
         (leftSetView.cachedHashTotal == rightSetView.cachedHashTotal) ? 1 : 0;
@@ -38,9 +38,9 @@ class OpSetNotEqTrigger : public SetTrigger {
 };
 
 void startTriggering(OpSetNotEq& op) {
-    getSetView(op.left).triggers.emplace_back(
+    getView<SetView>(op.left).triggers.emplace_back(
         make_shared<OpSetNotEqTrigger>(op));
-    getSetView(op.right).triggers.emplace_back(
+    getView<SetView>(op.right).triggers.emplace_back(
         make_shared<OpSetNotEqTrigger>(op));
     startTriggering(op.left);
     startTriggering(op.right);

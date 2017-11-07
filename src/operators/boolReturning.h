@@ -1,7 +1,6 @@
 #ifndef SRC_OPERATORS_BOOLRETURNING_H_
 #define SRC_OPERATORS_BOOLRETURNING_H_
 #include "operators/operatorBase.h"
-#include "search/violationDescription.h"
 #include "types/bool.h"
 #include "types/forwardDecls/typesAndDomains.h"
 #include "types/typeTrates.h"
@@ -26,36 +25,5 @@ using BoolReturning =
         const name&, const QuantValue& unrollingQuantifier);
 buildForBoolProducers(boolProducerFuncs, )
 #undef boolProducerFuncs
-
-    inline BoolView& getBoolView(const BoolReturning& boolV) {
-    return mpark::visit(
-        [&](auto& boolImpl) -> BoolView& {
-            return reinterpret_cast<BoolView&>(*boolImpl);
-        },
-        boolV);
-}
-
-inline void evaluate(BoolReturning& boolV) {
-    mpark::visit([&](auto& boolImpl) { evaluate(*boolImpl); }, boolV);
-}
-
-inline void startTriggering(BoolReturning& boolV) {
-    mpark::visit([&](auto& boolImpl) { startTriggering(*boolImpl); }, boolV);
-}
-
-inline void stopTriggering(BoolReturning& boolV) {
-    mpark::visit([&](auto& boolImpl) { stopTriggering(*boolImpl); }, boolV);
-}
-
-inline void updateViolationDescription(
-    const BoolReturning& boolv, u_int64_t parentViolation,
-    ViolationDescription& violationDescription) {
-    mpark::visit(
-        [&](auto& boolImpl) {
-            updateViolationDescription(*boolImpl, parentViolation,
-                                       violationDescription);
-        },
-        boolv);
-}
 
 #endif /* SRC_OPERATORS_BOOLRETURNING_H_ */

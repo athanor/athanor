@@ -4,7 +4,7 @@ using namespace std;
 
 void evaluate(OpSetSize& op) {
     evaluate(op.operand);
-    op.value = getSetView(op.operand).memberHashes.size();
+    op.value = getView<SetView>(op.operand).memberHashes.size();
 }
 
 class OpSetSizeTrigger : public SetTrigger {
@@ -35,7 +35,7 @@ class OpSetSizeTrigger : public SetTrigger {
 };
 
 void startTriggering(OpSetSize& op) {
-    getSetView(op.operand)
+    getView<SetView>(op.operand)
         .triggers.emplace_back(make_shared<OpSetSizeTrigger>(op));
     startTriggering(op.operand);
 }

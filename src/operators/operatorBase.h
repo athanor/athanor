@@ -2,6 +2,8 @@
 #ifndef SRC_OPERATORS_OPERATORBASE_H_
 #define SRC_OPERATORS_OPERATORBASE_H_
 #include "operators/quantifierBase.h"
+#include "search/violationDescription.h"
+
 // overload for function deepCopyForUnrolling for all base operator variant
 // types i.e. BoolReturning, IntReturning, SetReturning, etc.
 template <typename ReturnType>
@@ -27,6 +29,40 @@ template <typename T>
 inline ValRef<T> deepCopyForUnrollOverload(const ValRef<T>& val,
                                            const QuantValue&) {
     return val;
+}
+
+template <typename View, typename Operator>
+inline View& getView(const Operator& op) {
+    return mpark::visit(
+        [&](auto& opImpl) -> View& { return reinterpret_cast<View&>(*opImpl); },
+        op);
+}
+
+template <typename Operator>
+inline void evaluate(Operator& op) {
+    mpark::visit([&](auto& opImpl) { evaluate(*opImpl); }, op);
+}
+
+template <typename Operator>
+inline void startTriggering(Operator& op) {
+    mpark::visit([&](auto& opImpl) { startTriggering(*opImpl); }, op);
+}
+
+template <typename Operator>
+inline void stopTriggering(Operator& op) {
+    mpark::visit([&](auto& opImpl) { stopTriggering(*opImpl); }, op);
+}
+
+template <typename Operator>
+inline void updateViolationDescription(
+    const Operator& op, u_int64_t parentViolation,
+    ViolationDescription& violationDescription) {
+    mpark::visit(
+        [&](auto& opImpl) {
+            updateViolationDescription(*opImpl, parentViolation,
+                                       violationDescription);
+        },
+        op);
 }
 
 #endif /* SRC_OPERATORS_OPERATORBASE_H_ */

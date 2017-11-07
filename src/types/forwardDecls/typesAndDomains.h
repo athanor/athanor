@@ -16,6 +16,7 @@ using BaseType =
 // forward declare structs
 #define declDomainsAndValues(name) \
     struct name##Value;            \
+    struct name##View;             \
     struct name##Domain;
 buildForAllTypes(declDomainsAndValues, )
 #undef declDomainsAndValues

@@ -6,8 +6,8 @@ void evaluate(OpSetIntersect& op) {
     evaluate(op.right);
     op.cachedHashTotal = 0;
     op.memberHashes.clear();
-    SetView& leftSetView = getSetView(op.left);
-    SetView& rightSetView = getSetView(op.right);
+    SetView& leftSetView = getView<SetView>(op.left);
+    SetView& rightSetView = getView<SetView>(op.right);
     SetView& smallSetView =
         (leftSetView.memberHashes.size() < rightSetView.memberHashes.size())
             ? leftSetView
@@ -49,7 +49,7 @@ class OpSetIntersectTrigger : public SetTrigger {
         if (op.memberHashes.count(hash)) {
             return;
         }
-        SetView& viewOfUnchangedSet = getSetView(unchanged);
+        SetView& viewOfUnchangedSet = getView<SetView>(unchanged);
         if (viewOfUnchangedSet.memberHashes.count(hash)) {
             op.memberHashes.insert(hash);
             op.cachedHashTotal += hash;
@@ -76,7 +76,7 @@ class OpSetIntersectTrigger : public SetTrigger {
         }
         SetReturning& unchanged = (left) ? op.right : op.left;
         bool containedInUnchangedSet =
-            getSetView(unchanged).memberHashes.count(newHashOfMember);
+            getView<SetView>(unchanged).memberHashes.count(newHashOfMember);
         if (oldHashIter != op.memberHashes.end()) {
             op.cachedHashTotal -= *oldHashIter;
             op.memberHashes.erase(oldHashIter);
@@ -102,9 +102,9 @@ class OpSetIntersectTrigger : public SetTrigger {
 };
 
 void startTriggering(OpSetIntersect& op) {
-    getSetView(op.left).triggers.emplace_back(
+    getView<SetView>(op.left).triggers.emplace_back(
         make_shared<OpSetIntersectTrigger<true>>(op));
-    getSetView(op.right).triggers.emplace_back(
+    getView<SetView>(op.right).triggers.emplace_back(
         make_shared<OpSetIntersectTrigger<false>>(op));
     startTriggering(op.left);
     startTriggering(op.right);

@@ -7,11 +7,11 @@ void evaluate(OpAnd& op) {
     for (size_t i = 0; i < op.operands.size(); ++i) {
         auto& operand = op.operands[i];
         evaluate(operand);
-        u_int64_t violation = getBoolView(operand).violation;
+        u_int64_t violation = getView<BoolView>(operand).violation;
         if (violation > 0) {
             op.violatingOperands.insert(i);
         }
-        op.violation += getBoolView(operand).violation;
+        op.violation += getView<BoolView>(operand).violation;
     }
 }
 
@@ -49,7 +49,7 @@ void startTriggering(OpAnd& op) {
     for (size_t i = 0; i < op.operands.size(); ++i) {
         auto& operand = op.operands[i];
         auto trigger = make_shared<OpAndTrigger>(op, i);
-        getBoolView(operand).triggers.emplace_back(trigger);
+        getView<BoolView>(operand).triggers.emplace_back(trigger);
         startTriggering(operand);
     }
 }

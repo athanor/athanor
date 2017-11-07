@@ -5,7 +5,7 @@ void evaluate(OpSum& op) {
     op.value = 0;
     for (auto& operand : op.operands) {
         evaluate(operand);
-        op.value += getIntView(operand).value;
+        op.value += getView<IntView>(operand).value;
     }
 }
 
@@ -34,7 +34,7 @@ class OpSumTrigger : public IntTrigger {
 void startTriggering(OpSum& op) {
     auto trigger = std::make_shared<OpSumTrigger>(op);
     for (auto& operand : op.operands) {
-        getIntView(operand).triggers.emplace_back(trigger);
+        getView<IntView>(operand).triggers.emplace_back(trigger);
         startTriggering(operand);
     }
 }

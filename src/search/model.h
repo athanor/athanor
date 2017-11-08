@@ -4,12 +4,12 @@
 #include <cassert>
 #include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
-#include "operators/boolOperators.h"
-#include "operators/boolReturning.h"
-#include "operators/intReturning.h"
+#include "operators/opAnd.h"
+#include "operators/operatorBase.h"
 #include "types/forwardDecls/copy.h"
 #include "types/forwardDecls/typesAndDomains.h"
 #include "types/int.h"
+
 class ModelBuilder;
 enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
 struct Model {

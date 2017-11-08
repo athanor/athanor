@@ -2,13 +2,13 @@
 #ifndef SRC_SEARCH_SEARCHSTRATEGIES_H_
 #define SRC_SEARCH_SEARCHSTRATEGIES_H_
 #include <cassert>
-#include "operators/boolReturning.h"
+#include "operators/operatorBase.h"
 #include "search/model.h"
+#include "search/neighbourhoodSelectionStrategies.h"
 #include "types/forwardDecls/compare.h"
 #include "types/forwardDecls/copy.h"
 #include "types/forwardDecls/print.h"
 
-#include "search/neighbourhoodSelectionStrategies.h"
 template <typename NeighbourhoodSelectionStrategy>
 class HillClimber {
     Model model;

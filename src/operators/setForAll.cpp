@@ -1,5 +1,5 @@
+#include "operators/setForAll.h"
 #include <cassert>
-#include "operators/boolOperators.h"
 using namespace std;
 /*
 void evaluate(OpAnd& op) {

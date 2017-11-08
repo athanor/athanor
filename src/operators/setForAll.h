@@ -1,18 +1,11 @@
-#ifndef SRC_OPERATORS_BOOLOPERATORS_H_
-#define SRC_OPERATORS_BOOLOPERATORS_H_
+
+#ifndef SRC_OPERATORS_SETFORALL_H_
+#define SRC_OPERATORS_SETFORALL_H_
 #include <vector>
-#include "operators/boolReturning.h"
+#include "operators/operatorBase.h"
 #include "operators/quantifierBase.h"
+#include "types/bool.h"
 #include "utils/fastIterableIntSet.h"
-
-struct OpAnd : public BoolView {
-    std::vector<BoolReturning> operands;
-    FastIterableIntSet violatingOperands;
-    OpAnd(std::vector<BoolReturning> operandsIn)
-        : operands(std::move(operandsIn)),
-          violatingOperands(0, this->operands.size() - 1) {}
-};
-
 struct SetForAll : public BoolView {
     const int quantId = nextQuantId();
     std::vector<BoolReturning> unrolled;
@@ -36,4 +29,5 @@ struct SetForAll : public BoolView {
    private:
     void unroll(const Value&) {}
 };
-#endif /* SRC_OPERATORS_BOOLOPERATORS_H_ */
+
+#endif /* SRC_OPERATORS_SETFORALL_H_ */

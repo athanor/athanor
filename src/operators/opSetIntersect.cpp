@@ -1,4 +1,9 @@
-#include "operators/setOperators.h"
+#include "operators/opSetIntersect.h"
+#include <iostream>
+#include <memory>
+#include "types/forwardDecls/hash.h"
+#include "utils/hashUtils.h"
+
 using namespace std;
 
 void evaluate(OpSetIntersect& op) {

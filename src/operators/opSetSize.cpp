@@ -1,5 +1,8 @@
-#include <cassert>
-#include "operators/setOperators.h"
+#include "operators/opSetSize.h"
+#include <iostream>
+#include <memory>
+#include "types/set.h"
+
 using namespace std;
 
 void evaluate(OpSetSize& op) {

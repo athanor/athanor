@@ -65,15 +65,6 @@ class RandomNeighbourhoodWithViolation {
     }
     inline void reportResult(const NeighbourhoodResult& result) {
         initialise(result.model);
-        if (false && result.bestViolation <= 2) {
-            for (auto varId : vioDesc.getVarsWithViolation()) {
-                std::cout << "var " << varId << " with violation of "
-                          << vioDesc.getVarViolationMapping()[varId]
-                          << std::endl;
-                prettyPrint(std::cout, result.model.variables[varId].second)
-                    << std::endl;
-            }
-        }
     }
     inline int selectNeighbourhoodFromVarId(const Model& model,
                                             u_int64_t varId) {

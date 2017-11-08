@@ -1,4 +1,8 @@
-#include "operators/setOperators.h"
+#include "operators/opSetNotEq.h"
+#include <iostream>
+#include <memory>
+#include "types/set.h"
+
 using namespace std;
 
 inline void setViolation(OpSetNotEq& op, bool trigger) {

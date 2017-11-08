@@ -1,13 +1,11 @@
-#include <operators/setReturning.h>
 #include <iostream>
 #include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
-#include "operators/setOperators.h"
+#include "operators/opSetNotEq.h"
 #include "search/searchStrategies.h"
 #include "types/allTypes.h"
-#include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/print.h"
-#include "utils/hashUtils.h"
+
 using namespace std;
 
 int main() {

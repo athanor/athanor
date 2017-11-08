@@ -1,5 +1,5 @@
+#include "operators/opSum.h"
 #include <cassert>
-#include "operators/intOperators.h"
 using namespace std;
 void evaluate(OpSum& op) {
     op.value = 0;

@@ -4,6 +4,37 @@
 #include "operators/quantifierBase.h"
 #include "search/violationDescription.h"
 
+#define buildForOperators(f, sep)                                           \
+    f(IntValue) sep f(OpSetSize) sep f(OpSum) sep f(BoolValue) sep f(OpAnd) \
+        sep f(OpSetNotEq) sep f(SetValue) sep f(OpSetIntersect)             \
+            sep f(OpSetUnion)
+
+#define structDecls(name) struct name;
+buildForOperators(structDecls, );
+#undef structDecls
+
+#define operatorFuncs(name)                                                    \
+    void evaluate(name&);                                                      \
+    void startTriggering(name&);                                               \
+    void stopTriggering(name&);                                                \
+    void updateViolationDescription(const name& op, u_int64_t parentViolation, \
+                                    ViolationDescription&);
+buildForOperators(operatorFuncs, );
+#undef operatorFuncs
+// bool returning
+using BoolReturning =
+    mpark::variant<ValRef<BoolValue>, QuantRef<BoolValue>,
+                   std::shared_ptr<OpAnd>, std::shared_ptr<OpSetNotEq>>;
+
+// int returning
+using IntReturning =
+    mpark::variant<ValRef<IntValue>, QuantRef<IntValue>,
+                   std::shared_ptr<OpSetSize>, std::shared_ptr<OpSum>>;
+
+// set returning
+using SetReturning = mpark::variant<ValRef<SetValue>, QuantRef<SetValue>,
+                                    std::shared_ptr<OpSetIntersect>>;
+
 // overload for function deepCopyForUnrolling for all base operator variant
 // types i.e. BoolReturning, IntReturning, SetReturning, etc.
 template <typename ReturnType>

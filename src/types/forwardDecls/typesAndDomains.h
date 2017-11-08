@@ -89,4 +89,25 @@ struct ValBase {
 buildForAllTypes(valBaseAccessors, )
 #undef valBaseAccessors
 
+    struct TriggerBase {
+    size_t indexInVector;
+};
+
+template <typename Trigger>
+void addTrigger(std::vector<std::shared_ptr<Trigger>>& triggerVec,
+                const std::shared_ptr<Trigger>& trigger) {
+    triggerVec.emplace_back(trigger);
+    static_cast<TriggerBase&>(*trigger).indexInVector = triggerVec.size() - 1;
+}
+
+template <typename Trigger>
+void deleteTrigger(std::vector<std::shared_ptr<Trigger>>& triggerVec,
+                   const std::shared_ptr<Trigger>& trigger) {
+    size_t indexToDelete = static_cast<TriggerBase&>(*trigger).indexInVector;
+    triggerVec[indexToDelete] = std::move(triggerVec.back());
+    static_cast<TriggerBase&>(*triggerVec[indexToDelete]).indexInVector =
+        indexToDelete;
+    triggerVec.pop_back();
+}
+
 #endif /* SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_ */

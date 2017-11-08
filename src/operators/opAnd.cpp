@@ -1,5 +1,6 @@
 #include "operators/opAnd.h"
 #include <cassert>
+#include "utils/ignoreUnused.h"
 using namespace std;
 
 void evaluate(OpAnd& op) {
@@ -16,12 +17,13 @@ void evaluate(OpAnd& op) {
 }
 
 class OpAndTrigger : public BoolTrigger {
-    OpAnd& op;
+    friend OpAnd;
+    OpAnd* op;
     const size_t index;
     u_int64_t lastViolation;
 
    public:
-    OpAndTrigger(OpAnd& op, size_t index) : op(op), index(index) {}
+    OpAndTrigger(OpAnd* op, size_t index) : op(op), index(index) {}
     void possibleValueChange(u_int64_t oldVilation) {
         lastViolation = oldVilation;
     }
@@ -30,33 +32,48 @@ class OpAndTrigger : public BoolTrigger {
             return;
         }
         if (newViolation > 0 && lastViolation == 0) {
-            op.violatingOperands.insert(index);
+            op->violatingOperands.insert(index);
         } else if (newViolation == 0 && lastViolation > 0) {
-            op.violatingOperands.erase(index);
+            op->violatingOperands.erase(index);
         }
-        for (auto& trigger : op.triggers) {
-            trigger->possibleValueChange(op.violation);
+        for (auto& trigger : op->triggers) {
+            trigger->possibleValueChange(op->violation);
         }
-        op.violation -= lastViolation;
-        op.violation += newViolation;
-        for (auto& trigger : op.triggers) {
-            trigger->valueChanged(op.violation);
+        op->violation -= lastViolation;
+        op->violation += newViolation;
+        for (auto& trigger : op->triggers) {
+            trigger->valueChanged(op->violation);
         }
     }
 };
 
+OpAnd::OpAnd(OpAnd&& other)
+    : BoolView(std::move(other)),
+      operands(std::move(other.operands)),
+      violatingOperands(std::move(other.violatingOperands)),
+      operandTriggers(std::move(other.operandTriggers)) {
+    for (auto& trigger : operandTriggers) {
+        trigger->op = this;
+    }
+}
+
 void startTriggering(OpAnd& op) {
     for (size_t i = 0; i < op.operands.size(); ++i) {
         auto& operand = op.operands[i];
-        auto trigger = make_shared<OpAndTrigger>(op, i);
-        getView<BoolView>(operand).triggers.emplace_back(trigger);
+        auto trigger = make_shared<OpAndTrigger>(&op, i);
+        addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
+        op.operandTriggers.emplace_back(trigger);
         startTriggering(operand);
     }
 }
 
 void stopTriggering(OpAnd& op) {
-    assert(false);  // todo
-    for (auto& operand : op.operands) {
+    while (!op.operandTriggers.empty()) {
+        auto& operand = op.operands[op.operandTriggers.size() - 1];
+        deleteTrigger<BoolTrigger>(getView<BoolView>(operand).triggers,
+
+                                   op.operandTriggers.back());
+        op.operandTriggers.pop_back();
         stopTriggering(operand);
     }
 }
@@ -67,4 +84,10 @@ void updateViolationDescription(const OpAnd& op, u_int64_t,
         updateViolationDescription(op.operands[violatingOperandIndex],
                                    op.violation, vioDesc);
     }
+}
+
+std::shared_ptr<OpAnd> deepCopyForUnroll(
+    const OpAnd& op, const QuantValue& unrollingQuantifier) {
+    ignoreUnused(op, unrollingQuantifier);
+    abort();
 }

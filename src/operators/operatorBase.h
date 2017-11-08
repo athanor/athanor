@@ -3,7 +3,7 @@
 #define SRC_OPERATORS_OPERATORBASE_H_
 #include "operators/quantifierBase.h"
 #include "search/violationDescription.h"
-
+#include "types/forwardDecls/typesAndDomains.h"
 #define buildForOperators(f, sep)                                           \
     f(IntValue) sep f(OpSetSize) sep f(OpSum) sep f(BoolValue) sep f(OpAnd) \
         sep f(OpSetNotEq) sep f(SetValue) sep f(OpSetIntersect)             \
@@ -18,9 +18,12 @@ buildForOperators(structDecls, );
     void startTriggering(name&);                                               \
     void stopTriggering(name&);                                                \
     void updateViolationDescription(const name& op, u_int64_t parentViolation, \
-                                    ViolationDescription&);
+                                    ViolationDescription&);                    \
+    std::shared_ptr<name> deepCopyForUnroll(                                   \
+        const name& op, const QuantValue& unrollingQuantifier);
 buildForOperators(operatorFuncs, );
 #undef operatorFuncs
+
 // bool returning
 using BoolReturning =
     mpark::variant<ValRef<BoolValue>, QuantRef<BoolValue>,
@@ -34,33 +37,6 @@ using IntReturning =
 // set returning
 using SetReturning = mpark::variant<ValRef<SetValue>, QuantRef<SetValue>,
                                     std::shared_ptr<OpSetIntersect>>;
-
-// overload for function deepCopyForUnrolling for all base operator variant
-// types i.e. BoolReturning, IntReturning, SetReturning, etc.
-template <typename ReturnType>
-inline ReturnType deepCopyForUnroll(const ReturnType& expr,
-                                    const QuantValue& unrollingQuantifier) {
-    return mpark::visit(
-        [&](auto& exprImpl) -> ReturnType {
-            return deepCopyForUnrollingImpl(exprImpl, unrollingQuantifier);
-        },
-        expr);
-}
-
-/// overload of deepCopyForUnroll that catches operators
-template <typename T>
-std::shared_ptr<T> deepCopyForUnrollOverload(
-    const std::shared_ptr<T>& ptr, const QuantValue& unrollingQuantifier) {
-    return deepCopyForUnroll(*ptr, unrollingQuantifier);
-}
-
-// ValRef overload for deepCopyOverload, note that ValRefs are not supposed to
-// be deepCopied when unrolling
-template <typename T>
-inline ValRef<T> deepCopyForUnrollOverload(const ValRef<T>& val,
-                                           const QuantValue&) {
-    return val;
-}
 
 template <typename View, typename Operator>
 inline View& getView(const Operator& op) {
@@ -96,4 +72,43 @@ inline void updateViolationDescription(
         op);
 }
 
+// overload for function deepCopyForUnrolling for all base operator variant
+// types i.e. BoolReturning, IntReturning, SetReturning, etc.
+template <typename ReturnType>
+inline ReturnType deepCopyForUnroll(const ReturnType& expr,
+                                    const QuantValue& unrollingQuantifier) {
+    return mpark::visit(
+        [&](auto& exprImpl) -> ReturnType {
+            return deepCopyForUnrollingOverLoad(exprImpl, unrollingQuantifier);
+        },
+        expr);
+}
+
+/// overload of deepCopyForUnroll that catches operators
+template <typename T>
+std::shared_ptr<T> deepCopyForUnrollOverload(
+    const std::shared_ptr<T>& ptr, const QuantValue& unrollingQuantifier) {
+    return deepCopyForUnroll(*ptr, unrollingQuantifier);
+}
+
+// ValRef overload for deepCopyOverload, note that ValRefs are not supposed to
+// be deepCopied when unrolling
+template <typename T>
+inline ValRef<T> deepCopyForUnrollOverload(const ValRef<T>& val,
+                                           const QuantValue&) {
+    return val;
+}
+
+template <typename T>
+inline QuantRef<T> deepCopyForUnrollOverload(
+    const QuantRef<T>& quantVal, const QuantValue& unrollingQuantifier) {
+    QuantRef<T>* unrollingQuantifierPtr =
+        mpark::get<QuantRef<T>>(unrollingQuantifier);
+    if (unrollingQuantifierPtr != NULL &&
+        unrollingQuantifierPtr->id == quantVal.id) {
+        return *unrollingQuantifierPtr;
+    } else {
+        return quantVal;
+    }
+}
 #endif /* SRC_OPERATORS_OPERATORBASE_H_ */

@@ -67,9 +67,9 @@ struct SetValueImpl {
     inline void changeMemberValue(Func&& func, SetValueType& val,
                                   size_t memberIndex) {
         u_int64_t hash = mix(getValueHash(*members[memberIndex]));
-        for (auto& t : val.triggers) {
-            t->possibleValueChange(members[memberIndex]);
-        }
+        Value triggerMember = members[memberIndex];
+        visitTriggers([&](auto& t) { t->possibleValueChange(triggerMember); },
+                      val.triggers);
         bool valueChanged = func();
         if (!valueChanged) {
             return;
@@ -79,10 +79,11 @@ struct SetValueImpl {
         hash = mix(getValueHash(*members[memberIndex]));
         val.memberHashes.insert(hash);
         val.cachedHashTotal += hash;
-        for (auto& t : val.triggers) {
-            t->valueChanged(members[memberIndex]);
-        }
+        triggerMember = members[memberIndex];
+        visitTriggers([&](auto& t) { t->valueChanged(triggerMember); },
+                      val.triggers);
     }
+
     template <typename SetValueType>
     inline Inner removeValue(SetValueType& val, size_t memberIndex) {
         Inner member = std::move(members[memberIndex]);
@@ -91,11 +92,12 @@ struct SetValueImpl {
         u_int64_t hash = mix(getValueHash(*member));
         val.memberHashes.erase(hash);
         val.cachedHashTotal -= hash;
-        for (auto& t : val.triggers) {
-            t->valueRemoved(member);
-        }
+        Value triggerMember = member;
+        visitTriggers([&](auto& t) { t->valueRemoved(triggerMember); },
+                      val.triggers);
         return member;
     }
+
     template <typename SetValueType>
     void removeAllValues(SetValueType& val) {
         while (!members.empty()) {
@@ -112,9 +114,9 @@ struct SetValueImpl {
         u_int64_t hash = mix(getValueHash(*member));
         val.memberHashes.insert(hash);
         val.cachedHashTotal += hash;
-        for (auto& t : val.triggers) {
-            t->valueAdded(members.back());
-        }
+        Value triggerMember = members.back();
+        visitTriggers([&](auto& t) { t->valueAdded(triggerMember); },
+                      val.triggers);
         return true;
     }
 };

@@ -10,38 +10,47 @@ void evaluate(OpSum& op) {
 }
 
 class OpSumTrigger : public IntTrigger {
-    OpSum& op;
+    friend OpSum;
+    OpSum* op;
     int64_t lastMemberValue;
 
    public:
-    OpSumTrigger(OpSum& op) : op(op) {}
+    OpSumTrigger(OpSum* op) : op(op) {}
     void possibleValueChange(int64_t oldValue) { lastMemberValue = oldValue; }
     void valueChanged(int64_t newValue) {
         if (newValue == lastMemberValue) {
             return;
         }
-        for (auto& trigger : op.triggers) {
-            trigger->possibleValueChange(op.value);
-        }
-        op.value -= lastMemberValue;
-        op.value += newValue;
-        for (auto& trigger : op.triggers) {
-            trigger->valueChanged(op.value);
-        }
+        visitTriggers(
+            [&](auto& trigger) { trigger->possibleValueChange(op->value); },
+            op->triggers, emptyEndOfTriggerQueue);
+        op->value -= lastMemberValue;
+        op->value += newValue;
+        visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
+                      op->triggers, emptyEndOfTriggerQueue);
     }
 };
 
+OpSum::OpSum(OpSum&& other)
+    : IntView(std::move(other)),
+      operands(std::move(other.operands)),
+      operandTrigger(std::move(other.operandTrigger)) {
+    operandTrigger->op = this;
+}
+
 void startTriggering(OpSum& op) {
-    auto trigger = std::make_shared<OpSumTrigger>(op);
+    op.operandTrigger = std::make_shared<OpSumTrigger>(&op);
     for (auto& operand : op.operands) {
-        getView<IntView>(operand).triggers.emplace_back(trigger);
+        addTrigger<IntTrigger>(getView<IntView>(operand).triggers,
+                               op.operandTrigger);
         startTriggering(operand);
     }
 }
 
 void stopTriggering(OpSum& op) {
-    assert(false);  // todo
     for (auto& operand : op.operands) {
+        deleteTrigger<IntTrigger>(getView<IntView>(operand).triggers,
+                                  op.operandTrigger);
         stopTriggering(operand);
     }
 }

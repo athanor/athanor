@@ -90,9 +90,9 @@ buildForAllTypes(valBaseAccessors, )
 #undef valBaseAccessors
 
     struct TriggerBase {
-    size_t indexInVector;
+    bool active;
 };
-struct EndOfQueueTrigger {
+struct EndOfQueueTrigger : public TriggerBase {
     virtual void reachedEndOfTriggerQueue() = 0;
 };
 
@@ -110,7 +110,6 @@ void cleanNullTriggers(std::vector<std::shared_ptr<Trigger>>& triggers) {
             break;
         } else {
             triggers[i] = std::move(triggers.back());
-            triggers[i]->indexInVector = i;
             triggers.pop_back();
         }
     }
@@ -122,10 +121,13 @@ void visitTriggers(
     std::vector<std::shared_ptr<EndOfQueueTrigger>>& endOfQueueTriggers) {
     size_t triggerNullCount = 0;
     for (auto& trigger : triggers) {
-        if (trigger) {
+        if (trigger && trigger->active) {
             func(trigger);
         } else {
             ++triggerNullCount;
+            if (trigger && !trigger->active) {
+                trigger = nullptr;
+            }
         }
     }
     if (((double)triggerNullCount) / triggers.size() > 0.2) {
@@ -139,14 +141,13 @@ template <typename Trigger>
 void addTrigger(std::vector<std::shared_ptr<Trigger>>& triggerVec,
                 const std::shared_ptr<Trigger>& trigger) {
     triggerVec.emplace_back(trigger);
-    static_cast<TriggerBase&>(*trigger).indexInVector = triggerVec.size() - 1;
+    trigger->active = true;
 }
 
 template <typename Trigger>
-void deleteTrigger(std::vector<std::shared_ptr<Trigger>>& triggerVec,
+void deleteTrigger(std::vector<std::shared_ptr<Trigger>>&,
                    const std::shared_ptr<Trigger>& trigger) {
-    size_t indexToDelete = trigger->indexInVector;
-    triggerVec[indexToDelete] = nullptr;
+    trigger->active = false;
 }
 
 #endif /* SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_ */

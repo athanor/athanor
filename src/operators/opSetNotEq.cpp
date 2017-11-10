@@ -12,12 +12,12 @@ inline void setViolation(OpSetNotEq& op, bool trigger) {
     op.violation =
         (leftSetView.cachedHashTotal == rightSetView.cachedHashTotal) ? 1 : 0;
     if (trigger && op.violation != oldViolation) {
-        for (auto& trigger : op.triggers) {
-            trigger->possibleValueChange(oldViolation);
-        }
-        for (auto& trigger : op.triggers) {
-            trigger->valueChanged(op.violation);
-        }
+        visitTriggers(
+            [&](auto& trigger) { trigger->possibleValueChange(oldViolation); },
+            op.triggers, emptyEndOfTriggerQueue);
+        visitTriggers(
+            [&](auto& trigger) { trigger->valueChanged(op.violation); },
+            op.triggers, emptyEndOfTriggerQueue);
     }
 }
 
@@ -28,30 +28,39 @@ void evaluate(OpSetNotEq& op) {
 }
 
 class OpSetNotEqTrigger : public SetTrigger {
-    OpSetNotEq& op;
+    friend OpSetNotEq;
+    OpSetNotEq* op;
 
    public:
-    OpSetNotEqTrigger(OpSetNotEq& op) : op(op) {}
-    inline void valueRemoved(const Value&) final { setViolation(op, true); }
+    OpSetNotEqTrigger(OpSetNotEq* op) : op(op) {}
+    inline void valueRemoved(const Value&) final { setViolation(*op, true); }
 
-    inline void valueAdded(const Value&) final { setViolation(op, true); }
+    inline void valueAdded(const Value&) final { setViolation(*op, true); }
 
     inline void possibleValueChange(const Value&) final {}
 
-    inline void valueChanged(const Value&) final { setViolation(op, true); }
+    inline void valueChanged(const Value&) final { setViolation(*op, true); }
 };
 
+OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
+    : BoolView(std::move(other)),
+      left(std::move(other.left)),
+      right(std::move(other.right)),
+      trigger(std::move(other.trigger)) {
+    trigger->op = this;
+}
+
 void startTriggering(OpSetNotEq& op) {
-    getView<SetView>(op.left).triggers.emplace_back(
-        make_shared<OpSetNotEqTrigger>(op));
-    getView<SetView>(op.right).triggers.emplace_back(
-        make_shared<OpSetNotEqTrigger>(op));
+    op.trigger = make_shared<OpSetNotEqTrigger>(&op);
+    addTrigger<SetTrigger>(getView<SetView>(op.left).triggers, op.trigger);
+    addTrigger<SetTrigger>(getView<SetView>(op.right).triggers, op.trigger);
     startTriggering(op.left);
     startTriggering(op.right);
 }
 
 void stopTriggering(OpSetNotEq& op) {
-    assert(false);  // todo
+    deleteTrigger<SetTrigger>(getView<SetView>(op.left).triggers, op.trigger);
+    deleteTrigger<SetTrigger>(getView<SetView>(op.right).triggers, op.trigger);
     stopTriggering(op.left);
     stopTriggering(op.right);
 }

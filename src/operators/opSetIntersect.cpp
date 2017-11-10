@@ -106,7 +106,7 @@ class OpSetIntersectTrigger : public SetTrigger {
 };
 
 OpSetIntersect::OpSetIntersect(OpSetIntersect&& other)
-    : SetView(other),
+    : SetView(std::move(other)),
       left(std::move(other.left)),
       right(std::move(other.right)),
       leftTrigger(std::move(other.leftTrigger)),

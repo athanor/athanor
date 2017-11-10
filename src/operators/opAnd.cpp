@@ -36,14 +36,14 @@ class OpAndTrigger : public BoolTrigger {
         } else if (newViolation == 0 && lastViolation > 0) {
             op->violatingOperands.erase(index);
         }
-        for (auto& trigger : op->triggers) {
-            trigger->possibleValueChange(op->violation);
-        }
+        visitTriggers(
+            [&](auto& trigger) { trigger->possibleValueChange(op->violation); },
+            op->triggers, emptyEndOfTriggerQueue);
         op->violation -= lastViolation;
         op->violation += newViolation;
-        for (auto& trigger : op->triggers) {
-            trigger->valueChanged(op->violation);
-        }
+        visitTriggers(
+            [&](auto& trigger) { trigger->valueChanged(op->violation); },
+            op->triggers, emptyEndOfTriggerQueue);
     }
 };
 

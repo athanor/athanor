@@ -25,12 +25,11 @@ struct BoolValue : public BoolView, ValBase {
         if (violation == oldViolation) {
             return;
         }
-        for (auto& trigger : triggers) {
-            trigger->possibleValueChange(oldViolation);
-        }
-        for (auto& trigger : triggers) {
-            trigger->valueChanged(violation);
-        }
+        visitTriggers(
+            [&](auto& trigger) { trigger->possibleValueChange(oldViolation); },
+            triggers, emptyEndOfTriggerQueue);
+        visitTriggers([&](auto& trigger) { trigger->valueChanged(violation); },
+                      triggers, emptyEndOfTriggerQueue);
     }
 };
 

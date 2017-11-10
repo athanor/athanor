@@ -50,3 +50,5 @@ ValRef<ValueType> construct();
 
 buildForAllTypes(specialised, )
 #undef specialised
+
+    std::vector<std::shared_ptr<EndOfQueueTrigger>> emptyEndOfTriggerQueue;

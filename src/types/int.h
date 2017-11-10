@@ -38,12 +38,10 @@ struct IntValue : public IntView, ValBase {
         if (value == oldValue) {
             return;
         }
-        for (std::shared_ptr<IntTrigger>& t : triggers) {
-            t->possibleValueChange(oldValue);
-        }
-        for (std::shared_ptr<IntTrigger>& t : triggers) {
-            t->valueChanged(value);
-        }
+        visitTriggers([&](auto& t) { t->possibleValueChange(oldValue); },
+                      triggers, emptyEndOfTriggerQueue);
+        visitTriggers([&](auto& t) { t->valueChanged(value); }, triggers,
+                      emptyEndOfTriggerQueue);
     }
 };
 

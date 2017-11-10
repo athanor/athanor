@@ -1,10 +1,10 @@
 #ifndef SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_
 #define SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_
-#include <utils/stackFunction.h>
 #include <functional>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <vector>
 #include "utils/variantOperations.h"
 #define buildForAllTypes(f, sep) f(Bool) sep f(Int) sep f(Set)
 
@@ -96,6 +96,7 @@ struct EndOfQueueTrigger {
     virtual void reachedEndOfTriggerQueue() = 0;
 };
 
+extern std::vector<std::shared_ptr<EndOfQueueTrigger>> emptyEndOfTriggerQueue;
 template <typename Trigger>
 void cleanNullTriggers(std::vector<std::shared_ptr<Trigger>>& triggers) {
     for (size_t i = 0; i < triggers.size(); ++i) {
@@ -116,8 +117,9 @@ void cleanNullTriggers(std::vector<std::shared_ptr<Trigger>>& triggers) {
 }
 
 template <typename Trigger, typename Visitor>
-void visitTriggers(Visitor&& func,
-                   std::vector<std::shared_ptr<Trigger>>& triggers) {
+void visitTriggers(
+    Visitor&& func, std::vector<std::shared_ptr<Trigger>>& triggers,
+    std::vector<std::shared_ptr<EndOfQueueTrigger>>& endOfQueueTriggers) {
     size_t triggerNullCount = 0;
     for (auto& trigger : triggers) {
         if (trigger) {
@@ -128,6 +130,9 @@ void visitTriggers(Visitor&& func,
     }
     if (((double)triggerNullCount) / triggers.size() > 0.2) {
         cleanNullTriggers(triggers);
+    }
+    for (auto& trigger : endOfQueueTriggers) {
+        trigger->reachedEndOfTriggerQueue();
     }
 }
 template <typename Trigger>

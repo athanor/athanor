@@ -13,7 +13,9 @@ struct OpAnd : public BoolView {
     OpAnd(std::vector<BoolReturning> operandsIn)
         : operands(std::move(operandsIn)),
           violatingOperands(0, this->operands.size() - 1) {}
+    OpAnd(const OpAnd& other) = delete;
     OpAnd(OpAnd&& other);
+    ~OpAnd() { stopTriggering(*this); }
 };
 
 #endif /* SRC_OPERATORS_OPAND_H_ */

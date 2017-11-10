@@ -52,6 +52,7 @@ struct SetView {
     std::unordered_set<u_int64_t> memberHashes;
     u_int64_t cachedHashTotal;
     std::vector<std::shared_ptr<SetTrigger>> triggers;
+    std::vector<std::shared_ptr<EndOfQueueTrigger>> endOfQueueTriggers;
 
     template <typename Inner>
     inline bool containsMember(const Inner& member) {
@@ -69,7 +70,7 @@ struct SetValueImpl {
         u_int64_t hash = mix(getValueHash(*members[memberIndex]));
         Value triggerMember = members[memberIndex];
         visitTriggers([&](auto& t) { t->possibleValueChange(triggerMember); },
-                      val.triggers);
+                      val.triggers, val.endOfQueueTriggers);
         bool valueChanged = func();
         if (!valueChanged) {
             return;
@@ -81,7 +82,7 @@ struct SetValueImpl {
         val.cachedHashTotal += hash;
         triggerMember = members[memberIndex];
         visitTriggers([&](auto& t) { t->valueChanged(triggerMember); },
-                      val.triggers);
+                      val.triggers, val.endOfQueueTriggers);
     }
 
     template <typename SetValueType>
@@ -94,7 +95,7 @@ struct SetValueImpl {
         val.cachedHashTotal -= hash;
         Value triggerMember = member;
         visitTriggers([&](auto& t) { t->valueRemoved(triggerMember); },
-                      val.triggers);
+                      val.triggers, val.endOfQueueTriggers);
         return member;
     }
 
@@ -116,7 +117,7 @@ struct SetValueImpl {
         val.cachedHashTotal += hash;
         Value triggerMember = members.back();
         visitTriggers([&](auto& t) { t->valueAdded(triggerMember); },
-                      val.triggers);
+                      val.triggers, val.endOfQueueTriggers);
         return true;
     }
 };

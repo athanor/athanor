@@ -5,6 +5,7 @@
 #include <limits>
 #include <memory>
 #include <vector>
+#include "utils/cachedSharedPtr.h"
 #include "utils/variantOperations.h"
 #define buildForAllTypes(f, sep) f(Bool) sep f(Int) sep f(Set)
 
@@ -20,10 +21,8 @@ using BaseType =
     struct name##Domain;
 buildForAllTypes(declDomainsAndValues, )
 #undef declDomainsAndValues
-
-    // ref type used for values, allows memory to be reused
     template <typename T>
-    class ValRef;
+    using ValRef = CachedSharedPtr<T>;
 
 // short cut for building a variant of any other templated class, where the
 // class is templated over a value (SetValue,IntValue, etc.)
@@ -40,9 +39,6 @@ using Value = Variantised<ValRef>;
 #define variantDomains(T) std::shared_ptr<T##Domain>
 using Domain = mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
 #undef variantDomains
-
-template <typename T>
-std::shared_ptr<T> makeShared();
 
 template <typename T>
 struct AssociatedDomain;
@@ -103,58 +99,9 @@ buildForAllTypes(makeAssociations, )
 buildForAllTypes(valBaseAccessors, )
 #undef valBaseAccessors
 
-    template <typename T>
-    void saveMemory(std::shared_ptr<T>& ref);
-template <typename T>
-class ValRef {
-   public:
-    typedef T element_type;
-
-   private:
-    std::shared_ptr<T> ref;
-
-   public:
-    ValRef(std::shared_ptr<T> ref) : ref(std::move(ref)) {}
-    ~ValRef() {
-        if (!ref) {
-            return;
-        }
-        if (ref.use_count() == 1) {
-            reset(*ref);
-            saveMemory(ref);
-        }
-    }
-    inline decltype(auto) operator*() { return ref.operator*(); }
-    inline decltype(auto) operator-> () { return ref.operator->(); }
-    inline decltype(auto) operator*() const { return ref.operator*(); }
-    inline decltype(auto) operator-> () const { return ref.operator->(); }
-};
-
-template <typename T>
-std::vector<std::shared_ptr<T>>& getStorage() {
-    static std::vector<std::shared_ptr<T>> storage;
-    return storage;
-}
-template <typename T>
-void saveMemory(std::shared_ptr<T>& ref) {
-    getStorage<T>().emplace_back(std::move(ref));
-}
-
-template <typename T>
-ValRef<T> make() {
-    auto& storage = getStorage<T>();
-    if (storage.empty()) {
-        return ValRef<T>(makeShared<T>());
-    } else {
-        ValRef<T> v(std::move(storage.back()));
-        storage.pop_back();
-        return v;
-    }
-}
-
-template <typename DomainType>
-ValRef<typename AssociatedValueType<DomainType>::type> constructValueFromDomain(
-    const DomainType& domain) {
+    template <typename DomainType>
+    ValRef<typename AssociatedValueType<
+        DomainType>::type> constructValueFromDomain(const DomainType& domain) {
     auto val = make<typename AssociatedValueType<DomainType>::type>();
     matchInnerType(domain, *val);
     return val;

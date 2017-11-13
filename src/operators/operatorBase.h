@@ -105,7 +105,8 @@ inline QuantRef<T> deepCopyForUnrollOverload(
     QuantRef<T>* unrollingQuantifierPtr =
         mpark::get<QuantRef<T>>(unrollingQuantifier);
     if (unrollingQuantifierPtr != NULL &&
-        unrollingQuantifierPtr->id == quantVal.id) {
+        unrollingQuantifierPtr->getQuantifier().id ==
+            quantVal.getQuantifier().id) {
         return *unrollingQuantifierPtr;
     } else {
         return quantVal;

@@ -4,27 +4,27 @@
 #include "types/forwardDecls/typesAndDomains.h"
 
 template <typename T>
+struct Quantifier {
+    int id;
+    ValRef<T> ref;
+    Quantifier(int id, ValRef<T> ref) : id(id), ref(std::move(ref)) {}
+};
+
+template <typename T>
 class QuantRef {
    public:
     typedef T element_type;
-    int id;
 
    private:
-    std::shared_ptr<ValRef<T>> ref;
+    std::shared_ptr<Quantifier<T>> ref;
 
    public:
-    QuantRef(const int id)
-        : id(id), ref(std::make_shared<ValRef<T>>(nullptr)) {}
-
-    inline void attachValue(const ValRef<T>& ref) { *ref = ref; }
-    inline void attachValue(const Value& val) {
-        attachValue(mpark::get<ValRef<T>>(val));
-    }
-    inline void releaseValue() { *ref = ValRef<T>(nullptr); }
-    inline decltype(auto) operator*() { return ref->operator*(); }
-    inline decltype(auto) operator-> () { return ref->operator->(); }
-    inline decltype(auto) operator*() const { return ref->operator*(); }
-    inline decltype(auto) operator-> () const { return ref->operator->(); }
+    QuantRef(int id) : ref(std::make_shared<Quantifier<T>>(id, nullptr)) {}
+    inline Quantifier<T>& getQuantifier() { return *ref; }
+    inline decltype(auto) operator*() { return ref->ref.operator*(); }
+    inline decltype(auto) operator-> () { return ref->ref.operator->(); }
+    inline decltype(auto) operator*() const { return ref->ref.operator*(); }
+    inline decltype(auto) operator-> () const { return ref->ref.operator->(); }
 };
 
 typedef Variantised<QuantRef> QuantValue;

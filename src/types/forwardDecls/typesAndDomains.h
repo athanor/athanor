@@ -25,22 +25,88 @@ buildForAllTypes(declDomainsAndValues, )
     template <typename T>
     class ValRef;
 
-// method declarations used to construct ValRefs as well as methods to reset
-// their state when saving their memory
-// These methods don't have to be individually implemented in each type, they
-// are implemented already in globalDefinitions.h.
+// short cut for building a variant of any other templated class, where the
+// class is templated over a value (SetValue,IntValue, etc.)
+#define variantValues(V) T<V##Value>
+template <template <typename> class T>
+using Variantised =
+    mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
+#undef variantValues
 
-#define constructFunctions(name)                                       \
-    ValRef<name##Value> constructValueFromDomain(const name##Domain&); \
-    ValRef<name##Value> constructValueOfSameType(const name##Value&);  \
-    void reset(name##Value& value);                                    \
-    void saveMemory(std::shared_ptr<name##Value>& ref);
+// variant for values
+using Value = Variantised<ValRef>;
 
-buildForAllTypes(constructFunctions, )
-#undef constructFunctions
+// variant for domains
+#define variantDomains(T) std::shared_ptr<T##Domain>
+using Domain = mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
+#undef variantDomains
+
+template <typename T>
+std::shared_ptr<T> makeShared();
+
+template <typename T>
+struct AssociatedDomain;
+template <typename T>
+struct AssociatedValueType;
+
+template <typename T>
+struct IsDomainPtrType : public std::false_type {};
+template <typename T>
+struct IsDomainType : public std::false_type {};
+template <typename T>
+struct IsValueType : public std::false_type {};
+
+template <typename T>
+struct TypeAsString;
+#define makeAssociations(name)                                           \
+    template <>                                                          \
+    std::shared_ptr<name##Value> makeShared<name##Value>();              \
+    void matchInnerType(const name##Domain& domain, name##Value& value); \
+    void matchInnerType(const name##Value& other, name##Value& value);   \
+    void reset(name##Value& value);                                      \
+    template <>                                                          \
+    struct AssociatedDomain<name##Value> {                               \
+        typedef name##Domain type;                                       \
+    };                                                                   \
+                                                                         \
+    template <>                                                          \
+    struct AssociatedValueType<name##Domain> {                           \
+        typedef name##Value type;                                        \
+    };                                                                   \
+    template <>                                                          \
+    struct TypeAsString<name##Value> {                                   \
+        static const std::string value;                                  \
+    };                                                                   \
+    template <>                                                          \
+    struct TypeAsString<name##Domain> {                                  \
+        static const std::string value;                                  \
+    };                                                                   \
+                                                                         \
+    template <>                                                          \
+    struct IsDomainPtrType<std::shared_ptr<name##Domain>>                \
+        : public std::true_type {};                                      \
+                                                                         \
+    template <>                                                          \
+    struct IsDomainType<name##Domain> : public std::true_type {};        \
+    template <>                                                          \
+    struct IsValueType<name##Value> : public std::true_type {};
+
+buildForAllTypes(makeAssociations, )
+#undef makeAssociations
+
+    struct ValBase {
+    int64_t id = -1;
+};
+#define valBaseAccessors(name)           \
+    int64_t getId(const name##Value& n); \
+    void setId(name##Value& n, int64_t id);
+buildForAllTypes(valBaseAccessors, )
+#undef valBaseAccessors
 
     template <typename T>
-    class ValRef {
+    void saveMemory(std::shared_ptr<T>& ref);
+template <typename T>
+class ValRef {
    public:
     typedef T element_type;
 
@@ -64,32 +130,43 @@ buildForAllTypes(constructFunctions, )
     inline decltype(auto) operator-> () const { return ref.operator->(); }
 };
 
-// short cut for building a variant of any other templated class, where the
-// class is templated over a value (SetValue,IntValue, etc.)
-#define variantValues(V) T<V##Value>
-template <template <typename> class T>
-using Variantised =
-    mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
-#undef variantValues
+template <typename T>
+std::vector<std::shared_ptr<T>>& getStorage() {
+    static std::vector<std::shared_ptr<T>> storage;
+    return storage;
+}
+template <typename T>
+void saveMemory(std::shared_ptr<T>& ref) {
+    getStorage<T>().emplace_back(std::move(ref));
+}
 
-// variant for values
-using Value = Variantised<ValRef>;
+template <typename T>
+ValRef<T> make() {
+    auto& storage = getStorage<T>();
+    if (storage.empty()) {
+        return ValRef<T>(makeShared<T>());
+    } else {
+        ValRef<T> v(std::move(storage.back()));
+        storage.pop_back();
+        return v;
+    }
+}
 
-// variant for domains
-#define variantDomains(T) std::shared_ptr<T##Domain>
-using Domain = mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
-#undef variantDomains
+template <typename DomainType>
+ValRef<typename AssociatedValueType<DomainType>::type> constructValueFromDomain(
+    const DomainType& domain) {
+    auto val = make<typename AssociatedValueType<DomainType>::type>();
+    matchInnerType(domain, *val);
+    return val;
+}
+template <typename ValueType>
+ValRef<ValueType> constructValueOfSameType(const ValueType& other) {
+    auto val = make<ValueType>();
+    matchInnerType(other, *val);
+    return val;
+}
 
-struct ValBase {
-    int64_t id = -1;
-};
-#define valBaseAccessors(name)           \
-    int64_t getId(const name##Value& n); \
-    void setId(name##Value& n, int64_t id);
-buildForAllTypes(valBaseAccessors, )
-#undef valBaseAccessors
-
-    struct TriggerBase {
+struct TriggerBase {
     bool active;
 };
 struct EndOfQueueTrigger : public TriggerBase {

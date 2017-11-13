@@ -116,4 +116,5 @@ inline QuantRef<T> deepCopyForUnrollOverload(
         return quantVal;
     }
 }
+
 #endif /* SRC_OPERATORS_OPERATORBASE_H_ */

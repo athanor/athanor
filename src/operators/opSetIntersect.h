@@ -10,7 +10,6 @@ struct OpSetIntersect : public SetView {
     SetReturning right;
     std::shared_ptr<OpSetIntersectTrigger<true>> leftTrigger;
     std::shared_ptr<OpSetIntersectTrigger<false>> rightTrigger;
-    u_int64_t cachedHashTotal = 0;
 
     OpSetIntersect(SetReturning leftIn, SetReturning rightIn)
         : left(std::move(leftIn)), right(std::move(rightIn)) {}

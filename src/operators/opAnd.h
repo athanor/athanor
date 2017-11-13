@@ -10,6 +10,8 @@ struct OpAnd : public BoolView {
     std::vector<BoolReturning> operands;
     FastIterableIntSet violatingOperands;
     std::vector<std::shared_ptr<OpAndTrigger>> operandTriggers;
+
+   public:
     OpAnd(std::vector<BoolReturning> operandsIn)
         : operands(std::move(operandsIn)),
           violatingOperands(0, this->operands.size() - 1) {}

@@ -4,6 +4,7 @@
 #include "operators/quantifierBase.h"
 #include "search/violationDescription.h"
 #include "types/forwardDecls/typesAndDomains.h"
+#include "utils/cachedSharedPtr.h"
 #define buildForOperators(f, sep)                                           \
     f(IntValue) sep f(OpSetSize) sep f(OpSum) sep f(BoolValue) sep f(OpAnd) \
         sep f(OpSetNotEq) sep f(SetValue) sep f(OpSetIntersect)             \
@@ -14,6 +15,9 @@ buildForOperators(structDecls, );
 #undef structDecls
 
 #define operatorFuncs(name)                                                    \
+    template <>                                                                \
+    std::shared_ptr<name> makeShared<name>();                                  \
+    void reset(name& op);                                                      \
     void evaluate(name&);                                                      \
     void startTriggering(name&);                                               \
     void stopTriggering(name&);                                                \

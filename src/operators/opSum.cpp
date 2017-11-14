@@ -60,3 +60,8 @@ void updateViolationDescription(const OpSum& op, u_int64_t parentViolation,
         updateViolationDescription(operand, parentViolation, vioDesc);
     }
 }
+
+std::shared_ptr<OpSum> deepCopyForUnroll(const OpSum&, const QuantValue&) {
+    assert(false);
+    abort();
+}

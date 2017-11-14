@@ -18,6 +18,10 @@ struct OpAnd : public BoolView {
     OpAnd(const OpAnd& other) = delete;
     OpAnd(OpAnd&& other);
     ~OpAnd() { stopTriggering(*this); }
+
+    OpAnd(std::vector<BoolReturning> operands,
+          const FastIterableIntSet& violatingOperands)
+        : operands(std::move(operands)), violatingOperands(violatingOperands) {}
 };
 
 #endif /* SRC_OPERATORS_OPAND_H_ */

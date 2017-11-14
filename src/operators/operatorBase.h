@@ -83,7 +83,7 @@ inline ReturnType deepCopyForUnroll(const ReturnType& expr,
                                     const QuantValue& unrollingQuantifier) {
     return mpark::visit(
         [&](auto& exprImpl) -> ReturnType {
-            return deepCopyForUnrollingOverLoad(exprImpl, unrollingQuantifier);
+            return deepCopyForUnrollOverload(exprImpl, unrollingQuantifier);
         },
         expr);
 }
@@ -106,8 +106,8 @@ inline ValRef<T> deepCopyForUnrollOverload(const ValRef<T>& val,
 template <typename T>
 inline QuantRef<T> deepCopyForUnrollOverload(
     const QuantRef<T>& quantVal, const QuantValue& unrollingQuantifier) {
-    QuantRef<T>* unrollingQuantifierPtr =
-        mpark::get<QuantRef<T>>(unrollingQuantifier);
+    const QuantRef<T>* unrollingQuantifierPtr =
+        mpark::get_if<QuantRef<T>>(&unrollingQuantifier);
     if (unrollingQuantifierPtr != NULL &&
         unrollingQuantifierPtr->getQuantifier().id ==
             quantVal.getQuantifier().id) {

@@ -108,6 +108,14 @@ void updateViolationDescription(const OpAnd& op, u_int64_t,
 
 std::shared_ptr<OpAnd> deepCopyForUnroll(
     const OpAnd& op, const QuantValue& unrollingQuantifier) {
-    ignoreUnused(op, unrollingQuantifier);
-    abort();
+    std::vector<BoolReturning> operands;
+    operands.reserve(op.operands.size());
+    for (auto& operand : op.operands) {
+        operands.emplace_back(deepCopyForUnroll(operand, unrollingQuantifier));
+    }
+    auto newOpAnd =
+        std::make_shared<OpAnd>(std::move(operands), op.violatingOperands);
+    newOpAnd->violation = op.violation;
+    startTriggering(*newOpAnd);
+    return newOpAnd;
 }

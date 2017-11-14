@@ -69,3 +69,9 @@ void updateViolationDescription(const OpSetNotEq& op, u_int64_t,
     updateViolationDescription(op.left, op.violation, vioDesc);
     updateViolationDescription(op.right, op.violation, vioDesc);
 }
+
+std::shared_ptr<OpSetNotEq> deepCopyForUnroll(const OpSetNotEq&,
+                                              const QuantValue&) {
+    assert(false);
+    abort();
+}

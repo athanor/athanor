@@ -29,6 +29,7 @@ class QuantRef {
    public:
     QuantRef(int id) : ref(std::make_shared<Quantifier<T>>(id, nullptr)) {}
     inline Quantifier<T>& getQuantifier() { return *ref; }
+    inline const Quantifier<T>& getQuantifier() const { return *ref; }
     inline decltype(auto) operator*() { return ref->ref.operator*(); }
     inline decltype(auto) operator-> () { return ref->ref.operator->(); }
     inline decltype(auto) operator*() const { return ref->ref.operator*(); }

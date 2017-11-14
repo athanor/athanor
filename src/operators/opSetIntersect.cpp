@@ -111,8 +111,12 @@ OpSetIntersect::OpSetIntersect(OpSetIntersect&& other)
       right(std::move(other.right)),
       leftTrigger(std::move(other.leftTrigger)),
       rightTrigger(std::move(other.rightTrigger)) {
-    leftTrigger->op = this;
-    rightTrigger->op = this;
+    if (leftTrigger) {
+        leftTrigger->op = this;
+    }
+    if (rightTrigger) {
+        rightTrigger->op = this;
+    }
 }
 
 void startTriggering(OpSetIntersect& op) {

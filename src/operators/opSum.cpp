@@ -10,6 +10,7 @@ void evaluate(OpSum& op) {
 }
 
 class OpSumTrigger : public IntTrigger {
+   protected:
     friend OpSum;
     OpSum* op;
     int64_t lastMemberValue;
@@ -31,11 +32,26 @@ class OpSumTrigger : public IntTrigger {
     }
 };
 
+class OpSumUnrollTrigger : public UnrollTrigger<IntValue>, public OpSumTrigger {
+    using OpSumTrigger::OpSumTrigger;
+    void valueChangedDuringUnroll(const IntValue& oldValue,
+                                  const ValRef<IntValue>& newValue) {
+        possibleValueChange(oldValue.value);
+        valueChanged(newValue->value);
+    }
+};
+
 OpSum::OpSum(OpSum&& other)
     : IntView(std::move(other)),
       operands(std::move(other.operands)),
-      operandTrigger(std::move(other.operandTrigger)) {
-    operandTrigger->op = this;
+      operandTrigger(std::move(other.operandTrigger)),
+      operandUnrollTrigger(std::move(other.operandUnrollTrigger)) {
+    if (operandTrigger) {
+        operandTrigger->op = this;
+    }
+    if (operandUnrollTrigger) {
+        operandUnrollTrigger->op = this;
+    }
 }
 
 void startTriggering(OpSum& op) {
@@ -44,12 +60,27 @@ void startTriggering(OpSum& op) {
         addTrigger<IntTrigger>(getView<IntView>(operand).triggers,
                                op.operandTrigger);
         startTriggering(operand);
+        mpark::visit(overloaded(
+                         [&](QuantRef<IntValue>& ref) {
+                             if (!op.operandUnrollTrigger) {
+                                 op.operandUnrollTrigger =
+                                     std::make_shared<OpSumUnrollTrigger>(&op);
+                             }
+                             addTrigger<UnrollTrigger<IntValue>>(
+                                 ref.getQuantifier().unrollTriggers,
+                                 op.operandUnrollTrigger);
+                         },
+                         [](auto&) {}),
+                     operand);
     }
 }
 
 void stopTriggering(OpSum& op) {
+    deleteTrigger<IntTrigger>(op.operandTrigger);
+    if (op.operandUnrollTrigger) {
+        deleteTrigger<UnrollTrigger<IntValue>>(op.operandUnrollTrigger);
+    }
     for (auto& operand : op.operands) {
-        deleteTrigger<IntTrigger>(op.operandTrigger);
         stopTriggering(operand);
     }
 }
@@ -61,7 +92,14 @@ void updateViolationDescription(const OpSum& op, u_int64_t parentViolation,
     }
 }
 
-std::shared_ptr<OpSum> deepCopyForUnroll(const OpSum&, const QuantValue&) {
-    assert(false);
-    abort();
+std::shared_ptr<OpSum> deepCopyForUnroll(
+    const OpSum& op, const QuantValue& unrollingQuantifier) {
+    std::vector<IntReturning> operands;
+    operands.reserve(op.operands.size());
+    for (auto& operand : op.operands) {
+        operands.emplace_back(deepCopyForUnroll(operand, unrollingQuantifier));
+    }
+    auto newOpSum = std::make_shared<OpSum>(std::move(operands));
+    newOpSum->value = op.value;
+    return newOpSum;
 }

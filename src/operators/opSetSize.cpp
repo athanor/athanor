@@ -42,7 +42,9 @@ OpSetSize::OpSetSize(OpSetSize&& other)
     : IntView(std::move(other)),
       operand(std::move(other.operand)),
       operandTrigger(std::move(other.operandTrigger)) {
-    operandTrigger->op = this;
+    if (operandTrigger) {
+        operandTrigger->op = this;
+    }
 }
 void startTriggering(OpSetSize& op) {
     op.operandTrigger = make_shared<OpSetSizeTrigger>(&op);

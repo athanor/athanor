@@ -47,7 +47,9 @@ OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
       left(std::move(other.left)),
       right(std::move(other.right)),
       trigger(std::move(other.trigger)) {
-    trigger->op = this;
+    if (trigger) {
+        trigger->op = this;
+    }
 }
 
 void startTriggering(OpSetNotEq& op) {

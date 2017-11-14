@@ -4,8 +4,9 @@
 #include "types/forwardDecls/typesAndDomains.h"
 
 template <typename UnrollingValue>
-struct UnrollTrigger : public TriggerBase {
-    virtual void valueChangedDuringUnroll(const UnrollingValue& oldValue);
+struct UnrollTrigger : public virtual TriggerBase {
+    virtual void valueChangedDuringUnroll(
+        const UnrollingValue& oldValue, const ValRef<UnrollingValue>& newValue);
 };
 
 template <typename T>
@@ -24,7 +25,6 @@ class QuantRef {
 
    private:
     std::shared_ptr<Quantifier<T>> ref;
-    std::shared_ptr<UnrollTrigger<T>> unrollTrigger;
 
    public:
     QuantRef(int id) : ref(std::make_shared<Quantifier<T>>(id, nullptr)) {}

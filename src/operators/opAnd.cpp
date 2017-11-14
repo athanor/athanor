@@ -15,9 +15,10 @@ void evaluate(OpAnd& op) {
         op.violation += getView<BoolView>(operand).violation;
     }
 }
-
 class OpAndTrigger : public BoolTrigger {
     friend OpAnd;
+
+   protected:
     OpAnd* op;
     const size_t index;
     u_int64_t lastViolation;
@@ -47,6 +48,17 @@ class OpAndTrigger : public BoolTrigger {
     }
 };
 
+class OpAndUnrollTrigger : public OpAndTrigger,
+                           public UnrollTrigger<BoolValue> {
+   public:
+    using OpAndTrigger::OpAndTrigger;
+    void valueChangedDuringUnroll(const BoolValue& oldValue,
+                                  const ValRef<BoolValue>& newValue) final {
+        possibleValueChange(oldValue.violation);
+        valueChanged(newValue->violation);
+    }
+};
+
 OpAnd::OpAnd(OpAnd&& other)
     : BoolView(std::move(other)),
       operands(std::move(other.operands)),
@@ -63,6 +75,16 @@ void startTriggering(OpAnd& op) {
         auto trigger = make_shared<OpAndTrigger>(&op, i);
         addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
         op.operandTriggers.emplace_back(trigger);
+        mpark::visit(overloaded(
+                         [&](QuantRef<BoolValue>& ref) {
+                             auto unrollTrigger =
+                                 make_shared<OpAndUnrollTrigger>(&op, i);
+                             addTrigger<UnrollTrigger<BoolValue>>(
+                                 ref.getQuantifier().unrollTriggers,
+                                 unrollTrigger);
+                         },
+                         [](auto&) {}),
+                     operand);
         startTriggering(operand);
     }
 }
@@ -70,9 +92,7 @@ void startTriggering(OpAnd& op) {
 void stopTriggering(OpAnd& op) {
     while (!op.operandTriggers.empty()) {
         auto& operand = op.operands[op.operandTriggers.size() - 1];
-        deleteTrigger<BoolTrigger>(getView<BoolView>(operand).triggers,
-
-                                   op.operandTriggers.back());
+        deleteTrigger<BoolTrigger>(op.operandTriggers.back());
         op.operandTriggers.pop_back();
         stopTriggering(operand);
     }

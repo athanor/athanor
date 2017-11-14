@@ -59,8 +59,7 @@ void startTriggering(OpSetNotEq& op) {
 }
 
 void stopTriggering(OpSetNotEq& op) {
-    deleteTrigger<SetTrigger>(getView<SetView>(op.left).triggers, op.trigger);
-    deleteTrigger<SetTrigger>(getView<SetView>(op.right).triggers, op.trigger);
+    deleteTrigger<SetTrigger>(op.trigger);
     stopTriggering(op.left);
     stopTriggering(op.right);
 }

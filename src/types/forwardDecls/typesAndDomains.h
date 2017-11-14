@@ -169,8 +169,7 @@ void addTrigger(std::vector<std::shared_ptr<Trigger>>& triggerVec,
 }
 
 template <typename Trigger>
-void deleteTrigger(std::vector<std::shared_ptr<Trigger>>&,
-                   const std::shared_ptr<Trigger>& trigger) {
+void deleteTrigger(const std::shared_ptr<Trigger>& trigger) {
     trigger->active = false;
 }
 

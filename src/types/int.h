@@ -20,7 +20,7 @@ struct IntDomain {
               })) {}
 };
 
-struct IntTrigger : public TriggerBase {
+struct IntTrigger : public virtual TriggerBase {
     virtual void possibleValueChange(int64_t value) = 0;
     virtual void valueChanged(int64_t value) = 0;
 };

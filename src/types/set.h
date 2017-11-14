@@ -41,7 +41,7 @@ struct SetDomain {
     }
 };
 
-struct SetTrigger : public TriggerBase {
+struct SetTrigger : public virtual TriggerBase {
     virtual void valueRemoved(const Value& member) = 0;
     virtual void valueAdded(const Value& member) = 0;
     virtual void possibleValueChange(const Value& member) = 0;

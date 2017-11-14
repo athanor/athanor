@@ -7,7 +7,7 @@
 #include "forwardDecls/typesAndDomains.h"
 struct BoolDomain {};
 
-struct BoolTrigger : public TriggerBase {
+struct BoolTrigger : public virtual TriggerBase {
     virtual void possibleValueChange(u_int64_t OldViolation) = 0;
     virtual void valueChanged(u_int64_t newViolation) = 0;
 };

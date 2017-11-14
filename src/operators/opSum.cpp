@@ -49,8 +49,7 @@ void startTriggering(OpSum& op) {
 
 void stopTriggering(OpSum& op) {
     for (auto& operand : op.operands) {
-        deleteTrigger<IntTrigger>(getView<IntView>(operand).triggers,
-                                  op.operandTrigger);
+        deleteTrigger<IntTrigger>(op.operandTrigger);
         stopTriggering(operand);
     }
 }

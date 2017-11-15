@@ -76,7 +76,9 @@ void startTriggering(OpSum& op) {
 }
 
 void stopTriggering(OpSum& op) {
-    deleteTrigger<IntTrigger>(op.operandTrigger);
+    if (op.operandTrigger) {
+        deleteTrigger<IntTrigger>(op.operandTrigger);
+    }
     if (op.operandUnrollTrigger) {
         deleteTrigger<UnrollTrigger<IntValue>>(op.operandUnrollTrigger);
     }

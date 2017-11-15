@@ -54,7 +54,9 @@ void startTriggering(OpSetSize& op) {
 }
 
 void stopTriggering(OpSetSize& op) {
-    deleteTrigger<SetTrigger>(op.operandTrigger);
+    if (op.operandTrigger) {
+        deleteTrigger<SetTrigger>(op.operandTrigger);
+    }
     stopTriggering(op.operand);
 }
 

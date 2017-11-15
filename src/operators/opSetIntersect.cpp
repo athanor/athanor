@@ -130,8 +130,12 @@ void startTriggering(OpSetIntersect& op) {
 }
 
 void stopTriggering(OpSetIntersect& op) {
-    deleteTrigger<SetTrigger>(op.leftTrigger);
-    deleteTrigger<SetTrigger>(op.rightTrigger);
+    if (op.leftTrigger) {
+        deleteTrigger<SetTrigger>(op.leftTrigger);
+    }
+    if (op.rightTrigger) {
+        deleteTrigger<SetTrigger>(op.rightTrigger);
+    }
     stopTriggering(op.left);
     stopTriggering(op.right);
 }

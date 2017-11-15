@@ -16,6 +16,7 @@ struct Quantifier {
     std::vector<std::shared_ptr<UnrollTrigger<T>>> unrollTriggers;
 
     Quantifier(int id, ValRef<T> ref) : id(id), ref(std::move(ref)) {}
+    inline void attachValue(const ValRef<T>& val) { ref = val; }
 };
 
 template <typename T>
@@ -27,8 +28,10 @@ class QuantRef {
     std::shared_ptr<Quantifier<T>> ref;
 
    public:
-    QuantRef(int id) : ref(std::make_shared<Quantifier<T>>(id, nullptr)) {}
+    QuantRef(int id)
+        : ref(std::make_shared<Quantifier<T>>(id, ValRef<T>(nullptr))) {}
     inline Quantifier<T>& getQuantifier() { return *ref; }
+    inline decltype(auto) refCount() { return ref.use_count(); }
     inline const Quantifier<T>& getQuantifier() const { return *ref; }
     inline decltype(auto) operator*() { return ref->ref.operator*(); }
     inline decltype(auto) operator-> () { return ref->ref.operator->(); }

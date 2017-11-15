@@ -8,17 +8,12 @@
 #include "utils/fastIterableIntSet.h"
 struct SetForAll : public BoolView {
     const int quantId = nextQuantId();
-    std::vector<BoolReturning> unrolled;
-    std::vector<QuantValue> quantRefs;
-    int numberUnrolled = 0;
+    BoolReturning expr;
+    std::vector<std::pair<BoolReturning, QuantValue>> unrolledExprs;
+
     template <typename T>
-    inline void setExpression(const QuantRef<T>& quantifier,
-                              BoolReturning expr) {
-        numberUnrolled = 0;
-        unrolled.clear();
-        quantRefs.clear();
-        unrolled.emplace_back(std::move(expr));
-        quantRefs.emplace_back(quantifier);
+    inline void setExpression(BoolReturning exprIn) {
+        expr = std::move(exprIn);
     }
 
     template <typename T>
@@ -26,8 +21,17 @@ struct SetForAll : public BoolView {
         return QuantRef<T>(quantId);
     }
 
-   private:
-    void unroll(const Value&) {}
+    inline void unroll(const Value& newValue) {
+        mpark::visit(
+            [&](auto& newValImpl) {
+                auto quantRef = newQuantRef<
+                    typename BaseType<decltype(newValImpl)>::element_type>();
+                unrolledExprs.emplace_back(deepCopyForUnroll(expr, quantRef),
+                                           quantRef);
+                quantRef.getQuantifier().attachValue(newValImpl);
+            },
+            newValue);
+    }
 };
 
 #endif /* SRC_OPERATORS_SETFORALL_H_ */

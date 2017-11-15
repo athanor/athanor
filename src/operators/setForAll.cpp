@@ -1,5 +1,5 @@
+#include "operators/setForAll.h"
 #include <cassert>
-#include "operators/opAnd.h"
 #include "utils/ignoreUnused.h"
 /*
 using namespace std;

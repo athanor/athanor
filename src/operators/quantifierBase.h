@@ -54,12 +54,12 @@ inline static int nextQuantId() {
 template <typename ContainerType, typename ReturnType, typename ReturnTypeValue>
 struct Quantifier {
     const int quantId = nextQuantId();
-    ContainerType set;
+    ContainerType container;
     ReturnType expr = ValRef<ReturnTypeValue>(nullptr);
     std::vector<std::pair<ReturnType, IterValue>> unrolledExprs;
     std::unordered_map<u_int64_t, size_t> valueExprMap;
 
-    Quantifier(ContainerType set) : set(std::move(set)) {}
+    Quantifier(ContainerType container) : container(std::move(container)) {}
 
     inline void setExpression(ReturnType exprIn) { expr = std::move(exprIn); }
 

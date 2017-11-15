@@ -6,7 +6,7 @@
 #include "common/common.h"
 class FastIterableIntSet {
     static const int NOT_PRESENT = 0;
-    const int64_t minElement;
+    int64_t minElement;
     std::vector<int64_t> contents;
     std::vector<size_t> elementIndexes;
 

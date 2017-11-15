@@ -2,20 +2,27 @@
 #include <cassert>
 
 using namespace std;
-/*
 void evaluate(OpSetForAll& op) {
+    SetMembersVector members = evaluate(op.container);
     op.violation = 0;
-    for (size_t i = 0; i < op.operands.size(); ++i) {
-        auto& operand = op.operands[i];
-        evaluate(operand);
-        u_int64_t violation = getView<BoolView>(operand).violation;
-        if (violation > 0) {
-            op.violatingOperands.insert(i);
-        }
-        op.violation += getView<BoolView>(operand).violation;
-    }
+    mpark::visit(
+        [&](auto& membersImpl) {
+            op.violatingOperands =
+                FastIterableIntSet(0, membersImpl.size() - 1);
+            for (auto& ref : membersImpl) {
+                op.unroll(ref);
+                auto& operand = op.unrolledExprs.back().first;
+                evaluate(operand);
+                u_int64_t violation = getView<BoolView>(operand).violation;
+                if (violation > 0) {
+                    op.violatingOperands.insert(op.unrolledExprs.size() - 1);
+                    op.violation += getView<BoolView>(operand).violation;
+                }
+            }
+        },
+        members);
 }
-
+/*
 class OpAndTrigger : public BoolTrigger {
     friend OpAnd;
     OpAnd* op;
@@ -209,4 +216,5 @@ std::shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
     startTriggering(*newOpAnd);
     return newOpAnd;
 }
+
 */

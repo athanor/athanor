@@ -125,7 +125,6 @@ struct SetValueImpl {
 template <typename T>
 using SetValueImplWithValRefWrapper = SetValueImpl<ValRef<T>>;
 typedef Variantised<SetValueImplWithValRefWrapper> SetValueImplVariant;
-
 struct SetValue : public SetView, ValBase {
     SetValueImplVariant setValueImpl = SetValueImpl<ValRef<IntValue>>();
 };

@@ -1,32 +1,19 @@
 
 #ifndef SRC_OPERATORS_OPERATORBASE_H_
 #define SRC_OPERATORS_OPERATORBASE_H_
+#include <type_traits>
+#include <utility>
 #include "operators/quantifierBase.h"
 #include "search/violationDescription.h"
 #include "types/forwardDecls/typesAndDomains.h"
 #include "utils/cachedSharedPtr.h"
 #define buildForOperators(f, sep)                                           \
     f(IntValue) sep f(OpSetSize) sep f(OpSum) sep f(BoolValue) sep f(OpAnd) \
-        sep f(OpSetNotEq) sep f(SetValue) sep f(OpSetIntersect)             \
-            sep f(OpSetUnion)
+        sep f(OpSetNotEq) sep f(SetValue) sep f(OpSetIntersect)
 
 #define structDecls(name) struct name;
 buildForOperators(structDecls, );
 #undef structDecls
-
-#define operatorFuncs(name)                                                    \
-    template <>                                                                \
-    std::shared_ptr<name> makeShared<name>();                                  \
-    void reset(name& op);                                                      \
-    void evaluate(name&);                                                      \
-    void startTriggering(name&);                                               \
-    void stopTriggering(name&);                                                \
-    void updateViolationDescription(const name& op, u_int64_t parentViolation, \
-                                    ViolationDescription&);                    \
-    std::shared_ptr<name> deepCopyForUnroll(const name& op,                    \
-                                            const IterValue& iterator);
-buildForOperators(operatorFuncs, );
-#undef operatorFuncs
 
 // bool returning
 using BoolReturning =
@@ -41,6 +28,56 @@ using IntReturning =
 // set returning
 using SetReturning = mpark::variant<ValRef<SetValue>, IterRef<SetValue>,
                                     std::shared_ptr<OpSetIntersect>>;
+template <typename Op>
+class ReturnType {
+    template <typename T>
+    static auto test() -> decltype(std::declval<SetReturning&>() = std::move(
+                                       std::declval<std::shared_ptr<T>>()));
+    template <typename T>
+    static auto test() -> decltype(std::declval<BoolReturning&>() = std::move(
+                                       std::declval<std::shared_ptr<T>>()));
+    template <typename T>
+    static auto test() -> decltype(std::declval<IntReturning&>() = std::move(
+                                       std::declval<std::shared_ptr<T>>()));
+
+   public:
+    typedef BaseType<decltype(ReturnType<Op>::test<Op>())> type;
+};
+template <typename Operator, typename ReturnTypeIn>
+using HasReturnType =
+    std::is_same<ReturnTypeIn, typename ReturnType<Operator>::type>;
+// hack just to specialise the return type of some of the
+// evaluate functions
+
+template <typename T>
+using SetMembersVectorImpl = std::vector<ValRef<T>>;
+
+using SetMembersVector = Variantised<SetMembersVectorImpl>;
+
+template <typename T>
+struct EvaluateResult {
+    typedef void type;
+};
+
+template <>
+struct EvaluateResult<SetReturning> {
+    typedef SetMembersVector type;
+};
+
+#define operatorFuncs(name)                                                    \
+    template <>                                                                \
+    std::shared_ptr<name> makeShared<name>();                                  \
+    void reset(name& op);                                                      \
+    typename EvaluateResult<typename ReturnType<name>::type>::type evaluate(   \
+        name&);                                                                \
+    void startTriggering(name&);                                               \
+    void stopTriggering(name&);                                                \
+    void updateViolationDescription(const name& op, u_int64_t parentViolation, \
+                                    ViolationDescription&);                    \
+    std::shared_ptr<name> deepCopyForUnroll(const name& op,                    \
+                                            const IterValue& iterator);
+buildForOperators(operatorFuncs, );
+#undef operatorFuncs
 
 template <typename View, typename Operator>
 inline View& getView(const Operator& op) {
@@ -50,8 +87,8 @@ inline View& getView(const Operator& op) {
 }
 
 template <typename Operator>
-inline void evaluate(Operator& op) {
-    mpark::visit([&](auto& opImpl) { evaluate(*opImpl); }, op);
+inline decltype(auto) evaluate(Operator& op) {
+    return mpark::visit([&](auto& opImpl) { return evaluate(*opImpl); }, op);
 }
 
 template <typename Operator>

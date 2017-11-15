@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include "common/common.h"
+#include "operators/operatorBase.h"
 #include "types/forwardDecls/compare.h"
 #include "types/forwardDecls/copy.h"
 #include "types/forwardDecls/getDomainSize.h"
@@ -108,7 +109,11 @@ void reset(SetValue& val) {
                  val.setValueImpl);
 }
 
-void evaluate(SetValue&) {}
+SetMembersVector evaluate(SetValue& val) {
+    return mpark::visit(
+        [&](auto& valImpl) -> SetMembersVector { return valImpl.members; },
+        val.setValueImpl);
+}
 void startTriggering(SetValue&) {}
 void stopTriggering(SetValue&) {}
 

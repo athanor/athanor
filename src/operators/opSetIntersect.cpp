@@ -6,9 +6,9 @@
 
 using namespace std;
 
-void evaluate(OpSetIntersect& op) {
-    evaluate(op.left);
-    evaluate(op.right);
+SetMembersVector evaluate(OpSetIntersect& op) {
+    SetMembersVector leftVec = evaluate(op.left);
+    SetMembersVector rightVec = evaluate(op.right);
     op.cachedHashTotal = 0;
     op.memberHashes.clear();
     SetView& leftSetView = getView<SetView>(op.left);
@@ -27,6 +27,22 @@ void evaluate(OpSetIntersect& op) {
             op.cachedHashTotal += hash;
         }
     }
+    return mpark::visit(
+        [&](auto& leftVecImpl) -> SetMembersVector {
+            typedef BaseType<decltype(leftVecImpl)> VecType;
+            auto rightVecImpl = mpark::get<VecType>(rightVec);
+            VecType returnVec;
+            auto& smallerVec = (leftVecImpl.size() > rightVecImpl.size())
+                                   ? leftVecImpl
+                                   : rightVecImpl;
+            for (auto& ref : smallerVec) {
+                if (op.memberHashes.count(mix(getValueHash(*ref)))) {
+                    returnVec.emplace_back(std::move(ref));
+                }
+            }
+            return returnVec;
+        },
+        leftVec);
 }
 
 template <bool left>

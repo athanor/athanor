@@ -51,9 +51,8 @@ inline static int nextQuantId() {
     return id++;
 }
 
-template <typename ContainerType, typename ReturnType, typename ReturnTypeValue,
-          typename ReturnTypeView>
-struct Quantifier : public ReturnTypeView {
+template <typename ContainerType, typename ReturnType, typename ReturnTypeValue>
+struct Quantifier {
     const int quantId = nextQuantId();
     ContainerType set;
     ReturnType expr = ValRef<ReturnTypeValue>(nullptr);

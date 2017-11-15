@@ -148,7 +148,7 @@ void updateViolationDescription(const OpSetIntersect& op,
 }
 
 std::shared_ptr<OpSetIntersect> deepCopyForUnroll(const OpSetIntersect&,
-                                                  const QuantValue&) {
+                                                  const IterValue&) {
     assert(false);
     abort();
 }

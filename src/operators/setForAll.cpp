@@ -88,8 +88,8 @@ void updateViolationDescription(const OpAnd& op, u_int64_t,
 }
 
 std::shared_ptr<OpAnd> deepCopyForUnroll(
-    const OpAnd& op, const QuantValue& unrollingQuantifier) {
-    ignoreUnused(op, unrollingQuantifier);
+    const OpAnd& op, const IterValue& iterator) {
+    ignoreUnused(op, iterator);
     abort();
 }
 */

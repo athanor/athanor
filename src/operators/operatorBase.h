@@ -23,23 +23,23 @@ buildForOperators(structDecls, );
     void stopTriggering(name&);                                                \
     void updateViolationDescription(const name& op, u_int64_t parentViolation, \
                                     ViolationDescription&);                    \
-    std::shared_ptr<name> deepCopyForUnroll(                                   \
-        const name& op, const QuantValue& unrollingQuantifier);
+    std::shared_ptr<name> deepCopyForUnroll(const name& op,                    \
+                                            const IterValue& iterator);
 buildForOperators(operatorFuncs, );
 #undef operatorFuncs
 
 // bool returning
 using BoolReturning =
-    mpark::variant<ValRef<BoolValue>, QuantRef<BoolValue>,
+    mpark::variant<ValRef<BoolValue>, IterRef<BoolValue>,
                    std::shared_ptr<OpAnd>, std::shared_ptr<OpSetNotEq>>;
 
 // int returning
 using IntReturning =
-    mpark::variant<ValRef<IntValue>, QuantRef<IntValue>,
+    mpark::variant<ValRef<IntValue>, IterRef<IntValue>,
                    std::shared_ptr<OpSetSize>, std::shared_ptr<OpSum>>;
 
 // set returning
-using SetReturning = mpark::variant<ValRef<SetValue>, QuantRef<SetValue>,
+using SetReturning = mpark::variant<ValRef<SetValue>, IterRef<SetValue>,
                                     std::shared_ptr<OpSetIntersect>>;
 
 template <typename View, typename Operator>
@@ -80,40 +80,38 @@ inline void updateViolationDescription(
 // types i.e. BoolReturning, IntReturning, SetReturning, etc.
 template <typename ReturnType>
 inline ReturnType deepCopyForUnroll(const ReturnType& expr,
-                                    const QuantValue& unrollingQuantifier) {
+                                    const IterValue& iterator) {
     return mpark::visit(
         [&](auto& exprImpl) -> ReturnType {
-            return deepCopyForUnrollOverload(exprImpl, unrollingQuantifier);
+            return deepCopyForUnrollOverload(exprImpl, iterator);
         },
         expr);
 }
 
 /// overload of deepCopyForUnroll that catches operators
 template <typename T>
-std::shared_ptr<T> deepCopyForUnrollOverload(
-    const std::shared_ptr<T>& ptr, const QuantValue& unrollingQuantifier) {
-    return deepCopyForUnroll(*ptr, unrollingQuantifier);
+std::shared_ptr<T> deepCopyForUnrollOverload(const std::shared_ptr<T>& ptr,
+                                             const IterValue& iterator) {
+    return deepCopyForUnroll(*ptr, iterator);
 }
 
 // ValRef overload for deepCopyOverload, note that ValRefs are not supposed to
 // be deepCopied when unrolling
 template <typename T>
 inline ValRef<T> deepCopyForUnrollOverload(const ValRef<T>& val,
-                                           const QuantValue&) {
+                                           const IterValue&) {
     return val;
 }
 
 template <typename T>
-inline QuantRef<T> deepCopyForUnrollOverload(
-    const QuantRef<T>& quantVal, const QuantValue& unrollingQuantifier) {
-    const QuantRef<T>* unrollingQuantifierPtr =
-        mpark::get_if<QuantRef<T>>(&unrollingQuantifier);
-    if (unrollingQuantifierPtr != NULL &&
-        unrollingQuantifierPtr->getQuantifier().id ==
-            quantVal.getQuantifier().id) {
-        return *unrollingQuantifierPtr;
+inline IterRef<T> deepCopyForUnrollOverload(const IterRef<T>& iterVal,
+                                            const IterValue& iterator) {
+    const IterRef<T>* iteratorPtr = mpark::get_if<IterRef<T>>(&iterator);
+    if (iteratorPtr != NULL &&
+        iteratorPtr->getIterator().id == iterVal.getIterator().id) {
+        return *iteratorPtr;
     } else {
-        return quantVal;
+        return iterVal;
     }
 }
 

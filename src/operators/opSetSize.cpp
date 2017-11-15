@@ -66,7 +66,7 @@ void updateViolationDescription(const OpSetSize& op, u_int64_t parentViolation,
 }
 
 std::shared_ptr<OpSetSize> deepCopyForUnroll(const OpSetSize&,
-                                             const QuantValue&) {
+                                             const IterValue&) {
     assert(false);
     abort();
 }

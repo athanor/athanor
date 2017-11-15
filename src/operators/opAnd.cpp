@@ -76,11 +76,11 @@ void startTriggering(OpAnd& op) {
         addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
         op.operandTriggers.emplace_back(trigger);
         mpark::visit(overloaded(
-                         [&](QuantRef<BoolValue>& ref) {
+                         [&](IterRef<BoolValue>& ref) {
                              auto unrollTrigger =
                                  make_shared<OpAndUnrollTrigger>(&op, i);
                              addTrigger<UnrollTrigger<BoolValue>>(
-                                 ref.getQuantifier().unrollTriggers,
+                                 ref.getIterator().unrollTriggers,
                                  unrollTrigger);
                          },
                          [](auto&) {}),
@@ -106,12 +106,12 @@ void updateViolationDescription(const OpAnd& op, u_int64_t,
     }
 }
 
-std::shared_ptr<OpAnd> deepCopyForUnroll(
-    const OpAnd& op, const QuantValue& unrollingQuantifier) {
+std::shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
+                                         const IterValue& iterator) {
     std::vector<BoolReturning> operands;
     operands.reserve(op.operands.size());
     for (auto& operand : op.operands) {
-        operands.emplace_back(deepCopyForUnroll(operand, unrollingQuantifier));
+        operands.emplace_back(deepCopyForUnroll(operand, iterator));
     }
     auto newOpAnd =
         std::make_shared<OpAnd>(std::move(operands), op.violatingOperands);

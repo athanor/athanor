@@ -61,13 +61,13 @@ void startTriggering(OpSum& op) {
                                op.operandTrigger);
         startTriggering(operand);
         mpark::visit(overloaded(
-                         [&](QuantRef<IntValue>& ref) {
+                         [&](IterRef<IntValue>& ref) {
                              if (!op.operandUnrollTrigger) {
                                  op.operandUnrollTrigger =
                                      std::make_shared<OpSumUnrollTrigger>(&op);
                              }
                              addTrigger<UnrollTrigger<IntValue>>(
-                                 ref.getQuantifier().unrollTriggers,
+                                 ref.getIterator().unrollTriggers,
                                  op.operandUnrollTrigger);
                          },
                          [](auto&) {}),
@@ -94,12 +94,12 @@ void updateViolationDescription(const OpSum& op, u_int64_t parentViolation,
     }
 }
 
-std::shared_ptr<OpSum> deepCopyForUnroll(
-    const OpSum& op, const QuantValue& unrollingQuantifier) {
+std::shared_ptr<OpSum> deepCopyForUnroll(const OpSum& op,
+                                         const IterValue& iterator) {
     std::vector<IntReturning> operands;
     operands.reserve(op.operands.size());
     for (auto& operand : op.operands) {
-        operands.emplace_back(deepCopyForUnroll(operand, unrollingQuantifier));
+        operands.emplace_back(deepCopyForUnroll(operand, iterator));
     }
     auto newOpSum = std::make_shared<OpSum>(std::move(operands));
     newOpSum->value = op.value;

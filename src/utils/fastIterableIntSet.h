@@ -15,6 +15,10 @@ class FastIterableIntSet {
         : minElement(minElement),
           elementIndexes((maxElement + 1) - minElement, NOT_PRESENT) {}
 
+    inline void resetMaxElement(size_t maxElement) {
+        elementIndexes.resize((maxElement + 1) - minElement, NOT_PRESENT);
+    }
+
     inline int count(int64_t element) {
         return elementIndexes[translate(element)] != NOT_PRESENT;
     }

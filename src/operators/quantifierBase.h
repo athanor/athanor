@@ -9,16 +9,16 @@
 #include "types/forwardDecls/hash.h"
 
 template <typename UnrollingValue>
-struct UnrollTrigger : public virtual TriggerBase {
-    virtual void valueChangedDuringUnroll(
-        const UnrollingValue& oldValue, const ValRef<UnrollingValue>& newValue);
+struct IterValueChangeTrigger : public virtual TriggerBase {
+    virtual void iterHasNewValue(const UnrollingValue& oldValue,
+                                 const ValRef<UnrollingValue>& newValue);
 };
 
 template <typename T>
 struct Iterator {
     int id;
     ValRef<T> ref;
-    std::vector<std::shared_ptr<UnrollTrigger<T>>> unrollTriggers;
+    std::vector<std::shared_ptr<IterValueChangeTrigger<T>>> unrollTriggers;
 
     Iterator(int id, ValRef<T> ref) : id(id), ref(std::move(ref)) {}
     inline void attachValue(const ValRef<T>& val) { ref = val; }
@@ -82,13 +82,16 @@ struct Quantifier {
             newValue);
     }
 
-    inline void roll(const Value& val) {
+    inline std::pair<size_t, ReturnType> roll(const Value& val) {
         u_int64_t hash = getValueHash(val);
         assert(valueExprMap.count(hash));
         size_t index = valueExprMap[hash];
+        auto removedExpr =
+            std::make_pair(index, std::move(unrolledExprs[index]));
         unrolledExprs[index] = std::move(unrolledExprs.back());
         unrolledExprs.pop_back();
         valueExprMap.erase(hash);
+        return removedExpr;
     }
 };
 

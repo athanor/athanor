@@ -22,38 +22,8 @@ void evaluate(OpSetForAll& op) {
         },
         members);
 }
+
 /*
-class OpAndTrigger : public BoolTrigger {
-    friend OpAnd;
-    OpAnd* op;
-    const size_t index;
-    u_int64_t lastViolation;
-
-   public:
-    OpAndTrigger(OpAnd* op, size_t index) : op(op), index(index) {}
-    void possibleValueChange(u_int64_t oldVilation) {
-        lastViolation = oldVilation;
-    }
-    void valueChanged(u_int64_t newViolation) {
-        if (newViolation == lastViolation) {
-            return;
-        }
-        if (newViolation > 0 && lastViolation == 0) {
-            op->violatingOperands.insert(index);
-        } else if (newViolation == 0 && lastViolation > 0) {
-            op->violatingOperands.erase(index);
-        }
-        visitTriggers(
-            [&](auto& trigger) { trigger->possibleValueChange(op->violation); },
-            op->triggers, emptyEndOfTriggerQueue);
-        op->violation -= lastViolation;
-        op->violation += newViolation;
-        visitTriggers(
-            [&](auto& trigger) { trigger->valueChanged(op->violation); },
-            op->triggers, emptyEndOfTriggerQueue);
-    }
-};
-
 OpAnd::OpAnd(OpAnd&& other)
     : BoolView(std::move(other)),
       operands(std::move(other.operands)),
@@ -145,11 +115,11 @@ class OpAndTrigger : public BoolTrigger {
     }
 };
 
-class OpAndUnrollTrigger : public OpAndTrigger,
-                           public UnrollTrigger<BoolValue> {
+class OpAndIterValueChangeTrigger : public OpAndTrigger,
+                           public IterValueChangeTrigger<BoolValue> {
    public:
     using OpAndTrigger::OpAndTrigger;
-    void valueChangedDuringUnroll(const BoolValue& oldValue,
+    void iterHasNewValue(const BoolValue& oldValue,
                                   const ValRef<BoolValue>& newValue) final {
         possibleValueChange(oldValue.violation);
         valueChanged(newValue->violation);
@@ -175,8 +145,8 @@ void startTriggering(OpAnd& op) {
         mpark::visit(overloaded(
                          [&](IterRef<BoolValue>& ref) {
                              auto unrollTrigger =
-                                 make_shared<OpAndUnrollTrigger>(&op, i);
-                             addTrigger<UnrollTrigger<BoolValue>>(
+                                 make_shared<OpAndIterValueChangeTrigger>(&op,
+i); addTrigger<IterValueChangeTrigger<BoolValue>>(
                                  ref.getIterator().unrollTriggers,
                                  unrollTrigger);
                          },

@@ -15,50 +15,6 @@ void evaluate(OpAnd& op) {
         op.violation += getView<BoolView>(operand).violation;
     }
 }
-class OpAndTrigger : public BoolTrigger {
-    friend OpAnd;
-
-   protected:
-    OpAnd* op;
-    const size_t index;
-    u_int64_t lastViolation;
-
-   public:
-    OpAndTrigger(OpAnd* op, size_t index) : op(op), index(index) {}
-    void possibleValueChange(u_int64_t oldVilation) {
-        lastViolation = oldVilation;
-    }
-    void valueChanged(u_int64_t newViolation) {
-        if (newViolation == lastViolation) {
-            return;
-        }
-        if (newViolation > 0 && lastViolation == 0) {
-            op->violatingOperands.insert(index);
-        } else if (newViolation == 0 && lastViolation > 0) {
-            op->violatingOperands.erase(index);
-        }
-        visitTriggers(
-            [&](auto& trigger) { trigger->possibleValueChange(op->violation); },
-            op->triggers, emptyEndOfTriggerQueue);
-        op->violation -= lastViolation;
-        op->violation += newViolation;
-        visitTriggers(
-            [&](auto& trigger) { trigger->valueChanged(op->violation); },
-            op->triggers, emptyEndOfTriggerQueue);
-    }
-};
-
-class OpAndUnrollTrigger : public OpAndTrigger,
-                           public UnrollTrigger<BoolValue> {
-   public:
-    using OpAndTrigger::OpAndTrigger;
-    void valueChangedDuringUnroll(const BoolValue& oldValue,
-                                  const ValRef<BoolValue>& newValue) final {
-        possibleValueChange(oldValue.violation);
-        valueChanged(newValue->violation);
-    }
-};
-
 OpAnd::OpAnd(OpAnd&& other)
     : BoolView(std::move(other)),
       operands(std::move(other.operands)),
@@ -75,16 +31,16 @@ void startTriggering(OpAnd& op) {
         auto trigger = make_shared<OpAndTrigger>(&op, i);
         addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
         op.operandTriggers.emplace_back(trigger);
-        mpark::visit(overloaded(
-                         [&](IterRef<BoolValue>& ref) {
-                             auto unrollTrigger =
-                                 make_shared<OpAndUnrollTrigger>(&op, i);
-                             addTrigger<UnrollTrigger<BoolValue>>(
-                                 ref.getIterator().unrollTriggers,
-                                 unrollTrigger);
-                         },
-                         [](auto&) {}),
-                     operand);
+        mpark::visit(
+            overloaded(
+                [&](IterRef<BoolValue>& ref) {
+                    auto unrollTrigger =
+                        make_shared<OpAndIterValueChangeTrigger>(&op, i);
+                    addTrigger<IterValueChangeTrigger<BoolValue>>(
+                        ref.getIterator().unrollTriggers, unrollTrigger);
+                },
+                [](auto&) {}),
+            operand);
         startTriggering(operand);
     }
 }

@@ -32,10 +32,11 @@ class OpSumTrigger : public IntTrigger {
     }
 };
 
-class OpSumUnrollTrigger : public UnrollTrigger<IntValue>, public OpSumTrigger {
+class OpSumIterValueChangeTrigger : public IterValueChangeTrigger<IntValue>,
+                                    public OpSumTrigger {
     using OpSumTrigger::OpSumTrigger;
-    void valueChangedDuringUnroll(const IntValue& oldValue,
-                                  const ValRef<IntValue>& newValue) {
+    void iterHasNewValue(const IntValue& oldValue,
+                         const ValRef<IntValue>& newValue) {
         possibleValueChange(oldValue.value);
         valueChanged(newValue->value);
     }
@@ -45,12 +46,13 @@ OpSum::OpSum(OpSum&& other)
     : IntView(std::move(other)),
       operands(std::move(other.operands)),
       operandTrigger(std::move(other.operandTrigger)),
-      operandUnrollTrigger(std::move(other.operandUnrollTrigger)) {
+      operandIterValueChangeTrigger(
+          std::move(other.operandIterValueChangeTrigger)) {
     if (operandTrigger) {
         operandTrigger->op = this;
     }
-    if (operandUnrollTrigger) {
-        operandUnrollTrigger->op = this;
+    if (operandIterValueChangeTrigger) {
+        operandIterValueChangeTrigger->op = this;
     }
 }
 
@@ -60,18 +62,19 @@ void startTriggering(OpSum& op) {
         addTrigger<IntTrigger>(getView<IntView>(operand).triggers,
                                op.operandTrigger);
         startTriggering(operand);
-        mpark::visit(overloaded(
-                         [&](IterRef<IntValue>& ref) {
-                             if (!op.operandUnrollTrigger) {
-                                 op.operandUnrollTrigger =
-                                     std::make_shared<OpSumUnrollTrigger>(&op);
-                             }
-                             addTrigger<UnrollTrigger<IntValue>>(
-                                 ref.getIterator().unrollTriggers,
-                                 op.operandUnrollTrigger);
-                         },
-                         [](auto&) {}),
-                     operand);
+        mpark::visit(
+            overloaded(
+                [&](IterRef<IntValue>& ref) {
+                    if (!op.operandIterValueChangeTrigger) {
+                        op.operandIterValueChangeTrigger =
+                            std::make_shared<OpSumIterValueChangeTrigger>(&op);
+                    }
+                    addTrigger<IterValueChangeTrigger<IntValue>>(
+                        ref.getIterator().unrollTriggers,
+                        op.operandIterValueChangeTrigger);
+                },
+                [](auto&) {}),
+            operand);
     }
 }
 
@@ -79,8 +82,9 @@ void stopTriggering(OpSum& op) {
     if (op.operandTrigger) {
         deleteTrigger<IntTrigger>(op.operandTrigger);
     }
-    if (op.operandUnrollTrigger) {
-        deleteTrigger<UnrollTrigger<IntValue>>(op.operandUnrollTrigger);
+    if (op.operandIterValueChangeTrigger) {
+        deleteTrigger<IterValueChangeTrigger<IntValue>>(
+            op.operandIterValueChangeTrigger);
     }
     for (auto& operand : op.operands) {
         stopTriggering(operand);

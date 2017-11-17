@@ -23,28 +23,84 @@ void evaluate(OpSetForAll& op) {
         members);
 }
 
-/*
-OpAnd::OpAnd(OpAnd&& other)
+class OpSetForAllContainerTrigger : public SetTrigger {
+    friend OpSetForAll;
+    OpSetForAll* op;
+    OpSetForAllContainerTrigger(OpSetForAll* op) : op(op) {}
+
+    inline void valueRemoved(const Value& val) final {
+        auto indexExprPair = op->roll(val);
+        u_int64_t removedViolation =
+            getView<BoolView>(indexExprPair.second).violation;
+        if (removedViolation > 0) {
+            visitTriggers(
+                [&](auto& trigger) {
+                    trigger->possibleValueChange(op->violation);
+                },
+                op->triggers);
+            op->violation -= removedViolation;
+            op->violatingOperands.erase(indexExprPair.first);
+            visitTriggers(
+                [&](auto& trigger) { trigger->valueChanged(op->violation); },
+                op->triggers);
+        }
+        if (op->violatingOperands.erase(op->unrolledExprs.size())) {
+            op->violatingOperands.insert(indexExprPair.first);
+        }
+        deleteTrigger(op->exprTriggers[indexExprPair.first]);
+        op->exprTriggers[indexExprPair.first] =
+            std::move(op->exprTriggers.back());
+        op->exprTriggers.pop_back();
+    }
+
+    inline void valueAdded(const Value& val) final {
+        op->queueOfValuesToAdd.emplace_back(std::move(val));
+    }
+
+    inline void possibleValueChange(const Value&) {}
+    inline void valueChanged(const Value&) {}
+};
+
+class OpSetForAllContainerDelayedTrigger : public DelayedTrigger {
+    friend OpSetForAll;
+    OpSetForAll* op;
+    OpSetForAllContainerDelayedTrigger(OpSetForAll* op) : op(op) {}
+    void trigger() final {}
+};
+OpSetForAll::OpSetForAll(OpSetForAll&& other)
     : BoolView(std::move(other)),
-      operands(std::move(other.operands)),
+      Quantifier(std::move(other)),
       violatingOperands(std::move(other.violatingOperands)),
-      operandTriggers(std::move(other.operandTriggers)) {
-    for (auto& trigger : operandTriggers) {
+      exprTriggers(std::move(other.exprTriggers)),
+      containerTrigger(std::move(other.containerTrigger)),
+      containerIterAssignedTrigger(
+          std::move(other.containerIterAssignedTrigger)),
+      containerDelayedTrigger(std::move(other.containerDelayedTrigger)) {
+    for (auto& trigger : exprTriggers) {
         trigger->op = this;
     }
+    if (containerTrigger) {
+        containerTrigger->op = this;
+    }
+    if (containerIterAssignedTrigger) {
+        containerIterAssignedTrigger->op = this;
+    }
+    if (containerDelayedTrigger) {
+        containerDelayedTrigger->op = this;
+    }
 }
-
-void startTriggering(OpAnd& op) {
+/*
+void startTriggering(OpSetForAll& op) {
     for (size_t i = 0; i < op.operands.size(); ++i) {
         auto& operand = op.operands[i];
-        auto trigger = make_shared<OpAndTrigger>(&op, i);
+        auto trigger = make_shared<OpSetForAllTrigger>(&op, i);
         addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
         op.operandTriggers.emplace_back(trigger);
         startTriggering(operand);
     }
 }
 
-void stopTriggering(OpAnd& op) {
+void stopTriggering(OpSetForAll& op) {
     while (!op.operandTriggers.empty()) {
         auto& operand = op.operands[op.operandTriggers.size() - 1];
         deleteTrigger<BoolTrigger>(getView<BoolView>(operand).triggers,
@@ -55,7 +111,7 @@ void stopTriggering(OpAnd& op) {
     }
 }
 
-void updateViolationDescription(const OpAnd& op, u_int64_t,
+void updateViolationDescription(const OpSetForAll& op, u_int64_t,
                                 ViolationDescription& vioDesc) {
     for (size_t violatingOperandIndex : op.violatingOperands) {
         updateViolationDescription(op.operands[violatingOperandIndex],
@@ -63,8 +119,8 @@ void updateViolationDescription(const OpAnd& op, u_int64_t,
     }
 }
 
-std::shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
-                                         const IterValue& iterator) {
+std::shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
+                                               const IterValue& iterator) {
     ignoreUnused(op, iterator);
     abort();
 }
@@ -82,109 +138,4 @@ std::shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
         op.violation += getView<BoolView>(operand).violation;
     }
 }
-class OpAndTrigger : public BoolTrigger {
-    friend OpAnd;
-
-   protected:
-    OpAnd* op;
-    const size_t index;
-    u_int64_t lastViolation;
-
-   public:
-    OpAndTrigger(OpAnd* op, size_t index) : op(op), index(index) {}
-    void possibleValueChange(u_int64_t oldVilation) {
-        lastViolation = oldVilation;
-    }
-    void valueChanged(u_int64_t newViolation) {
-        if (newViolation == lastViolation) {
-            return;
-        }
-        if (newViolation > 0 && lastViolation == 0) {
-            op->violatingOperands.insert(index);
-        } else if (newViolation == 0 && lastViolation > 0) {
-            op->violatingOperands.erase(index);
-        }
-        visitTriggers(
-            [&](auto& trigger) { trigger->possibleValueChange(op->violation); },
-            op->triggers, emptyEndOfTriggerQueue);
-        op->violation -= lastViolation;
-        op->violation += newViolation;
-        visitTriggers(
-            [&](auto& trigger) { trigger->valueChanged(op->violation); },
-            op->triggers, emptyEndOfTriggerQueue);
-    }
-};
-
-class OpAndIterValueChangeTrigger : public OpAndTrigger,
-                           public IterValueChangeTrigger<BoolValue> {
-   public:
-    using OpAndTrigger::OpAndTrigger;
-    void iterHasNewValue(const BoolValue& oldValue,
-                                  const ValRef<BoolValue>& newValue) final {
-        possibleValueChange(oldValue.violation);
-        valueChanged(newValue->violation);
-    }
-};
-
-OpAnd::OpAnd(OpAnd&& other)
-    : BoolView(std::move(other)),
-      operands(std::move(other.operands)),
-      violatingOperands(std::move(other.violatingOperands)),
-      operandTriggers(std::move(other.operandTriggers)) {
-    for (auto& trigger : operandTriggers) {
-        trigger->op = this;
-    }
-}
-
-void startTriggering(OpAnd& op) {
-    for (size_t i = 0; i < op.operands.size(); ++i) {
-        auto& operand = op.operands[i];
-        auto trigger = make_shared<OpAndTrigger>(&op, i);
-        addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
-        op.operandTriggers.emplace_back(trigger);
-        mpark::visit(overloaded(
-                         [&](IterRef<BoolValue>& ref) {
-                             auto unrollTrigger =
-                                 make_shared<OpAndIterValueChangeTrigger>(&op,
-i); addTrigger<IterValueChangeTrigger<BoolValue>>(
-                                 ref.getIterator().unrollTriggers,
-                                 unrollTrigger);
-                         },
-                         [](auto&) {}),
-                     operand);
-        startTriggering(operand);
-    }
-}
-
-void stopTriggering(OpAnd& op) {
-    while (!op.operandTriggers.empty()) {
-        auto& operand = op.operands[op.operandTriggers.size() - 1];
-        deleteTrigger<BoolTrigger>(op.operandTriggers.back());
-        op.operandTriggers.pop_back();
-        stopTriggering(operand);
-    }
-}
-
-void updateViolationDescription(const OpAnd& op, u_int64_t,
-                                ViolationDescription& vioDesc) {
-    for (size_t violatingOperandIndex : op.violatingOperands) {
-        updateViolationDescription(op.operands[violatingOperandIndex],
-                                   op.violation, vioDesc);
-    }
-}
-
-std::shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
-                                         const IterValue& iterator) {
-    std::vector<BoolReturning> operands;
-    operands.reserve(op.operands.size());
-    for (auto& operand : op.operands) {
-        operands.emplace_back(deepCopyForUnroll(operand, iterator));
-    }
-    auto newOpAnd =
-        std::make_shared<OpAnd>(std::move(operands), op.violatingOperands);
-    newOpAnd->violation = op.violation;
-    startTriggering(*newOpAnd);
-    return newOpAnd;
-}
-
 */

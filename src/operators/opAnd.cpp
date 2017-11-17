@@ -31,16 +31,16 @@ void startTriggering(OpAnd& op) {
         auto trigger = make_shared<OpAndTrigger>(&op, i);
         addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
         op.operandTriggers.emplace_back(trigger);
-        mpark::visit(
-            overloaded(
-                [&](IterRef<BoolValue>& ref) {
-                    auto unrollTrigger =
-                        make_shared<OpAndIterValueChangeTrigger>(&op, i);
-                    addTrigger<IterValueChangeTrigger<BoolValue>>(
-                        ref.getIterator().unrollTriggers, unrollTrigger);
-                },
-                [](auto&) {}),
-            operand);
+        mpark::visit(overloaded(
+                         [&](IterRef<BoolValue>& ref) {
+                             auto unrollTrigger =
+                                 make_shared<OpAndIterAssignedTrigger>(&op, i);
+                             addTrigger<IterAssignedTrigger<BoolValue>>(
+                                 ref.getIterator().unrollTriggers,
+                                 unrollTrigger);
+                         },
+                         [](auto&) {}),
+                     operand);
         startTriggering(operand);
     }
 }
@@ -48,7 +48,7 @@ void startTriggering(OpAnd& op) {
 void stopTriggering(OpAnd& op) {
     while (!op.operandTriggers.empty()) {
         auto& operand = op.operands[op.operandTriggers.size() - 1];
-        deleteTrigger<BoolTrigger>(op.operandTriggers.back());
+        deleteTrigger(op.operandTriggers.back());
         op.operandTriggers.pop_back();
         stopTriggering(operand);
     }

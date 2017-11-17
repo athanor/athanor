@@ -116,11 +116,13 @@ ValRef<ValueType> constructValueOfSameType(const ValueType& other) {
 struct TriggerBase {
     bool active;
 };
-struct EndOfQueueTrigger : public TriggerBase {
-    virtual void reachedEndOfTriggerQueue() = 0;
+struct DelayedTrigger : public virtual TriggerBase {
+    virtual void trigger() = 0;
 };
 
-extern std::vector<std::shared_ptr<EndOfQueueTrigger>> emptyEndOfTriggerQueue;
+extern std::vector<std::shared_ptr<DelayedTrigger>> delayedTriggerStack;
+extern bool currentlyProcessingDelayedTriggerStack;
+
 template <typename Trigger>
 void cleanNullTriggers(std::vector<std::shared_ptr<Trigger>>& triggers) {
     for (size_t i = 0; i < triggers.size(); ++i) {
@@ -139,10 +141,9 @@ void cleanNullTriggers(std::vector<std::shared_ptr<Trigger>>& triggers) {
     }
 }
 
-template <typename Trigger, typename Visitor>
-void visitTriggers(
-    Visitor&& func, std::vector<std::shared_ptr<Trigger>>& triggers,
-    std::vector<std::shared_ptr<EndOfQueueTrigger>>& endOfQueueTriggers) {
+template <typename Visitor, typename Trigger>
+void visitTriggers(Visitor&& func,
+                   std::vector<std::shared_ptr<Trigger>>& triggers) {
     size_t triggerNullCount = 0;
     for (auto& trigger : triggers) {
         if (trigger && trigger->active) {
@@ -157,10 +158,19 @@ void visitTriggers(
     if (((double)triggerNullCount) / triggers.size() > 0.2) {
         cleanNullTriggers(triggers);
     }
-    for (auto& trigger : endOfQueueTriggers) {
-        trigger->reachedEndOfTriggerQueue();
+    if (!currentlyProcessingDelayedTriggerStack) {
+        currentlyProcessingDelayedTriggerStack = true;
+        while (!delayedTriggerStack.empty()) {
+            auto trigger = std::move(delayedTriggerStack.back());
+            delayedTriggerStack.pop_back();
+            if (trigger && trigger->active) {
+                trigger->trigger();
+            }
+        }
+        currentlyProcessingDelayedTriggerStack = false;
     }
 }
+
 template <typename Trigger>
 void addTrigger(std::vector<std::shared_ptr<Trigger>>& triggerVec,
                 const std::shared_ptr<Trigger>& trigger) {

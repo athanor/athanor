@@ -14,10 +14,10 @@ inline void setViolation(OpSetNotEq& op, bool trigger) {
     if (trigger && op.violation != oldViolation) {
         visitTriggers(
             [&](auto& trigger) { trigger->possibleValueChange(oldViolation); },
-            op.triggers, emptyEndOfTriggerQueue);
+            op.triggers);
         visitTriggers(
             [&](auto& trigger) { trigger->valueChanged(op.violation); },
-            op.triggers, emptyEndOfTriggerQueue);
+            op.triggers);
     }
 }
 
@@ -62,7 +62,7 @@ void startTriggering(OpSetNotEq& op) {
 
 void stopTriggering(OpSetNotEq& op) {
     if (op.trigger) {
-        deleteTrigger<SetTrigger>(op.trigger);
+        deleteTrigger(op.trigger);
     }
     stopTriggering(op.left);
     stopTriggering(op.right);

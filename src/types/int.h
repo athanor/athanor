@@ -39,9 +39,8 @@ struct IntValue : public IntView, ValBase {
             return;
         }
         visitTriggers([&](auto& t) { t->possibleValueChange(oldValue); },
-                      triggers, emptyEndOfTriggerQueue);
-        visitTriggers([&](auto& t) { t->valueChanged(value); }, triggers,
-                      emptyEndOfTriggerQueue);
+                      triggers);
+        visitTriggers([&](auto& t) { t->valueChanged(value); }, triggers);
     }
 };
 

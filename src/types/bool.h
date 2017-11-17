@@ -27,9 +27,9 @@ struct BoolValue : public BoolView, ValBase {
         }
         visitTriggers(
             [&](auto& trigger) { trigger->possibleValueChange(oldViolation); },
-            triggers, emptyEndOfTriggerQueue);
+            triggers);
         visitTriggers([&](auto& trigger) { trigger->valueChanged(violation); },
-                      triggers, emptyEndOfTriggerQueue);
+                      triggers);
     }
 };
 

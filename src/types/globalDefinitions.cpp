@@ -24,4 +24,4 @@
 buildForAllTypes(specialised, )
 #undef specialised
 
-    std::vector<std::shared_ptr<EndOfQueueTrigger>> emptyEndOfTriggerQueue;
+    std::vector<std::shared_ptr<DelayedTrigger>> emptyEndOfTriggerQueue;

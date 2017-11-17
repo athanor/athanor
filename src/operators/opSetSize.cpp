@@ -19,19 +19,19 @@ class OpSetSizeTrigger : public SetTrigger {
     inline void valueRemoved(const Value&) final {
         visitTriggers(
             [&](auto& trigger) { trigger->possibleValueChange(op->value); },
-            op->triggers, emptyEndOfTriggerQueue);
+            op->triggers);
         --op->value;
         visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
-                      op->triggers, emptyEndOfTriggerQueue);
+                      op->triggers);
     }
 
     inline void valueAdded(const Value&) final {
         visitTriggers(
             [&](auto& trigger) { trigger->possibleValueChange(op->value); },
-            op->triggers, emptyEndOfTriggerQueue);
+            op->triggers);
         ++op->value;
         visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
-                      op->triggers, emptyEndOfTriggerQueue);
+                      op->triggers);
     }
 
     inline void possibleValueChange(const Value&) {}
@@ -55,7 +55,7 @@ void startTriggering(OpSetSize& op) {
 
 void stopTriggering(OpSetSize& op) {
     if (op.operandTrigger) {
-        deleteTrigger<SetTrigger>(op.operandTrigger);
+        deleteTrigger(op.operandTrigger);
     }
     stopTriggering(op.operand);
 }

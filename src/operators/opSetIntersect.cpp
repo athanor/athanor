@@ -61,7 +61,7 @@ class OpSetIntersectTrigger : public SetTrigger {
             op->memberHashes.erase(hashIter);
             op->cachedHashTotal -= hash;
             visitTriggers([&](auto& trigger) { trigger->valueRemoved(member); },
-                          op->triggers, op->endOfQueueTriggers);
+                          op->triggers);
         }
     }
 
@@ -76,7 +76,7 @@ class OpSetIntersectTrigger : public SetTrigger {
             op->memberHashes.insert(hash);
             op->cachedHashTotal += hash;
             visitTriggers([&](auto& trigger) { trigger->valueAdded(member); },
-                          op->triggers, op->endOfQueueTriggers);
+                          op->triggers);
         }
     }
     inline void possibleValueChange(const Value& member) final {
@@ -85,7 +85,7 @@ class OpSetIntersectTrigger : public SetTrigger {
         if (oldHashIter != op->memberHashes.end()) {
             visitTriggers(
                 [&](auto& trigger) { trigger->possibleValueChange(member); },
-                op->triggers, op->endOfQueueTriggers);
+                op->triggers);
         }
     }
 
@@ -106,17 +106,17 @@ class OpSetIntersectTrigger : public SetTrigger {
                 op->cachedHashTotal += newHashOfMember;
                 visitTriggers(
                     [&](auto& trigger) { trigger->valueChanged(member); },
-                    op->triggers, op->endOfQueueTriggers);
+                    op->triggers);
             } else {
                 visitTriggers(
                     [&](auto& trigger) { trigger->valueRemoved(member); },
-                    op->triggers, op->endOfQueueTriggers);
+                    op->triggers);
             }
         } else if (containedInUnchangedSet) {
             op->memberHashes.insert(newHashOfMember);
             op->cachedHashTotal += newHashOfMember;
             visitTriggers([&](auto& trigger) { trigger->valueAdded(member); },
-                          op->triggers, op->endOfQueueTriggers);
+                          op->triggers);
         }
     }
 };
@@ -147,7 +147,7 @@ void startTriggering(OpSetIntersect& op) {
 
 void stopTriggering(OpSetIntersect& op) {
     if (op.leftTrigger) {
-        deleteTrigger<SetTrigger>(op.leftTrigger);
+        deleteTrigger(op.leftTrigger);
     }
     if (op.rightTrigger) {
         deleteTrigger<SetTrigger>(op.rightTrigger);

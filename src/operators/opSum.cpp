@@ -24,16 +24,16 @@ class OpSumTrigger : public IntTrigger {
         }
         visitTriggers(
             [&](auto& trigger) { trigger->possibleValueChange(op->value); },
-            op->triggers, emptyEndOfTriggerQueue);
+            op->triggers);
         op->value -= lastMemberValue;
         op->value += newValue;
         visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
-                      op->triggers, emptyEndOfTriggerQueue);
+                      op->triggers);
     }
 };
 
-class OpSumIterValueChangeTrigger : public IterValueChangeTrigger<IntValue>,
-                                    public OpSumTrigger {
+class OpSumIterAssignedTrigger : public IterAssignedTrigger<IntValue>,
+                                 public OpSumTrigger {
     using OpSumTrigger::OpSumTrigger;
     void iterHasNewValue(const IntValue& oldValue,
                          const ValRef<IntValue>& newValue) {
@@ -46,13 +46,12 @@ OpSum::OpSum(OpSum&& other)
     : IntView(std::move(other)),
       operands(std::move(other.operands)),
       operandTrigger(std::move(other.operandTrigger)),
-      operandIterValueChangeTrigger(
-          std::move(other.operandIterValueChangeTrigger)) {
+      operandIterAssignedTrigger(std::move(other.operandIterAssignedTrigger)) {
     if (operandTrigger) {
         operandTrigger->op = this;
     }
-    if (operandIterValueChangeTrigger) {
-        operandIterValueChangeTrigger->op = this;
+    if (operandIterAssignedTrigger) {
+        operandIterAssignedTrigger->op = this;
     }
 }
 
@@ -65,13 +64,13 @@ void startTriggering(OpSum& op) {
         mpark::visit(
             overloaded(
                 [&](IterRef<IntValue>& ref) {
-                    if (!op.operandIterValueChangeTrigger) {
-                        op.operandIterValueChangeTrigger =
-                            std::make_shared<OpSumIterValueChangeTrigger>(&op);
+                    if (!op.operandIterAssignedTrigger) {
+                        op.operandIterAssignedTrigger =
+                            std::make_shared<OpSumIterAssignedTrigger>(&op);
                     }
-                    addTrigger<IterValueChangeTrigger<IntValue>>(
+                    addTrigger<IterAssignedTrigger<IntValue>>(
                         ref.getIterator().unrollTriggers,
-                        op.operandIterValueChangeTrigger);
+                        op.operandIterAssignedTrigger);
                 },
                 [](auto&) {}),
             operand);
@@ -80,11 +79,10 @@ void startTriggering(OpSum& op) {
 
 void stopTriggering(OpSum& op) {
     if (op.operandTrigger) {
-        deleteTrigger<IntTrigger>(op.operandTrigger);
+        deleteTrigger(op.operandTrigger);
     }
-    if (op.operandIterValueChangeTrigger) {
-        deleteTrigger<IterValueChangeTrigger<IntValue>>(
-            op.operandIterValueChangeTrigger);
+    if (op.operandIterAssignedTrigger) {
+        deleteTrigger(op.operandIterAssignedTrigger);
     }
     for (auto& operand : op.operands) {
         stopTriggering(operand);

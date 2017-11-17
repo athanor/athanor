@@ -9,7 +9,7 @@
 #include "types/forwardDecls/hash.h"
 
 template <typename UnrollingValue>
-struct IterValueChangeTrigger : public virtual TriggerBase {
+struct IterAssignedTrigger : public virtual TriggerBase {
     virtual void iterHasNewValue(const UnrollingValue& oldValue,
                                  const ValRef<UnrollingValue>& newValue);
 };
@@ -18,7 +18,7 @@ template <typename T>
 struct Iterator {
     int id;
     ValRef<T> ref;
-    std::vector<std::shared_ptr<IterValueChangeTrigger<T>>> unrollTriggers;
+    std::vector<std::shared_ptr<IterAssignedTrigger<T>>> unrollTriggers;
 
     Iterator(int id, ValRef<T> ref) : id(id), ref(std::move(ref)) {}
     inline void attachValue(const ValRef<T>& val) { ref = val; }

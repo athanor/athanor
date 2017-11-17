@@ -8,11 +8,11 @@
 template <typename T>
 class ConjunctionTrigger;
 template <typename T>
-class ConjunctionIterValueChangeTrigger;
+class ConjunctionIterAssignedTrigger;
 struct OpAnd;
 
 typedef ConjunctionTrigger<OpAnd> OpAndTrigger;
-typedef ConjunctionIterValueChangeTrigger<OpAnd> OpAndIterValueChangeTrigger;
+typedef ConjunctionIterAssignedTrigger<OpAnd> OpAndIterAssignedTrigger;
 
 struct OpAnd : public BoolView {
     std::vector<BoolReturning> operands;
@@ -58,18 +58,17 @@ class ConjunctionTrigger : public BoolTrigger {
         }
         visitTriggers(
             [&](auto& trigger) { trigger->possibleValueChange(op->violation); },
-            op->triggers, emptyEndOfTriggerQueue);
+            op->triggers);
         op->violation -= lastViolation;
         op->violation += newViolation;
         visitTriggers(
             [&](auto& trigger) { trigger->valueChanged(op->violation); },
-            op->triggers, emptyEndOfTriggerQueue);
+            op->triggers);
     }
 };
 template <typename Op>
-class ConjunctionIterValueChangeTrigger
-    : public ConjunctionTrigger<Op>,
-      public IterValueChangeTrigger<BoolValue> {
+class ConjunctionIterAssignedTrigger : public ConjunctionTrigger<Op>,
+                                       public IterAssignedTrigger<BoolValue> {
    public:
     using ConjunctionTrigger<Op>::ConjunctionTrigger;
     void iterHasNewValue(const BoolValue& oldValue,

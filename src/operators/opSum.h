@@ -5,11 +5,11 @@
 #include "operators/operatorBase.h"
 #include "types/int.h"
 class OpSumTrigger;
-class OpSumIterValueChangeTrigger;
+class OpSumIterAssignedTrigger;
 struct OpSum : public IntView {
     std::vector<IntReturning> operands;
     std::shared_ptr<OpSumTrigger> operandTrigger = nullptr;
-    std::shared_ptr<OpSumIterValueChangeTrigger> operandIterValueChangeTrigger =
+    std::shared_ptr<OpSumIterAssignedTrigger> operandIterAssignedTrigger =
         nullptr;
 
     OpSum(std::vector<IntReturning> operandsIn)

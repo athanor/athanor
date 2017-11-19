@@ -21,7 +21,16 @@ struct Iterator {
     std::vector<std::shared_ptr<IterAssignedTrigger<T>>> unrollTriggers;
 
     Iterator(int id, ValRef<T> ref) : id(id), ref(std::move(ref)) {}
-    inline void attachValue(const ValRef<T>& val) { ref = val; }
+    inline void attachValue(const ValRef<T>& val) {
+        auto oldRef = std::move(ref);
+        ref = val;
+        if (!oldRef) {
+            return;
+        }
+        for (auto& trigger : unrollTriggers) {
+            trigger->iterHasNewValue(*oldRef, ref);
+        }
+    }
 };
 
 template <typename T>
@@ -67,16 +76,25 @@ struct Quantifier {
     inline IterRef<T> newIterRef() {
         return IterRef<T>(quantId);
     }
-
-    inline void unroll(const Value& newValue) {
+    inline void unroll(const Value& newValue,
+                       bool startTriggeringNewExpr = true) {
         mpark::visit(
             [&](auto& newValImpl) {
                 auto quantRef = newIterRef<
                     typename BaseType<decltype(newValImpl)>::element_type>();
-                unrolledExprs.emplace_back(deepCopyForUnroll(expr, quantRef),
-                                           quantRef);
+                if (unrolledExprs.size() == 0) {
+                    unrolledExprs.emplace_back(
+                        deepCopyForUnroll(expr, quantRef), quantRef);
+                } else {
+                    unrolledExprs.emplace_back(
+                        deepCopyForUnroll(unrolledExprs.back().first, quantRef),
+                        quantRef);
+                }
                 valueExprMap.emplace(getValueHash(newValImpl),
                                      unrolledExprs.size() - 1);
+                if (startTriggeringNewExpr) {
+                    startTriggering(unrolledExprs.back().first);
+                }
                 quantRef.getIterator().attachValue(newValImpl);
             },
             newValue);

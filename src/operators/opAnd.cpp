@@ -48,9 +48,10 @@ void startTriggering(OpAnd& op) {
 
 void stopTriggering(OpAnd& op) {
     while (!op.operandTriggers.empty()) {
-        auto& operand = op.operands[op.operandTriggers.size() - 1];
         deleteTrigger(op.operandTriggers.back());
         op.operandTriggers.pop_back();
+    }
+    for (auto& operand : op.operands) {
         stopTriggering(operand);
     }
 }

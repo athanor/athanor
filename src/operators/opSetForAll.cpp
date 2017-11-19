@@ -8,7 +8,7 @@ using namespace std;
 using ContainerTrigger = OpSetForAll::ContainerTrigger;
 using ContainerIterAssignedTrigger = OpSetForAll::ContainerIterAssignedTrigger;
 using DelayedUnrollTrigger = OpSetForAll::DelayedUnrollTrigger;
-void startTriggeringExpr(OpSetForAll& op, BoolReturning& operand, size_t index);
+void attachTriggerToExpr(OpSetForAll& op, BoolReturning& operand, size_t index);
 void evaluate(OpSetForAll& op) {
     SetMembersVector members = evaluate(op.container);
     op.violation = 0;
@@ -17,7 +17,7 @@ void evaluate(OpSetForAll& op) {
             op.violatingOperands =
                 FastIterableIntSet(0, membersImpl.size() - 1);
             for (auto& ref : membersImpl) {
-                op.unroll(ref);
+                op.unroll(ref, false);
                 auto& operand = op.unrolledExprs.back().first;
                 evaluate(operand);
                 u_int64_t violation = getView<BoolView>(operand).violation;
@@ -90,8 +90,14 @@ struct OpSetForAll::DelayedUnrollTrigger : public DelayedTrigger {
         while (!op->valuesToUnroll.empty()) {
             op->unroll(op->valuesToUnroll.back());
             op->valuesToUnroll.pop_back();
-            startTriggeringExpr(*op, op->unrolledExprs.back().first,
+            attachTriggerToExpr(*op, op->unrolledExprs.back().first,
                                 op->unrolledExprs.size() - 1);
+            u_int64_t violation =
+                getView<BoolView>(op->unrolledExprs.back().first).violation;
+            if (violation > 0) {
+                op->violatingOperands.insert(op->unrolledExprs.size() - 1);
+                op->violation += violation;
+            }
         }
     }
 };
@@ -125,11 +131,12 @@ void startTriggering(OpSetForAll& op) {
                      [](auto&) {}),
                  op.container);
     for (size_t i = 0; i < op.unrolledExprs.size(); ++i) {
-        startTriggeringExpr(op, op.unrolledExprs[i].first, i);
+        attachTriggerToExpr(op, op.unrolledExprs[i].first, i);
+        startTriggering(op.unrolledExprs[i].first);
     }
 }
 
-void startTriggeringExpr(OpSetForAll& op, BoolReturning& operand,
+void attachTriggerToExpr(OpSetForAll& op, BoolReturning& operand,
                          size_t index) {
     auto trigger = make_shared<ExprTrigger>(&op, index);
     addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
@@ -144,19 +151,27 @@ void startTriggeringExpr(OpSetForAll& op, BoolReturning& operand,
                      },
                      [](auto&) {}),
                  operand);
-    startTriggering(operand);
+}
+
+void stopTriggering(OpSetForAll& op) {
+    while (!op.exprTriggers.empty()) {
+        deleteTrigger(op.exprTriggers.back());
+        op.exprTriggers.pop_back();
+    }
+    for (auto& expr : op.unrolledExprs) {
+        stopTriggering(expr.first);
+    }
+    if (op.containerIterAssignedTrigger) {
+        deleteTrigger(op.containerIterAssignedTrigger);
+    }
+    if (op.containerTrigger) {
+        deleteTrigger(op.containerTrigger);
+        stopTriggering(op.container);
+    }
+    assert(op.queueOfValuesToAdd.size() == 0);
 }
 
 /*
-void stopTriggering(OpSetForAll& op) {
-    while (!op.operandTriggers.empty()) {
-        auto& operand = op.operands[op.operandTriggers.size() - 1];
-        deleteTrigger(op.operandTriggers.back());
-        op.operandTriggers.pop_back();
-        stopTriggering(operand);
-    }
-}
-
 void updateViolationDescription(const OpSetForAll& op, u_int64_t,
                                 ViolationDescription& vioDesc) {
     for (size_t violatingOperandIndex : op.violatingOperands) {
@@ -166,16 +181,17 @@ void updateViolationDescription(const OpSetForAll& op, u_int64_t,
 }
 
 shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
-                                         const IterValue& iterator) {
+                                          const IterValue& iterator) {
     vector<BoolReturning> operands;
     operands.reserve(op.operands.size());
     for (auto& operand : op.operands) {
         operands.emplace_back(deepCopyForUnroll(operand, iterator));
     }
     auto newOpSetForAll =
-        make_shared<OpSetForAll>(move(operands),
-op.violatingOperands); newOpSetForAll->violation = op.violation;
+        make_shared<OpSetForAll>(move(operands), op.violatingOperands);
+    newOpSetForAll->violation = op.violation;
     startTriggering(*newOpSetForAll);
     return newOpSetForAll;
 }
+
 */

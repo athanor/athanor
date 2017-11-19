@@ -28,6 +28,9 @@ class CachedSharedPtr {
             saveMemory(ref);
         }
     }
+    inline explicit operator bool() const noexcept {
+        return ref.operator bool();
+    }
     inline decltype(auto) operator*() { return ref.operator*(); }
     inline decltype(auto) operator-> () { return ref.operator->(); }
     inline decltype(auto) operator*() const { return ref.operator*(); }

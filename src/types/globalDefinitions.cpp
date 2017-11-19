@@ -5,7 +5,8 @@
 #include "search/violationDescription.h"
 #include "types/allTypes.h"
 #define quote(x) #x
-
+bool currentlyProcessingDelayedTriggerStack = false;
+std::vector<std::shared_ptr<DelayedTrigger>> delayedTriggerStack;
 #define specialised(name)                                                      \
     template <>                                                                \
     std::shared_ptr<name##Value> makeShared<name##Value>() {                   \

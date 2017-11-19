@@ -87,7 +87,7 @@ struct Quantifier {
         assert(valueExprMap.count(hash));
         size_t index = valueExprMap[hash];
         auto removedExpr =
-            std::make_pair(index, std::move(unrolledExprs[index]));
+            std::make_pair(index, std::move(unrolledExprs[index].first));
         unrolledExprs[index] = std::move(unrolledExprs.back());
         unrolledExprs.pop_back();
         valueExprMap.erase(hash);

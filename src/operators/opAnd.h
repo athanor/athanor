@@ -36,6 +36,10 @@ class ConjunctionTrigger : public BoolTrigger {
     friend Op;
 
    protected:
+    friend void setTriggerParentImpl(
+        Op* op, std::shared_ptr<ConjunctionTrigger<Op>>& trigger);
+    friend void setTriggerParentImpl(
+        Op* op, std::vector<std::shared_ptr<ConjunctionTrigger<Op>>>& triggers);
     Op* op;
     u_int64_t lastViolation;
 

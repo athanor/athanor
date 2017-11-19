@@ -1,7 +1,12 @@
 #include "operators/opSetForAll.h"
 #include <cassert>
-
+#include "operators/opAnd.h"
+#include "utils/ignoreUnused.h"
 using namespace std;
+using ContainerTrigger = OpSetForAll::ContainerTrigger;
+using ContainerIterAssignedTrigger = OpSetForAll::ContainerIterAssignedTrigger;
+using DelayedUnrollTrigger = OpSetForAll::DelayedUnrollTrigger;
+
 void evaluate(OpSetForAll& op) {
     SetMembersVector members = evaluate(op.container);
     op.violation = 0;
@@ -23,10 +28,9 @@ void evaluate(OpSetForAll& op) {
         members);
 }
 
-class OpSetForAllContainerTrigger : public SetTrigger {
-    friend OpSetForAll;
+struct OpSetForAll::ContainerTrigger : public SetTrigger {
     OpSetForAll* op;
-    OpSetForAllContainerTrigger(OpSetForAll* op) : op(op) {}
+    ContainerTrigger(OpSetForAll* op) : op(op) {}
 
     inline void valueRemoved(const Value& val) final {
         auto indexExprPair = op->roll(val);
@@ -55,17 +59,36 @@ class OpSetForAllContainerTrigger : public SetTrigger {
 
     inline void valueAdded(const Value& val) final {
         op->queueOfValuesToAdd.emplace_back(std::move(val));
+        if (op->queueOfValuesToAdd.size() == 1) {
+            addDelayedTrigger(make_shared<DelayedUnrollTrigger>(op));
+        }
     }
 
     inline void possibleValueChange(const Value&) {}
     inline void valueChanged(const Value&) {}
 };
 
-class OpSetForAllContainerDelayedTrigger : public DelayedTrigger {
-    friend OpSetForAll;
+struct OpSetForAll::ContainerIterAssignedTrigger
+    : public ContainerTrigger,
+      public IterAssignedTrigger<SetValue> {
+    using ContainerTrigger::ContainerTrigger;
+
+    void iterHasNewValue(const SetValue& oldValue,
+                         const ValRef<SetValue>& newValue) {
+        ignoreUnused(oldValue, newValue);
+        assert(false);
+    }
+};
+struct OpSetForAll::DelayedUnrollTrigger : public DelayedTrigger {
     OpSetForAll* op;
-    OpSetForAllContainerDelayedTrigger(OpSetForAll* op) : op(op) {}
-    void trigger() final {}
+
+    DelayedUnrollTrigger(OpSetForAll* op) : op(op) {}
+    void trigger() final {
+        while (!op->valuesToUnroll.empty()) {
+            op->unroll(op->valuesToUnroll.back());
+            op->valuesToUnroll.pop_back();
+        }
+    }
 };
 OpSetForAll::OpSetForAll(OpSetForAll&& other)
     : BoolView(std::move(other)),
@@ -75,20 +98,12 @@ OpSetForAll::OpSetForAll(OpSetForAll&& other)
       containerTrigger(std::move(other.containerTrigger)),
       containerIterAssignedTrigger(
           std::move(other.containerIterAssignedTrigger)),
-      containerDelayedTrigger(std::move(other.containerDelayedTrigger)) {
-    for (auto& trigger : exprTriggers) {
-        trigger->op = this;
-    }
-    if (containerTrigger) {
-        containerTrigger->op = this;
-    }
-    if (containerIterAssignedTrigger) {
-        containerIterAssignedTrigger->op = this;
-    }
-    if (containerDelayedTrigger) {
-        containerDelayedTrigger->op = this;
-    }
+      delayedUnrollTrigger(std::move(other.delayedUnrollTrigger)),
+      valuesToUnroll(std::move(other.valuesToUnroll)) {
+    setTriggerParent(this, exprTriggers, containerTrigger,
+                     containerIterAssignedTrigger, delayedUnrollTrigger);
 }
+
 /*
 void startTriggering(OpSetForAll& op) {
     for (size_t i = 0; i < op.operands.size(); ++i) {

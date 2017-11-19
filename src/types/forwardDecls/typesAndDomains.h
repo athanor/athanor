@@ -179,8 +179,34 @@ void addTrigger(std::vector<std::shared_ptr<Trigger>>& triggerVec,
 }
 
 template <typename Trigger>
+void addDelayedTrigger(const std::shared_ptr<Trigger>& trigger) {
+    delayedTriggerStack.emplace_back(trigger);
+    delayedTriggerStack.back()->active = true;
+}
+
+template <typename Trigger>
 void deleteTrigger(const std::shared_ptr<Trigger>& trigger) {
     trigger->active = false;
 }
 
-#endif /* SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_ */
+template <typename Op, typename Trigger>
+void setTriggerParentImpl(Op* op, std::shared_ptr<Trigger>& trigger) {
+    if (trigger) {
+        trigger->op = op;
+    }
+}
+
+template <typename Op, typename Trigger>
+void setTriggerParentImpl(Op* op,
+                          std::vector<std::shared_ptr<Trigger>>& triggers) {
+    for (auto& trigger : triggers) {
+        trigger->op = op;
+    }
+}
+
+template <typename Op, typename... Triggers>
+void setTriggerParent(Op* op, Triggers&... triggers) {
+    int unpack[] = {0, (setTriggerParentImpl(op, triggers), 0)...};
+    static_cast<void>(unpack);
+}
+#endif

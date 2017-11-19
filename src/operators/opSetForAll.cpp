@@ -110,6 +110,20 @@ OpSetForAll::OpSetForAll(OpSetForAll&& other)
 }
 
 void startTriggering(OpSetForAll& op) {
+    op.containerTrigger = make_shared<ContainerTrigger>(&op);
+    addTrigger<SetTrigger>(getView<SetView>(op.container).triggers,
+                           op.containerTrigger);
+
+    mpark::visit(overloaded(
+                     [&](IterRef<SetValue>& ref) {
+                         op.containerIterAssignedTrigger =
+                             make_shared<ContainerIterAssignedTrigger>(&op);
+                         addTrigger<IterAssignedTrigger<SetValue>>(
+                             ref.getIterator().unrollTriggers,
+                             op.containerIterAssignedTrigger);
+                     },
+                     [](auto&) {}),
+                 op.container);
     for (size_t i = 0; i < op.unrolledExprs.size(); ++i) {
         startTriggeringExpr(op, op.unrolledExprs[i].first, i);
     }

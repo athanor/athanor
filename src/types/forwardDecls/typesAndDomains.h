@@ -195,7 +195,6 @@ void setTriggerParentImpl(Op* op, std::shared_ptr<Trigger>& trigger) {
         trigger->op = op;
     }
 }
-
 template <typename Op, typename Trigger>
 void setTriggerParentImpl(Op* op,
                           std::vector<std::shared_ptr<Trigger>>& triggers) {

@@ -2,11 +2,13 @@
 #include <cassert>
 #include "operators/opAnd.h"
 #include "utils/ignoreUnused.h"
+using ExprTrigger = OpSetForAll::ExprTrigger;
+using ExprIterAssignedTrigger = OpSetForAll::ExprIterAssignedTrigger;
 using namespace std;
 using ContainerTrigger = OpSetForAll::ContainerTrigger;
 using ContainerIterAssignedTrigger = OpSetForAll::ContainerIterAssignedTrigger;
 using DelayedUnrollTrigger = OpSetForAll::DelayedUnrollTrigger;
-
+void startTriggeringExpr(OpSetForAll& op, BoolReturning& operand, size_t index);
 void evaluate(OpSetForAll& op) {
     SetMembersVector members = evaluate(op.container);
     op.violation = 0;
@@ -52,13 +54,14 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
             op->violatingOperands.insert(indexExprPair.first);
         }
         deleteTrigger(op->exprTriggers[indexExprPair.first]);
-        op->exprTriggers[indexExprPair.first] =
-            std::move(op->exprTriggers.back());
+        op->exprTriggers[indexExprPair.first] = move(op->exprTriggers.back());
+        op->exprTriggers.pop_back();
+        op->exprTriggers[indexExprPair.first] = move(op->exprTriggers.back());
         op->exprTriggers.pop_back();
     }
 
     inline void valueAdded(const Value& val) final {
-        op->queueOfValuesToAdd.emplace_back(std::move(val));
+        op->queueOfValuesToAdd.emplace_back(move(val));
         if (op->queueOfValuesToAdd.size() == 1) {
             addDelayedTrigger(make_shared<DelayedUnrollTrigger>(op));
         }
@@ -87,40 +90,54 @@ struct OpSetForAll::DelayedUnrollTrigger : public DelayedTrigger {
         while (!op->valuesToUnroll.empty()) {
             op->unroll(op->valuesToUnroll.back());
             op->valuesToUnroll.pop_back();
+            startTriggeringExpr(*op, op->unrolledExprs.back().first,
+                                op->unrolledExprs.size() - 1);
         }
     }
 };
+
 OpSetForAll::OpSetForAll(OpSetForAll&& other)
-    : BoolView(std::move(other)),
-      Quantifier(std::move(other)),
-      violatingOperands(std::move(other.violatingOperands)),
-      exprTriggers(std::move(other.exprTriggers)),
-      containerTrigger(std::move(other.containerTrigger)),
-      containerIterAssignedTrigger(
-          std::move(other.containerIterAssignedTrigger)),
-      delayedUnrollTrigger(std::move(other.delayedUnrollTrigger)),
-      valuesToUnroll(std::move(other.valuesToUnroll)) {
+    : BoolView(move(other)),
+      Quantifier(move(other)),
+      violatingOperands(move(other.violatingOperands)),
+      exprTriggers(move(other.exprTriggers)),
+      containerTrigger(move(other.containerTrigger)),
+      containerIterAssignedTrigger(move(other.containerIterAssignedTrigger)),
+      delayedUnrollTrigger(move(other.delayedUnrollTrigger)),
+      valuesToUnroll(move(other.valuesToUnroll)) {
     setTriggerParent(this, exprTriggers, containerTrigger,
                      containerIterAssignedTrigger, delayedUnrollTrigger);
 }
 
-/*
 void startTriggering(OpSetForAll& op) {
-    for (size_t i = 0; i < op.operands.size(); ++i) {
-        auto& operand = op.operands[i];
-        auto trigger = make_shared<OpSetForAllTrigger>(&op, i);
-        addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
-        op.operandTriggers.emplace_back(trigger);
-        startTriggering(operand);
+    for (size_t i = 0; i < op.unrolledExprs.size(); ++i) {
+        startTriggeringExpr(op, op.unrolledExprs[i].first, i);
     }
 }
 
+void startTriggeringExpr(OpSetForAll& op, BoolReturning& operand,
+                         size_t index) {
+    auto trigger = make_shared<ExprTrigger>(&op, index);
+    addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
+    op.exprTriggers.emplace_back(trigger);
+    mpark::visit(overloaded(
+                     [&](IterRef<BoolValue>& ref) {
+                         auto unrollTrigger =
+                             make_shared<ExprIterAssignedTrigger>(&op, index);
+                         addTrigger<IterAssignedTrigger<BoolValue>>(
+                             ref.getIterator().unrollTriggers, unrollTrigger);
+                         op.exprTriggers.emplace_back(move(unrollTrigger));
+                     },
+                     [](auto&) {}),
+                 operand);
+    startTriggering(operand);
+}
+
+/*
 void stopTriggering(OpSetForAll& op) {
     while (!op.operandTriggers.empty()) {
         auto& operand = op.operands[op.operandTriggers.size() - 1];
-        deleteTrigger<BoolTrigger>(getView<BoolView>(operand).triggers,
-
-                                   op.operandTriggers.back());
+        deleteTrigger(op.operandTriggers.back());
         op.operandTriggers.pop_back();
         stopTriggering(operand);
     }
@@ -134,23 +151,17 @@ void updateViolationDescription(const OpSetForAll& op, u_int64_t,
     }
 }
 
-std::shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
-                                               const IterValue& iterator) {
-    ignoreUnused(op, iterator);
-    abort();
-}
-* /
-
-    void evaluate(&op) {
-    op.violation = 0;
-    for (size_t i = 0; i < op.operands.size(); ++i) {
-        auto& operand = op.operands[i];
-        evaluate(operand);
-        u_int64_t violation = getView<BoolView>(operand).violation;
-        if (violation > 0) {
-            op.violatingOperands.insert(i);
-        }
-        op.violation += getView<BoolView>(operand).violation;
+shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
+                                         const IterValue& iterator) {
+    vector<BoolReturning> operands;
+    operands.reserve(op.operands.size());
+    for (auto& operand : op.operands) {
+        operands.emplace_back(deepCopyForUnroll(operand, iterator));
     }
+    auto newOpSetForAll =
+        make_shared<OpSetForAll>(move(operands),
+op.violatingOperands); newOpSetForAll->violation = op.violation;
+    startTriggering(*newOpSetForAll);
+    return newOpSetForAll;
 }
 */

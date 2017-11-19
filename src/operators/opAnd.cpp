@@ -31,16 +31,17 @@ void startTriggering(OpAnd& op) {
         auto trigger = make_shared<OpAndTrigger>(&op, i);
         addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
         op.operandTriggers.emplace_back(trigger);
-        mpark::visit(overloaded(
-                         [&](IterRef<BoolValue>& ref) {
-                             auto unrollTrigger =
-                                 make_shared<OpAndIterAssignedTrigger>(&op, i);
-                             addTrigger<IterAssignedTrigger<BoolValue>>(
-                                 ref.getIterator().unrollTriggers,
-                                 unrollTrigger);
-                         },
-                         [](auto&) {}),
-                     operand);
+        mpark::visit(
+            overloaded(
+                [&](IterRef<BoolValue>& ref) {
+                    auto unrollTrigger =
+                        make_shared<OpAndIterAssignedTrigger>(&op, i);
+                    addTrigger<IterAssignedTrigger<BoolValue>>(
+                        ref.getIterator().unrollTriggers, unrollTrigger);
+                    op.operandTriggers.emplace_back(std::move(unrollTrigger));
+                },
+                [](auto&) {}),
+            operand);
         startTriggering(operand);
     }
 }

@@ -171,15 +171,15 @@ void stopTriggering(OpSetForAll& op) {
     assert(op.queueOfValuesToAdd.size() == 0);
 }
 
-/*
 void updateViolationDescription(const OpSetForAll& op, u_int64_t,
                                 ViolationDescription& vioDesc) {
     for (size_t violatingOperandIndex : op.violatingOperands) {
-        updateViolationDescription(op.operands[violatingOperandIndex],
-                                   op.violation, vioDesc);
+        updateViolationDescription(
+            op.unrolledExprs[violatingOperandIndex].first, op.violation,
+            vioDesc);
     }
 }
-
+/*
 shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
                                           const IterValue& iterator) {
     vector<BoolReturning> operands;
@@ -190,7 +190,6 @@ shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
     auto newOpSetForAll =
         make_shared<OpSetForAll>(move(operands), op.violatingOperands);
     newOpSetForAll->violation = op.violation;
-    startTriggering(*newOpSetForAll);
     return newOpSetForAll;
 }
 

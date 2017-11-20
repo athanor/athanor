@@ -74,6 +74,5 @@ std::shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
     auto newOpAnd =
         std::make_shared<OpAnd>(std::move(operands), op.violatingOperands);
     newOpAnd->violation = op.violation;
-    startTriggering(*newOpAnd);
     return newOpAnd;
 }

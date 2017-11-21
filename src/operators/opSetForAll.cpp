@@ -57,6 +57,7 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
         op->exprTriggers[indexExprPair.first] = move(op->exprTriggers.back());
         op->exprTriggers.pop_back();
         op->exprTriggers[indexExprPair.first] = move(op->exprTriggers.back());
+        op->exprTriggers[indexExprPair.first]->index = indexExprPair.first;
         op->exprTriggers.pop_back();
     }
 
@@ -179,18 +180,11 @@ void updateViolationDescription(const OpSetForAll& op, u_int64_t,
             vioDesc);
     }
 }
-/*
+
 shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
                                           const IterValue& iterator) {
-    vector<BoolReturning> operands;
-    operands.reserve(op.operands.size());
-    for (auto& operand : op.operands) {
-        operands.emplace_back(deepCopyForUnroll(operand, iterator));
-    }
-    auto newOpSetForAll =
-        make_shared<OpSetForAll>(move(operands), op.violatingOperands);
+    auto newOpSetForAll = make_shared<OpSetForAll>(
+        op.deepCopyQuantifierForUnroll(iterator), op.violatingOperands);
     newOpSetForAll->violation = op.violation;
     return newOpSetForAll;
 }
-
-*/

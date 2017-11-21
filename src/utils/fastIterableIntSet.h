@@ -15,15 +15,21 @@ class FastIterableIntSet {
         : minElement(minElement),
           elementIndexes((maxElement + 1) - minElement, NOT_PRESENT) {}
 
-    inline void resetMaxElement(size_t maxElement) {
+    inline void increaseMaxElement(size_t maxElement) {
+        if ((maxElement + 1) - minElement < elementIndexes.size()) {
+            return;
+        }
         elementIndexes.resize((maxElement + 1) - minElement, NOT_PRESENT);
     }
 
     inline int count(int64_t element) {
-        return elementIndexes[translate(element)] != NOT_PRESENT;
+        size_t index = translate(element);
+        return index < elementIndexes.size() &&
+               elementIndexes[index] != NOT_PRESENT;
     }
 
     inline auto insert(int64_t element) {
+        increaseMaxElement(element);
         if (count(element)) {
             return std::make_pair(contents.begin() + getIndexOf(element),
                                   false);

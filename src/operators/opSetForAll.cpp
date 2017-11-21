@@ -9,6 +9,7 @@ using ContainerTrigger = OpSetForAll::ContainerTrigger;
 using ContainerIterAssignedTrigger = OpSetForAll::ContainerIterAssignedTrigger;
 using DelayedUnrollTrigger = OpSetForAll::DelayedUnrollTrigger;
 void attachTriggerToExpr(OpSetForAll& op, BoolReturning& operand, size_t index);
+void attachTriggers(OpSetForAll& op);
 void evaluate(OpSetForAll& op) {
     SetMembersVector members = evaluate(op.container);
     op.violation = 0;
@@ -17,7 +18,7 @@ void evaluate(OpSetForAll& op) {
             op.violatingOperands =
                 FastIterableIntSet(0, membersImpl.size() - 1);
             for (auto& ref : membersImpl) {
-                op.unroll(ref, false);
+                op.unroll(ref);
                 auto& operand = op.unrolledExprs.back().first;
                 evaluate(operand);
                 u_int64_t violation = getView<BoolView>(operand).violation;
@@ -28,6 +29,7 @@ void evaluate(OpSetForAll& op) {
             }
         },
         members);
+    attachTriggers(op);
 }
 
 struct OpSetForAll::ContainerTrigger : public SetTrigger {
@@ -103,7 +105,7 @@ OpSetForAll::OpSetForAll(OpSetForAll&& other)
                      containerIterAssignedTrigger, delayedUnrollTrigger);
 }
 
-void startTriggering(OpSetForAll& op) {
+void attachTriggers(OpSetForAll& op) {
     op.containerTrigger = make_shared<ContainerTrigger>(&op);
     addTrigger<SetTrigger>(getView<SetView>(op.container).triggers,
                            op.containerTrigger);
@@ -120,7 +122,6 @@ void startTriggering(OpSetForAll& op) {
                  op.container);
     for (size_t i = 0; i < op.unrolledExprs.size(); ++i) {
         attachTriggerToExpr(op, op.unrolledExprs[i].first, i);
-        startTriggering(op.unrolledExprs[i].first);
     }
 }
 
@@ -173,5 +174,6 @@ shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
     auto newOpSetForAll = make_shared<OpSetForAll>(
         op.deepCopyQuantifierForUnroll(iterator), op.violatingOperands);
     newOpSetForAll->violation = op.violation;
+    attachTriggers(*newOpSetForAll);
     return newOpSetForAll;
 }

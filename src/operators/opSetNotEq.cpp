@@ -20,15 +20,16 @@ inline void setViolation(OpSetNotEq& op, bool trigger) {
             op.triggers);
     }
 }
-
+void attachTriggers(OpSetNotEq& op);
 void evaluate(OpSetNotEq& op) {
     evaluate(op.left);
     evaluate(op.right);
     setViolation(op, false);
+    attachTriggers(op);
 }
 
 class OpSetNotEqTrigger : public SetTrigger {
-    friend OpSetNotEq;
+   public:
     OpSetNotEq* op;
 
    public:
@@ -47,17 +48,13 @@ OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
       left(std::move(other.left)),
       right(std::move(other.right)),
       trigger(std::move(other.trigger)) {
-    if (trigger) {
-        trigger->op = this;
-    }
+    setTriggerParent(this, trigger);
 }
 
-void startTriggering(OpSetNotEq& op) {
+void attachTriggers(OpSetNotEq& op) {
     op.trigger = make_shared<OpSetNotEqTrigger>(&op);
     addTrigger<SetTrigger>(getView<SetView>(op.left).triggers, op.trigger);
     addTrigger<SetTrigger>(getView<SetView>(op.right).triggers, op.trigger);
-    startTriggering(op.left);
-    startTriggering(op.right);
 }
 
 void stopTriggering(OpSetNotEq& op) {

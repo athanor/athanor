@@ -28,6 +28,7 @@ struct Quantifier {
     inline IterRef<T> newIterRef() {
         return IterRef<T>(quantId);
     }
+
     inline std::pair<size_t, ReturnType&> unroll(const Value& newValue) {
         mpark::visit(
             [&](auto& newValImpl) {
@@ -43,7 +44,6 @@ struct Quantifier {
                 }
                 valueExprMap.emplace(getValueHash(newValImpl),
                                      unrolledExprs.size() - 1);
-                startTriggering(unrolledExprs.back().first);
                 iterRef.getIterator().attachValue(newValImpl);
             },
             newValue);

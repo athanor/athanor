@@ -2,7 +2,7 @@
 #include <cassert>
 #include "utils/ignoreUnused.h"
 using namespace std;
-
+void attachTriggers(OpAnd& op);
 void evaluate(OpAnd& op) {
     op.violation = 0;
     for (size_t i = 0; i < op.operands.size(); ++i) {
@@ -14,18 +14,18 @@ void evaluate(OpAnd& op) {
         }
         op.violation += getView<BoolView>(operand).violation;
     }
+    attachTriggers(op);
 }
+
 OpAnd::OpAnd(OpAnd&& other)
     : BoolView(std::move(other)),
       operands(std::move(other.operands)),
       violatingOperands(std::move(other.violatingOperands)),
       operandTriggers(std::move(other.operandTriggers)) {
-    for (auto& trigger : operandTriggers) {
-        trigger->op = this;
-    }
+    setTriggerParent(this, operandTriggers);
 }
 
-void startTriggering(OpAnd& op) {
+void attachTriggers(OpAnd& op) {
     for (size_t i = 0; i < op.operands.size(); ++i) {
         auto& operand = op.operands[i];
         auto trigger = make_shared<OpAndTrigger>(&op, i);
@@ -42,7 +42,6 @@ void startTriggering(OpAnd& op) {
                 },
                 [](auto&) {}),
             operand);
-        startTriggering(operand);
     }
 }
 
@@ -74,5 +73,6 @@ std::shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
     auto newOpAnd =
         std::make_shared<OpAnd>(std::move(operands), op.violatingOperands);
     newOpAnd->violation = op.violation;
+    attachTriggers(*newOpAnd);
     return newOpAnd;
 }

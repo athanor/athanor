@@ -5,7 +5,7 @@
 #include "utils/hashUtils.h"
 
 using namespace std;
-
+void attachTriggers(OpSetIntersect& op);
 SetMembersVector evaluate(OpSetIntersect& op) {
     SetMembersVector leftVec = evaluate(op.left);
     SetMembersVector rightVec = evaluate(op.right);
@@ -43,11 +43,12 @@ SetMembersVector evaluate(OpSetIntersect& op) {
             return returnVec;
         },
         leftVec);
+    attachTriggers(op);
 }
 
 template <bool left>
 class OpSetIntersectTrigger : public SetTrigger {
-    friend OpSetIntersect;
+   public:
     OpSetIntersect* op;
     unordered_set<u_int64_t>::iterator oldHashIter;
 
@@ -127,22 +128,15 @@ OpSetIntersect::OpSetIntersect(OpSetIntersect&& other)
       right(std::move(other.right)),
       leftTrigger(std::move(other.leftTrigger)),
       rightTrigger(std::move(other.rightTrigger)) {
-    if (leftTrigger) {
-        leftTrigger->op = this;
-    }
-    if (rightTrigger) {
-        rightTrigger->op = this;
-    }
+    setTriggerParent(this, leftTrigger, rightTrigger);
 }
 
-void startTriggering(OpSetIntersect& op) {
+void attachTriggers(OpSetIntersect& op) {
     op.leftTrigger = make_shared<OpSetIntersectTrigger<true>>(&op);
     op.rightTrigger = make_shared<OpSetIntersectTrigger<false>>(&op);
     addTrigger<SetTrigger>(getView<SetView>(op.left).triggers, op.leftTrigger);
     addTrigger<SetTrigger>(getView<SetView>(op.right).triggers,
                            op.rightTrigger);
-    startTriggering(op.left);
-    startTriggering(op.right);
 }
 
 void stopTriggering(OpSetIntersect& op) {

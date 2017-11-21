@@ -5,13 +5,15 @@
 
 using namespace std;
 
+void attachTriggers(OpSetSize& op);
 void evaluate(OpSetSize& op) {
     evaluate(op.operand);
     op.value = getView<SetView>(op.operand).memberHashes.size();
+    attachTriggers(op);
 }
 
 class OpSetSizeTrigger : public SetTrigger {
-    friend OpSetSize;
+   public:
     OpSetSize* op;
 
    public:
@@ -42,15 +44,12 @@ OpSetSize::OpSetSize(OpSetSize&& other)
     : IntView(std::move(other)),
       operand(std::move(other.operand)),
       operandTrigger(std::move(other.operandTrigger)) {
-    if (operandTrigger) {
-        operandTrigger->op = this;
-    }
+    setTriggerParent(this, operandTrigger);
 }
-void startTriggering(OpSetSize& op) {
+void attachTriggers(OpSetSize& op) {
     op.operandTrigger = make_shared<OpSetSizeTrigger>(&op);
     addTrigger<SetTrigger>(getView<SetView>(op.operand).triggers,
                            op.operandTrigger);
-    startTriggering(op.operand);
 }
 
 void stopTriggering(OpSetSize& op) {

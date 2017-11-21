@@ -1,16 +1,18 @@
 #include "operators/opSum.h"
 #include <cassert>
 using namespace std;
+void attachTriggers(OpSum& op);
 void evaluate(OpSum& op) {
     op.value = 0;
     for (auto& operand : op.operands) {
         evaluate(operand);
         op.value += getView<IntView>(operand).value;
     }
+    attachTriggers(op);
 }
 
 class OpSumTrigger : public IntTrigger {
-   protected:
+   public:
     friend OpSum;
     OpSum* op;
     int64_t lastMemberValue;
@@ -47,20 +49,14 @@ OpSum::OpSum(OpSum&& other)
       operands(std::move(other.operands)),
       operandTrigger(std::move(other.operandTrigger)),
       operandIterAssignedTrigger(std::move(other.operandIterAssignedTrigger)) {
-    if (operandTrigger) {
-        operandTrigger->op = this;
-    }
-    if (operandIterAssignedTrigger) {
-        operandIterAssignedTrigger->op = this;
-    }
+    setTriggerParent(this, operandTrigger, operandIterAssignedTrigger);
 }
 
-void startTriggering(OpSum& op) {
+void attachTriggers(OpSum& op) {
     op.operandTrigger = std::make_shared<OpSumTrigger>(&op);
     for (auto& operand : op.operands) {
         addTrigger<IntTrigger>(getView<IntView>(operand).triggers,
                                op.operandTrigger);
-        startTriggering(operand);
         mpark::visit(
             overloaded(
                 [&](IterRef<IntValue>& ref) {
@@ -105,5 +101,6 @@ std::shared_ptr<OpSum> deepCopyForUnroll(const OpSum& op,
     }
     auto newOpSum = std::make_shared<OpSum>(std::move(operands));
     newOpSum->value = op.value;
+    attachTriggers(*newOpSum);
     return newOpSum;
 }

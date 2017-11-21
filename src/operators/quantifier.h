@@ -28,8 +28,7 @@ struct Quantifier {
     inline IterRef<T> newIterRef() {
         return IterRef<T>(quantId);
     }
-    inline void unroll(const Value& newValue,
-                       bool startTriggeringNewExpr = true) {
+    inline void unroll(const Value& newValue) {
         mpark::visit(
             [&](auto& newValImpl) {
                 auto quantRef = newIterRef<
@@ -44,9 +43,6 @@ struct Quantifier {
                 }
                 valueExprMap.emplace(getValueHash(newValImpl),
                                      unrolledExprs.size() - 1);
-                if (startTriggeringNewExpr) {
-                    startTriggering(unrolledExprs.back().first);
-                }
                 quantRef.getIterator().attachValue(newValImpl);
             },
             newValue);

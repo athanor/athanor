@@ -18,19 +18,17 @@ void evaluate(OpAnd& op) {
 }
 
 OpAnd::OpAnd(OpAnd&& other)
-    : BoolView(std::move(other)),
-      operands(std::move(other.operands)),
-      violatingOperands(std::move(other.violatingOperands)),
-      operandTriggers(std::move(other.operandTriggers)) {
+    : BoolView(move(other)),
+      operands(move(other.operands)),
+      violatingOperands(move(other.violatingOperands)),
+      operandTriggers(move(other.operandTriggers)) {
     setTriggerParent(this, operandTriggers);
 }
 
 void attachTriggers(OpAnd& op) {
     for (size_t i = 0; i < op.operands.size(); ++i) {
         auto& operand = op.operands[i];
-        auto trigger = make_shared<OpAndTrigger>(&op, i);
-        addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
-        op.operandTriggers.emplace_back(trigger);
+
         mpark::visit(
             overloaded(
                 [&](IterRef<BoolValue>& ref) {
@@ -38,9 +36,16 @@ void attachTriggers(OpAnd& op) {
                         make_shared<OpAndIterAssignedTrigger>(&op, i);
                     addTrigger<IterAssignedTrigger<BoolValue>>(
                         ref.getIterator().unrollTriggers, unrollTrigger);
-                    op.operandTriggers.emplace_back(std::move(unrollTrigger));
+                    addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers,
+                                            unrollTrigger);
+                    op.operandTriggers.emplace_back(move(unrollTrigger));
                 },
-                [](auto&) {}),
+                [&](auto&) {
+                    auto trigger = make_shared<OpAndTrigger>(&op, i);
+                    addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers,
+                                            trigger);
+                    op.operandTriggers.emplace_back(move(trigger));
+                }),
             operand);
     }
 }
@@ -63,15 +68,14 @@ void updateViolationDescription(const OpAnd& op, u_int64_t,
     }
 }
 
-std::shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
-                                         const IterValue& iterator) {
-    std::vector<BoolReturning> operands;
+shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
+                                    const IterValue& iterator) {
+    vector<BoolReturning> operands;
     operands.reserve(op.operands.size());
     for (auto& operand : op.operands) {
         operands.emplace_back(deepCopyForUnroll(operand, iterator));
     }
-    auto newOpAnd =
-        std::make_shared<OpAnd>(std::move(operands), op.violatingOperands);
+    auto newOpAnd = make_shared<OpAnd>(move(operands), op.violatingOperands);
     newOpAnd->violation = op.violation;
     attachTriggers(*newOpAnd);
     return newOpAnd;

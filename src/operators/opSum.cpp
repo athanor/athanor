@@ -45,40 +45,31 @@ class OpSumIterAssignedTrigger : public IterAssignedTrigger<IntValue>,
 };
 
 OpSum::OpSum(OpSum&& other)
-    : IntView(std::move(other)),
-      operands(std::move(other.operands)),
-      operandTrigger(std::move(other.operandTrigger)),
-      operandIterAssignedTrigger(std::move(other.operandIterAssignedTrigger)) {
-    setTriggerParent(this, operandTrigger, operandIterAssignedTrigger);
+    : IntView(move(other)),
+      operands(move(other.operands)),
+      operandTrigger(move(other.operandTrigger)) {
+    setTriggerParent(this, operandTrigger);
 }
 
 void attachTriggers(OpSum& op) {
-    op.operandTrigger = std::make_shared<OpSumTrigger>(&op);
+    op.operandTrigger = make_shared<OpSumIterAssignedTrigger>(&op);
     for (auto& operand : op.operands) {
         addTrigger<IntTrigger>(getView<IntView>(operand).triggers,
                                op.operandTrigger);
-        mpark::visit(
-            overloaded(
-                [&](IterRef<IntValue>& ref) {
-                    if (!op.operandIterAssignedTrigger) {
-                        op.operandIterAssignedTrigger =
-                            std::make_shared<OpSumIterAssignedTrigger>(&op);
-                    }
-                    addTrigger<IterAssignedTrigger<IntValue>>(
-                        ref.getIterator().unrollTriggers,
-                        op.operandIterAssignedTrigger);
-                },
-                [](auto&) {}),
-            operand);
+        mpark::visit(overloaded(
+                         [&](IterRef<IntValue>& ref) {
+                             addTrigger<IterAssignedTrigger<IntValue>>(
+                                 ref.getIterator().unrollTriggers,
+                                 op.operandTrigger);
+                         },
+                         [](auto&) {}),
+                     operand);
     }
 }
 
 void stopTriggering(OpSum& op) {
     if (op.operandTrigger) {
         deleteTrigger(op.operandTrigger);
-    }
-    if (op.operandIterAssignedTrigger) {
-        deleteTrigger(op.operandIterAssignedTrigger);
     }
     for (auto& operand : op.operands) {
         stopTriggering(operand);
@@ -92,14 +83,14 @@ void updateViolationDescription(const OpSum& op, u_int64_t parentViolation,
     }
 }
 
-std::shared_ptr<OpSum> deepCopyForUnroll(const OpSum& op,
-                                         const IterValue& iterator) {
-    std::vector<IntReturning> operands;
+shared_ptr<OpSum> deepCopyForUnroll(const OpSum& op,
+                                    const IterValue& iterator) {
+    vector<IntReturning> operands;
     operands.reserve(op.operands.size());
     for (auto& operand : op.operands) {
         operands.emplace_back(deepCopyForUnroll(operand, iterator));
     }
-    auto newOpSum = std::make_shared<OpSum>(std::move(operands));
+    auto newOpSum = make_shared<OpSum>(move(operands));
     newOpSum->value = op.value;
     attachTriggers(*newOpSum);
     return newOpSum;

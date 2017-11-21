@@ -8,9 +8,7 @@ class OpSumTrigger;
 class OpSumIterAssignedTrigger;
 struct OpSum : public IntView {
     std::vector<IntReturning> operands;
-    std::shared_ptr<OpSumTrigger> operandTrigger = nullptr;
-    std::shared_ptr<OpSumIterAssignedTrigger> operandIterAssignedTrigger =
-        nullptr;
+    std::shared_ptr<OpSumIterAssignedTrigger> operandTrigger = nullptr;
 
     OpSum(std::vector<IntReturning> operandsIn)
         : operands(std::move(operandsIn)) {}

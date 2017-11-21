@@ -28,28 +28,27 @@ struct Quantifier {
     inline IterRef<T> newIterRef() {
         return IterRef<T>(quantId);
     }
-    inline void unroll(const Value& newValue,
-                       bool startTriggeringNewExpr = true) {
+    inline std::pair<size_t, ReturnType&> unroll(const Value& newValue) {
         mpark::visit(
             [&](auto& newValImpl) {
-                auto quantRef = newIterRef<
+                auto iterRef = newIterRef<
                     typename BaseType<decltype(newValImpl)>::element_type>();
                 if (unrolledExprs.size() == 0) {
-                    unrolledExprs.emplace_back(
-                        deepCopyForUnroll(expr, quantRef), quantRef);
+                    unrolledExprs.emplace_back(deepCopyForUnroll(expr, iterRef),
+                                               iterRef);
                 } else {
                     unrolledExprs.emplace_back(
-                        deepCopyForUnroll(unrolledExprs.back().first, quantRef),
-                        quantRef);
+                        deepCopyForUnroll(unrolledExprs.back().first, iterRef),
+                        iterRef);
                 }
                 valueExprMap.emplace(getValueHash(newValImpl),
                                      unrolledExprs.size() - 1);
-                if (startTriggeringNewExpr) {
-                    startTriggering(unrolledExprs.back().first);
-                }
-                quantRef.getIterator().attachValue(newValImpl);
+                startTriggering(unrolledExprs.back().first);
+                iterRef.getIterator().attachValue(newValImpl);
             },
             newValue);
+        return std::pair<size_t, ReturnType&>(unrolledExprs.size() - 1,
+                                              unrolledExprs.back().first);
     }
 
     inline std::pair<size_t, ReturnType> roll(const Value& val) {
@@ -89,4 +88,52 @@ struct Quantifier {
     }
 };
 
+template <typename ContainerType, typename ContainerValueType,
+          typename ExprTrigger, typename ExprUnrollTrigger>
+struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
+                                          BoolReturning, BoolValue> {
+    using Quantifier::Quantifier;
+    FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
+    std::vector<ExprTrigger> exprTriggers;
+    std::vector<ExprUnrollTrigger> exprUnrollTriggers;
+    // should be empty if the quantifier expression does not consist of only an
+    // IterRef
+    bool exprIsIterRef;
+    inline void setExpression(ReturnType exprIn) {
+        Quantifier::setExpression(std::move(expr));
+        exprIsIterRef = (mpark::get_if<IterRef<BoolValue>>(&expr) != NULL);
+    }
+
+    inline std::pair<size_t, BoolReturning&> unroll(const Value& newValue) {
+        auto indexExprPair = Quantifier::unroll(newValue);
+        if (getView<BoolView>(indexExprPair.first).violation > 0) {
+            violatingOperands.insert(index);
+        }
+        return newExpr;
+    }
+
+    inline std::pair<size_t, ReturnType> roll(const Value& val) {
+        auto indexExprPair = Quantifier::roll(val);
+        u_int64_t removedViolation =
+            getView<BoolView>(indexExprPair.second).violation;
+        if (removedViolation > 0) {
+            violatingOperands.erase(indexExprPair.first);
+        }
+        if (violatingOperands.erase(unrolledExprs.size())) {
+            violatingOperands.insert(indexExprPair.first);
+        }
+        deleteTrigger(exprTriggers[indexExprPair.first]);
+        exprTriggers[indexExprPair.first] = std::move(exprTriggers.back());
+        exprTriggers.pop_back();
+        exprTriggers[indexExprPair.first]->index = indexExprPair.first;
+        if (exprIsIterRef) {
+            deleteTrigger(exprUnrollTriggers[indexExprPair.first]);
+            exprUnrollTriggers[indexExprPair.first] =
+                std::move(exprUnrollTriggers.back());
+            exprTriggers.pop_back();
+            exprTriggers[indexExprPair.first]->index = indexExprPair.first;
+        }
+        return indexExprPair;
+    }
+};
 #endif /* SRC_OPERATORS_QUANTIFIER_H_ */

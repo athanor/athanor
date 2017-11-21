@@ -15,9 +15,10 @@ struct OpSetForAll
     typedef ConjunctionIterAssignedTrigger<OpSetForAll> ExprIterAssignedTrigger;
     struct ContainerTrigger;
     struct ContainerIterAssignedTrigger;
+
     struct DelayedUnrollTrigger;
 
-    FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
+
     std::vector<Value> queueOfValuesToAdd;
     std::vector<std::shared_ptr<ExprTrigger>> exprTriggers;
     std::shared_ptr<ContainerTrigger> containerTrigger = nullptr;

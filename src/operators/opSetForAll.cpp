@@ -45,20 +45,10 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
                 },
                 op->triggers);
             op->violation -= removedViolation;
-            op->violatingOperands.erase(indexExprPair.first);
             visitTriggers(
                 [&](auto& trigger) { trigger->valueChanged(op->violation); },
                 op->triggers);
         }
-        if (op->violatingOperands.erase(op->unrolledExprs.size())) {
-            op->violatingOperands.insert(indexExprPair.first);
-        }
-        deleteTrigger(op->exprTriggers[indexExprPair.first]);
-        op->exprTriggers[indexExprPair.first] = move(op->exprTriggers.back());
-        op->exprTriggers.pop_back();
-        op->exprTriggers[indexExprPair.first] = move(op->exprTriggers.back());
-        op->exprTriggers[indexExprPair.first]->index = indexExprPair.first;
-        op->exprTriggers.pop_back();
     }
 
     inline void valueAdded(const Value& val) final {
@@ -89,14 +79,11 @@ struct OpSetForAll::DelayedUnrollTrigger : public DelayedTrigger {
     DelayedUnrollTrigger(OpSetForAll* op) : op(op) {}
     void trigger() final {
         while (!op->valuesToUnroll.empty()) {
-            op->unroll(op->valuesToUnroll.back());
+            auto expr = op->unroll(op->valuesToUnroll.back());
             op->valuesToUnroll.pop_back();
-            attachTriggerToExpr(*op, op->unrolledExprs.back().first,
-                                op->unrolledExprs.size() - 1);
             u_int64_t violation =
-                getView<BoolView>(op->unrolledExprs.back().first).violation;
+                getView<BoolView>(op->expr).violation;
             if (violation > 0) {
-                op->violatingOperands.insert(op->unrolledExprs.size() - 1);
                 op->violation += violation;
             }
         }

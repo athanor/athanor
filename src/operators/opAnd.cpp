@@ -2,7 +2,6 @@
 #include <cassert>
 #include "utils/ignoreUnused.h"
 using namespace std;
-void attachTriggers(OpAnd& op);
 void evaluate(OpAnd& op) {
     op.violation = 0;
     for (size_t i = 0; i < op.operands.size(); ++i) {
@@ -14,7 +13,6 @@ void evaluate(OpAnd& op) {
         }
         op.violation += getView<BoolView>(operand).violation;
     }
-    attachTriggers(op);
 }
 
 OpAnd::OpAnd(OpAnd&& other)
@@ -25,28 +23,20 @@ OpAnd::OpAnd(OpAnd&& other)
     setTriggerParent(this, operandTriggers);
 }
 
-void attachTriggers(OpAnd& op) {
+void startTriggering(OpAnd& op) {
     for (size_t i = 0; i < op.operands.size(); ++i) {
         auto& operand = op.operands[i];
-
-        mpark::visit(
-            overloaded(
-                [&](IterRef<BoolValue>& ref) {
-                    auto unrollTrigger =
-                        make_shared<OpAndIterAssignedTrigger>(&op, i);
-                    addTrigger<IterAssignedTrigger<BoolValue>>(
-                        ref.getIterator().unrollTriggers, unrollTrigger);
-                    addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers,
-                                            unrollTrigger);
-                    op.operandTriggers.emplace_back(move(unrollTrigger));
-                },
-                [&](auto&) {
-                    auto trigger = make_shared<OpAndTrigger>(&op, i);
-                    addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers,
-                                            trigger);
-                    op.operandTriggers.emplace_back(move(trigger));
-                }),
-            operand);
+        auto trigger = make_shared<OpAndIterAssignedTrigger>(&op, i);
+        addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
+        op.operandTriggers.emplace_back(move(trigger));
+        mpark::visit(overloaded(
+                         [&](IterRef<BoolValue>& ref) {
+                             addTrigger<IterAssignedTrigger<BoolValue>>(
+                                 ref.getIterator().unrollTriggers, trigger);
+                         },
+                         [](auto&) {}),
+                     operand);
+        startTriggering(operand);
     }
 }
 
@@ -77,6 +67,5 @@ shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
     }
     auto newOpAnd = make_shared<OpAnd>(move(operands), op.violatingOperands);
     newOpAnd->violation = op.violation;
-    attachTriggers(*newOpAnd);
     return newOpAnd;
 }

@@ -4,6 +4,7 @@
 #include <cassert>
 #include <unordered_map>
 #include <vector>
+#include "types/forwardDecls/hash.h"
 #include "types/forwardDecls/typesAndDomains.h"
 
 #include "types/forwardDecls/hash.h"
@@ -54,4 +55,20 @@ class IterRef {
 };
 
 typedef Variantised<IterRef> IterValue;
+
+template <typename T>
+u_int64_t getValueHash(const Iterator<T>& iter) {
+    return getValueHash(*(iter.ref));
+}
+
+template <typename T>
+u_int64_t getValueHash(const IterRef<T>& iter) {
+    return getValueHash(*iter);
+}
+
+inline u_int64_t getValueHash(const IterValue& iter) {
+    return mpark::visit([](auto& iterImpl) { return getValueHash(iterImpl); },
+                        iter);
+}
+
 #endif /* SRC_OPERATORS_QUANTIFIERBASE_H_ */

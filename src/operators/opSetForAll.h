@@ -10,28 +10,20 @@
 struct OpSetForAll;
 struct OpSetForAll
     : public BoolView,
-      public Quantifier<SetReturning, SetValue, BoolReturning, BoolValue> {
-    typedef ConjunctionTrigger<OpSetForAll> ExprTrigger;
+      public BoolQuantifier<OpSetForAll, SetReturning, SetValue,
+                            ConjunctionIterAssignedTrigger<OpSetForAll>> {
+    using BoolQuantifier<
+        OpSetForAll, SetReturning, SetValue,
+        ConjunctionIterAssignedTrigger<OpSetForAll>>::BoolQuantifier;
     typedef ConjunctionIterAssignedTrigger<OpSetForAll> ExprIterAssignedTrigger;
     struct ContainerTrigger;
-    struct ContainerIterAssignedTrigger;
-
     struct DelayedUnrollTrigger;
 
-
-    std::vector<Value> queueOfValuesToAdd;
-    std::vector<std::shared_ptr<ExprTrigger>> exprTriggers;
     std::shared_ptr<ContainerTrigger> containerTrigger = nullptr;
-    std::shared_ptr<ContainerIterAssignedTrigger> containerIterAssignedTrigger =
-        nullptr;
     std::shared_ptr<DelayedUnrollTrigger> delayedUnrollTrigger = nullptr;
     std::vector<Value> valuesToUnroll;
+
     OpSetForAll(const OpSetForAll&) = delete;
     OpSetForAll(OpSetForAll&& other);
-
-    OpSetForAll(
-        Quantifier<SetReturning, SetValue, BoolReturning, BoolValue> quant,
-        const FastIterableIntSet& violatingOperands)
-        : Quantifier(std::move(quant)), violatingOperands(violatingOperands) {}
 };
 #endif /* SRC_OPERATORS_OPSETFORALL_H_ */

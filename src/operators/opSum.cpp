@@ -1,14 +1,12 @@
 #include "operators/opSum.h"
 #include <cassert>
 using namespace std;
-void attachTriggers(OpSum& op);
 void evaluate(OpSum& op) {
     op.value = 0;
     for (auto& operand : op.operands) {
         evaluate(operand);
         op.value += getView<IntView>(operand).value;
     }
-    attachTriggers(op);
 }
 
 class OpSumTrigger : public IntTrigger {
@@ -51,7 +49,7 @@ OpSum::OpSum(OpSum&& other)
     setTriggerParent(this, operandTrigger);
 }
 
-void attachTriggers(OpSum& op) {
+void startTriggering(OpSum& op) {
     op.operandTrigger = make_shared<OpSumIterAssignedTrigger>(&op);
     for (auto& operand : op.operands) {
         addTrigger<IntTrigger>(getView<IntView>(operand).triggers,
@@ -64,6 +62,7 @@ void attachTriggers(OpSum& op) {
                          },
                          [](auto&) {}),
                      operand);
+        startTriggering(operand);
     }
 }
 
@@ -92,6 +91,5 @@ shared_ptr<OpSum> deepCopyForUnroll(const OpSum& op,
     }
     auto newOpSum = make_shared<OpSum>(move(operands));
     newOpSum->value = op.value;
-    attachTriggers(*newOpSum);
     return newOpSum;
 }

@@ -17,7 +17,7 @@ typedef ConjunctionIterAssignedTrigger<OpAnd> OpAndIterAssignedTrigger;
 struct OpAnd : public BoolView {
     std::vector<BoolReturning> operands;
     FastIterableIntSet violatingOperands;
-    std::vector<std::shared_ptr<OpAndTrigger>> operandTriggers;
+    std::vector<std::shared_ptr<OpAndIterAssignedTrigger>> operandTriggers;
 
    public:
     OpAnd(std::vector<BoolReturning> operandsIn)

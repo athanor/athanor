@@ -5,7 +5,6 @@
 #include "utils/hashUtils.h"
 
 using namespace std;
-void attachTriggers(OpSetIntersect& op);
 SetMembersVector evaluate(OpSetIntersect& op) {
     SetMembersVector leftVec = evaluate(op.left);
     SetMembersVector rightVec = evaluate(op.right);
@@ -43,7 +42,6 @@ SetMembersVector evaluate(OpSetIntersect& op) {
             return returnVec;
         },
         leftVec);
-    attachTriggers(op);
 }
 
 template <bool left>
@@ -131,12 +129,14 @@ OpSetIntersect::OpSetIntersect(OpSetIntersect&& other)
     setTriggerParent(this, leftTrigger, rightTrigger);
 }
 
-void attachTriggers(OpSetIntersect& op) {
+void startTriggering(OpSetIntersect& op) {
     op.leftTrigger = make_shared<OpSetIntersectTrigger<true>>(&op);
     op.rightTrigger = make_shared<OpSetIntersectTrigger<false>>(&op);
     addTrigger<SetTrigger>(getView<SetView>(op.left).triggers, op.leftTrigger);
     addTrigger<SetTrigger>(getView<SetView>(op.right).triggers,
                            op.rightTrigger);
+    startTriggering(op.left);
+    startTriggering(op.right);
 }
 
 void stopTriggering(OpSetIntersect& op) {

@@ -24,6 +24,7 @@ class HillClimber {
             assignRandomValueInDomain(var.first, var.second);
         }
         evaluate(model.csp);
+        startTriggering(model.csp);
         u_int64_t bestViolation = cspView.violation;
         newBestSolution(bestViolation);
         selectionStrategy.initialise(model);

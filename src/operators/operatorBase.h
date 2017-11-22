@@ -70,6 +70,7 @@ struct EvaluateResult<SetReturning> {
     void reset(name& op);                                                      \
     typename EvaluateResult<typename ReturnType<name>::type>::type evaluate(   \
         name&);                                                                \
+    void startTriggering(name&);                                               \
     void stopTriggering(name&);                                                \
     void updateViolationDescription(const name& op, u_int64_t parentViolation, \
                                     ViolationDescription&);                    \
@@ -89,6 +90,11 @@ template <typename Operator>
 inline decltype(auto) evaluate(Operator& op) {
     return mpark::visit([&](auto& opImpl) { return evaluate(*opImpl); }, op);
 }
+template <typename Operator>
+inline void startTriggering(Operator& op) {
+    mpark::visit([&](auto& opImpl) { startTriggering(*opImpl); }, op);
+}
+
 template <typename Operator>
 inline void stopTriggering(Operator& op) {
     mpark::visit([&](auto& opImpl) { stopTriggering(*opImpl); }, op);

@@ -1,5 +1,5 @@
-#ifndef SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_
-#define SRC_TYPES_FORWARDDECLS_TYPESANDDOMAINS_H_
+#ifndef SRC_TYPES_BASE_H_
+#define SRC_TYPES_BASE_H_
 #include <functional>
 #include <iostream>
 #include <limits>

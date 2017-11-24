@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "forwardDecls/typesAndDomains.h"
+#include "base.h"
 struct BoolDomain {};
 
 struct BoolTrigger : public virtual TriggerBase {

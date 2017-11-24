@@ -4,7 +4,7 @@
 #include <vector>
 #include "types/forwardDecls/getDomainSize.h"
 #include "types/forwardDecls/hash.h"
-#include "types/forwardDecls/typesAndDomains.h"
+#include "types/base.h"
 #include "types/sizeAttr.h"
 #include "types/typeTrates.h"
 #include "utils/hashUtils.h"

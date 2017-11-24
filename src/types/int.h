@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "forwardDecls/typesAndDomains.h"
+#include "base.h"
 
 inline auto intBound(int64_t a, int64_t b) { return std::make_pair(a, b); }
 struct IntDomain {

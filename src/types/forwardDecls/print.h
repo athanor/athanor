@@ -1,7 +1,7 @@
 
 #ifndef SRC_TYPES_FORWARDDECLS_PRINT_H_
 #define SRC_TYPES_FORWARDDECLS_PRINT_H_
-#include "types/forwardDecls/typesAndDomains.h"
+#include "types/base.h"
 
 #include <iostream>
 

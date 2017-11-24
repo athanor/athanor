@@ -3,7 +3,7 @@
 #define SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_
 #include <functional>
 #include <vector>
-#include "types/forwardDecls/typesAndDomains.h"
+#include "types/base.h"
 #include "types/typeTrates.h"
 #define assignRandomFunctions(name)                            \
     void assignRandomValueInDomain(const name##Domain& domain, \

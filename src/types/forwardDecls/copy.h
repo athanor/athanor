@@ -1,7 +1,7 @@
 
 #ifndef SRC_TYPES_FORWARDDECLS_COPY_H_
 #define SRC_TYPES_FORWARDDECLS_COPY_H_
-#include "types/forwardDecls/typesAndDomains.h"
+#include "types/base.h"
 #define makeDeepCopyDecl(name) \
     void deepCopy(const name##Value& src, name##Value& target);
 buildForAllTypes(makeDeepCopyDecl, )

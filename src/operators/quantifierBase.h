@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 #include "types/forwardDecls/hash.h"
-#include "types/forwardDecls/typesAndDomains.h"
+#include "types/base.h"
 
 #include "types/forwardDecls/hash.h"
 

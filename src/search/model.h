@@ -7,7 +7,7 @@
 #include "operators/opAnd.h"
 #include "operators/operatorBase.h"
 #include "types/forwardDecls/copy.h"
-#include "types/forwardDecls/typesAndDomains.h"
+#include "types/base.h"
 #include "types/int.h"
 
 class ModelBuilder;

@@ -5,7 +5,7 @@
 #include <utility>
 #include "operators/quantifierBase.h"
 #include "search/violationDescription.h"
-#include "types/forwardDecls/typesAndDomains.h"
+#include "types/base.h"
 #include "utils/cachedSharedPtr.h"
 #define buildForOperators(f, sep)                                           \
     f(IntValue) sep f(OpSetSize) sep f(OpSum) sep f(BoolValue) sep f(OpAnd) \

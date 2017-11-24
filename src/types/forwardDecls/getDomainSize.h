@@ -1,7 +1,7 @@
 
 #ifndef SRC_TYPES_FORWARDDECLS_GETDOMAINSIZE_H_
 #define SRC_TYPES_FORWARDDECLS_GETDOMAINSIZE_H_
-#include "types/forwardDecls/typesAndDomains.h"
+#include "types/base.h"
 #define makeGetDomainSizeDecl(name) \
     u_int64_t getDomainSize(const name##Domain&);
 buildForAllTypes(makeGetDomainSizeDecl, )

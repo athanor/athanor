@@ -32,13 +32,13 @@ class OpSetNotEqTrigger : public SetTrigger {
 
    public:
     OpSetNotEqTrigger(OpSetNotEq* op) : op(op) {}
-    inline void valueRemoved(const Value&) final { setViolation(*op, true); }
+    inline void valueRemoved(const AnyValRef&) final { setViolation(*op, true); }
 
-    inline void valueAdded(const Value&) final { setViolation(*op, true); }
+    inline void valueAdded(const AnyValRef&) final { setViolation(*op, true); }
 
-    inline void possibleValueChange(const Value&) final {}
+    inline void possibleValueChange(const AnyValRef&) final {}
 
-    inline void valueChanged(const Value&) final { setViolation(*op, true); }
+    inline void valueChanged(const AnyValRef&) final { setViolation(*op, true); }
 };
 
 OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
@@ -72,7 +72,7 @@ void updateViolationDescription(const OpSetNotEq& op, u_int64_t,
 }
 
 std::shared_ptr<OpSetNotEq> deepCopyForUnroll(const OpSetNotEq&,
-                                              const IterValue&) {
+                                              const AnyIterRef&) {
     assert(false);
     abort();
 }

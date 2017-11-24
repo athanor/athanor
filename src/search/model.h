@@ -14,8 +14,8 @@ class ModelBuilder;
 enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
 struct Model {
     friend ModelBuilder;
-    std::vector<std::pair<Domain, Value>> variables;
-    std::vector<std::pair<Domain, Value>> variablesBackup;  // not used at the
+    std::vector<std::pair<Domain, AnyValRef>> variables;
+    std::vector<std::pair<Domain, AnyValRef>> variablesBackup;  // not used at the
                                                             // moment, just
                                                             // needed to invoke
                                                             // neighbourhoods
@@ -27,8 +27,8 @@ struct Model {
     OptimiseMode optimiseMode;
 
    private:
-    Model(std::vector<std::pair<Domain, Value>> variables,
-          std::vector<std::pair<Domain, Value>> variablesBackup,
+    Model(std::vector<std::pair<Domain, AnyValRef>> variables,
+          std::vector<std::pair<Domain, AnyValRef>> variablesBackup,
           std::vector<Neighbourhood> neighbourhoods,
           std::vector<int> neighbourhoodVarMapping,
           std::vector<std::vector<int>> varNeighbourhoodMapping,
@@ -45,7 +45,7 @@ struct Model {
 };
 
 class ModelBuilder {
-    std::vector<std::pair<Domain, Value>> variables;
+    std::vector<std::pair<Domain, AnyValRef>> variables;
     std::vector<BoolReturning> constraints;
     IntReturning objective = constructValueFromDomain(
         IntDomain({intBound(0, 0)}));  // non applicable default
@@ -64,7 +64,7 @@ class ModelBuilder {
                   typename DomainPtrType::element_type>::type>
     inline ValRef<ValueType> addVariable(const DomainPtrType& domainImpl) {
         variables.emplace_back(Domain(domainImpl),
-                               Value(ValRef<ValueType>(nullptr)));
+                               AnyValRef(ValRef<ValueType>(nullptr)));
         auto& val = variables.back().second.emplace<ValRef<ValueType>>(
             constructValueFromDomain(*domainImpl));
         setId(*val, variables.size() - 1);
@@ -94,7 +94,7 @@ class ModelBuilder {
                       previousNumberNeighbourhoods);
         }
         assert(neighbourhoods.size() > 0);
-        std::vector<std::pair<Domain, Value>> variablesBackup;
+        std::vector<std::pair<Domain, AnyValRef>> variablesBackup;
         std::transform(variables.begin(), variables.end(),
                        std::back_inserter(variablesBackup), [](auto& var) {
                            return std::make_pair(var.first,

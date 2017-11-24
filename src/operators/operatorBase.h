@@ -75,7 +75,7 @@ struct EvaluateResult<SetReturning> {
     void updateViolationDescription(const name& op, u_int64_t parentViolation, \
                                     ViolationDescription&);                    \
     std::shared_ptr<name> deepCopyForUnroll(const name& op,                    \
-                                            const IterValue& iterator);
+                                            const AnyIterRef& iterator);
 buildForOperators(operatorFuncs, );
 #undef operatorFuncs
 
@@ -116,7 +116,7 @@ inline void updateViolationDescription(
 // types i.e. BoolReturning, IntReturning, SetReturning, etc.
 template <typename ReturnType>
 inline ReturnType deepCopyForUnroll(const ReturnType& expr,
-                                    const IterValue& iterator) {
+                                    const AnyIterRef& iterator) {
     return mpark::visit(
         [&](auto& exprImpl) -> ReturnType {
             return deepCopyForUnrollOverload(exprImpl, iterator);
@@ -127,7 +127,7 @@ inline ReturnType deepCopyForUnroll(const ReturnType& expr,
 /// overload of deepCopyForUnroll that catches operators
 template <typename T>
 std::shared_ptr<T> deepCopyForUnrollOverload(const std::shared_ptr<T>& ptr,
-                                             const IterValue& iterator) {
+                                             const AnyIterRef& iterator) {
     return deepCopyForUnroll(*ptr, iterator);
 }
 
@@ -135,13 +135,13 @@ std::shared_ptr<T> deepCopyForUnrollOverload(const std::shared_ptr<T>& ptr,
 // be deepCopied when unrolling
 template <typename T>
 inline ValRef<T> deepCopyForUnrollOverload(const ValRef<T>& val,
-                                           const IterValue&) {
+                                           const AnyIterRef&) {
     return val;
 }
 
 template <typename T>
 inline IterRef<T> deepCopyForUnrollOverload(const IterRef<T>& iterVal,
-                                            const IterValue& iterator) {
+                                            const AnyIterRef& iterator) {
     const IterRef<T>* iteratorPtr = mpark::get_if<IterRef<T>>(&iterator);
     if (iteratorPtr != NULL &&
         iteratorPtr->getIterator().id == iterVal.getIterator().id) {

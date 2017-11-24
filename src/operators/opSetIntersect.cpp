@@ -52,7 +52,7 @@ class OpSetIntersectTrigger : public SetTrigger {
 
    public:
     OpSetIntersectTrigger(OpSetIntersect* op) : op(op) {}
-    inline void valueRemoved(const Value& member) final {
+    inline void valueRemoved(const AnyValRef& member) final {
         u_int64_t hash = mix(getValueHash(member));
         unordered_set<u_int64_t>::iterator hashIter;
         if ((hashIter = op->memberHashes.find(hash)) !=
@@ -64,7 +64,7 @@ class OpSetIntersectTrigger : public SetTrigger {
         }
     }
 
-    inline void valueAdded(const Value& member) final {
+    inline void valueAdded(const AnyValRef& member) final {
         SetReturning& unchanged = (left) ? op->right : op->left;
         u_int64_t hash = mix(getValueHash(member));
         if (op->memberHashes.count(hash)) {
@@ -78,7 +78,7 @@ class OpSetIntersectTrigger : public SetTrigger {
                           op->triggers);
         }
     }
-    inline void possibleValueChange(const Value& member) final {
+    inline void possibleValueChange(const AnyValRef& member) final {
         u_int64_t hash = mix(getValueHash(member));
         oldHashIter = op->memberHashes.find(hash);
         if (oldHashIter != op->memberHashes.end()) {
@@ -88,7 +88,7 @@ class OpSetIntersectTrigger : public SetTrigger {
         }
     }
 
-    inline void valueChanged(const Value& member) final {
+    inline void valueChanged(const AnyValRef& member) final {
         u_int64_t newHashOfMember = mix(getValueHash(member));
         if (oldHashIter != op->memberHashes.end() &&
             newHashOfMember == *oldHashIter) {
@@ -158,7 +158,7 @@ void updateViolationDescription(const OpSetIntersect& op,
 }
 
 std::shared_ptr<OpSetIntersect> deepCopyForUnroll(const OpSetIntersect&,
-                                                  const IterValue&) {
+                                                  const AnyIterRef&) {
     assert(false);
     abort();
 }

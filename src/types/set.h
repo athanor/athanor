@@ -42,10 +42,10 @@ struct SetDomain {
 };
 
 struct SetTrigger : public virtual TriggerBase {
-    virtual void valueRemoved(const Value& member) = 0;
-    virtual void valueAdded(const Value& member) = 0;
-    virtual void possibleValueChange(const Value& member) = 0;
-    virtual void valueChanged(const Value& member) = 0;
+    virtual void valueRemoved(const AnyValRef& member) = 0;
+    virtual void valueAdded(const AnyValRef& member) = 0;
+    virtual void possibleValueChange(const AnyValRef& member) = 0;
+    virtual void valueChanged(const AnyValRef& member) = 0;
 };
 
 struct SetView {
@@ -67,7 +67,7 @@ struct SetValueImpl {
     inline void changeMemberValue(Func&& func, SetValueType& val,
                                   size_t memberIndex) {
         u_int64_t hash = mix(getValueHash(*members[memberIndex]));
-        Value triggerMember = members[memberIndex];
+        AnyValRef triggerMember = members[memberIndex];
         visitTriggers([&](auto& t) { t->possibleValueChange(triggerMember); },
                       val.triggers);
         bool valueChanged = func();
@@ -92,7 +92,7 @@ struct SetValueImpl {
         u_int64_t hash = mix(getValueHash(*member));
         val.memberHashes.erase(hash);
         val.cachedHashTotal -= hash;
-        Value triggerMember = member;
+        AnyValRef triggerMember = member;
         visitTriggers([&](auto& t) { t->valueRemoved(triggerMember); },
                       val.triggers);
         return member;
@@ -114,7 +114,7 @@ struct SetValueImpl {
         u_int64_t hash = mix(getValueHash(*member));
         val.memberHashes.insert(hash);
         val.cachedHashTotal += hash;
-        Value triggerMember = members.back();
+        AnyValRef triggerMember = members.back();
         visitTriggers([&](auto& t) { t->valueAdded(triggerMember); },
                       val.triggers);
         return true;

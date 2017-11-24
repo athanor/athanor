@@ -13,7 +13,7 @@
 buildForAllTypes(CompareDecl, )
 #undef makePrettyPrintDecl
 
-    inline bool smallerValue(const Value& u, const Value& v) {
+    inline bool smallerValue(const AnyValRef& u, const AnyValRef& v) {
     return u.index() < v.index() ||
            (u.index() == v.index() &&
             mpark::visit(
@@ -24,10 +24,10 @@ buildForAllTypes(CompareDecl, )
                 u));
 }
 
-inline void normalise(Value& v) {
+inline void normalise(AnyValRef& v) {
     mpark::visit([](auto& vImpl) { normalise(*vImpl); }, v);
 }
-inline bool largerValue(const Value& u, const Value& v) {
+inline bool largerValue(const AnyValRef& u, const AnyValRef& v) {
     return u.index() > v.index() ||
            (u.index() == v.index() &&
             mpark::visit(
@@ -38,7 +38,7 @@ inline bool largerValue(const Value& u, const Value& v) {
                 u));
 }
 
-inline bool equalValue(const Value& u, const Value& v) {
+inline bool equalValue(const AnyValRef& u, const AnyValRef& v) {
     return (u.index() == v.index() &&
             mpark::visit(
                 [&v](auto& uImpl) {

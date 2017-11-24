@@ -16,7 +16,7 @@ class OpSetSizeTrigger : public SetTrigger {
 
    public:
     OpSetSizeTrigger(OpSetSize* op) : op(op) {}
-    inline void valueRemoved(const Value&) final {
+    inline void valueRemoved(const AnyValRef&) final {
         visitTriggers(
             [&](auto& trigger) { trigger->possibleValueChange(op->value); },
             op->triggers);
@@ -25,7 +25,7 @@ class OpSetSizeTrigger : public SetTrigger {
                       op->triggers);
     }
 
-    inline void valueAdded(const Value&) final {
+    inline void valueAdded(const AnyValRef&) final {
         visitTriggers(
             [&](auto& trigger) { trigger->possibleValueChange(op->value); },
             op->triggers);
@@ -34,8 +34,8 @@ class OpSetSizeTrigger : public SetTrigger {
                       op->triggers);
     }
 
-    inline void possibleValueChange(const Value&) {}
-    inline void valueChanged(const Value&) {}
+    inline void possibleValueChange(const AnyValRef&) {}
+    inline void valueChanged(const AnyValRef&) {}
 };
 
 OpSetSize::OpSetSize(OpSetSize&& other)
@@ -64,7 +64,7 @@ void updateViolationDescription(const OpSetSize& op, u_int64_t parentViolation,
 }
 
 std::shared_ptr<OpSetSize> deepCopyForUnroll(const OpSetSize&,
-                                             const IterValue&) {
+                                             const AnyIterRef&) {
     assert(false);
     abort();
 }

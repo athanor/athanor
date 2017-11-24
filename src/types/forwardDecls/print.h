@@ -15,17 +15,17 @@ buildForAllTypes(makePrettyPrintDecl, )
     mpark::visit([&os](auto& dImpl) { prettyPrint(os, *dImpl); }, d);
     return os;
 }
-inline std::ostream& prettyPrint(std::ostream& os, const Value& v) {
+inline std::ostream& prettyPrint(std::ostream& os, const AnyValRef& v) {
     mpark::visit([&os](auto& vImpl) { prettyPrint(os, *vImpl); }, v);
     return os;
 }
 
-template <typename Value>
-std::ostream& operator<<(std::ostream& os, const ValRef<Value>& v) {
+template <typename AnyValRef>
+std::ostream& operator<<(std::ostream& os, const ValRef<AnyValRef>& v) {
     return prettyPrint(os, v);
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Value& v) {
+inline std::ostream& operator<<(std::ostream& os, const AnyValRef& v) {
     return prettyPrint(os, v);
 }
 #endif

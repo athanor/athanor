@@ -21,7 +21,7 @@ struct OpSetForAll
 
     std::shared_ptr<ContainerTrigger> containerTrigger = nullptr;
     std::shared_ptr<DelayedUnrollTrigger> delayedUnrollTrigger = nullptr;
-    std::vector<Value> valuesToUnroll;
+    std::vector<AnyValRef> valuesToUnroll;
 
     OpSetForAll(const OpSetForAll&) = delete;
     OpSetForAll(OpSetForAll&& other);

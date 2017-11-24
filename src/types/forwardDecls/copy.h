@@ -14,12 +14,12 @@ buildForAllTypes(makeDeepCopyDecl, )
     return target;
 }
 
-inline Value deepCopyValue(const Value& val) {
+inline AnyValRef deepCopyValue(const AnyValRef& val) {
     return mpark::visit(
-        [](const auto& valImpl) { return Value(deepCopy(*valImpl)); }, val);
+        [](const auto& valImpl) { return AnyValRef(deepCopy(*valImpl)); }, val);
 }
 
-inline void deepCopyValue(const Value& u, Value& v) {
+inline void deepCopyValue(const AnyValRef& u, AnyValRef& v) {
     if (u.index() == v.index()) {
         mpark::visit(
             [&](auto& uImpl) {

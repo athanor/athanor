@@ -83,7 +83,7 @@ void updateViolationDescription(const OpSum& op, u_int64_t parentViolation,
 }
 
 shared_ptr<OpSum> deepCopyForUnroll(const OpSum& op,
-                                    const IterValue& iterator) {
+                                    const AnyIterRef& iterator) {
     vector<IntReturning> operands;
     operands.reserve(op.operands.size());
     for (auto& operand : op.operands) {

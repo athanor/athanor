@@ -33,7 +33,7 @@ using Variantised =
 #undef variantValues
 
 // variant for values
-using Value = Variantised<ValRef>;
+using AnyValRef = Variantised<ValRef>;
 
 // variant for domains
 #define variantDomains(T) std::shared_ptr<T##Domain>

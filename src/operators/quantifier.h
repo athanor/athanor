@@ -16,7 +16,7 @@ struct Quantifier {
     const int quantId;
     ContainerType container;
     ReturnType expr;
-    std::vector<std::pair<ReturnType, IterValue>> unrolledExprs;
+    std::vector<std::pair<ReturnType, AnyIterRef>> unrolledExprs;
     std::unordered_map<u_int64_t, size_t> valueExprMap;
 
     Quantifier(ContainerType container, const int id = nextQuantId())
@@ -30,7 +30,7 @@ struct Quantifier {
     }
 
     inline std::pair<size_t, ReturnType&> unroll(
-        const Value& newValue, const bool startTriggeringExpr = true,
+        const AnyValRef& newValue, const bool startTriggeringExpr = true,
         const bool evaluateFreshExpr = false) {
         mpark::visit(
             [&](auto& newValImpl) {
@@ -63,7 +63,7 @@ struct Quantifier {
                                               unrolledExprs.back().first);
     }
 
-    inline std::pair<size_t, ReturnType> roll(const Value& val) {
+    inline std::pair<size_t, ReturnType> roll(const AnyValRef& val) {
         u_int64_t hash = getValueHash(val);
         assert(valueExprMap.count(hash));
         size_t index = valueExprMap[hash];
@@ -79,7 +79,7 @@ struct Quantifier {
     }
 
     Quantifier<ContainerType, ContainerValueType, ReturnType, ReturnValueType>
-    deepCopyQuantifierForUnroll(const IterValue& iterator) const {
+    deepCopyQuantifierForUnroll(const AnyIterRef& iterator) const {
         Quantifier<ContainerType, ContainerValueType, ReturnType,
                    ReturnValueType>
             newQuantifier(deepCopyForUnroll(container, iterator));
@@ -136,7 +136,7 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
     }
 
     inline std::pair<size_t, BoolReturning&> unroll(
-        const Value& newValue, const bool startTriggeringExpr = true,
+        const AnyValRef& newValue, const bool startTriggeringExpr = true,
         const bool evaluateFreshExpr = false) {
         auto indexExprPair =
             QuantBase::unroll(newValue, startTriggeringExpr, evaluateFreshExpr);
@@ -147,7 +147,7 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
         return indexExprPair;
     }
 
-    inline std::pair<size_t, BoolReturning> roll(const Value& val) {
+    inline std::pair<size_t, BoolReturning> roll(const AnyValRef& val) {
         auto indexExprPair = QuantBase::roll(val);
         u_int64_t removedViolation =
             getView<BoolView>(indexExprPair.second).violation;

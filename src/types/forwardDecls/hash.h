@@ -7,7 +7,7 @@
 buildForAllTypes(makeGetHashDecl, )
 #undef makeGetHashDecl
 
-    inline u_int64_t getValueHash(const Value& val) {
+    inline u_int64_t getValueHash(const AnyValRef& val) {
     return mpark::visit(
         [&](const auto& valImpl) { return getValueHash(*valImpl); }, val);
 }

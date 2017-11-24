@@ -54,7 +54,7 @@ class IterRef {
     inline decltype(auto) operator-> () const { return ref->ref.operator->(); }
 };
 
-typedef Variantised<IterRef> IterValue;
+typedef Variantised<IterRef> AnyIterRef;
 
 template <typename T>
 u_int64_t getValueHash(const Iterator<T>& iter) {
@@ -66,7 +66,7 @@ u_int64_t getValueHash(const IterRef<T>& iter) {
     return getValueHash(*iter);
 }
 
-inline u_int64_t getValueHash(const IterValue& iter) {
+inline u_int64_t getValueHash(const AnyIterRef& iter) {
     return mpark::visit([](auto& iterImpl) { return getValueHash(iterImpl); },
                         iter);
 }

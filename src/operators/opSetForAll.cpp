@@ -30,7 +30,7 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger,
     OpSetForAll* op;
     ContainerTrigger(OpSetForAll* op) : op(op) {}
 
-    inline void valueRemoved(const Value& val) final {
+    inline void valueRemoved(const AnyValRef& val) final {
         auto indexExprPair = op->roll(val);
         u_int64_t removedViolation =
             getView<BoolView>(indexExprPair.second).violation;
@@ -47,15 +47,15 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger,
         }
     }
 
-    inline void valueAdded(const Value& val) final {
+    inline void valueAdded(const AnyValRef& val) final {
         op->valuesToUnroll.emplace_back(move(val));
         if (op->valuesToUnroll.size() == 1) {
             addDelayedTrigger(make_shared<DelayedUnrollTrigger>(op));
         }
     }
 
-    inline void possibleValueChange(const Value&) {}
-    inline void valueChanged(const Value&) {}
+    inline void possibleValueChange(const AnyValRef&) {}
+    inline void valueChanged(const AnyValRef&) {}
     void iterHasNewValue(const SetValue& oldValue,
                          const ValRef<SetValue>& newValue) {
         ignoreUnused(oldValue, newValue);
@@ -102,7 +102,7 @@ void updateViolationDescription(const OpSetForAll& op, u_int64_t,
 }
 
 shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
-                                          const IterValue& iterator) {
+                                          const AnyIterRef& iterator) {
     auto newOpSetForAll = make_shared<OpSetForAll>(
         op.deepCopyQuantifierForUnroll(iterator), op.violatingOperands);
     newOpSetForAll->violation = op.violation;

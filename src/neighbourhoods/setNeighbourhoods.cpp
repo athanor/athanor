@@ -56,8 +56,8 @@ void setAddGen(const SetDomain& domain,
                 InnerValueRefType;
             neighbourhoods.emplace_back(
                 "setAdd", [innerDomainSize, &domain, &innerDomainPtr](
-                              const AcceptanceCallBack& changeAccepted, Value&,
-                              Value& primary) {
+                              const AcceptanceCallBack& changeAccepted, AnyValRef&,
+                              AnyValRef& primary) {
                     auto& val = *mpark::get<ValRef<SetValue>>(primary);
                     auto& valImpl = mpark::get<SetValueImpl<InnerValueRefType>>(
                         val.setValueImpl);
@@ -96,7 +96,7 @@ void setRemoveGen(const SetDomain& domain,
                 InnerValueRefType;
             neighbourhoods.emplace_back(
                 "setRemove", [&](const AcceptanceCallBack& changeAccepted,
-                                 Value&, Value& primary) {
+                                 AnyValRef&, AnyValRef& primary) {
                     auto& val = *mpark::get<ValRef<SetValue>>(primary);
                     auto& valImpl = mpark::get<SetValueImpl<InnerValueRefType>>(
                         val.setValueImpl);
@@ -127,8 +127,8 @@ void setSwapGen(const SetDomain& domain,
                 InnerValueRefType;
             neighbourhoods.emplace_back(
                 "setSwap", [innerDomainSize, &domain, &innerDomainPtr](
-                               const AcceptanceCallBack& changeAccepted, Value&,
-                               Value& primary) {
+                               const AcceptanceCallBack& changeAccepted, AnyValRef&,
+                               AnyValRef& primary) {
                     auto& val = *mpark::get<ValRef<SetValue>>(primary);
                     auto& valImpl = mpark::get<SetValueImpl<InnerValueRefType>>(
                         val.setValueImpl);

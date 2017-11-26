@@ -3,7 +3,8 @@
 #include "types/bool.h"
 #include "utils/random.h"
 
-void assignRandomValueInDomain(const BoolDomain&, BoolValue& val) {
+template <>
+void assignRandomValueInDomain<BoolDomain>(const BoolDomain&, BoolValue& val) {
     val.changeValue([&]() { val.violation = globalRandom(0, 1); });
 }
 

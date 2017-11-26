@@ -4,14 +4,12 @@
 #include <functional>
 #include <vector>
 #include "types/base.h"
-#define assignRandomFunctions(name)                            \
-    void assignRandomValueInDomain(const name##Domain& domain, \
-                                   name##Value& val);
-buildForAllTypes(assignRandomFunctions, )
-#undef assignRandomFunctions
-
-    inline void assignRandomValueInDomain(const Domain& domain,
-                                          AnyValRef& val) {
+template <typename Domain>
+void assignRandomValueInDomain(const Domain& domain,
+                               typename AssociatedValueType<Domain>::type& val);
+template <typename T = int>
+inline void assignRandomValueInDomain(const AnyDomainRef& domain,
+                                      AnyValRef& val, T = 0) {
     mpark::visit(
         [&](auto& domainImpl) {
             typedef typename BaseType<decltype(domainImpl)>::element_type
@@ -57,7 +55,7 @@ buildForAllTypes(makeGeneratorDecls, )
     }
 }
 
-inline void generateNeighbourhoods(const Domain domain,
+inline void generateNeighbourhoods(const AnyDomainRef domain,
                                    std::vector<Neighbourhood>& neighbourhoods) {
     mpark::visit(
         [&](auto& domainImpl) {

@@ -3,7 +3,9 @@
 #include "neighbourhoods/neighbourhoods.h"
 #include "types/int.h"
 #include "utils/random.h"
-void assignRandomValueInDomain(const IntDomain& domain, IntValue& val) {
+template <>
+void assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
+                                          IntValue& val) {
     u_int64_t randomDomainIndex =
         globalRandom<decltype(domain.domainSize)>(0, domain.domainSize - 1);
     for (auto& bound : domain.bounds) {

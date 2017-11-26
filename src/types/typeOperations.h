@@ -90,14 +90,14 @@ inline AnyValRef deepCopy(const AnyValRef& val, T = 0) {
 }
 
 template <typename T = int>
-inline u_int64_t getDomainSize(const Domain& domain, T = 0) {
+inline u_int64_t getDomainSize(const AnyDomainRef& domain, T = 0) {
     return mpark::visit(
         [&](const auto& domainImpl) { return getDomainSize(*domainImpl); },
         domain);
 }
 
 template <typename T = int>
-inline std::ostream& prettyPrint(std::ostream& os, const Domain& d, T = 0) {
+inline std::ostream& prettyPrint(std::ostream& os, const AnyDomainRef& d, T = 0) {
     mpark::visit([&os](auto& dImpl) { prettyPrint(os, *dImpl); }, d);
     return os;
 }

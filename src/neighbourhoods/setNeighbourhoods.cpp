@@ -4,7 +4,12 @@
 #include "types/set.h"
 #include "types/typeOperations.h"
 #include "utils/random.h"
+
 using namespace std;
+
+template <>
+void assignRandomValueInDomain<SetDomain>(const SetDomain& domain,
+                                          SetValue& val);
 template <typename InnerDomainPtrType>
 void assignRandomValueInDomainImpl(const SetDomain& domain,
                                    const InnerDomainPtrType& innerDomainPtr,
@@ -26,7 +31,9 @@ void assignRandomValueInDomainImpl(const SetDomain& domain,
     }
 }
 
-void assignRandomValueInDomain(const SetDomain& domain, SetValue& val) {
+template <>
+void assignRandomValueInDomain<SetDomain>(const SetDomain& domain,
+                                          SetValue& val) {
     mpark::visit(
         [&](auto& innerDomainPtr) {
             assignRandomValueInDomainImpl(domain, innerDomainPtr, val);

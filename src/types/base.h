@@ -37,7 +37,8 @@ using AnyValRef = Variantised<ValRef>;
 
 // variant for domains
 #define variantDomains(T) std::shared_ptr<T##Domain>
-using Domain = mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
+using AnyDomainRef =
+    mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
 #undef variantDomains
 
 template <typename T>

@@ -9,7 +9,7 @@
 
 struct SetDomain {
     SizeAttr sizeAttr;
-    Domain inner;
+    AnyDomainRef inner;
     // template hack to accept only domains
     template <
         typename DomainType,

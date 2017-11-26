@@ -1,20 +1,27 @@
 #include "types/int.h"
 #include <cassert>
 #include "common/common.h"
+#include "types/typeOperations.h"
 using namespace std;
 
-u_int64_t getValueHash(const IntValue& val) { return val.value; }
+template <>
+u_int64_t getValueHash<IntValue>(const IntValue& val) {
+    return val.value;
+}
 
-ostream& prettyPrint(ostream& os, const IntValue& v) {
+template <>
+ostream& prettyPrint<IntValue>(ostream& os, const IntValue& v) {
     os << v.value;
     return os;
 }
 
-void deepCopy(const IntValue& src, IntValue& target) {
+template <>
+void deepCopy<IntValue>(const IntValue& src, IntValue& target) {
     target.changeValue([&]() { target.value = src.value; });
 }
 
-ostream& prettyPrint(ostream& os, const IntDomain& d) {
+template <>
+ostream& prettyPrint<IntDomain>(ostream& os, const IntDomain& d) {
     os << "int(";
     bool first = true;
     for (auto& bound : d.bounds) {
@@ -36,7 +43,10 @@ ostream& prettyPrint(ostream& os, const IntDomain& d) {
 void matchInnerType(const IntValue&, IntValue&) {}
 void matchInnerType(const IntDomain&, IntValue&) {}
 
-u_int64_t getDomainSize(const IntDomain& domain) { return domain.domainSize; }
+template <>
+u_int64_t getDomainSize<IntDomain>(const IntDomain& domain) {
+    return domain.domainSize;
+}
 
 void reset(IntValue& val) { val.triggers.clear(); }
 
@@ -44,16 +54,20 @@ void evaluate(IntValue&) {}
 void startTriggering(IntValue&) {}
 void stopTriggering(IntValue&) {}
 
-bool smallerValue(const IntValue& u, const IntValue& v) {
+template <>
+bool smallerValue<IntValue>(const IntValue& u, const IntValue& v) {
     return u.value < v.value;
 }
 
-bool largerValue(const IntValue& u, const IntValue& v) {
+template <>
+bool largerValue<IntValue>(const IntValue& u, const IntValue& v) {
     return u.value > v.value;
 }
 
-bool equalValue(const IntValue& u, const IntValue& v) {
+template <>
+bool equalValue<IntValue>(const IntValue& u, const IntValue& v) {
     return u.value == v.value;
 }
 
-void normalise(IntValue&) {}
+template <>
+void normalise<IntValue>(IntValue&) {}

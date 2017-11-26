@@ -2,12 +2,11 @@
 #define SRC_TYPES_SET_H_
 #include <unordered_set>
 #include <vector>
-#include "types/forwardDecls/getDomainSize.h"
-#include "types/forwardDecls/hash.h"
 #include "types/base.h"
 #include "types/sizeAttr.h"
-#include "types/typeTrates.h"
+#include "types/typeOperations.h"
 #include "utils/hashUtils.h"
+
 struct SetDomain {
     SizeAttr sizeAttr;
     Domain inner;

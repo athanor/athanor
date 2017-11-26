@@ -4,10 +4,8 @@
 #include <cassert>
 #include <unordered_map>
 #include <vector>
-#include "types/forwardDecls/hash.h"
 #include "types/base.h"
-
-#include "types/forwardDecls/hash.h"
+#include "types/typeOperations.h"
 
 template <typename UnrollingValue>
 struct IterAssignedTrigger : public virtual TriggerBase {

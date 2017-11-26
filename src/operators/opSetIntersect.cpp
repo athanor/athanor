@@ -1,7 +1,7 @@
 #include "operators/opSetIntersect.h"
 #include <iostream>
 #include <memory>
-#include "types/forwardDecls/hash.h"
+#include "types/typeOperations.h"
 #include "utils/hashUtils.h"
 
 using namespace std;

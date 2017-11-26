@@ -4,14 +4,14 @@
 #include <functional>
 #include <vector>
 #include "types/base.h"
-#include "types/typeTrates.h"
 #define assignRandomFunctions(name)                            \
     void assignRandomValueInDomain(const name##Domain& domain, \
                                    name##Value& val);
 buildForAllTypes(assignRandomFunctions, )
 #undef assignRandomFunctions
 
-    inline void assignRandomValueInDomain(const Domain& domain, AnyValRef& val) {
+    inline void assignRandomValueInDomain(const Domain& domain,
+                                          AnyValRef& val) {
     mpark::visit(
         [&](auto& domainImpl) {
             typedef typename BaseType<decltype(domainImpl)>::element_type
@@ -25,7 +25,8 @@ buildForAllTypes(assignRandomFunctions, )
 typedef std::function<bool()> AcceptanceCallBack;
 struct Neighbourhood {
     typedef std::function<void(const AcceptanceCallBack&,
-                               AnyValRef& backUpDestination, AnyValRef& primary)>
+                               AnyValRef& backUpDestination,
+                               AnyValRef& primary)>
         ApplyFunc;
     std::string name;
     ApplyFunc apply;

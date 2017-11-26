@@ -5,9 +5,7 @@
 #include "operators/operatorBase.h"
 #include "search/model.h"
 #include "search/neighbourhoodSelectionStrategies.h"
-#include "types/forwardDecls/compare.h"
-#include "types/forwardDecls/copy.h"
-#include "types/forwardDecls/print.h"
+#include "types/typeOperations.h"
 
 template <typename NeighbourhoodSelectionStrategy>
 class HillClimber {
@@ -64,8 +62,8 @@ class HillClimber {
             return;
         }
         for (size_t i = 0; i < model.variables.size(); ++i) {
-            deepCopyValue(model.variables[i].second,
-                          model.variablesBackup[i].second);
+            model.variablesBackup[i].second =
+                deepCopy(model.variables[i].second);
             normalise(model.variablesBackup[i].second);
         }
         std::sort(

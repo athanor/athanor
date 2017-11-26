@@ -55,7 +55,7 @@ struct Quantifier {
                     }
                     iterRef.getIterator().attachValue(newValImpl);
                 }
-                valueExprMap.emplace(getValueHash(newValImpl),
+                valueExprMap.emplace(getValueHash(*newValImpl),
                                      unrolledExprs.size() - 1);
             },
             newValue);

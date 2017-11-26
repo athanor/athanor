@@ -3,19 +3,18 @@
 #include <cassert>
 #include "common/common.h"
 #include "operators/operatorBase.h"
-#include "types/forwardDecls/compare.h"
-#include "types/forwardDecls/copy.h"
-#include "types/forwardDecls/getDomainSize.h"
-#include "types/forwardDecls/hash.h"
-#include "types/forwardDecls/print.h"
-#include "types/typeTrates.h"
+#include "types/typeOperations.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 
-u_int64_t getValueHash(const SetValue& val) { return val.cachedHashTotal; }
+template <>
+u_int64_t getValueHash<SetValue>(const SetValue& val) {
+    return val.cachedHashTotal;
+}
 
-ostream& prettyPrint(ostream& os, const SetValue& v) {
+template <>
+ostream& prettyPrint<SetValue>(ostream& os, const SetValue& v) {
     os << "set({";
     mpark::visit(
         [&](auto& vImpl) {
@@ -46,13 +45,15 @@ void deepCopyImpl(const SetValueImpl<InnerValueRefType>& srcImpl,
     }
 }
 
-void deepCopy(const SetValue& src, SetValue& target) {
+template <>
+void deepCopy<SetValue>(const SetValue& src, SetValue& target) {
     assert(src.setValueImpl.index() == target.setValueImpl.index());
     return visit([&](auto& srcImpl) { return deepCopyImpl(srcImpl, target); },
                  src.setValueImpl);
 }
 
-ostream& prettyPrint(ostream& os, const SetDomain& d) {
+template <>
+ostream& prettyPrint<SetDomain>(ostream& os, const SetDomain& d) {
     os << "set(";
     os << d.sizeAttr << ",";
     prettyPrint(os, d.inner);
@@ -93,7 +94,8 @@ void matchInnerType(const SetDomain& domain, SetValue& target) {
         domain.inner);
 }
 
-u_int64_t getDomainSize(const SetDomain& domain) {
+template <>
+u_int64_t getDomainSize<SetDomain>(const SetDomain& domain) {
     return 1 << getDomainSize(domain.inner);
 }
 
@@ -126,12 +128,19 @@ void normaliseImpl(SetValueImpl<InnerValueRefType>& valImpl) {
          [](auto& u, auto& v) { return smallerValue(*u, *v); });
 }
 
-void normalise(SetValue& val) {
+template <>
+void normalise<SetValue>(SetValue& val) {
     mpark::visit([](auto& valImpl) { normaliseImpl(valImpl); },
                  val.setValueImpl);
 }
 
-bool smallerValue(const SetValue& u, const SetValue& v) {
+template <>
+bool smallerValue<SetValue>(const SetValue& u, const SetValue& v);
+template <>
+bool largerValue<SetValue>(const SetValue& u, const SetValue& v);
+
+template <>
+bool smallerValue<SetValue>(const SetValue& u, const SetValue& v) {
     return mpark::visit(
         [&](auto& uImpl) {
             auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v.setValueImpl);
@@ -152,7 +161,8 @@ bool smallerValue(const SetValue& u, const SetValue& v) {
         u.setValueImpl);
 }
 
-bool largerValue(const SetValue& u, const SetValue& v) {
+template <>
+bool largerValue<SetValue>(const SetValue& u, const SetValue& v) {
     return mpark::visit(
         [&](auto& uImpl) {
             auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v.setValueImpl);

@@ -4,7 +4,7 @@
 #include "operators/opSetNotEq.h"
 #include "search/searchStrategies.h"
 #include "types/allTypes.h"
-#include "types/forwardDecls/print.h"
+#include "types/typeOperations.h"
 
 using namespace std;
 

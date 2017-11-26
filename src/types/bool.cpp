@@ -1,20 +1,27 @@
 #include "types/bool.h"
 #include <cassert>
 #include "common/common.h"
+#include "types/typeOperations.h"
+
 using namespace std;
+template <>
+u_int64_t getValueHash<BoolValue>(const BoolValue& val) {
+    return val.violation;
+}
 
-u_int64_t getValueHash(const BoolValue& val) { return val.violation; }
-
-ostream& prettyPrint(ostream& os, const BoolValue& v) {
+template <>
+ostream& prettyPrint<BoolValue>(ostream& os, const BoolValue& v) {
     os << (v.violation == 1);
     return os;
 }
 
-void deepCopy(const BoolValue& src, BoolValue& target) {
+template <>
+void deepCopy<BoolValue>(const BoolValue& src, BoolValue& target) {
     target.changeValue([&]() { target.violation = src.violation; });
 }
 
-ostream& prettyPrint(ostream& os, const BoolDomain&) {
+template <>
+ostream& prettyPrint<BoolDomain>(ostream& os, const BoolDomain&) {
     os << "bool";
     return os;
 }
@@ -25,7 +32,10 @@ u_int64_t VIOLATION_0 = 0;
 void matchInnerType(const BoolValue&, BoolValue&) {}
 void matchInnerType(const BoolDomain&, BoolValue&) {}
 
-u_int64_t getDomainSize(const BoolDomain&) { return 2; }
+template <>
+u_int64_t getDomainSize<BoolDomain>(const BoolDomain&) {
+    return 2;
+}
 
 void reset(BoolValue& val) { val.triggers.clear(); }
 
@@ -33,16 +43,20 @@ void evaluate(BoolValue&) {}
 void startTriggering(BoolValue&) {}
 void stopTriggering(BoolValue&) {}
 
-void normalise(BoolValue&) {}
+template <>
+void normalise<BoolValue>(BoolValue&) {}
 
-bool smallerValue(const BoolValue& u, const BoolValue& v) {
+template <>
+bool smallerValue<BoolValue>(const BoolValue& u, const BoolValue& v) {
     return u.violation < v.violation;
 }
 
-bool largerValue(const BoolValue& u, const BoolValue& v) {
+template <>
+bool largerValue<BoolValue>(const BoolValue& u, const BoolValue& v) {
     return u.violation > v.violation;
 }
 
-bool equalValue(const BoolValue& u, const BoolValue& v) {
+template <>
+bool equalValue<BoolValue>(const BoolValue& u, const BoolValue& v) {
     return u.violation == v.violation;
 }

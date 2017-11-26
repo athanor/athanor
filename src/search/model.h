@@ -6,19 +6,20 @@
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/opAnd.h"
 #include "operators/operatorBase.h"
-#include "types/forwardDecls/copy.h"
 #include "types/base.h"
 #include "types/int.h"
+#include "types/typeOperations.h"
 
 class ModelBuilder;
 enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
 struct Model {
     friend ModelBuilder;
     std::vector<std::pair<Domain, AnyValRef>> variables;
-    std::vector<std::pair<Domain, AnyValRef>> variablesBackup;  // not used at the
-                                                            // moment, just
-                                                            // needed to invoke
-                                                            // neighbourhoods
+    std::vector<std::pair<Domain, AnyValRef>>
+        variablesBackup;  // not used at the
+                          // moment, just
+                          // needed to invoke
+                          // neighbourhoods
     std::vector<Neighbourhood> neighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
@@ -98,7 +99,7 @@ class ModelBuilder {
         std::transform(variables.begin(), variables.end(),
                        std::back_inserter(variablesBackup), [](auto& var) {
                            return std::make_pair(var.first,
-                                                 deepCopyValue(var.second));
+                                                 deepCopy(var.second));
                        });
         return Model(std::move(variables), std::move(variablesBackup),
                      std::move(neighbourhoods),

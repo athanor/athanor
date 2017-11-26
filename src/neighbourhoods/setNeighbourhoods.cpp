@@ -1,10 +1,8 @@
 #include <cmath>
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
-#include "types/forwardDecls/copy.h"
-#include "types/forwardDecls/getDomainSize.h"
-#include "types/forwardDecls/print.h"
 #include "types/set.h"
+#include "types/typeOperations.h"
 #include "utils/random.h"
 using namespace std;
 template <typename InnerDomainPtrType>
@@ -56,8 +54,8 @@ void setAddGen(const SetDomain& domain,
                 InnerValueRefType;
             neighbourhoods.emplace_back(
                 "setAdd", [innerDomainSize, &domain, &innerDomainPtr](
-                              const AcceptanceCallBack& changeAccepted, AnyValRef&,
-                              AnyValRef& primary) {
+                              const AcceptanceCallBack& changeAccepted,
+                              AnyValRef&, AnyValRef& primary) {
                     auto& val = *mpark::get<ValRef<SetValue>>(primary);
                     auto& valImpl = mpark::get<SetValueImpl<InnerValueRefType>>(
                         val.setValueImpl);
@@ -127,8 +125,8 @@ void setSwapGen(const SetDomain& domain,
                 InnerValueRefType;
             neighbourhoods.emplace_back(
                 "setSwap", [innerDomainSize, &domain, &innerDomainPtr](
-                               const AcceptanceCallBack& changeAccepted, AnyValRef&,
-                               AnyValRef& primary) {
+                               const AcceptanceCallBack& changeAccepted,
+                               AnyValRef&, AnyValRef& primary) {
                     auto& val = *mpark::get<ValRef<SetValue>>(primary);
                     auto& valImpl = mpark::get<SetValueImpl<InnerValueRefType>>(
                         val.setValueImpl);

@@ -37,7 +37,10 @@ u_int64_t getDomainSize<BoolDomain>(const BoolDomain&) {
     return 2;
 }
 
-void reset(BoolValue& val) { val.triggers.clear(); }
+void reset(BoolValue& val) {
+    val.triggers.clear();
+    val.container = NULL;
+}
 
 void evaluate(BoolValue&) {}
 void startTriggering(BoolValue&) {}

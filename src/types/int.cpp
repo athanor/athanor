@@ -48,7 +48,10 @@ u_int64_t getDomainSize<IntDomain>(const IntDomain& domain) {
     return domain.domainSize;
 }
 
-void reset(IntValue& val) { val.triggers.clear(); }
+void reset(IntValue& val) {
+    val.triggers.clear();
+    val.container = NULL;
+}
 
 void evaluate(IntValue&) {}
 void startTriggering(IntValue&) {}

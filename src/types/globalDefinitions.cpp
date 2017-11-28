@@ -7,6 +7,10 @@
 #define quote(x) #x
 bool currentlyProcessingDelayedTriggerStack = false;
 std::vector<std::shared_ptr<DelayedTrigger>> delayedTriggerStack;
+
+inline ViolationDescription& registerViolations(const ValBase* val,
+                                                const u_int64_t violation,
+                                                ViolationDescription& vioDesc);
 #define specialised(name)                                                      \
     template <>                                                                \
     std::shared_ptr<name##Value> makeShared<name##Value>() {                   \
@@ -14,15 +18,37 @@ std::vector<std::shared_ptr<DelayedTrigger>> delayedTriggerStack;
     }                                                                          \
     const std::string TypeAsString<name##Value>::value = quote(name##Value);   \
     const std::string TypeAsString<name##Domain>::value = quote(name##Domain); \
-    void setId(name##Value& n, int64_t id) { n.id = id; }                      \
-    int64_t getId(const name##Value& n) { return n.id; }                       \
+    template <>                                                                \
+    ValBase& valBase<name##Value>(name##Value & v) {                           \
+        return v;                                                              \
+    }                                                                          \
+    template <>                                                                \
+    const ValBase& valBase<name##Value>(const name##Value& v) {                \
+        return v;                                                              \
+    }                                                                          \
     void updateViolationDescription(const name##Value& val,                    \
                                     u_int64_t parentViolation,                 \
                                     ViolationDescription& vioDesc) {           \
-        vioDesc.addViolation(val.id, parentViolation);                         \
+        registerViolations(&val, parentViolation, vioDesc);                    \
     }
 
 buildForAllTypes(specialised, )
 #undef specialised
 
     std::vector<std::shared_ptr<DelayedTrigger>> emptyEndOfTriggerQueue;
+
+inline ViolationDescription& registerViolations(const ValBase* val,
+                                                const u_int64_t violation,
+                                                ViolationDescription& vioDesc) {
+    if (val->container == NULL) {
+        vioDesc.addViolation(val->id, violation);
+        return vioDesc;
+    } else {
+        ViolationDescription& parentVioDesc =
+            registerViolations(val->container, violation, vioDesc);
+        ViolationDescription& childVioDesc =
+            parentVioDesc.childViolations(val->container->id);
+        childVioDesc.addViolation(val->id, violation);
+        return childVioDesc;
+    }
+}

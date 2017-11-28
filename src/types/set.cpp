@@ -102,6 +102,7 @@ u_int64_t getDomainSize<SetDomain>(const SetDomain& domain) {
 template <typename InnerValueRefType>
 void resetImpl(SetValue& val, SetValueImpl<InnerValueRefType>& valImpl) {
     val.triggers.clear();
+    val.container = NULL;
     valImpl.members.clear();
     val.memberHashes.clear();
     val.cachedHashTotal = 0;

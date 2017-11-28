@@ -86,8 +86,10 @@ struct SetValueImpl {
     template <typename SetValueType>
     inline Inner removeValue(SetValueType& val, size_t memberIndex) {
         Inner member = std::move(members[memberIndex]);
+        valBase(*members[memberIndex]).container = NULL;
         members[memberIndex] = std::move(members.back());
         members.pop_back();
+        valBase(*members[memberIndex]).id = memberIndex;
         u_int64_t hash = mix(getValueHash(*member));
         val.memberHashes.erase(hash);
         val.cachedHashTotal -= hash;
@@ -109,7 +111,9 @@ struct SetValueImpl {
             return false;
         }
         members.push_back(member);
-        setId(*member, getId(val));
+        ValBase& newMemberBase = valBase(*member);
+        newMemberBase.id = members.size() - 1;
+        newMemberBase.container = &val;
         u_int64_t hash = mix(getValueHash(*member));
         val.memberHashes.insert(hash);
         val.cachedHashTotal += hash;

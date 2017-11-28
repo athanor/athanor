@@ -92,17 +92,23 @@ buildForAllTypes(makeAssociations, )
 #undef makeAssociations
 
     struct ValBase {
-    int64_t id = -1;
+    u_int64_t id = 0;
+    ValBase* container = NULL;
 };
-#define valBaseAccessors(name)           \
-    int64_t getId(const name##Value& n); \
-    void setId(name##Value& n, int64_t id);
-buildForAllTypes(valBaseAccessors, )
-#undef valBaseAccessors
 
-    template <typename DomainType>
-    ValRef<typename AssociatedValueType<
-        DomainType>::type> constructValueFromDomain(const DomainType& domain) {
+template <typename Val>
+ValBase& valBase(Val& val);
+template <typename Val>
+const ValBase& valBase(const Val& val);
+
+template <typename T = int>
+ValBase& valBase(const AnyValRef& ref, T = 0) {
+    return mpark::visit([](auto& val) { return valBase(val); }, ref);
+}
+
+template <typename DomainType>
+ValRef<typename AssociatedValueType<DomainType>::type> constructValueFromDomain(
+    const DomainType& domain) {
     auto val = make<typename AssociatedValueType<DomainType>::type>();
     matchInnerType(domain, *val);
     return val;

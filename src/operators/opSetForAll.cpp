@@ -99,13 +99,12 @@ void updateViolationDescription(const OpSetForAll& op, u_int64_t,
             vioDesc);
     }
 }
-/*
+
+
 shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
                                           const AnyIterRef& iterator) {
     auto newOpSetForAll = make_shared<OpSetForAll>(
         op.deepCopyQuantifierForUnroll(iterator), op.violatingOperands);
     newOpSetForAll->violation = op.violation;
-    attachTriggers(*newOpSetForAll);
     return newOpSetForAll;
 }
-*/

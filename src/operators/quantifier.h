@@ -1,23 +1,24 @@
 
 #ifndef SRC_OPERATORS_QUANTIFIER_H_
 #define SRC_OPERATORS_QUANTIFIER_H_
-
 #include "operators/operatorBase.h"
 #include "operators/quantifierBase.h"
-
-inline static int nextQuantId() {
-    static int id = 0;
-    return id++;
-}
+#include "types/bool.h"
+#include "utils/fastIterableIntSet.h"
 
 template <typename ContainerType, typename ContainerValueType,
           typename ReturnType, typename ReturnValueType>
 struct Quantifier {
     const int quantId;
     ContainerType container;
-    ReturnType expr;
+    ReturnType expr = ValRef<ReturnValueType>(nullptr);
     std::vector<std::pair<ReturnType, AnyIterRef>> unrolledExprs;
     std::unordered_map<u_int64_t, size_t> valueExprMap;
+
+    inline static u_int64_t nextQuantId() {
+        static u_int64_t quantId = 0;
+        return quantId++;
+    }
 
     Quantifier(ContainerType container, const int id = nextQuantId())
         : quantId(id), container(std::move(container)) {}
@@ -80,21 +81,25 @@ struct Quantifier {
 
     Quantifier<ContainerType, ContainerValueType, ReturnType, ReturnValueType>
     deepCopyQuantifierForUnroll(const AnyIterRef& iterator) const {
-        Quantifier<ContainerType, ContainerValueType, ReturnType,
-                   ReturnValueType>
-            newQuantifier(deepCopyForUnroll(container, iterator));
-
         const IterRef<ContainerValueType>* containerPtr =
-            mpark::get_if<IterRef<ContainerValueType>>(
-                &(newQuantifier.container));
+            mpark::get_if<IterRef<ContainerValueType>>(&container);
         const IterRef<ContainerValueType>* iteratorPtr =
             mpark::get_if<IterRef<ContainerValueType>>(&iterator);
         if (containerPtr != NULL && iteratorPtr != NULL &&
             containerPtr->getIterator().id == iteratorPtr->getIterator().id) {
+            Quantifier<ContainerType, ContainerValueType, ReturnType,
+                       ReturnValueType>
+                newQuantifier(deepCopyForUnroll(container, iterator));
+            newQuantifier.expr = expr;
+
             // this is a new container we are now pointing too
-            // no need to populate it with copies of the old unrolled exprs
+            // no need to populate it with copies of the old unrolled
+            // exprs
             return newQuantifier;
         }
+        Quantifier<ContainerType, ContainerValueType, ReturnType,
+                   ReturnValueType>
+            newQuantifier(deepCopyForUnroll(container, iterator), quantId);
         newQuantifier.expr = expr;
         for (auto& expr : unrolledExprs) {
             newQuantifier.unrolledExprs.emplace_back(

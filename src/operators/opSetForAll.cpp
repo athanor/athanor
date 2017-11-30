@@ -90,7 +90,7 @@ OpSetForAll::OpSetForAll(OpSetForAll&& other)
 }
 
 void startTriggering(OpSetForAll& op) { op.startTriggeringBase(); }
-void stopTriggering(OpSetForAll op) { op.stopTriggeringBase(); }
+void stopTriggering(OpSetForAll& op) { op.stopTriggeringBase(); }
 void updateViolationDescription(const OpSetForAll& op, u_int64_t,
                                 ViolationDescription& vioDesc) {
     for (size_t violatingOperandIndex : op.violatingOperands) {
@@ -99,7 +99,6 @@ void updateViolationDescription(const OpSetForAll& op, u_int64_t,
             vioDesc);
     }
 }
-
 
 shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
                                           const AnyIterRef& iterator) {

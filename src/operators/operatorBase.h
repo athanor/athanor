@@ -1,4 +1,3 @@
-
 #ifndef SRC_OPERATORS_OPERATORBASE_H_
 #define SRC_OPERATORS_OPERATORBASE_H_
 #include <type_traits>
@@ -9,7 +8,8 @@
 #include "utils/cachedSharedPtr.h"
 #define buildForOperators(f, sep)                                           \
     f(IntValue) sep f(OpSetSize) sep f(OpSum) sep f(BoolValue) sep f(OpAnd) \
-        sep f(OpSetNotEq) sep f(SetValue) sep f(OpSetIntersect)
+        sep f(OpSetNotEq) sep f(SetValue) sep f(OpSetIntersect)             \
+            sep f(OpSetForAll) sep f(OpIntEq)
 
 #define structDecls(name) struct name;
 buildForOperators(structDecls, );
@@ -18,7 +18,8 @@ buildForOperators(structDecls, );
 // bool returning
 using BoolReturning =
     mpark::variant<ValRef<BoolValue>, IterRef<BoolValue>,
-                   std::shared_ptr<OpAnd>, std::shared_ptr<OpSetNotEq>>;
+                   std::shared_ptr<OpAnd>, std::shared_ptr<OpSetNotEq>,
+                   std::shared_ptr<OpSetForAll>, std::shared_ptr<OpIntEq>>;
 
 // int returning
 using IntReturning =

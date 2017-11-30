@@ -40,7 +40,8 @@ struct SetDomain {
     }
 };
 
-struct SetTrigger : public virtual TriggerBase {
+struct SetTrigger : public IterAssignedTrigger<SetValue> {
+    typedef SetView View;
     virtual void valueRemoved(const AnyValRef& member) = 0;
     virtual void valueAdded(const AnyValRef& member) = 0;
     virtual void possibleValueChange(const AnyValRef& member) = 0;

@@ -12,12 +12,11 @@ class ConjunctionIterAssignedTrigger;
 struct OpAnd;
 
 typedef ConjunctionTrigger<OpAnd> OpAndTrigger;
-typedef ConjunctionIterAssignedTrigger<OpAnd> OpAndIterAssignedTrigger;
 
 struct OpAnd : public BoolView {
     std::vector<BoolReturning> operands;
     FastIterableIntSet violatingOperands;
-    std::vector<std::shared_ptr<OpAndIterAssignedTrigger>> operandTriggers;
+    std::vector<std::shared_ptr<OpAndTrigger>> operandTriggers;
 
    public:
     OpAnd(std::vector<BoolReturning> operandsIn)
@@ -71,12 +70,6 @@ class ConjunctionTrigger : public BoolTrigger {
             [&](auto& trigger) { trigger->valueChanged(op->violation); },
             op->triggers);
     }
-};
-template <typename Op>
-class ConjunctionIterAssignedTrigger : public ConjunctionTrigger<Op>,
-                                       public IterAssignedTrigger<BoolValue> {
-   public:
-    using ConjunctionTrigger<Op>::ConjunctionTrigger;
     void iterHasNewValue(const BoolValue& oldValue,
                          const ValRef<BoolValue>& newValue) final {
         this->possibleValueChange(oldValue.violation);

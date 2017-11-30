@@ -126,6 +126,12 @@ struct TriggerBase {
 struct DelayedTrigger : public virtual TriggerBase {
     virtual void trigger() = 0;
 };
+template <typename UnrollingValue>
+struct IterAssignedTrigger : public virtual TriggerBase {
+    typedef UnrollingValue ValueType;
+    virtual void iterHasNewValue(const UnrollingValue& oldValue,
+                                 const ValRef<UnrollingValue>& newValue);
+};
 
 extern std::vector<std::shared_ptr<DelayedTrigger>> delayedTriggerStack;
 extern bool currentlyProcessingDelayedTriggerStack;
@@ -178,11 +184,20 @@ void visitTriggers(Visitor&& func,
     }
 }
 
-template <typename Trigger>
-void addTrigger(std::vector<std::shared_ptr<Trigger>>& triggerVec,
-                const std::shared_ptr<Trigger>& trigger) {
-    triggerVec.emplace_back(trigger);
+template <typename View, typename Operator>
+View& getView(const Operator& op);
+template <typename T>
+class IterRef;
+template <typename Op, typename Trigger>
+void addTrigger(Op& op, const std::shared_ptr<Trigger>& trigger) {
+    getView<typename Trigger::View>(op).triggers.emplace_back(trigger);
     trigger->active = true;
+    mpark::visit(overloaded(
+                     [&](IterRef<typename Trigger::ValueType>& ref) {
+                         ref.getIterator().unrollTriggers.emplace_back(trigger);
+                     },
+                     [](auto&) {}),
+                 op);
 }
 
 template <typename Trigger>

@@ -30,13 +30,8 @@ class OpSumTrigger : public IntTrigger {
         visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
                       op->triggers);
     }
-};
-
-class OpSumIterAssignedTrigger : public IterAssignedTrigger<IntValue>,
-                                 public OpSumTrigger {
-    using OpSumTrigger::OpSumTrigger;
-    void iterHasNewValue(const IntValue& oldValue,
-                         const ValRef<IntValue>& newValue) {
+    inline void iterHasNewValue(const IntValue& oldValue,
+                                const ValRef<IntValue>& newValue) {
         possibleValueChange(oldValue.value);
         valueChanged(newValue->value);
     }
@@ -50,18 +45,9 @@ OpSum::OpSum(OpSum&& other)
 }
 
 void startTriggering(OpSum& op) {
-    op.operandTrigger = make_shared<OpSumIterAssignedTrigger>(&op);
+    op.operandTrigger = make_shared<OpSumTrigger>(&op);
     for (auto& operand : op.operands) {
-        addTrigger<IntTrigger>(getView<IntView>(operand).triggers,
-                               op.operandTrigger);
-        mpark::visit(overloaded(
-                         [&](IterRef<IntValue>& ref) {
-                             addTrigger<IterAssignedTrigger<IntValue>>(
-                                 ref.getIterator().unrollTriggers,
-                                 op.operandTrigger);
-                         },
-                         [](auto&) {}),
-                     operand);
+        addTrigger(operand, op.operandTrigger);
         startTriggering(operand);
     }
 }

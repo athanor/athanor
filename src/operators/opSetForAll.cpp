@@ -25,8 +25,7 @@ void evaluate(OpSetForAll& op) {
         members);
 }
 
-struct OpSetForAll::ContainerTrigger : public SetTrigger,
-                                       public IterAssignedTrigger<SetValue> {
+struct OpSetForAll::ContainerTrigger : public SetTrigger {
     OpSetForAll* op;
     ContainerTrigger(OpSetForAll* op) : op(op) {}
 

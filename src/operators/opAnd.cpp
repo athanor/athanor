@@ -26,16 +26,9 @@ OpAnd::OpAnd(OpAnd&& other)
 void startTriggering(OpAnd& op) {
     for (size_t i = 0; i < op.operands.size(); ++i) {
         auto& operand = op.operands[i];
-        auto trigger = make_shared<OpAndIterAssignedTrigger>(&op, i);
-        addTrigger<BoolTrigger>(getView<BoolView>(operand).triggers, trigger);
+        auto trigger = make_shared<OpAndTrigger>(&op, i);
+        addTrigger(operand, trigger);
         op.operandTriggers.emplace_back(move(trigger));
-        mpark::visit(overloaded(
-                         [&](IterRef<BoolValue>& ref) {
-                             addTrigger<IterAssignedTrigger<BoolValue>>(
-                                 ref.getIterator().unrollTriggers, trigger);
-                         },
-                         [](auto&) {}),
-                     operand);
         startTriggering(operand);
     }
 }

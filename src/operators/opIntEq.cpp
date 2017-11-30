@@ -11,8 +11,7 @@ void evaluate(OpIntEq& op) {
                             getView<IntView>(op.right).value);
 }
 
-struct OpIntEq::Trigger : public IntTrigger,
-                          public IterAssignedTrigger<IntValue> {
+struct OpIntEq::Trigger : public IntTrigger {
     OpIntEq* op;
     Trigger(OpIntEq* op) : op(op) {}
     inline void possibleValueChange(int64_t) final {}
@@ -48,20 +47,10 @@ OpIntEq::OpIntEq(OpIntEq&& other)
 
 void startTriggering(OpIntEq& op) {
     op.operandTrigger = make_shared<OpIntEq::Trigger>(&op);
-    addTrigger<IntTrigger>(getView<IntView>(op.left).triggers,
-                           op.operandTrigger);
-    addTrigger<IntTrigger>(getView<IntView>(op.right).triggers,
-                           op.operandTrigger);
+    addTrigger(op.left, op.operandTrigger);
+    addTrigger(op.right, op.operandTrigger);
     startTriggering(op.left);
     startTriggering(op.right);
-    auto iterAssignedFunc = overloaded(
-        [&](IterRef<IntValue>& ref) {
-            addTrigger<IterAssignedTrigger<IntValue>>(
-                ref.getIterator().unrollTriggers, op.operandTrigger);
-        },
-        [](auto&) {});
-    mpark::visit(iterAssignedFunc, op.left);
-    mpark::visit(iterAssignedFunc, op.right);
 }
 
 void stopTriggering(OpIntEq& op) {

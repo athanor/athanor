@@ -7,12 +7,6 @@
 #include "types/base.h"
 #include "types/typeOperations.h"
 
-template <typename UnrollingValue>
-struct IterAssignedTrigger : public virtual TriggerBase {
-    virtual void iterHasNewValue(const UnrollingValue& oldValue,
-                                 const ValRef<UnrollingValue>& newValue);
-};
-
 template <typename T>
 struct Iterator {
     int id;

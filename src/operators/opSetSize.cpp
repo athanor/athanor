@@ -36,6 +36,19 @@ class OpSetSizeTrigger : public SetTrigger {
 
     inline void possibleValueChange(const AnyValRef&) {}
     inline void valueChanged(const AnyValRef&) {}
+    inline void iterHasNewValue(const SetValue&,
+                                const ValRef<SetValue>& newValue) {
+        int64_t newSize = newValue->memberHashes.size();
+        if (newSize == op->value) {
+            return;
+        }
+        visitTriggers(
+            [&](auto& trigger) { trigger->possibleValueChange(op->value); },
+            op->triggers);
+        op->value = newSize;
+        visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
+                      op->triggers);
+    }
 };
 
 OpSetSize::OpSetSize(OpSetSize&& other)
@@ -46,8 +59,7 @@ OpSetSize::OpSetSize(OpSetSize&& other)
 }
 void startTriggering(OpSetSize& op) {
     op.operandTrigger = make_shared<OpSetSizeTrigger>(&op);
-    addTrigger<SetTrigger>(getView<SetView>(op.operand).triggers,
-                           op.operandTrigger);
+    addTrigger(op.operand, op.operandTrigger);
     startTriggering(op.operand);
 }
 
@@ -63,8 +75,10 @@ void updateViolationDescription(const OpSetSize& op, u_int64_t parentViolation,
     updateViolationDescription(op.operand, parentViolation, vioDesc);
 }
 
-std::shared_ptr<OpSetSize> deepCopyForUnroll(const OpSetSize&,
-                                             const AnyIterRef&) {
-    assert(false);
-    abort();
+std::shared_ptr<OpSetSize> deepCopyForUnroll(const OpSetSize& op,
+                                             const AnyIterRef& iterator) {
+    auto newOpSetSize =
+        make_shared<OpSetSize>(deepCopyForUnroll(op.operand, iterator));
+    newOpSetSize->value = op.value;
+    return newOpSetSize;
 }

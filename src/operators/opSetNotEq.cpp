@@ -32,13 +32,22 @@ class OpSetNotEqTrigger : public SetTrigger {
 
    public:
     OpSetNotEqTrigger(OpSetNotEq* op) : op(op) {}
-    inline void valueRemoved(const AnyValRef&) final { setViolation(*op, true); }
+    inline void valueRemoved(const AnyValRef&) final {
+        setViolation(*op, true);
+    }
 
     inline void valueAdded(const AnyValRef&) final { setViolation(*op, true); }
 
     inline void possibleValueChange(const AnyValRef&) final {}
 
-    inline void valueChanged(const AnyValRef&) final { setViolation(*op, true); }
+    inline void valueChanged(const AnyValRef&) final {
+        setViolation(*op, true);
+    }
+
+    inline void iterHasNewValue(const SetValue&,
+                                const ValRef<SetValue>&) final {
+        assert(false);
+    }
 };
 
 OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
@@ -51,8 +60,8 @@ OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
 
 void startTriggering(OpSetNotEq& op) {
     op.trigger = make_shared<OpSetNotEqTrigger>(&op);
-    addTrigger<SetTrigger>(getView<SetView>(op.left).triggers, op.trigger);
-    addTrigger<SetTrigger>(getView<SetView>(op.right).triggers, op.trigger);
+    addTrigger(op.left, op.trigger);
+    addTrigger(op.right, op.trigger);
     startTriggering(op.left);
     startTriggering(op.right);
 }

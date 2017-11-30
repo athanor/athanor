@@ -118,6 +118,9 @@ class OpSetIntersectTrigger : public SetTrigger {
                           op->triggers);
         }
     }
+    inline void iterHasNewValue(const SetValue&, const ValRef<SetValue>&) {
+        assert(false);
+    }
 };
 
 OpSetIntersect::OpSetIntersect(OpSetIntersect&& other)
@@ -132,9 +135,8 @@ OpSetIntersect::OpSetIntersect(OpSetIntersect&& other)
 void startTriggering(OpSetIntersect& op) {
     op.leftTrigger = make_shared<OpSetIntersectTrigger<true>>(&op);
     op.rightTrigger = make_shared<OpSetIntersectTrigger<false>>(&op);
-    addTrigger<SetTrigger>(getView<SetView>(op.left).triggers, op.leftTrigger);
-    addTrigger<SetTrigger>(getView<SetView>(op.right).triggers,
-                           op.rightTrigger);
+    addTrigger(op.left, op.leftTrigger);
+    addTrigger(op.right, op.rightTrigger);
     startTriggering(op.left);
     startTriggering(op.right);
 }

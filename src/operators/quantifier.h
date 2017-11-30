@@ -128,16 +128,8 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
     inline void attachTriggerToExpr(size_t index) {
         auto trigger = std::make_shared<ExprTrigger>(
             static_cast<DerivingQuantifierType*>(this), index);
-        addTrigger<BoolTrigger>(
-            getView<BoolView>(unrolledExprs[index].first).triggers, trigger);
+        addTrigger(unrolledExprs[index].first, trigger);
         exprTriggers.emplace_back(trigger);
-        mpark::visit(overloaded(
-                         [&](IterRef<BoolValue>& ref) {
-                             addTrigger<IterAssignedTrigger<BoolValue>>(
-                                 ref.getIterator().unrollTriggers, trigger);
-                         },
-                         [](auto&) {}),
-                     unrolledExprs[index].first);
     }
 
     inline std::pair<size_t, BoolReturning&> unroll(
@@ -174,17 +166,8 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
         typedef typename decltype(
             op.containerTrigger)::element_type ContainerTrigger;
         op.containerTrigger = std::make_shared<ContainerTrigger>(&op);
-        addTrigger<SetTrigger>(getView<SetView>(op.container).triggers,
-                               op.containerTrigger);
+        addTrigger(op.container, op.containerTrigger);
         startTriggering(container);
-        mpark::visit(
-            overloaded(
-                [&](IterRef<SetValue>& ref) {
-                    addTrigger<IterAssignedTrigger<ContainerValueType>>(
-                        ref.getIterator().unrollTriggers, op.containerTrigger);
-                },
-                [](auto&) {}),
-            op.container);
         for (size_t i = 0; i < unrolledExprs.size(); ++i) {
             attachTriggerToExpr(i);
             startTriggering(unrolledExprs[i].first);

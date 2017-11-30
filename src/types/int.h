@@ -20,7 +20,8 @@ struct IntDomain {
               })) {}
 };
 
-struct IntTrigger : public virtual TriggerBase {
+struct IntTrigger : public IterAssignedTrigger<IntValue> {
+    typedef IntView View;
     virtual void possibleValueChange(int64_t value) = 0;
     virtual void valueChanged(int64_t value) = 0;
 };

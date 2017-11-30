@@ -8,13 +8,11 @@
 #include "types/set.h"
 #include "utils/fastIterableIntSet.h"
 struct OpSetForAll;
-struct OpSetForAll
-    : public BoolView,
-      public BoolQuantifier<OpSetForAll, SetReturning, SetValue,
-                            ConjunctionIterAssignedTrigger<OpSetForAll>> {
-    using BoolQuantifier<
-        OpSetForAll, SetReturning, SetValue,
-        ConjunctionIterAssignedTrigger<OpSetForAll>>::BoolQuantifier;
+struct OpSetForAll : public BoolView,
+                     public BoolQuantifier<OpSetForAll, SetReturning, SetValue,
+                                           ConjunctionTrigger<OpSetForAll>> {
+    using BoolQuantifier<OpSetForAll, SetReturning, SetValue,
+                         ConjunctionTrigger<OpSetForAll>>::BoolQuantifier;
     typedef ConjunctionIterAssignedTrigger<OpSetForAll> ExprIterAssignedTrigger;
     struct ContainerTrigger;
     struct DelayedUnrollTrigger;

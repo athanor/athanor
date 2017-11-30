@@ -1,34 +1,33 @@
-#include "operators/opIntEq.h"
+#include "operators/opMod.h"
 #include <cassert>
 #include <cstdlib>
 #include "types/int.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-void evaluate(OpIntEq& op) {
+void evaluate(OpMod& op) {
     evaluate(op.left);
     evaluate(op.right);
-    op.violation = std::abs(getView<IntView>(op.left).value -
-                            getView<IntView>(op.right).value);
+    op.value =
+        getView<IntView>(op.left).value % getView<IntView>(op.right).value;
 }
 
-struct OpIntEq::Trigger : public IntTrigger,
-                          public IterAssignedTrigger<IntValue> {
-    OpIntEq* op;
-    Trigger(OpIntEq* op) : op(op) {}
+struct OpMod::Trigger : public IntTrigger,
+                        public IterAssignedTrigger<IntValue> {
+    OpMod* op;
+    Trigger(OpMod* op) : op(op) {}
     inline void possibleValueChange(int64_t) final {}
     inline void valueChanged(int64_t) final {
-        u_int64_t newViolation = std::abs(getView<IntView>(op->left).value -
-                                          getView<IntView>(op->right).value);
-        if (newViolation == op->violation) {
+        int64_t newValue = getView<IntView>(op->left).value %
+                           getView<IntView>(op->right).value;
+        if (newValue == op->value) {
             return;
         }
         visitTriggers(
-            [&](auto& trigger) { trigger->possibleValueChange(op->violation); },
+            [&](auto& trigger) { trigger->possibleValueChange(op->value); },
             op->triggers);
-        op->violation = newViolation;
-        visitTriggers(
-            [&](auto& trigger) { trigger->valueChanged(op->violation); },
-            op->triggers);
+        op->value = newValue;
+        visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
+                      op->triggers);
     }
 
     inline void iterHasNewValue(const IntValue& oldValue,
@@ -38,16 +37,16 @@ struct OpIntEq::Trigger : public IntTrigger,
     }
 };
 
-OpIntEq::OpIntEq(OpIntEq&& other)
-    : BoolView(std::move(other)),
+OpMod::OpMod(OpMod&& other)
+    : IntView(std::move(other)),
       left(std::move(other.left)),
       right(std::move(other.right)),
       operandTrigger(std::move(other.operandTrigger)) {
     setTriggerParent(this, operandTrigger);
 }
 
-void startTriggering(OpIntEq& op) {
-    op.operandTrigger = make_shared<OpIntEq::Trigger>(&op);
+void startTriggering(OpMod& op) {
+    op.operandTrigger = make_shared<OpMod::Trigger>(&op);
     addTrigger<IntTrigger>(getView<IntView>(op.left).triggers,
                            op.operandTrigger);
     addTrigger<IntTrigger>(getView<IntView>(op.right).triggers,
@@ -64,23 +63,22 @@ void startTriggering(OpIntEq& op) {
     mpark::visit(iterAssignedFunc, op.right);
 }
 
-void stopTriggering(OpIntEq& op) {
+void stopTriggering(OpMod& op) {
     deleteTrigger(op.operandTrigger);
     stopTriggering(op.left);
     stopTriggering(op.right);
 }
 
-void updateViolationDescription(const OpIntEq& op, u_int64_t,
+void updateViolationDescription(const OpMod& op, u_int64_t parentViolation,
                                 ViolationDescription& vioDesc) {
-    updateViolationDescription(op.left, op.violation, vioDesc);
-    updateViolationDescription(op.right, op.violation, vioDesc);
+    updateViolationDescription(op.left, parentViolation, vioDesc);
+    updateViolationDescription(op.right, parentViolation, vioDesc);
 }
 
-shared_ptr<OpIntEq> deepCopyForUnroll(const OpIntEq& op,
-                                      const AnyIterRef& iterator) {
-    auto newOpIntEq =
-        make_shared<OpIntEq>(deepCopyForUnroll(op.left, iterator),
-                             deepCopyForUnroll(op.right, iterator));
-    newOpIntEq->violation = op.violation;
-    return newOpIntEq;
+shared_ptr<OpMod> deepCopyForUnroll(const OpMod& op,
+                                    const AnyIterRef& iterator) {
+    auto newOpMod = make_shared<OpMod>(deepCopyForUnroll(op.left, iterator),
+                                       deepCopyForUnroll(op.right, iterator));
+    newOpMod->value = op.value;
+    return newOpMod;
 }

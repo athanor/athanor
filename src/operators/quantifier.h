@@ -121,7 +121,7 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
     using QuantBase::container;
     FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
     std::vector<std::shared_ptr<ExprTrigger>> exprTriggers;
-
+    using QuantBase::QuantBase;
     BoolQuantifier(QuantBase quant, const FastIterableIntSet& violatingOperands)
         : Quantifier(std::move(quant)), violatingOperands(violatingOperands) {}
 

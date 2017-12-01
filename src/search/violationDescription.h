@@ -2,12 +2,16 @@
 #ifndef SRC_SEARCH_VIOLATIONDESCRIPTION_H_
 #define SRC_SEARCH_VIOLATIONDESCRIPTION_H_
 #include <iostream>
+#include <memory>
 #include <unordered_map>
+#include <utility>
 #include <vector>
+
 class ViolationDescription {
     std::vector<u_int64_t> varViolations;
     std::vector<u_int64_t> varsWithViolation;
-    std::unordered_map<u_int64_t, ViolationDescription> _childViolations;
+    std::unordered_map<u_int64_t, std::unique_ptr<ViolationDescription>>
+        _childViolations;
 
    public:
     ViolationDescription(const u_int64_t numberVariables = 0)
@@ -38,10 +42,14 @@ class ViolationDescription {
     }
 
     inline ViolationDescription& childViolations(u_int64_t id) {
-        return _childViolations[id];
+        auto& ptr = _childViolations[id];
+        if (!ptr) {
+            ptr = std::make_unique<ViolationDescription>();
+        }
+        return *ptr;
     }
     inline const ViolationDescription& childViolations(u_int64_t id) const {
-        return _childViolations.at(id);
+        return *_childViolations.at(id);
     }
     inline bool hasChildViolation(u_int64_t id) const {
         return _childViolations.count(id);

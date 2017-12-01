@@ -20,6 +20,7 @@ struct OpSetForAll : public BoolView,
     std::shared_ptr<ContainerTrigger> containerTrigger = nullptr;
     std::shared_ptr<DelayedUnrollTrigger> delayedUnrollTrigger = nullptr;
     std::vector<AnyValRef> valuesToUnroll;
+    OpSetForAll(SetReturning set) : BoolQuantifier(std::move(set)) {}
     OpSetForAll(const OpSetForAll&) = delete;
     OpSetForAll(OpSetForAll&& other);
     ~OpSetForAll() { stopTriggering(*this); }

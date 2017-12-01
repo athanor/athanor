@@ -72,8 +72,8 @@ class ConjunctionTrigger : public BoolTrigger {
     }
     void iterHasNewValue(const BoolValue& oldValue,
                          const ValRef<BoolValue>& newValue) final {
-        this->possibleValueChange(oldValue.violation);
-        this->valueChanged(newValue->violation);
+        possibleValueChange(oldValue.violation);
+        valueChanged(newValue->violation);
     }
 };
 

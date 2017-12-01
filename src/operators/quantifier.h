@@ -37,7 +37,7 @@ struct Quantifier {
             [&](auto& newValImpl) {
                 typedef typename BaseType<decltype(newValImpl)>::element_type
                     IterValueType;
-                auto iterRef = newIterRef<IterValueType>();
+                auto iterRef = this->newIterRef<IterValueType>();
                 evaluateFreshExpr |= unrolledExprs.size() == 0;
                 auto& exprToCopy =
                     (evaluateFreshExpr) ? expr : unrolledExprs.back().first;
@@ -112,14 +112,14 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
                                           BoolReturning, BoolValue> {
     using QuantBase =
         Quantifier<ContainerType, ContainerValueType, BoolReturning, BoolValue>;
-    using typename QuantBase::Quantifier;
     using QuantBase::unrolledExprs;
     using QuantBase::container;
     FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
     std::vector<std::shared_ptr<ExprTrigger>> exprTriggers;
-    using QuantBase::QuantBase;
+
+    BoolQuantifier(ContainerType container) : QuantBase(std::move(container)) {}
     BoolQuantifier(QuantBase quant, const FastIterableIntSet& violatingOperands)
-        : Quantifier(std::move(quant)), violatingOperands(violatingOperands) {}
+        : QuantBase(std::move(quant)), violatingOperands(violatingOperands) {}
 
     inline void attachTriggerToExpr(size_t index) {
         auto trigger = std::make_shared<ExprTrigger>(

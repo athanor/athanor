@@ -14,9 +14,12 @@ struct Iterator {
     std::vector<std::shared_ptr<IterAssignedTrigger<T>>> unrollTriggers;
 
     Iterator(int id, ValRef<T> ref) : id(id), ref(std::move(ref)) {}
-    inline void attachValue(const ValRef<T>& val) {
+    template <typename Func>
+    inline void attachValue(const ValRef<T>& val, Func&& action) {
         auto oldRef = std::move(ref);
         ref = val;
+        action();
+
         if (!oldRef) {
             return;
         }

@@ -130,7 +130,7 @@ template <typename UnrollingValue>
 struct IterAssignedTrigger : public virtual TriggerBase {
     typedef UnrollingValue ValueType;
     virtual void iterHasNewValue(const UnrollingValue& oldValue,
-                                 const ValRef<UnrollingValue>& newValue);
+                                 const ValRef<UnrollingValue>& newValue) = 0;
 };
 
 extern std::vector<std::shared_ptr<DelayedTrigger>> delayedTriggerStack;

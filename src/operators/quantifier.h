@@ -32,30 +32,26 @@ struct Quantifier {
 
     inline std::pair<size_t, ReturnType&> unroll(
         const AnyValRef& newValue, const bool startTriggeringExpr = true,
-        const bool evaluateFreshExpr = false) {
+        bool evaluateFreshExpr = false) {
         mpark::visit(
             [&](auto& newValImpl) {
                 typedef typename BaseType<decltype(newValImpl)>::element_type
                     IterValueType;
                 auto iterRef = newIterRef<IterValueType>();
+                evaluateFreshExpr |= unrolledExprs.size() == 0;
+                auto& exprToCopy =
+                    (evaluateFreshExpr) ? expr : unrolledExprs.back().first;
+                unrolledExprs.emplace_back(
+                    deepCopyForUnroll(exprToCopy, iterRef), iterRef);
+                iterRef.getIterator().attachValue(newValImpl, [&]() {
+                    if (evaluateFreshExpr) {
+                        evaluate(unrolledExprs.front().first);
+                    }
+                    if (startTriggeringExpr) {
+                        startTriggering(unrolledExprs.back().first);
+                    }
 
-                if (evaluateFreshExpr || unrolledExprs.size() == 0) {
-                    unrolledExprs.emplace_back(deepCopyForUnroll(expr, iterRef),
-                                               iterRef);
-                    iterRef.getIterator().attachValue(newValImpl);
-                    evaluate(unrolledExprs.front().first);
-                    if (startTriggeringExpr) {
-                        startTriggering(unrolledExprs.back().first);
-                    }
-                } else {
-                    unrolledExprs.emplace_back(
-                        deepCopyForUnroll(unrolledExprs.back().first, iterRef),
-                        iterRef);
-                    if (startTriggeringExpr) {
-                        startTriggering(unrolledExprs.back().first);
-                    }
-                    iterRef.getIterator().attachValue(newValImpl);
-                }
+                });
                 valueExprMap.emplace(getValueHash(*newValImpl),
                                      unrolledExprs.size() - 1);
             },

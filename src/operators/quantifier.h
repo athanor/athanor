@@ -4,6 +4,7 @@
 #include "operators/operatorBase.h"
 #include "operators/quantifierBase.h"
 #include "types/bool.h"
+#include "types/typeOperations.h"
 #include "utils/fastIterableIntSet.h"
 
 template <typename ContainerType, typename ContainerValueType,
@@ -52,8 +53,9 @@ struct Quantifier {
                     }
 
                 });
-                valueExprMap.emplace(getValueHash(*newValImpl),
-                                     unrolledExprs.size() - 1);
+                u_int64_t hash = getValueHash(*newValImpl);
+                assert(!valueExprMap.count(hash));
+                valueExprMap.emplace(hash, unrolledExprs.size() - 1);
             },
             newValue);
         return std::pair<size_t, ReturnType&>(unrolledExprs.size() - 1,
@@ -62,6 +64,7 @@ struct Quantifier {
 
     inline std::pair<size_t, ReturnType> roll(const AnyValRef& val) {
         u_int64_t hash = getValueHash(val);
+
         assert(valueExprMap.count(hash));
         size_t index = valueExprMap[hash];
         std::pair<size_t, ReturnType> removedExpr =
@@ -69,10 +72,17 @@ struct Quantifier {
         unrolledExprs[index] = std::move(unrolledExprs.back());
         unrolledExprs.pop_back();
         valueExprMap.erase(hash);
-        if (unrolledExprs.size() > 0) {
+        if (index < unrolledExprs.size()) {
             valueExprMap[getValueHash(unrolledExprs[index].second)] = index;
         }
         return removedExpr;
+    }
+
+    void valueChanged(u_int64_t oldHash, u_int64_t newHash) {
+        assert(valueExprMap.count(oldHash));
+        assert(!valueExprMap.count(newHash));
+        valueExprMap[newHash] = std::move(valueExprMap[oldHash]);
+        valueExprMap.erase(oldHash);
     }
 
     Quantifier<ContainerType, ContainerValueType, ReturnType, ReturnValueType>

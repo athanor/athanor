@@ -97,7 +97,8 @@ inline u_int64_t getDomainSize(const AnyDomainRef& domain, T = 0) {
 }
 
 template <typename T = int>
-inline std::ostream& prettyPrint(std::ostream& os, const AnyDomainRef& d, T = 0) {
+inline std::ostream& prettyPrint(std::ostream& os, const AnyDomainRef& d,
+                                 T = 0) {
     mpark::visit([&os](auto& dImpl) { prettyPrint(os, *dImpl); }, d);
     return os;
 }
@@ -114,6 +115,11 @@ std::ostream& operator<<(std::ostream& os, const ValRef<Val>& v) {
 }
 
 inline std::ostream& operator<<(std::ostream& os, const AnyValRef& v) {
+    return prettyPrint(os, v);
+}
+template <typename Val>
+inline typename std::enable_if<IsValueType<Val>::value, std::ostream&>::type
+operator<<(std::ostream& os, const Val& v) {
     return prettyPrint(os, v);
 }
 

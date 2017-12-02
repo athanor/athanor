@@ -52,11 +52,6 @@ class IterRef {
 typedef Variantised<IterRef> AnyIterRef;
 
 template <typename T>
-u_int64_t getValueHash(const Iterator<T>& iter) {
-    return getValueHash(*(iter.ref));
-}
-
-template <typename T>
 u_int64_t getValueHash(const IterRef<T>& iter) {
     return getValueHash(*iter);
 }

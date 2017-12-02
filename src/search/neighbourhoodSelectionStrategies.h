@@ -61,6 +61,9 @@ class RandomNeighbourhoodWithViolation {
 
     inline void initialise(const Model& model) {
         vioDesc.reset();
+        if (model.csp.violation == 0) {
+            return;
+        }
         updateViolationDescription(model.csp, 0, vioDesc);
     }
     inline void reportResult(const NeighbourhoodResult& result) {

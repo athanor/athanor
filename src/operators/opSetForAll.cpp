@@ -27,6 +27,7 @@ void evaluate(OpSetForAll& op) {
 
 struct OpSetForAll::ContainerTrigger : public SetTrigger {
     OpSetForAll* op;
+    u_int64_t lastMemberHash = 0;
     ContainerTrigger(OpSetForAll* op) : op(op) {}
 
     inline void valueRemoved(const AnyValRef& val) final {
@@ -53,8 +54,13 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
         }
     }
 
-    inline void possibleValueChange(const AnyValRef&) {}
-    inline void valueChanged(const AnyValRef&) {}
+    inline void possibleValueChange(const AnyValRef& oldValue) {
+        lastMemberHash = getValueHash(oldValue);
+    }
+    inline void valueChanged(const AnyValRef& newValue) {
+        op->valueChanged(lastMemberHash, getValueHash(newValue));
+    }
+
     void iterHasNewValue(const SetValue& oldValue,
                          const ValRef<SetValue>& newValue) {
         ignoreUnused(oldValue, newValue);

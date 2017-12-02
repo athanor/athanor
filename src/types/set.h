@@ -2,6 +2,7 @@
 #define SRC_TYPES_SET_H_
 #include <unordered_set>
 #include <vector>
+#include "common/common.h"
 #include "types/base.h"
 #include "types/sizeAttr.h"
 #include "types/typeOperations.h"
@@ -87,13 +88,18 @@ struct SetValueImpl {
     template <typename SetValueType>
     inline Inner removeValue(SetValueType& val, size_t memberIndex) {
         Inner member = std::move(members[memberIndex]);
-        valBase(*members[memberIndex]).container = NULL;
+        valBase(*member).container = NULL;
         members[memberIndex] = std::move(members.back());
         members.pop_back();
-        valBase(*members[memberIndex]).id = memberIndex;
+        if (memberIndex < members.size()) {
+            valBase(*members[memberIndex]).id = memberIndex;
+        }
         u_int64_t hash = mix(getValueHash(*member));
-        val.memberHashes.erase(hash);
+        bool deleted = val.memberHashes.erase(hash);
+        static_cast<void>(deleted);
+        assert(deleted);
         val.cachedHashTotal -= hash;
+
         AnyValRef triggerMember = member;
         visitTriggers([&](auto& t) { t->valueRemoved(triggerMember); },
                       val.triggers);

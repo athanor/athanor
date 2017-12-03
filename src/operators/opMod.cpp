@@ -53,7 +53,10 @@ void startTriggering(OpMod& op) {
 }
 
 void stopTriggering(OpMod& op) {
-    deleteTrigger(op.operandTrigger);
+    if (op.operandTrigger) {
+        deleteTrigger(op.operandTrigger);
+        op.operandTrigger = nullptr;
+    }
     stopTriggering(op.left);
     stopTriggering(op.right);
 }

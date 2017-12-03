@@ -144,9 +144,11 @@ void startTriggering(OpSetIntersect& op) {
 void stopTriggering(OpSetIntersect& op) {
     if (op.leftTrigger) {
         deleteTrigger(op.leftTrigger);
+        op.leftTrigger = nullptr;
     }
     if (op.rightTrigger) {
         deleteTrigger<SetTrigger>(op.rightTrigger);
+        op.rightTrigger = nullptr;
     }
     stopTriggering(op.left);
     stopTriggering(op.right);

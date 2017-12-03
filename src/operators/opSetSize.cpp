@@ -66,6 +66,7 @@ void startTriggering(OpSetSize& op) {
 void stopTriggering(OpSetSize& op) {
     if (op.operandTrigger) {
         deleteTrigger(op.operandTrigger);
+        op.operandTrigger = nullptr;
     }
     stopTriggering(op.operand);
 }

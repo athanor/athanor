@@ -69,6 +69,7 @@ void startTriggering(OpSetNotEq& op) {
 void stopTriggering(OpSetNotEq& op) {
     if (op.trigger) {
         deleteTrigger(op.trigger);
+        op.trigger = nullptr;
     }
     stopTriggering(op.left);
     stopTriggering(op.right);

@@ -55,6 +55,7 @@ void startTriggering(OpSum& op) {
 void stopTriggering(OpSum& op) {
     if (op.operandTrigger) {
         deleteTrigger(op.operandTrigger);
+        op.operandTrigger = nullptr;
     }
     for (auto& operand : op.operands) {
         stopTriggering(operand);

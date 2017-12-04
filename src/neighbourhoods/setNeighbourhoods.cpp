@@ -73,14 +73,20 @@ void setAddGen(const SetDomain& domain,
                     int numberTries = 0;
                     const int tryLimit =
                         getTryLimit(valImpl.members.size(), innerDomainSize);
+                    debug_neighbourhood_action("Looking for value to add");
                     do {
                         assignRandomValueInDomain(*innerDomainPtr, *newMember);
                     } while (!valImpl.addValue(val, newMember) &&
                              ++numberTries < tryLimit);
                     if (numberTries >= tryLimit) {
+                        debug_neighbourhood_action(
+                            "Couldn't find value, number tries=" << tryLimit);
                         return;
                     }
+                    debug_neighbourhood_action("Added value: " << *newMember);
                     if (!changeAccepted()) {
+                        debug_neighbourhood_action("Change rejected"
+                                                   << tryLimit);
                         valImpl.removeValue(val, valImpl.members.size() - 1);
                     }
                 });
@@ -112,8 +118,10 @@ void setRemoveGen(const SetDomain& domain,
                         globalRandom<size_t>(0, valImpl.members.size() - 1);
                     auto removedMember =
                         valImpl.removeValue(val, indexToRemove);
+                    debug_neighbourhood_action("Removed " << *removedMember);
 
                     if (!changeAccepted()) {
+                        debug_neighbourhood_action("Change rejected");
                         valImpl.addValue(val, std::move(removedMember));
                     }
                 });
@@ -148,30 +156,33 @@ void setSwapGen(const SetDomain& domain,
                     bool success = false;
                     auto memberBackup =
                         deepCopy(*valImpl.members[indexToChange]);
+                    debug_neighbourhood_action("Changing value "
+                                               << *memberBackup);
                     auto newMember = constructValueFromDomain(*innerDomainPtr);
-
-                    valImpl.changeMemberValue(
-                        [&]() {
-                            do {
-                                assignRandomValueInDomain(*innerDomainPtr,
-                                                          *newMember);
-                                success = !val.containsMember(newMember);
-                            } while (!success && ++numberTries < tryLimit);
-                            if (success) {
-                                valImpl.members[indexToChange] =
-                                    std::move(newMember);
-                            }
-                            return success;
-                        },
-                        val, indexToChange);
+                    do {
+                        assignRandomValueInDomain(*innerDomainPtr, *newMember);
+                        success = !val.containsMember(newMember);
+                    } while (!success && ++numberTries < tryLimit);
                     if (!success) {
+                        debug_neighbourhood_action(
+                            "Couldn't find new value, number tries="
+                            << tryLimit);
                         return;
                     }
+                    debug_neighbourhood_action("New Value: " << *newMember);
+                    valImpl.changeMemberValue(
+                        [&]() {
+                            deepCopy(*newMember,
+                                     *valImpl.members[indexToChange]);
+                            return true;
+                        },
+                        val, indexToChange);
                     if (!changeAccepted()) {
+                        debug_neighbourhood_action("Change rejected");
                         valImpl.changeMemberValue(
                             [&]() {
-                                valImpl.members[indexToChange] =
-                                    std::move(memberBackup);
+                                deepCopy(*memberBackup,
+                                         *valImpl.members[indexToChange]);
                                 return true;
                             },
                             val, indexToChange);

@@ -1,6 +1,7 @@
 
 #ifndef SRC_OPERATORS_QUANTIFIER_H_
 #define SRC_OPERATORS_QUANTIFIER_H_
+#include <map>
 #include "operators/operatorBase.h"
 #include "operators/quantifierBase.h"
 #include "types/bool.h"
@@ -14,8 +15,7 @@ struct Quantifier {
     ContainerType container;
     ReturnType expr = ValRef<ReturnValueType>(nullptr);
     std::vector<std::pair<ReturnType, AnyIterRef>> unrolledExprs;
-    std::unordered_map<u_int64_t, size_t> valueExprMap;
-
+    std::map<u_int64_t, size_t> valueExprMap;
     inline static u_int64_t nextQuantId() {
         static u_int64_t quantId = 0;
         return quantId++;
@@ -31,9 +31,59 @@ struct Quantifier {
         return IterRef<T>(quantId);
     }
 
+    inline void hasConsistentState() {
+        u_int64_t hash;
+        size_t index;
+        bool indexFound = true;
+        bool success = true;
+        if (unrolledExprs.size() != valueExprMap.size()) {
+            success = false;
+        } else {
+            for (size_t i = 0; i < unrolledExprs.size(); ++i) {
+                hash = getValueHash(unrolledExprs[i].second);
+                index = i;
+                auto iter = valueExprMap.find(hash);
+                if (iter == valueExprMap.end()) {
+                    indexFound = false;
+                    success = false;
+                    break;
+                } else if (iter->second != index) {
+                    success = false;
+                    break;
+                }
+            }
+        }
+        if (!success) {
+            std::cerr << "Error: inconsistent state detected.\nFunction: "
+                      << __func__ << " file: " << __FILE__
+                      << ", line: " << __LINE__
+                      << "\nvalueExprMap: " << valueExprMap
+                      << "\nunrolledExprs: ";
+            for (auto& kv : unrolledExprs) {
+                std::cerr << kv.second << ",";
+            }
+            std::cerr << std::endl;
+            std::cerr << "Explanation: ";
+            if (unrolledExprs.size() != valueExprMap.size()) {
+                std::cerr << "\nvalueExprMap has size " << valueExprMap.size()
+                          << " but unrolledExprs has size "
+                          << unrolledExprs.size() << std::endl;
+            } else if (!indexFound) {
+                std::cerr << "\nkey " << hash << " for index " << index
+                          << " was not found.\n";
+            } else {
+                std::cerr << "key " << hash << " maps to " << valueExprMap[hash]
+                          << " but it was instead found in position " << index
+                          << std::endl;
+            }
+            abort();
+        }
+    }
+
     inline std::pair<size_t, ReturnType&> unroll(
         const AnyValRef& newValue, const bool startTriggeringExpr = true,
         bool evaluateFreshExpr = false) {
+        debug_code(this->hasConsistentState());
         mpark::visit(
             [&](auto& newValImpl) {
                 typedef typename BaseType<decltype(newValImpl)>::element_type
@@ -46,7 +96,7 @@ struct Quantifier {
                     deepCopyForUnroll(exprToCopy, iterRef), iterRef);
                 iterRef.getIterator().attachValue(newValImpl, [&]() {
                     if (evaluateFreshExpr) {
-                        evaluate(unrolledExprs.front().first);
+                        evaluate(unrolledExprs.back().first);
                     }
                     if (startTriggeringExpr) {
                         startTriggering(unrolledExprs.back().first);
@@ -58,11 +108,13 @@ struct Quantifier {
                 valueExprMap.emplace(hash, unrolledExprs.size() - 1);
             },
             newValue);
+        debug_code(this->hasConsistentState());
         return std::pair<size_t, ReturnType&>(unrolledExprs.size() - 1,
                                               unrolledExprs.back().first);
     }
 
     inline std::pair<size_t, ReturnType> roll(const AnyValRef& val) {
+        debug_code(this->hasConsistentState());
         u_int64_t hash = getValueHash(val);
 
         assert(valueExprMap.count(hash));
@@ -75,14 +127,20 @@ struct Quantifier {
         if (index < unrolledExprs.size()) {
             valueExprMap[getValueHash(unrolledExprs[index].second)] = index;
         }
+        debug_code(this->hasConsistentState());
         return removedExpr;
     }
 
     void valueChanged(u_int64_t oldHash, u_int64_t newHash) {
+        if (oldHash == newHash) {
+            return;
+        }
+
         assert(valueExprMap.count(oldHash));
         assert(!valueExprMap.count(newHash));
         valueExprMap[newHash] = std::move(valueExprMap[oldHash]);
         valueExprMap.erase(oldHash);
+        debug_code(this->hasConsistentState());
     }
 
     Quantifier<ContainerType, ContainerValueType, ReturnType, ReturnValueType>
@@ -151,6 +209,7 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
     }
 
     inline std::pair<size_t, BoolReturning> roll(const AnyValRef& val) {
+        debug_code(this->hasConsistentState());
         auto indexExprPair = QuantBase::roll(val);
         u_int64_t removedViolation =
             getView<BoolView>(indexExprPair.second).violation;

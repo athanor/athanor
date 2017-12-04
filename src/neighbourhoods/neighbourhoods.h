@@ -3,7 +3,10 @@
 #define SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_
 #include <functional>
 #include <vector>
+#include "common/common.h"
 #include "types/base.h"
+
+#define debug_neighbourhood_action(x) debug_log(x)
 template <typename Domain>
 void assignRandomValueInDomain(const Domain& domain,
                                typename AssociatedValueType<Domain>::type& val);

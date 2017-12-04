@@ -35,14 +35,11 @@ class HillClimber {
                 selectionStrategy.nextNeighbourhood(model);
             Neighbourhood& neighbourhood =
                 model.neighbourhoods[nextNeighbourhoodIndex];
+            debug_neighbourhood_action(neighbourhood.name << ":");
+            debug_code(newBestSolution(model.csp.violation));
             auto& var =
                 model.variables
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
-            if (false && bestViolation <= 2) {
-                std::cout << "trying neighbourhood " << neighbourhood.name
-                          << std::endl;
-                prettyPrint(std::cout << "on var : ", var.second) << std::endl;
-            }
             auto& varBackup =
                 model.variablesBackup
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];

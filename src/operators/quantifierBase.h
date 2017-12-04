@@ -56,9 +56,26 @@ u_int64_t getValueHash(const IterRef<T>& iter) {
     return getValueHash(*iter);
 }
 
+template <typename T>
+std::ostream& prettyPrint(std::ostream& os, const IterRef<T>& iter) {
+    return prettyPrint(os, *iter);
+}
+
 inline u_int64_t getValueHash(const AnyIterRef& iter) {
     return mpark::visit([](auto& iterImpl) { return getValueHash(iterImpl); },
                         iter);
 }
+template <typename T = int>
+inline std::ostream& prettyPrint(std::ostream& os, const AnyIterRef& iter,
+                                 T = 0) {
+    return mpark::visit(
+        [&](auto& iterImpl) -> std::ostream& {
+            return prettyPrint(os, *iterImpl);
+        },
+        iter);
+}
 
+inline std::ostream& operator<<(std::ostream& os, const AnyIterRef& iter) {
+    return prettyPrint(os, iter);
+}
 #endif /* SRC_OPERATORS_QUANTIFIERBASE_H_ */

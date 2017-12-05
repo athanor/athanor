@@ -60,15 +60,13 @@ void setAddGen(const SetDomain& domain,
                 typename InnerDomainPtrType::element_type>::type>
                 InnerValueRefType;
             neighbourhoods.emplace_back(
-                "setAdd",
-                [innerDomainSize, &domain, &innerDomainPtr](
-                    const AcceptanceCallBack& changeAccepted, AnyValRef&,
-                    AnyValRef& primary, StatsContainer& stats) {
-                    auto& val = *mpark::get<ValRef<SetValue>>(primary);
+                "setAdd", [innerDomainSize, &domain,
+                           &innerDomainPtr](NeighbourhoodParams& params) {
+                    auto& val = *mpark::get<ValRef<SetValue>>(params.primary);
                     auto& valImpl = mpark::get<SetValueImpl<InnerValueRefType>>(
                         val.setValueImpl);
                     if (valImpl.members.size() == domain.sizeAttr.maxSize) {
-                        ++stats.minorNodeCount;
+                        ++params.stats.minorNodeCount;
                         return;
                     }
                     auto newMember = constructValueFromDomain(*innerDomainPtr);
@@ -77,7 +75,7 @@ void setAddGen(const SetDomain& domain,
                         getTryLimit(valImpl.members.size(), innerDomainSize);
                     debug_neighbourhood_action("Looking for value to add");
                     do {
-                        ++stats.minorNodeCount;
+                        ++params.stats.minorNodeCount;
                         assignRandomValueInDomain(*innerDomainPtr, *newMember);
                     } while (!valImpl.addValue(val, newMember) &&
                              ++numberTries < tryLimit);
@@ -87,7 +85,7 @@ void setAddGen(const SetDomain& domain,
                         return;
                     }
                     debug_neighbourhood_action("Added value: " << *newMember);
-                    if (!changeAccepted()) {
+                    if (!params.changeAccepted()) {
                         debug_neighbourhood_action("Change rejected"
                                                    << tryLimit);
                         valImpl.removeValue(val, valImpl.members.size() - 1);
@@ -109,11 +107,9 @@ void setRemoveGen(const SetDomain& domain,
                 typename InnerDomainPtrType::element_type>::type>
                 InnerValueRefType;
             neighbourhoods.emplace_back(
-                "setRemove",
-                [&](const AcceptanceCallBack& changeAccepted, AnyValRef&,
-                    AnyValRef& primary, StatsContainer& stats) {
-                    ++stats.minorNodeCount;
-                    auto& val = *mpark::get<ValRef<SetValue>>(primary);
+                "setRemove", [&](NeighbourhoodParams& params) {
+                    ++params.stats.minorNodeCount;
+                    auto& val = *mpark::get<ValRef<SetValue>>(params.primary);
                     auto& valImpl = mpark::get<SetValueImpl<InnerValueRefType>>(
                         val.setValueImpl);
                     if (valImpl.members.size() == domain.sizeAttr.minSize) {
@@ -125,7 +121,7 @@ void setRemoveGen(const SetDomain& domain,
                         valImpl.removeValue(val, indexToRemove);
                     debug_neighbourhood_action("Removed " << *removedMember);
 
-                    if (!changeAccepted()) {
+                    if (!params.changeAccepted()) {
                         debug_neighbourhood_action("Change rejected");
                         valImpl.addValue(val, std::move(removedMember));
                     }
@@ -144,15 +140,13 @@ void setSwapGen(const SetDomain& domain,
                 typename InnerDomainPtrType::element_type>::type>
                 InnerValueRefType;
             neighbourhoods.emplace_back(
-                "setSwap",
-                [innerDomainSize, &domain, &innerDomainPtr](
-                    const AcceptanceCallBack& changeAccepted, AnyValRef&,
-                    AnyValRef& primary, StatsContainer& stats) {
-                    auto& val = *mpark::get<ValRef<SetValue>>(primary);
+                "setSwap", [innerDomainSize, &domain,
+                            &innerDomainPtr](NeighbourhoodParams& params) {
+                    auto& val = *mpark::get<ValRef<SetValue>>(params.primary);
                     auto& valImpl = mpark::get<SetValueImpl<InnerValueRefType>>(
                         val.setValueImpl);
                     if (valImpl.members.size() == 0) {
-                        ++stats.minorNodeCount;
+                        ++params.stats.minorNodeCount;
                         return;
                     }
                     const int tryLimit =
@@ -167,7 +161,7 @@ void setSwapGen(const SetDomain& domain,
                                                << *memberBackup);
                     auto newMember = constructValueFromDomain(*innerDomainPtr);
                     do {
-                        ++stats.minorNodeCount;
+                        ++params.stats.minorNodeCount;
                         assignRandomValueInDomain(*innerDomainPtr, *newMember);
                         success = !val.containsMember(newMember);
                     } while (!success && ++numberTries < tryLimit);
@@ -185,7 +179,7 @@ void setSwapGen(const SetDomain& domain,
                             return true;
                         },
                         val, indexToChange);
-                    if (!changeAccepted()) {
+                    if (!params.changeAccepted()) {
                         debug_neighbourhood_action("Change rejected");
                         valImpl.changeMemberValue(
                             [&]() {

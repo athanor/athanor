@@ -46,7 +46,9 @@ class HillClimber {
             auto& varBackup =
                 model.variablesBackup
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
-            neighbourhood.apply(callback, varBackup.second, var.second, stats);
+            NeighbourhoodParams params(callback, varBackup.second, var.second,
+                                       stats);
+            neighbourhood.apply(params);
             if (cspView.violation < bestViolation) {
                 bestViolation = cspView.violation;
                 newBestSolution(bestViolation);

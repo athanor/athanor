@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include "utils/random.h"
 
 class ViolationDescription {
     u_int64_t totalViolation = 0;
@@ -57,6 +58,25 @@ class ViolationDescription {
     }
     inline bool hasChildViolation(u_int64_t id) const {
         return _childViolations.count(id);
+    }
+
+    u_int64_t selectRandomVar() const {
+        if (totalViolation == 0) {
+            std::cerr << "Cannot select random variable when there are zero "
+                         "violations\n";
+            abort();
+        }
+        u_int64_t rand = globalRandom<u_int64_t>(0, totalViolation - 1);
+        for (u_int64_t varId : getVarsWithViolation()) {
+            u_int64_t violation = getVarViolationMapping()[varId];
+            if (violation > rand) {
+                return varId;
+            } else {
+                rand -= violation;
+            }
+        }
+        assert(false);
+        abort();
     }
 };
 

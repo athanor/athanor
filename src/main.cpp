@@ -17,12 +17,12 @@ int main() {
     zeroConst->value = 0;
     auto twoConst = ValRef<IntValue>(make_shared<IntValue>());
     twoConst->value = 2;
-    auto fiveConst = ValRef<IntValue>(make_shared<IntValue>());
-    fiveConst->value = 5;
+    auto _20Const = ValRef<IntValue>(make_shared<IntValue>());
+    _20Const->value = 40;
 
     ModelBuilder builder;
     auto domain =
-        make_shared<SetDomain>(noSize(), IntDomain({intBound(1, 20)}));
+        make_shared<SetDomain>(noSize(), IntDomain({intBound(1, 40)}));
     auto a = builder.addVariable(domain);
     auto forAll = make_shared<OpSetForAll>(a);
     auto i = forAll->newIterRef<IntValue>();
@@ -30,7 +30,7 @@ int main() {
         make_shared<OpIntEq>(make_shared<OpMod>(i, twoConst), zeroConst));
     builder.addConstraint(forAll);
     builder.addConstraint(
-        make_shared<OpIntEq>(make_shared<OpSetSize>(a), fiveConst));
+        make_shared<OpIntEq>(make_shared<OpSetSize>(a), _20Const));
     HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
     search.search();
 }

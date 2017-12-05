@@ -25,11 +25,23 @@ inline void assignRandomValueInDomain(const AnyDomainRef& domain,
         domain);
 }
 typedef std::function<bool()> AcceptanceCallBack;
+
+struct NeighbourhoodParams {
+    const AcceptanceCallBack& changeAccepted;
+    AnyValRef& backUpDestination;
+    AnyValRef& primary;
+    StatsContainer& stats;
+
+    NeighbourhoodParams(const AcceptanceCallBack& changeAccepted,
+                        AnyValRef& backUpDestination, AnyValRef& primary,
+                        StatsContainer& stats)
+        : changeAccepted(changeAccepted),
+          backUpDestination(backUpDestination),
+          primary(primary),
+          stats(stats) {}
+};
 struct Neighbourhood {
-    typedef std::function<void(const AcceptanceCallBack&,
-                               AnyValRef& backUpDestination, AnyValRef& primary,
-                               StatsContainer& stats)>
-        ApplyFunc;
+    typedef std::function<void(NeighbourhoodParams&)> ApplyFunc;
     std::string name;
     ApplyFunc apply;
     Neighbourhood(std::string&& name, ApplyFunc&& apply)

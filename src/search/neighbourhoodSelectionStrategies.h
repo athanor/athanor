@@ -38,22 +38,12 @@ class RandomNeighbourhoodWithViolation {
           vioDesc(numberNeighbourhoods) {}
 
     inline u_int32_t nextNeighbourhood(const Model& model) {
-        u_int64_t totalViolation = vioDesc.getTotalViolation();
-        if (totalViolation == 0) {
+        if (vioDesc.getTotalViolation() == 0) {
             return globalRandom<int>(0, numberNeighbourhoods - 1);
+        } else {
+            return selectNeighbourhoodFromVarId(model,
+                                                vioDesc.selectRandomVar());
         }
-        u_int64_t rand = globalRandom<u_int32_t>(0, totalViolation - 1);
-        for (u_int64_t varId : vioDesc.getVarsWithViolation()) {
-            u_int64_t violation = vioDesc.getVarViolationMapping()[varId];
-            if (violation > rand) {
-                return selectNeighbourhoodFromVarId(model, varId);
-                ;
-            } else {
-                rand -= violation;
-            }
-        }
-        assert(false);
-        abort();
     }
 
     inline void initialise(const Model& model) {

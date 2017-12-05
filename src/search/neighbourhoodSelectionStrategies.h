@@ -38,10 +38,7 @@ class RandomNeighbourhoodWithViolation {
           vioDesc(numberNeighbourhoods) {}
 
     inline u_int32_t nextNeighbourhood(const Model& model) {
-        u_int64_t totalViolation = 0;
-        for (u_int64_t varId : vioDesc.getVarsWithViolation()) {
-            totalViolation += vioDesc.getVarViolationMapping()[varId];
-        }
+        u_int64_t totalViolation = vioDesc.getTotalViolation();
         if (totalViolation == 0) {
             return globalRandom<int>(0, numberNeighbourhoods - 1);
         }

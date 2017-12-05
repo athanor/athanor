@@ -5,6 +5,7 @@
 #include "operators/operatorBase.h"
 #include "search/model.h"
 #include "search/neighbourhoodSelectionStrategies.h"
+#include "search/statsContainer.h"
 #include "types/typeOperations.h"
 
 template <typename NeighbourhoodSelectionStrategy>
@@ -17,6 +18,8 @@ class HillClimber {
         : model(std::move(model)),
           selectionStrategy(this->model.neighbourhoods.size()) {}
     void search() {
+        StatsContainer stats;
+        stats.startTimer();
         BoolView& cspView = model.csp;
         for (auto& var : model.variables) {
             assignRandomValueInDomain(var.first, var.second);
@@ -29,8 +32,8 @@ class HillClimber {
         AcceptanceCallBack callback = [&]() {
             return cspView.violation <= bestViolation;
         };
-        size_t iterationCount = 0;
-        while (cspView.violation != 0 && iterationCount++ < 3000000) {
+        while (cspView.violation != 0 && stats.majorNodeCount < 3000000) {
+            ++stats.majorNodeCount;
             int nextNeighbourhoodIndex =
                 selectionStrategy.nextNeighbourhood(model);
             Neighbourhood& neighbourhood =
@@ -43,7 +46,7 @@ class HillClimber {
             auto& varBackup =
                 model.variablesBackup
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
-            neighbourhood.apply(callback, varBackup.second, var.second);
+            neighbourhood.apply(callback, varBackup.second, var.second, stats);
             if (cspView.violation < bestViolation) {
                 bestViolation = cspView.violation;
                 newBestSolution(bestViolation);
@@ -51,6 +54,8 @@ class HillClimber {
             selectionStrategy.reportResult(
                 NeighbourhoodResult(model, bestViolation));
         }
+        stats.endTimer();
+        std::cout << stats << std::endl;
     }
 
     inline void newBestSolution(u_int64_t bestViolation) {

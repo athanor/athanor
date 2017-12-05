@@ -4,6 +4,7 @@
 #include <functional>
 #include <vector>
 #include "common/common.h"
+#include "search/statsContainer.h"
 #include "types/base.h"
 
 #define debug_neighbourhood_action(x) debug_log(x)
@@ -26,8 +27,8 @@ inline void assignRandomValueInDomain(const AnyDomainRef& domain,
 typedef std::function<bool()> AcceptanceCallBack;
 struct Neighbourhood {
     typedef std::function<void(const AcceptanceCallBack&,
-                               AnyValRef& backUpDestination,
-                               AnyValRef& primary)>
+                               AnyValRef& backUpDestination, AnyValRef& primary,
+                               StatsContainer& stats)>
         ApplyFunc;
     std::string name;
     ApplyFunc apply;

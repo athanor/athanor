@@ -8,6 +8,7 @@
 #include <vector>
 
 class ViolationDescription {
+    u_int64_t totalViolation = 0;
     std::vector<u_int64_t> varViolations;
     std::vector<u_int64_t> varsWithViolation;
     std::unordered_map<u_int64_t, std::unique_ptr<ViolationDescription>>
@@ -24,9 +25,11 @@ class ViolationDescription {
             varsWithViolation.push_back(id);
         }
         varViolations[id] += violation;
+        totalViolation += violation;
     }
 
     inline void reset() {
+        totalViolation = 0;
         size_t numberVariables = varViolations.size();
         varViolations.clear();
         varsWithViolation.clear();
@@ -41,6 +44,7 @@ class ViolationDescription {
         return varsWithViolation;
     }
 
+    inline u_int64_t getTotalViolation() const { return totalViolation; }
     inline ViolationDescription& childViolations(u_int64_t id) {
         auto& ptr = _childViolations[id];
         if (!ptr) {

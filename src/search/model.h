@@ -6,6 +6,7 @@
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/opAnd.h"
 #include "operators/operatorBase.h"
+#include "search/violationDescription.h"
 #include "types/base.h"
 #include "types/int.h"
 #include "types/typeOperations.h"
@@ -26,6 +27,7 @@ struct Model {
     OpAnd csp;
     IntReturning objective;
     OptimiseMode optimiseMode;
+    ViolationDescription vioDesc;
 
    private:
     Model(std::vector<std::pair<AnyDomainRef, AnyValRef>> variables,

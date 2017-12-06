@@ -8,6 +8,8 @@
 #include "search/statsContainer.h"
 #include "types/typeOperations.h"
 
+inline bool alwaysTrue(const AnyValRef&) { return true; }
+
 template <typename NeighbourhoodSelectionStrategy>
 class HillClimber {
     Model model;
@@ -43,11 +45,8 @@ class HillClimber {
             auto& var =
                 model.variables
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
-            auto& varBackup =
-                model.variablesBackup
-                    [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
-            NeighbourhoodParams params(callback, varBackup.second, var.second,
-                                       stats);
+            NeighbourhoodParams params(callback, alwaysTrue, var.second, stats,
+                                       model.vioDesc);
             neighbourhood.apply(params);
             if (cspView.violation < bestViolation) {
                 bestViolation = cspView.violation;

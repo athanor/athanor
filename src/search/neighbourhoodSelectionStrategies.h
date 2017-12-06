@@ -30,30 +30,28 @@ class RandomNeighbourhoodSelection {
 };
 class RandomNeighbourhoodWithViolation {
     const int numberNeighbourhoods;
-    ViolationDescription vioDesc;
 
    public:
     RandomNeighbourhoodWithViolation(const int numberNeighbourhoods)
-        : numberNeighbourhoods(numberNeighbourhoods),
-          vioDesc(numberNeighbourhoods) {}
+        : numberNeighbourhoods(numberNeighbourhoods) {}
 
     inline u_int32_t nextNeighbourhood(const Model& model) {
-        if (vioDesc.getTotalViolation() == 0) {
+        if (model.vioDesc.getTotalViolation() == 0) {
             return globalRandom<int>(0, numberNeighbourhoods - 1);
         } else {
-            return selectNeighbourhoodFromVarId(model,
-                                                vioDesc.selectRandomVar());
+            return selectNeighbourhoodFromVarId(
+                model, model.vioDesc.selectRandomVar());
         }
     }
 
-    inline void initialise(const Model& model) {
-        vioDesc.reset();
+    inline void initialise(Model& model) {
+        model.vioDesc.reset();
         if (model.csp.violation == 0) {
             return;
         }
-        updateViolationDescription(model.csp, 0, vioDesc);
+        updateViolationDescription(model.csp, 0, model.vioDesc);
     }
-    inline void reportResult(const NeighbourhoodResult& result) {
+    inline void reportResult(NeighbourhoodResult&& result) {
         initialise(result.model);
     }
     inline int selectNeighbourhoodFromVarId(const Model& model,
@@ -84,7 +82,7 @@ class ExhaustiveRandomNeighbourhoodSelection {
     inline u_int32_t nextNeighbourhood() {
         return availableNeighbourhoods[currentIndex];
     }
-    inline void reportResult(const NeighbourhoodResult&) {
+    inline void reportResult(NeighbourhoodResult&&) {
         if (currentIndex == availableNeighbourhoods.size() - 1) {
             reshuffle();
         } else {

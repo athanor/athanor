@@ -55,7 +55,7 @@ struct SetView {
     std::vector<std::shared_ptr<SetTrigger>> triggers;
 
     template <typename Inner>
-    inline bool containsMember(const Inner& member) {
+    inline bool containsMember(const Inner& member) const {
         return memberHashes.count(mix(getValueHash(*member)));
     }
 };
@@ -63,26 +63,34 @@ struct SetView {
 template <typename Inner>
 struct SetValueImpl {
     std::vector<Inner> members;
+    u_int64_t hashOfPossibleChange;
+
+    template <typename SetValueType>
+    inline void possibleValueChange(SetValueType& val, size_t memberIndex) {
+        hashOfPossibleChange = mix(getValueHash(*members[memberIndex]));
+        AnyValRef triggerMember = members[memberIndex];
+        visitTriggers([&](auto& t) { t->possibleValueChange(triggerMember); },
+                      val.triggers);
+    }
+    template <typename SetValueType>
+    inline void valueChanged(SetValueType& val, size_t memberIndex) {
+        val.memberHashes.erase(hashOfPossibleChange);
+        val.cachedHashTotal -= hashOfPossibleChange;
+        u_int64_t hash = mix(getValueHash(*members[memberIndex]));
+        val.memberHashes.insert(hash);
+        val.cachedHashTotal += hash;
+        AnyValRef triggerMember = members[memberIndex];
+        visitTriggers([&](auto& t) { t->valueChanged(triggerMember); },
+                      val.triggers);
+    }
 
     template <typename Func, typename SetValueType>
     inline void changeMemberValue(Func&& func, SetValueType& val,
                                   size_t memberIndex) {
-        u_int64_t hash = mix(getValueHash(*members[memberIndex]));
-        AnyValRef triggerMember = members[memberIndex];
-        visitTriggers([&](auto& t) { t->possibleValueChange(triggerMember); },
-                      val.triggers);
-        bool valueChanged = func();
-        if (!valueChanged) {
-            return;
+        possibleValueChange(val, memberIndex);
+        if (func()) {
+            valueChanged(val, memberIndex);
         }
-        val.memberHashes.erase(hash);
-        val.cachedHashTotal -= hash;
-        hash = mix(getValueHash(*members[memberIndex]));
-        val.memberHashes.insert(hash);
-        val.cachedHashTotal += hash;
-        triggerMember = members[memberIndex];
-        visitTriggers([&](auto& t) { t->valueChanged(triggerMember); },
-                      val.triggers);
     }
 
     template <typename SetValueType>

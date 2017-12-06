@@ -5,6 +5,7 @@
 #include <vector>
 #include "common/common.h"
 #include "search/statsContainer.h"
+#include "search/violationDescription.h"
 #include "types/base.h"
 
 #define debug_neighbourhood_action(x) debug_log(x)
@@ -25,21 +26,24 @@ inline void assignRandomValueInDomain(const AnyDomainRef& domain,
         domain);
 }
 typedef std::function<bool()> AcceptanceCallBack;
-
+typedef std::function<bool(const AnyValRef& newValue)> ParentCheckCallBack;
 struct NeighbourhoodParams {
     const AcceptanceCallBack& changeAccepted;
-    AnyValRef& backUpDestination;
+    const ParentCheckCallBack& parentCheck;
     AnyValRef& primary;
     StatsContainer& stats;
-
+    ViolationDescription& vioDesc;
     NeighbourhoodParams(const AcceptanceCallBack& changeAccepted,
-                        AnyValRef& backUpDestination, AnyValRef& primary,
-                        StatsContainer& stats)
+                        const ParentCheckCallBack& parentCheck,
+                        AnyValRef& primary, StatsContainer& stats,
+                        ViolationDescription& vioDesc)
         : changeAccepted(changeAccepted),
-          backUpDestination(backUpDestination),
+          parentCheck(parentCheck),
           primary(primary),
-          stats(stats) {}
+          stats(stats),
+          vioDesc(vioDesc) {}
 };
+
 struct Neighbourhood {
     typedef std::function<void(NeighbourhoodParams&)> ApplyFunc;
     std::string name;

@@ -45,8 +45,8 @@ class HillClimber {
             auto& var =
                 model.variables
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
-            NeighbourhoodParams params(callback, alwaysTrue, var.second, stats,
-                                       model.vioDesc);
+            NeighbourhoodParams params(callback, alwaysTrue, 1, var.second,
+                                       stats, model.vioDesc);
             neighbourhood.apply(params);
             if (cspView.violation < bestViolation) {
                 bestViolation = cspView.violation;

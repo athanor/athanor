@@ -72,6 +72,7 @@ void setAddGen(const SetDomain& domain,
                     auto newMember = constructValueFromDomain(*innerDomainPtr);
                     int numberTries = 0;
                     const int tryLimit =
+                        params.parentCheckTryLimit *
                         getTryLimit(valImpl.members.size(), innerDomainSize);
                     debug_neighbourhood_action("Looking for value to add");
                     bool success;
@@ -121,7 +122,7 @@ void setRemoveGen(const SetDomain& domain,
                     size_t indexToRemove;
                     InnerValRefType removedMember(nullptr);
                     int numberTries = 0;
-                    const int tryLimit = valImpl.members.size();
+
                     bool success;
                     debug_neighbourhood_action("Looking for value to remove");
                     do {
@@ -133,10 +134,12 @@ void setRemoveGen(const SetDomain& domain,
                         if (!success) {
                             valImpl.addValue(val, std::move(removedMember));
                         }
-                    } while (!success && ++numberTries < tryLimit);
+                    } while (!success &&
+                             ++numberTries < params.parentCheckTryLimit);
                     if (!success) {
                         debug_neighbourhood_action(
-                            "Couldn't find value, number tries=" << tryLimit);
+                            "Couldn't find value, number tries="
+                            << numberTries);
                         return;
                     }
                     debug_neighbourhood_action("Removed " << *removedMember);
@@ -156,12 +159,14 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                           std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(domain.inner, innerDomainNeighbourhoods);
+    u_int64_t innerDomainSize = getDomainSize(domain.inner);
     typedef ValRef<typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type>
         InnerValRefType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
         neighbourhoods.emplace_back("setLiftSingle_" + innerNh.name, [
-            innerNhApply{std::move(innerNh.apply)}, &domain, &innerDomainPtr
+            innerNhApply{std::move(innerNh.apply)}, innerDomainSize, &domain,
+            &innerDomainPtr
         ](NeighbourhoodParams & params) {
             auto& val = *mpark::get<ValRef<SetValue>>(params.primary);
             auto& valImpl =
@@ -185,7 +190,9 @@ void setLiftSingleGenImpl(const SetDomain& domain,
             };
             AnyValRef changingMember = valImpl.members[indexToChange];
             NeighbourhoodParams innerNhParams(
-                changeAccepted, parentCheck, changingMember, params.stats,
+                changeAccepted, parentCheck,
+                getTryLimit(valImpl.members.size(), innerDomainSize),
+                changingMember, params.stats,
                 ((params.vioDesc.getTotalViolation() != 0) ? params.vioDesc
                                                            : emptyViolations));
             innerNhApply(innerNhParams);

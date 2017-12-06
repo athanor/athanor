@@ -7,6 +7,7 @@
 #include "search/statsContainer.h"
 #include "search/violationDescription.h"
 #include "types/base.h"
+#include "types/typeOperations.h"
 
 #define debug_neighbourhood_action(x) debug_log(x)
 template <typename Domain>
@@ -30,15 +31,17 @@ typedef std::function<bool(const AnyValRef& newValue)> ParentCheckCallBack;
 struct NeighbourhoodParams {
     const AcceptanceCallBack& changeAccepted;
     const ParentCheckCallBack& parentCheck;
+    const int parentCheckTryLimit;
     AnyValRef& primary;
     StatsContainer& stats;
     ViolationDescription& vioDesc;
     NeighbourhoodParams(const AcceptanceCallBack& changeAccepted,
                         const ParentCheckCallBack& parentCheck,
-                        AnyValRef& primary, StatsContainer& stats,
-                        ViolationDescription& vioDesc)
+                        const int parentCheckTryLimit, AnyValRef& primary,
+                        StatsContainer& stats, ViolationDescription& vioDesc)
         : changeAccepted(changeAccepted),
           parentCheck(parentCheck),
+          parentCheckTryLimit(parentCheckTryLimit),
           primary(primary),
           stats(stats),
           vioDesc(vioDesc) {}
@@ -64,15 +67,18 @@ struct NeighbourhoodGenList;
     };
 buildForAllTypes(makeGeneratorDecls, )
 #undef makeGeneratorDecls
-
-    template <typename DomainPtrType>
-    inline void generateNeighbourhoodsImpl(
-        const DomainPtrType& domainImpl,
-        std::vector<Neighbourhood>& neighbourhoods) {
+    template <typename Domain>
+    void assignRandomGen(const Domain& domain,
+                         std::vector<Neighbourhood>& neighbourhoods);
+template <typename DomainPtrType>
+inline void generateNeighbourhoodsImpl(
+    const DomainPtrType& domainImpl,
+    std::vector<Neighbourhood>& neighbourhoods) {
     for (auto& generator :
          NeighbourhoodGenList<typename DomainPtrType::element_type>::value) {
         generator(*domainImpl, neighbourhoods);
     }
+    assignRandomGen(*domainImpl, neighbourhoods);
 }
 
 inline void generateNeighbourhoods(const AnyDomainRef domain,
@@ -83,4 +89,35 @@ inline void generateNeighbourhoods(const AnyDomainRef domain,
         },
         domain);
 }
+template <typename Domain>
+void assignRandomGen(const Domain& domain,
+                     std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename AssociatedValueType<Domain>::type ValueType;
+    neighbourhoods.emplace_back(
+        TypeAsString<ValueType>::value + "AssignRandom",
+        [&domain](NeighbourhoodParams& params) {
+            auto& val = mpark::get<ValRef<ValueType>>(params.primary);
+            auto newMember = constructValueFromDomain(domain);
+            AnyValRef newMemberRef(newMember);
+            auto backup = deepCopy(*val);
+            int numberTries = 0;
+            debug_neighbourhood_action("Assigning random value");
+            do {
+                assignRandomValueInDomain(domain, *newMember);
+            } while (!params.parentCheck(newMemberRef) &&
+                     numberTries++ < params.parentCheckTryLimit);
+            if (numberTries >= params.parentCheckTryLimit) {
+                debug_neighbourhood_action(
+                    "Could not find new value, number tries=" << numberTries);
+                return;
+            }
+            debug_neighbourhood_action("Assigned new value: " << *newMember);
+            deepCopy(*newMember, *val);
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                deepCopy(*backup, *val);
+            }
+        });
+}
+
 #endif /* SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_ */

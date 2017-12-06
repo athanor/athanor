@@ -180,13 +180,18 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                     ? params.vioDesc.selectRandomVar()
                     : globalRandom<u_int64_t>(0, valImpl.members.size() - 1);
             valImpl.possibleValueChange(val, indexToChange);
+            bool requiresRevert= false;
             ParentCheckCallBack parentCheck = [&](const AnyValRef& newValue) {
                 return !val.containsMember(
                     mpark::get<InnerValRefType>(newValue));
             };
             AcceptanceCallBack changeAccepted = [&]() {
                 valImpl.valueChanged(val, indexToChange);
-                return params.changeAccepted();
+                requiresRevert = !params.changeAccepted();
+                if (requiresRevert) {
+                    valImpl.possibleValueChange(val, indexToChange);
+                }
+                return !requiresRevert;
             };
             AnyValRef changingMember = valImpl.members[indexToChange];
             NeighbourhoodParams innerNhParams(
@@ -196,6 +201,9 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                 ((params.vioDesc.getTotalViolation() != 0) ? params.vioDesc
                                                            : emptyViolations));
             innerNhApply(innerNhParams);
+            if (requiresRevert) {
+                valImpl.valueChanged(val, indexToChange);
+            }
         });
     }
 }

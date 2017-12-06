@@ -92,6 +92,9 @@ inline void generateNeighbourhoods(const AnyDomainRef domain,
 template <typename Domain>
 void assignRandomGen(const Domain& domain,
                      std::vector<Neighbourhood>& neighbourhoods) {
+    if (std::is_same<Domain, SetDomain>::value) {
+        return;
+    }
     typedef typename AssociatedValueType<Domain>::type ValueType;
     neighbourhoods.emplace_back(
         TypeAsString<ValueType>::value + "AssignRandom",
@@ -101,8 +104,10 @@ void assignRandomGen(const Domain& domain,
             AnyValRef newMemberRef(newMember);
             auto backup = deepCopy(*val);
             int numberTries = 0;
-            debug_neighbourhood_action("Assigning random value");
+            debug_neighbourhood_action(
+                "Assigning random value, original value is " << *backup);
             do {
+                ++params.stats.minorNodeCount;
                 assignRandomValueInDomain(domain, *newMember);
             } while (!params.parentCheck(newMemberRef) &&
                      numberTries++ < params.parentCheckTryLimit);

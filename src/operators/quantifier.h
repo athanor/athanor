@@ -209,7 +209,6 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
     }
 
     inline std::pair<size_t, BoolReturning> roll(const AnyValRef& val) {
-        debug_code(this->hasConsistentState());
         auto indexExprPair = QuantBase::roll(val);
         u_int64_t removedViolation =
             getView<BoolView>(indexExprPair.second).violation;

@@ -95,6 +95,7 @@ struct SetValueImpl {
 
     template <typename SetValueType>
     inline Inner removeValue(SetValueType& val, size_t memberIndex) {
+        assert(memberIndex < members.size());
         Inner member = std::move(members[memberIndex]);
         valBase(*member).container = NULL;
         members[memberIndex] = std::move(members.back());

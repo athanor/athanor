@@ -76,3 +76,11 @@ shared_ptr<OpIntEq> deepCopyForUnroll(const OpIntEq& op,
     newOpIntEq->violation = op.violation;
     return newOpIntEq;
 }
+
+std::ostream& dumpState(std::ostream& os, const OpIntEq& op) {
+    os << "OpIntEq: violation=" << op.violation << "\nleft: ";
+    dumpState(os, op.left);
+    os << "\nright: ";
+    dumpState(os, op.right);
+    return os;
+}

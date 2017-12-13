@@ -86,3 +86,8 @@ std::shared_ptr<OpSetNotEq> deepCopyForUnroll(const OpSetNotEq&,
     assert(false);
     abort();
 }
+
+std::ostream& dumpState(std::ostream& os, const OpSetNotEq&) {
+    assert(false);
+    return os;
+}

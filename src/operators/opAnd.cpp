@@ -62,3 +62,18 @@ shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
     newOpAnd->violation = op.violation;
     return newOpAnd;
 }
+
+std::ostream& dumpState(std::ostream& os, const OpAnd& op) {
+    os << "OpAnd: violation=" << op.violation << "\noperands [";
+    bool first = true;
+    for (auto& operand : op.operands) {
+        if (first) {
+            first = false;
+        } else {
+            os << ",\n";
+        }
+        dumpState(os, operand);
+    }
+    os << "]";
+    return os;
+}

@@ -166,3 +166,8 @@ std::shared_ptr<OpSetIntersect> deepCopyForUnroll(const OpSetIntersect&,
     assert(false);
     abort();
 }
+
+std::ostream& dumpState(std::ostream& os, const OpSetIntersect&) {
+    assert(false);
+    return os;
+}

@@ -77,7 +77,9 @@ struct EvaluateResult<SetReturning> {
     void updateViolationDescription(const name& op, u_int64_t parentViolation, \
                                     ViolationDescription&);                    \
     std::shared_ptr<name> deepCopyForUnroll(const name& op,                    \
-                                            const AnyIterRef& iterator);
+                                            const AnyIterRef& iterator);       \
+                                                                               \
+    std::ostream& dumpState(std::ostream& os, const name& val);
 buildForOperators(operatorFuncs, );
 #undef operatorFuncs
 
@@ -151,6 +153,13 @@ inline IterRef<T> deepCopyForUnrollOverload(const IterRef<T>& iterVal,
     } else {
         return iterVal;
     }
+}
+
+template <typename Operator>
+inline std::ostream& dumpState(std::ostream& os, const Operator& op) {
+    return mpark::visit(
+        [&](auto& opImpl) -> std::ostream& { return dumpState(os, *opImpl); },
+        op);
 }
 
 #endif /* SRC_OPERATORS_OPERATORBASE_H_ */

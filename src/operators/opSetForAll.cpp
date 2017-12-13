@@ -30,22 +30,7 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
     u_int64_t lastMemberHash = 0;
     ContainerTrigger(OpSetForAll* op) : op(op) {}
 
-    inline void valueRemoved(const AnyValRef& val) final {
-        auto indexExprPair = op->roll(val);
-        u_int64_t removedViolation =
-            getView<BoolView>(indexExprPair.second).violation;
-        if (removedViolation > 0) {
-            visitTriggers(
-                [&](auto& trigger) {
-                    trigger->possibleValueChange(op->violation);
-                },
-                op->triggers);
-            op->violation -= removedViolation;
-            visitTriggers(
-                [&](auto& trigger) { trigger->valueChanged(op->violation); },
-                op->triggers);
-        }
-    }
+    inline void valueRemoved(const AnyValRef& val) final { op->roll(val); }
 
     inline void valueAdded(const AnyValRef& val) final {
         op->valuesToUnroll.emplace_back(move(val));
@@ -111,4 +96,19 @@ shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
         op.deepCopyQuantifierForUnroll(iterator), op.violatingOperands);
     newOpSetForAll->violation = op.violation;
     return newOpSetForAll;
+}
+
+std::ostream& dumpState(std::ostream& os, const OpSetForAll& op) {
+    os << "OpSetForAll: violation=" << op.violation << "\noperands [";
+    bool first = true;
+    for (auto& exprValuePair : op.unrolledExprs) {
+        if (first) {
+            first = false;
+        } else {
+            os << ",\n";
+        }
+        dumpState(os, exprValuePair.first);
+    }
+    os << "]";
+    return os;
 }

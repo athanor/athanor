@@ -81,16 +81,19 @@ void setAddGen(const SetDomain& domain,
                         assignRandomValueInDomain(*innerDomainPtr, *newMember);
                         success = valImpl.addValue(val, newMember) &&
                                   params.parentCheck(params.primary);
-                    } while (!success && ++numberTries < tryLimit);
-                    if (success) {
+                        if (++numberTries >= tryLimit) {
+                            return;
+                        }
+                    } while (!success);
+                    if (!success) {
                         debug_neighbourhood_action(
                             "Couldn't find value, number tries=" << tryLimit);
                         return;
                     }
                     debug_neighbourhood_action("Added value: " << *newMember);
                     if (!params.changeAccepted()) {
-                        debug_neighbourhood_action("Change rejected"
-                                                   << tryLimit);
+                        debug_neighbourhood_action(
+                            "Change rejected, numberTries=" << tryLimit);
                         valImpl.removeValue(val, valImpl.members.size() - 1);
                     }
                 });
@@ -134,8 +137,10 @@ void setRemoveGen(const SetDomain& domain,
                         if (!success) {
                             valImpl.addValue(val, std::move(removedMember));
                         }
-                    } while (!success &&
-                             ++numberTries < params.parentCheckTryLimit);
+                        if (++numberTries < params.parentCheckTryLimit) {
+                            break;
+                        }
+                    } while (!success);
                     if (!success) {
                         debug_neighbourhood_action(
                             "Couldn't find value, number tries="
@@ -180,7 +185,7 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                     ? params.vioDesc.selectRandomVar()
                     : globalRandom<u_int64_t>(0, valImpl.members.size() - 1);
             valImpl.possibleValueChange(val, indexToChange);
-            bool requiresRevert= false;
+            bool requiresRevert = false;
             ParentCheckCallBack parentCheck = [&](const AnyValRef& newValue) {
                 return !val.containsMember(
                     mpark::get<InnerValRefType>(newValue));

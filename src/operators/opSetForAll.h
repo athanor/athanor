@@ -24,5 +24,28 @@ struct OpSetForAll : public BoolView,
     OpSetForAll(const OpSetForAll&) = delete;
     OpSetForAll(OpSetForAll&& other);
     ~OpSetForAll() { stopTriggering(*this); }
+
+    inline void operandRemoved(u_int64_t removedViolation) {
+        if (removedViolation > 0) {
+            visitTriggers(
+                [&](auto& trigger) { trigger->possibleValueChange(violation); },
+                triggers);
+            violation -= removedViolation;
+            visitTriggers(
+                [&](auto& trigger) { trigger->valueChanged(violation); },
+                triggers);
+        }
+    }
+    inline void operandAdded(u_int64_t addedViolation) {
+        if (addedViolation > 0) {
+            visitTriggers(
+                [&](auto& trigger) { trigger->possibleValueChange(violation); },
+                triggers);
+            violation += addedViolation;
+            visitTriggers(
+                [&](auto& trigger) { trigger->valueChanged(violation); },
+                triggers);
+        }
+    }
 };
 #endif /* SRC_OPERATORS_OPSETFORALL_H_ */

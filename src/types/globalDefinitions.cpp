@@ -30,6 +30,11 @@ inline ViolationDescription& registerViolations(const ValBase* val,
                                     u_int64_t parentViolation,                 \
                                     ViolationDescription& vioDesc) {           \
         registerViolations(&val, parentViolation, vioDesc);                    \
+    }                                                                          \
+    \
+std::ostream&                                                                  \
+    dumpState(std::ostream& os, const name##Value& val) {                      \
+        return prettyPrint(os, val);                                           \
     }
 
 buildForAllTypes(specialised, )

@@ -74,3 +74,11 @@ shared_ptr<OpMod> deepCopyForUnroll(const OpMod& op,
     newOpMod->value = op.value;
     return newOpMod;
 }
+
+std::ostream& dumpState(std::ostream& os, const OpMod& op) {
+    os << "OpMod: value=" << op.value << "\nleft: ";
+    dumpState(os, op.left);
+    os << "\nright: ";
+    dumpState(os, op.right);
+    return os;
+}

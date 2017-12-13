@@ -83,3 +83,9 @@ std::shared_ptr<OpSetSize> deepCopyForUnroll(const OpSetSize& op,
     newOpSetSize->value = op.value;
     return newOpSetSize;
 }
+
+std::ostream& dumpState(std::ostream& os, const OpSetSize& op) {
+    os << "OpSetSize: value=" << op.value << "\noperand: ";
+    dumpState(os, op.operand);
+    return os;
+}

@@ -15,18 +15,17 @@ struct Iterator {
 
     Iterator(int id, ValRef<T> ref) : id(id), ref(std::move(ref)) {}
     template <typename Func>
-    inline void attachValue(const ValRef<T>& val, Func&& action) {
-        auto oldRef = std::move(ref);
-        ref = val;
-        action();
-
-        if (!oldRef) {
-            return;
-        }
-        for (auto& trigger : unrollTriggers) {
-            trigger->iterHasNewValue(*oldRef, ref);
+    inline void triggerValueChange(const ValRef<T>& oldVal,
+                                   const ValRef<T>& newVal, Func&& callback) {
+        ref = newVal;
+        callback();
+        if (oldVal) {
+            for (auto& trigger : unrollTriggers) {
+                trigger->iterHasNewValue(*oldVal, newVal);
+            }
         }
     }
+    inline ValRef<T>& getValue() { return ref; }
 };
 
 template <typename T>

@@ -92,17 +92,24 @@ struct Quantifier {
                 evaluateFreshExpr |= unrolledExprs.size() == 0;
                 auto& exprToCopy =
                     (evaluateFreshExpr) ? expr : unrolledExprs.back().first;
+                const auto& oldValueOfIter =
+                    (evaluateFreshExpr) ? ValRef<IterValueType>(nullptr)
+                                        : mpark::get<IterRef<IterValueType>>(
+                                              unrolledExprs.back().second)
+                                              .getIterator()
+                                              .getValue();
                 unrolledExprs.emplace_back(
                     deepCopyForUnroll(exprToCopy, iterRef), iterRef);
-                iterRef.getIterator().attachValue(newValImpl, [&]() {
-                    if (evaluateFreshExpr) {
-                        evaluate(unrolledExprs.back().first);
-                    }
-                    if (startTriggeringExpr) {
-                        startTriggering(unrolledExprs.back().first);
-                    }
+                iterRef.getIterator().triggerValueChange(
+                    oldValueOfIter, newValImpl, [&]() {
+                        if (evaluateFreshExpr) {
+                            evaluate(unrolledExprs.back().first);
+                        }
+                        if (startTriggeringExpr) {
+                            startTriggering(unrolledExprs.back().first);
+                        }
 
-                });
+                    });
                 u_int64_t hash = getValueHash(*newValImpl);
                 assert(!valueExprMap.count(hash));
                 valueExprMap.emplace(hash, unrolledExprs.size() - 1);
@@ -201,7 +208,11 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
         const bool evaluateFreshExpr = false) {
         auto indexExprPair =
             QuantBase::unroll(newValue, startTriggeringExpr, evaluateFreshExpr);
-        if (getView<BoolView>(indexExprPair.second).violation > 0) {
+        u_int64_t addedViolation =
+            getView<BoolView>(indexExprPair.second).violation;
+        static_cast<DerivingQuantifierType*>(this)->operandAdded(
+            addedViolation);
+        if (addedViolation > 0) {
             violatingOperands.insert(indexExprPair.first);
         }
         attachTriggerToExpr(unrolledExprs.size() - 1);
@@ -212,6 +223,8 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
         auto indexExprPair = QuantBase::roll(val);
         u_int64_t removedViolation =
             getView<BoolView>(indexExprPair.second).violation;
+        static_cast<DerivingQuantifierType*>(this)->operandRemoved(
+            removedViolation);
         if (removedViolation > 0) {
             violatingOperands.erase(indexExprPair.first);
         }

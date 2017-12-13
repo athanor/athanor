@@ -80,3 +80,8 @@ shared_ptr<OpSum> deepCopyForUnroll(const OpSum& op,
     newOpSum->value = op.value;
     return newOpSum;
 }
+
+std::ostream& dumpState(std::ostream& os, const OpSum&) {
+    assert(false);
+    return os;
+}

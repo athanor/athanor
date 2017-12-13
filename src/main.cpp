@@ -18,11 +18,11 @@ int main() {
     auto twoConst = ValRef<IntValue>(make_shared<IntValue>());
     twoConst->value = 2;
     auto _20Const = ValRef<IntValue>(make_shared<IntValue>());
-    _20Const->value = 5;
+    _20Const->value = 20;
 
     ModelBuilder builder;
     auto domain =
-        make_shared<SetDomain>(noSize(), IntDomain({intBound(1, 10)}));
+        make_shared<SetDomain>(noSize(), IntDomain({intBound(1, 20)}));
     auto a = builder.addVariable(domain);
     auto forAll = make_shared<OpSetForAll>(a);
     auto i = forAll->newIterRef<IntValue>();

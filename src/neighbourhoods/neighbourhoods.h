@@ -92,7 +92,6 @@ inline void generateNeighbourhoods(const AnyDomainRef domain,
 template <typename Domain>
 void assignRandomGen(const Domain& domain,
                      std::vector<Neighbourhood>& neighbourhoods) {
-    return;
     typedef typename AssociatedValueType<Domain>::type ValueType;
     neighbourhoods.emplace_back(
         TypeAsString<ValueType>::value + "AssignRandom",

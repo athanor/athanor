@@ -22,7 +22,7 @@ int main() {
 
     ModelBuilder builder;
     auto domain =
-        make_shared<SetDomain>(noSize(), IntDomain({intBound(1, 20)}));
+        make_shared<SetDomain>(noSize(), IntDomain({intBound(1, 40)}));
     auto a = builder.addVariable(domain);
     auto forAll = make_shared<OpSetForAll>(a);
     auto i = forAll->newIterRef<IntValue>();

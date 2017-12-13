@@ -74,11 +74,13 @@ template <typename DomainPtrType>
 inline void generateNeighbourhoodsImpl(
     const DomainPtrType& domainImpl,
     std::vector<Neighbourhood>& neighbourhoods) {
+    assignRandomGen(*domainImpl, neighbourhoods);
+
+    return;
     for (auto& generator :
          NeighbourhoodGenList<typename DomainPtrType::element_type>::value) {
         generator(*domainImpl, neighbourhoods);
     }
-    assignRandomGen(*domainImpl, neighbourhoods);
 }
 
 inline void generateNeighbourhoods(const AnyDomainRef domain,

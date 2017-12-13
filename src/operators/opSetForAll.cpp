@@ -15,11 +15,7 @@ void evaluate(OpSetForAll& op) {
             op.violatingOperands =
                 FastIterableIntSet(0, membersImpl.size() - 1);
             for (auto& ref : membersImpl) {
-                auto& operand = op.unroll(ref, false, true).second;
-                u_int64_t violation = getView<BoolView>(operand).violation;
-                if (violation > 0) {
-                    op.violation += getView<BoolView>(operand).violation;
-                }
+                op.unroll(ref, false, true);
             }
         },
         members);

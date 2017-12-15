@@ -71,6 +71,7 @@ class ModelBuilder {
         auto& val = variables.back().second.emplace<ValRef<ValueType>>(
             constructValueFromDomain(*domainImpl));
         valBase(*val).id = variables.size() - 1;
+        valBase(*val).container = NULL;
         return val;
     }
 

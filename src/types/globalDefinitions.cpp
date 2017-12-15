@@ -5,6 +5,8 @@
 #include "search/violationDescription.h"
 #include "types/allTypes.h"
 #define quote(x) #x
+
+ValBase constantPool;
 bool currentlyProcessingDelayedTriggerStack = false;
 std::vector<std::shared_ptr<DelayedTrigger>> delayedTriggerStack;
 
@@ -31,9 +33,8 @@ inline ViolationDescription& registerViolations(const ValBase* val,
                                     ViolationDescription& vioDesc) {           \
         registerViolations(&val, parentViolation, vioDesc);                    \
     }                                                                          \
-    \
-std::ostream&                                                                  \
-    dumpState(std::ostream& os, const name##Value& val) {                      \
+                                                                               \
+    std::ostream& dumpState(std::ostream& os, const name##Value& val) {        \
         return prettyPrint(os, val);                                           \
     }
 
@@ -45,6 +46,9 @@ buildForAllTypes(specialised, )
 inline ViolationDescription& registerViolations(const ValBase* val,
                                                 const u_int64_t violation,
                                                 ViolationDescription& vioDesc) {
+    if (val->container == &constantPool) {
+        return vioDesc;
+    }
     if (val->container == NULL) {
         vioDesc.addViolation(val->id, violation);
         return vioDesc;

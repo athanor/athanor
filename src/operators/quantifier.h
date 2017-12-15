@@ -234,7 +234,9 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
         deleteTrigger(exprTriggers[indexExprPair.first]);
         exprTriggers[indexExprPair.first] = std::move(exprTriggers.back());
         exprTriggers.pop_back();
-        exprTriggers[indexExprPair.first]->index = indexExprPair.first;
+        if (indexExprPair.first < exprTriggers.size()) {
+            exprTriggers[indexExprPair.first]->index = indexExprPair.first;
+        }
         return indexExprPair;
     }
 

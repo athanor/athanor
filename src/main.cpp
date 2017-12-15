@@ -31,6 +31,6 @@ int main() {
     builder.addConstraint(forAll);
     builder.addConstraint(
         make_shared<OpIntEq>(make_shared<OpSetSize>(a), _20Const));
-    HillClimber<InteractiveNeighbourhoodSelector> search(builder.build());
+    HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
     search.search();
 }

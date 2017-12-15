@@ -88,12 +88,15 @@ struct TypeAsString;
     template <>                                                          \
     struct IsValueType<name##Value> : public std::true_type {};
 
-buildForAllTypes(makeAssociations, )
+buildForAllTypes(makeAssociations, );
 #undef makeAssociations
 
-    struct ValBase {
+struct ValBase;
+extern ValBase constantPool;
+
+struct ValBase {
     u_int64_t id = 0;
-    ValBase* container = NULL;
+    ValBase* container = &constantPool;
 };
 
 template <typename Val>

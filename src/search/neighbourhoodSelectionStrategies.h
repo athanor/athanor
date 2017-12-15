@@ -90,4 +90,47 @@ class ExhaustiveRandomNeighbourhoodSelection {
         }
     }
 };
+
+class InteractiveNeighbourhoodSelector {
+    const int numberNeighbourhoods;
+
+   public:
+    InteractiveNeighbourhoodSelector(const int numberNeighbourhoods)
+        : numberNeighbourhoods(numberNeighbourhoods) {}
+
+    inline u_int32_t nextNeighbourhood(const Model& model) {
+        while (true) {
+            std::cout << "Select a neighbourhood:\n";
+            for (int i = 0; i < numberNeighbourhoods; ++i) {
+                std::cout << "Option " << i << ": "
+                          << model.neighbourhoods[i].name
+                          << ", operates on variable with violation="
+                          << model.vioDesc.varViolation(
+                                 model.neighbourhoodVarMapping[i])
+                          << ".\n";
+            }
+            int index;
+            bool readInt(std::cin >> index);
+            if (!readInt || index < 0 ||
+                index >= (int)model.neighbourhoods.size()) {
+                std::cout << "Error, please enter an integer in the range 0.."
+                          << (model.neighbourhoods.size() - 1) << ".\n";
+            } else {
+                return index;
+            }
+        }
+    }
+
+    inline void initialise(Model& model) {
+        model.vioDesc.reset();
+        if (model.csp.violation == 0) {
+            return;
+        }
+        updateViolationDescription(model.csp, 0, model.vioDesc);
+    }
+    inline void reportResult(NeighbourhoodResult&& result) {
+        initialise(result.model);
+    }
+};
+
 #endif /* SRC_SEARCH_NEIGHBOURHOODSELECTIONSTRATEGIES_H_ */

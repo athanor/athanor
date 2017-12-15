@@ -181,8 +181,8 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                 return;
             }
             u_int64_t indexToChange =
-                (params.vioDesc.getTotalViolation() != 0)
-                    ? params.vioDesc.selectRandomVar()
+                (params.vioDesc.hasChildViolation(val.id))
+                    ? params.vioDesc.childViolations(val.id).selectRandomVar()
                     : globalRandom<u_int64_t>(0, valImpl.members.size() - 1);
             valImpl.possibleValueChange(val, indexToChange);
             bool requiresRevert = false;

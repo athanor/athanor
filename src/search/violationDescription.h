@@ -38,8 +38,8 @@ class ViolationDescription {
         varViolations.resize(numberVariables, 0);
     }
 
-    inline const std::vector<u_int64_t> getVarViolationMapping() const {
-        return varViolations;
+    inline u_int64_t varViolation(size_t varIndex) const {
+        return (varIndex < varViolations.size()) ? varViolations[varIndex] : 0;
     }
     inline const std::vector<u_int64_t> getVarsWithViolation() const {
         return varsWithViolation;
@@ -61,6 +61,7 @@ class ViolationDescription {
     }
 
     u_int64_t selectRandomVar() const {
+        assert(totalViolation != 0);
         if (totalViolation == 0) {
             std::cerr << "Cannot select random variable when there are zero "
                          "violations\n";
@@ -68,7 +69,7 @@ class ViolationDescription {
         }
         u_int64_t rand = globalRandom<u_int64_t>(0, totalViolation - 1);
         for (u_int64_t varId : getVarsWithViolation()) {
-            u_int64_t violation = getVarViolationMapping()[varId];
+            u_int64_t violation = varViolation(varId);
             if (violation > rand) {
                 return varId;
             } else {

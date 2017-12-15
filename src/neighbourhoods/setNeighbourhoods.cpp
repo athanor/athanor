@@ -223,5 +223,5 @@ void setLiftSingleGen(const SetDomain& domain,
 }
 
 const NeighbourhoodGenList<SetDomain>::type
-    NeighbourhoodGenList<SetDomain>::value = {setAddGen, setRemoveGen,
-                                              setLiftSingleGen};
+    NeighbourhoodGenList<SetDomain>::value = {setLiftSingleGen, setAddGen,
+                                              setRemoveGen};

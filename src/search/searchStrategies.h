@@ -20,6 +20,12 @@ class HillClimber {
         : model(std::move(model)),
           selectionStrategy(this->model.neighbourhoods.size()) {}
     void search() {
+        std::cout << "Neighbourhoods (" << model.neighbourhoods.size()
+                  << "):\n";
+        std::transform(model.neighbourhoods.begin(), model.neighbourhoods.end(),
+                       std::ostream_iterator<std::string>(std::cout, "\n"),
+                       [](auto& n) -> std::string& { return n.name; });
+
         StatsContainer stats;
         stats.startTimer();
         BoolView& cspView = model.csp;

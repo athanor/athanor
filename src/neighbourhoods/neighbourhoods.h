@@ -76,7 +76,6 @@ inline void generateNeighbourhoodsImpl(
     std::vector<Neighbourhood>& neighbourhoods) {
     assignRandomGen(*domainImpl, neighbourhoods);
 
-    return;
     for (auto& generator :
          NeighbourhoodGenList<typename DomainPtrType::element_type>::value) {
         generator(*domainImpl, neighbourhoods);

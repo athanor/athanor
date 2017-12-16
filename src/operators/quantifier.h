@@ -83,7 +83,7 @@ struct Quantifier {
     inline std::pair<size_t, ReturnType&> unroll(
         const AnyValRef& newValue, const bool startTriggeringExpr = true,
         bool evaluateFreshExpr = false) {
-        std::cout << "Unrolling " << newValue << std::endl;
+        debug_log("unrolling " << newValue);
         debug_code(this->hasConsistentState());
         mpark::visit(
             [&](auto& newValImpl) {
@@ -122,6 +122,7 @@ struct Quantifier {
     }
 
     inline std::pair<size_t, ReturnType> roll(const AnyValRef& val) {
+        debug_log("rolling " << val);
         debug_code(this->hasConsistentState());
         u_int64_t hash = getValueHash(val);
 
@@ -157,6 +158,21 @@ struct Quantifier {
                    ReturnValueType>
             newQuantifier(deepCopyForUnroll(container, iterator), quantId);
         newQuantifier.expr = deepCopyForUnroll(expr, iterator);
+        // we want to identify if the unrolling value is the our
+        // container. i.e. this is the inner quantifier and the container we are
+        // pointing to is going to be swapped out for a new one.
+        // If so, we don't bother repopulating the unrolledExprs as they will be
+        // repopulated when the new value of the container is chosen and a
+        // trigger activated.
+        const IterRef<ContainerValueType>* containerPtr =
+            mpark::get_if<IterRef<ContainerValueType>>(&container);
+        const IterRef<ContainerValueType>* iteratorPtr =
+            mpark::get_if<IterRef<ContainerValueType>>(&iterator);
+        if (false && containerPtr != NULL && iteratorPtr != NULL &&
+            containerPtr->getIterator().id == iteratorPtr->getIterator().id) {
+            return newQuantifier;
+        }
+        newQuantifier.valueExprMap = valueExprMap;
         for (auto& expr : unrolledExprs) {
             newQuantifier.unrolledExprs.emplace_back(
                 deepCopyForUnroll(expr.first, iterator), expr.second);
@@ -191,6 +207,7 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
     inline std::pair<size_t, BoolReturning&> unroll(
         const AnyValRef& newValue, const bool startTriggeringExpr = true,
         const bool evaluateFreshExpr = false) {
+        debug_code(hasConsistentState());
         auto indexExprPair =
             QuantBase::unroll(newValue, startTriggeringExpr, evaluateFreshExpr);
         u_int64_t addedViolation =
@@ -200,11 +217,15 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
         if (addedViolation > 0) {
             violatingOperands.insert(indexExprPair.first);
         }
-        attachTriggerToExpr(unrolledExprs.size() - 1);
+        if (startTriggeringExpr) {
+            attachTriggerToExpr(unrolledExprs.size() - 1);
+        }
+        debug_code(hasConsistentState());
         return indexExprPair;
     }
 
     inline std::pair<size_t, BoolReturning> roll(const AnyValRef& val) {
+        debug_code(hasConsistentState());
         auto indexExprPair = QuantBase::roll(val);
         u_int64_t removedViolation =
             getView<BoolView>(indexExprPair.second).violation;
@@ -216,16 +237,21 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
         if (violatingOperands.erase(unrolledExprs.size())) {
             violatingOperands.insert(indexExprPair.first);
         }
-        deleteTrigger(exprTriggers[indexExprPair.first]);
-        exprTriggers[indexExprPair.first] = std::move(exprTriggers.back());
-        exprTriggers.pop_back();
-        if (indexExprPair.first < exprTriggers.size()) {
-            exprTriggers[indexExprPair.first]->index = indexExprPair.first;
+        if (exprTriggers.size() > 0) {
+            deleteTrigger(exprTriggers[indexExprPair.first]);
+            exprTriggers[indexExprPair.first] = std::move(exprTriggers.back());
+            exprTriggers.pop_back();
+            if (indexExprPair.first < exprTriggers.size()) {
+                exprTriggers[indexExprPair.first]->index = indexExprPair.first;
+            }
         }
+        debug_code(hasConsistentState());
         return indexExprPair;
     }
 
     void startTriggeringBase() {
+        debug_code(assert(exprTriggers.size() == 0));
+        debug_code(hasConsistentState());
         auto& op = static_cast<DerivingQuantifierType&>(*this);
         typedef typename decltype(
             op.containerTrigger)::element_type ContainerTrigger;
@@ -236,9 +262,11 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
             attachTriggerToExpr(i);
             startTriggering(unrolledExprs[i].first);
         }
+        debug_code(hasConsistentState());
     }
 
     void stopTriggeringBase() {
+        debug_code(hasConsistentState());
         auto& op = static_cast<DerivingQuantifierType&>(*this);
         if (op.containerTrigger) {
             deleteTrigger(op.containerTrigger);
@@ -254,6 +282,17 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
         }
         for (auto& expr : op.unrolledExprs) {
             stopTriggering(expr.first);
+        }
+        debug_code(hasConsistentState());
+    }
+
+    inline void hasConsistentState() {
+        if (exprTriggers.size() != 0 &&
+            exprTriggers.size() != unrolledExprs.size()) {
+            std::cerr << "number unrolled Exprs = " << unrolledExprs.size()
+                      << ", number expr triggers = " << exprTriggers.size()
+                      << std::endl;
+            assert(false);
         }
     }
 };

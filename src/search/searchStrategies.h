@@ -41,6 +41,8 @@ class HillClimber {
             return cspView.violation <= bestViolation;
         };
         while (cspView.violation != 0 && stats.majorNodeCount < 3000000) {
+            debug_code(dumpState(std::cout << "state start\n", model.csp)
+                       << "\nstate end\n");
             ++stats.majorNodeCount;
             int nextNeighbourhoodIndex =
                 selectionStrategy.nextNeighbourhood(model);

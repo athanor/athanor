@@ -36,6 +36,7 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
     }
 
     inline void possibleValueChange(const AnyValRef& oldValue) {
+
         lastMemberHash = getValueHash(oldValue);
     }
     inline void valueChanged(const AnyValRef& newValue) {
@@ -44,7 +45,24 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
 
     void iterHasNewValue(const SetValue& oldValue,
                          const ValRef<SetValue>& newValue) {
-        deepCopy(oldValue, *newValue);
+        mpark::visit(
+            [&](auto& newValImpl) {
+                auto& oldValImpl = mpark::get<BaseType<decltype(newValImpl)>>(
+                    oldValue.setValueImpl);
+                for (auto& member : oldValImpl.members) {
+                    if (op->unrolledExprs.empty()) {
+                        // this check is only done as the quantifier op may use
+                        // optimisations  such that it does not repopulate with
+                        // alll the original exprs.
+                        break;
+                    }
+                    this->valueRemoved(member);
+                }
+                for (auto& member : newValImpl.members) {
+                    this->valueAdded(member);
+                }
+            },
+            newValue->setValueImpl);
     }
 };
 
@@ -54,12 +72,8 @@ struct OpSetForAll::DelayedUnrollTrigger : public DelayedTrigger {
     DelayedUnrollTrigger(OpSetForAll* op) : op(op) {}
     void trigger() final {
         while (!op->valuesToUnroll.empty()) {
-            auto expr = op->unroll(op->valuesToUnroll.back());
+            op->unroll(op->valuesToUnroll.back());
             op->valuesToUnroll.pop_back();
-            u_int64_t violation = getView<BoolView>(expr.second).violation;
-            if (violation > 0) {
-                op->violation += violation;
-            }
         }
     }
 };
@@ -89,7 +103,12 @@ shared_ptr<OpSetForAll> deepCopyForUnroll(const OpSetForAll& op,
                                           const AnyIterRef& iterator) {
     auto newOpSetForAll = make_shared<OpSetForAll>(
         op.deepCopyQuantifierForUnroll(iterator), op.violatingOperands);
-    newOpSetForAll->violation = op.violation;
+    if (newOpSetForAll->unrolledExprs.size() > 0) {
+        newOpSetForAll->violation = op.violation;
+        newOpSetForAll->violatingOperands = op.violatingOperands;
+    } else {
+        newOpSetForAll->violation = 0;
+    }
     return newOpSetForAll;
 }
 

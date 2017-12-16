@@ -12,21 +12,21 @@ int main() {
     auto modulousConst = ValRef<IntValue>(make_shared<IntValue>());
     modulousConst->value = 2;
     auto sizeLimitConst = ValRef<IntValue>(make_shared<IntValue>());
-    sizeLimitConst->value = 10;
+    sizeLimitConst->value = 3;
 
     ModelBuilder builder;
     auto domain = make_shared<SetDomain>(
-        maxSize(5), SetDomain(noSize(), IntDomain({intBound(1, 10)})));
+        maxSize(3), SetDomain(noSize(), IntDomain({intBound(1, 6)})));
     auto a = builder.addVariable(domain);
     auto forAll = setForAll(a);
     auto i = forAll->newIterRef<SetValue>();
     auto innerForAll = setForAll(i);
-    forAll->setExpression(innerForAll);
+    forAll->setExpression(
+        opAnd(intEq(setSize(i), sizeLimitConst), innerForAll));
     auto j = innerForAll->newIterRef<IntValue>();
-    innerForAll->setExpression(opAnd(intEq(setSize(i), sizeLimitConst),
-                                     intEq(mod(j, modulousConst), zeroConst)));
+    innerForAll->setExpression(intEq(mod(j, modulousConst), zeroConst));
     builder.addConstraint(forAll);
-
+    builder.addConstraint(intEq(setSize(a), sizeLimitConst));
     HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
     search.search();
 }

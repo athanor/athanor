@@ -145,13 +145,13 @@ void stopTriggering(OpSetIntersect& op) {
     if (op.leftTrigger) {
         deleteTrigger(op.leftTrigger);
         op.leftTrigger = nullptr;
+        stopTriggering(op.left);
     }
     if (op.rightTrigger) {
         deleteTrigger<SetTrigger>(op.rightTrigger);
         op.rightTrigger = nullptr;
+        stopTriggering(op.right);
     }
-    stopTriggering(op.left);
-    stopTriggering(op.right);
 }
 
 void updateViolationDescription(const OpSetIntersect& op,

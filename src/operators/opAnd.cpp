@@ -34,6 +34,9 @@ void startTriggering(OpAnd& op) {
 }
 
 void stopTriggering(OpAnd& op) {
+    if (op.operandTriggers.empty()) {
+        return;
+    }
     while (!op.operandTriggers.empty()) {
         deleteTrigger(op.operandTriggers.back());
         op.operandTriggers.pop_back();

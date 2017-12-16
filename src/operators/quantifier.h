@@ -243,8 +243,11 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
         if (op.containerTrigger) {
             deleteTrigger(op.containerTrigger);
             op.containerTrigger = nullptr;
+            stopTriggering(container);
         }
-        stopTriggering(container);
+        if (exprTriggers.empty()) {
+            return;
+        }
         while (!exprTriggers.empty()) {
             deleteTrigger(exprTriggers.back());
             exprTriggers.pop_back();

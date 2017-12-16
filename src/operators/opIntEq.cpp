@@ -57,9 +57,9 @@ void stopTriggering(OpIntEq& op) {
     if (op.operandTrigger) {
         deleteTrigger(op.operandTrigger);
         op.operandTrigger = nullptr;
+        stopTriggering(op.left);
+        stopTriggering(op.right);
     }
-    stopTriggering(op.left);
-    stopTriggering(op.right);
 }
 
 void updateViolationDescription(const OpIntEq& op, u_int64_t,

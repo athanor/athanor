@@ -67,8 +67,8 @@ void stopTriggering(OpSetSize& op) {
     if (op.operandTrigger) {
         deleteTrigger(op.operandTrigger);
         op.operandTrigger = nullptr;
+        stopTriggering(op.operand);
     }
-    stopTriggering(op.operand);
 }
 
 void updateViolationDescription(const OpSetSize& op, u_int64_t parentViolation,

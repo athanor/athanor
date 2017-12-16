@@ -70,9 +70,9 @@ void stopTriggering(OpSetNotEq& op) {
     if (op.trigger) {
         deleteTrigger(op.trigger);
         op.trigger = nullptr;
+        stopTriggering(op.left);
+        stopTriggering(op.right);
     }
-    stopTriggering(op.left);
-    stopTriggering(op.right);
 }
 
 void updateViolationDescription(const OpSetNotEq& op, u_int64_t,

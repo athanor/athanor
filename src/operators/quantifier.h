@@ -83,6 +83,7 @@ struct Quantifier {
     inline std::pair<size_t, ReturnType&> unroll(
         const AnyValRef& newValue, const bool startTriggeringExpr = true,
         bool evaluateFreshExpr = false) {
+        std::cout << "Unrolling " << newValue << std::endl;
         debug_code(this->hasConsistentState());
         mpark::visit(
             [&](auto& newValImpl) {
@@ -152,22 +153,6 @@ struct Quantifier {
 
     Quantifier<ContainerType, ContainerValueType, ReturnType, ReturnValueType>
     deepCopyQuantifierForUnroll(const AnyIterRef& iterator) const {
-        const IterRef<ContainerValueType>* containerPtr =
-            mpark::get_if<IterRef<ContainerValueType>>(&container);
-        const IterRef<ContainerValueType>* iteratorPtr =
-            mpark::get_if<IterRef<ContainerValueType>>(&iterator);
-        if (containerPtr != NULL && iteratorPtr != NULL &&
-            containerPtr->getIterator().id == iteratorPtr->getIterator().id) {
-            Quantifier<ContainerType, ContainerValueType, ReturnType,
-                       ReturnValueType>
-                newQuantifier(deepCopyForUnroll(container, iterator));
-            newQuantifier.expr = expr;
-
-            // this is a new container we are now pointing too
-            // no need to populate it with copies of the old unrolled
-            // exprs
-            return newQuantifier;
-        }
         Quantifier<ContainerType, ContainerValueType, ReturnType,
                    ReturnValueType>
             newQuantifier(deepCopyForUnroll(container, iterator), quantId);

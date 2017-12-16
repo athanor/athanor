@@ -44,8 +44,7 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
 
     void iterHasNewValue(const SetValue& oldValue,
                          const ValRef<SetValue>& newValue) {
-        ignoreUnused(oldValue, newValue);
-        assert(false);
+        deepCopy(oldValue, *newValue);
     }
 };
 

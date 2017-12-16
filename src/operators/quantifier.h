@@ -156,7 +156,7 @@ struct Quantifier {
         Quantifier<ContainerType, ContainerValueType, ReturnType,
                    ReturnValueType>
             newQuantifier(deepCopyForUnroll(container, iterator), quantId);
-        newQuantifier.expr = expr;
+        newQuantifier.expr = deepCopyForUnroll(expr, iterator);
         for (auto& expr : unrolledExprs) {
             newQuantifier.unrolledExprs.emplace_back(
                 deepCopyForUnroll(expr.first, iterator), expr.second);

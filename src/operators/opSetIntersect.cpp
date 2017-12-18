@@ -2,28 +2,25 @@
 #include <iostream>
 #include <memory>
 #include "types/typeOperations.h"
-#include "utils/hashUtils.h"
 
 using namespace std;
 SetMembersVector evaluate(OpSetIntersect& op) {
     SetMembersVector leftVec = evaluate(op.left);
     SetMembersVector rightVec = evaluate(op.right);
-    op.cachedHashTotal = 0;
-    op.memberHashes.clear();
+    op.clear();
     SetView& leftSetView = getView<SetView>(op.left);
     SetView& rightSetView = getView<SetView>(op.right);
-    SetView& smallSetView =
-        (leftSetView.memberHashes.size() < rightSetView.memberHashes.size())
-            ? leftSetView
-            : rightSetView;
-    SetView& largeSetView =
-        (leftSetView.memberHashes.size() < rightSetView.memberHashes.size())
-            ? rightSetView
-            : leftSetView;
-    for (u_int64_t hash : smallSetView.memberHashes) {
-        if (largeSetView.memberHashes.count(hash)) {
-            op.memberHashes.insert(hash);
-            op.cachedHashTotal += hash;
+    SetView& smallSetView = (leftSetView.getMemberHashes().size() <
+                             rightSetView.getMemberHashes().size())
+                                ? leftSetView
+                                : rightSetView;
+    SetView& largeSetView = (leftSetView.getMemberHashes().size() <
+                             rightSetView.getMemberHashes().size())
+                                ? rightSetView
+                                : leftSetView;
+    for (u_int64_t hash : smallSetView.getMemberHashes()) {
+        if (largeSetView.getMemberHashes().count(hash)) {
+            op.addHash(hash);
         }
     }
     return mpark::visit(
@@ -35,7 +32,7 @@ SetMembersVector evaluate(OpSetIntersect& op) {
                                    ? leftVecImpl
                                    : rightVecImpl;
             for (auto& ref : smallerVec) {
-                if (op.memberHashes.count(mix(getValueHash(*ref)))) {
+                if (op.containsMember(*ref)) {
                     returnVec.emplace_back(std::move(ref));
                 }
             }
@@ -53,12 +50,11 @@ class OpSetIntersectTrigger : public SetTrigger {
    public:
     OpSetIntersectTrigger(OpSetIntersect* op) : op(op) {}
     inline void valueRemoved(const AnyValRef& member) final {
-        u_int64_t hash = mix(getValueHash(member));
+        u_int64_t hash = getValueHash(member);
         unordered_set<u_int64_t>::iterator hashIter;
-        if ((hashIter = op->memberHashes.find(hash)) !=
-            op->memberHashes.end()) {
-            op->memberHashes.erase(hashIter);
-            op->cachedHashTotal -= hash;
+        if ((hashIter = op->getMemberHashes().find(hash)) !=
+            op->getMemberHashes().end()) {
+            op->removeHash(hash);
             visitTriggers([&](auto& trigger) { trigger->valueRemoved(member); },
                           op->triggers);
         }
@@ -66,22 +62,21 @@ class OpSetIntersectTrigger : public SetTrigger {
 
     inline void valueAdded(const AnyValRef& member) final {
         SetReturning& unchanged = (left) ? op->right : op->left;
-        u_int64_t hash = mix(getValueHash(member));
-        if (op->memberHashes.count(hash)) {
+        u_int64_t hash = getValueHash(member);
+        if (op->getMemberHashes().count(hash)) {
             return;
         }
         SetView& viewOfUnchangedSet = getView<SetView>(unchanged);
-        if (viewOfUnchangedSet.memberHashes.count(hash)) {
-            op->memberHashes.insert(hash);
-            op->cachedHashTotal += hash;
+        if (viewOfUnchangedSet.getMemberHashes().count(hash)) {
+            op->addHash(hash);
             visitTriggers([&](auto& trigger) { trigger->valueAdded(member); },
                           op->triggers);
         }
     }
     inline void possibleValueChange(const AnyValRef& member) final {
-        u_int64_t hash = mix(getValueHash(member));
-        oldHashIter = op->memberHashes.find(hash);
-        if (oldHashIter != op->memberHashes.end()) {
+        u_int64_t hash = getValueHash(member);
+        oldHashIter = op->getMemberHashes().find(hash);
+        if (oldHashIter != op->getMemberHashes().end()) {
             visitTriggers(
                 [&](auto& trigger) { trigger->possibleValueChange(member); },
                 op->triggers);
@@ -89,20 +84,19 @@ class OpSetIntersectTrigger : public SetTrigger {
     }
 
     inline void valueChanged(const AnyValRef& member) final {
-        u_int64_t newHashOfMember = mix(getValueHash(member));
-        if (oldHashIter != op->memberHashes.end() &&
+        u_int64_t newHashOfMember = getValueHash(member);
+        if (oldHashIter != op->getMemberHashes().end() &&
             newHashOfMember == *oldHashIter) {
             return;
         }
         SetReturning& unchanged = (left) ? op->right : op->left;
         bool containedInUnchangedSet =
-            getView<SetView>(unchanged).memberHashes.count(newHashOfMember);
-        if (oldHashIter != op->memberHashes.end()) {
-            op->cachedHashTotal -= *oldHashIter;
-            op->memberHashes.erase(oldHashIter);
+            getView<SetView>(unchanged).getMemberHashes().count(
+                newHashOfMember);
+        if (oldHashIter != op->getMemberHashes().end()) {
+            op->removeHash(*oldHashIter);
             if (containedInUnchangedSet) {
-                op->memberHashes.insert(newHashOfMember);
-                op->cachedHashTotal += newHashOfMember;
+                op->addHash(newHashOfMember);
                 visitTriggers(
                     [&](auto& trigger) { trigger->valueChanged(member); },
                     op->triggers);
@@ -112,8 +106,7 @@ class OpSetIntersectTrigger : public SetTrigger {
                     op->triggers);
             }
         } else if (containedInUnchangedSet) {
-            op->memberHashes.insert(newHashOfMember);
-            op->cachedHashTotal += newHashOfMember;
+            op->addHash(newHashOfMember);
             visitTriggers([&](auto& trigger) { trigger->valueAdded(member); },
                           op->triggers);
         }

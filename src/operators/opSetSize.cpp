@@ -7,7 +7,7 @@ using namespace std;
 
 void evaluate(OpSetSize& op) {
     evaluate(op.operand);
-    op.value = getView<SetView>(op.operand).memberHashes.size();
+    op.value = getView<SetView>(op.operand).numberElements();
 }
 
 class OpSetSizeTrigger : public SetTrigger {
@@ -38,7 +38,7 @@ class OpSetSizeTrigger : public SetTrigger {
     inline void valueChanged(const AnyValRef&) {}
     inline void iterHasNewValue(const SetValue&,
                                 const ValRef<SetValue>& newValue) {
-        int64_t newSize = newValue->memberHashes.size();
+        int64_t newSize = newValue->numberElements();
         if (newSize == op->value) {
             return;
         }

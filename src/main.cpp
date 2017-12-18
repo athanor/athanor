@@ -27,6 +27,6 @@ int main() {
     innerForAll->setExpression(intEq(mod(j, modulousConst), zeroConst));
     builder.addConstraint(forAll);
     builder.addConstraint(intEq(setSize(a), sizeLimitConst));
-    HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
+    HillClimber<InteractiveNeighbourhoodSelector> search(builder.build());
     search.search();
 }

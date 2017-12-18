@@ -184,20 +184,19 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                 (params.vioDesc.hasChildViolation(val.id))
                     ? params.vioDesc.childViolations(val.id).selectRandomVar()
                     : globalRandom<u_int64_t>(0, valImpl.members.size() - 1);
-            u_int64_t oldHash =
-                mix(getValueHash(*valImpl.members[indexToChange]));
+            u_int64_t oldHash = getValueHash(*valImpl.members[indexToChange]);
             valImpl.possibleValueChange(val, indexToChange);
             bool requiresRevert = false;
             ParentCheckCallBack parentCheck = [&](const AnyValRef& newValue) {
                 if (val.containsMember(mpark::get<InnerValRefType>(newValue))) {
                     return false;
                 }
-                u_int64_t newHash = mix(getValueHash(newValue));
-                val.cachedHashTotal -= oldHash;
-                val.cachedHashTotal += newHash;
+                u_int64_t newHash = getValueHash(newValue);
+                val.removeHash(oldHash);
+                val.addHash(newHash);
                 bool allowedByParent = params.parentCheck(params.primary);
-                val.cachedHashTotal -= newHash;
-                val.cachedHashTotal += oldHash;
+                val.removeHash(newHash);
+                val.addHash(oldHash);
                 return allowedByParent;
             };
             AcceptanceCallBack changeAccepted = [&]() {

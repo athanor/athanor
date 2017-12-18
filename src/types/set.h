@@ -50,14 +50,44 @@ struct SetTrigger : public IterAssignedTrigger<SetValue> {
 };
 
 struct SetView {
+   private:
     std::unordered_set<u_int64_t> memberHashes;
     u_int64_t cachedHashTotal;
+
+   public:
     std::vector<std::shared_ptr<SetTrigger>> triggers;
 
-    template <typename Inner>
-    inline bool containsMember(const Inner& member) const {
-        return memberHashes.count(mix(getValueHash(*member)));
+    template <typename ValueType>
+    inline bool containsMember(const ValRef<ValueType>& member) const {
+        return containsMember(*member);
     }
+    template <typename ValueType>
+    inline bool containsMember(const ValueType& member) const {
+        return memberHashes.count(getValueHash(member));
+    }
+
+    inline void addHash(u_int64_t hash) {
+        bool inserted = memberHashes.insert(hash).second;
+        debug_code(assert(inserted));
+        static_cast<void>(inserted);
+        cachedHashTotal += mix(hash);
+    }
+    inline void removeHash(u_int64_t hash) {
+        bool removed = memberHashes.erase(hash);
+        debug_code(assert(remove));
+        static_cast<void>(removed);
+        cachedHashTotal -= mix(hash);
+    }
+
+    inline void clear() {
+        memberHashes.clear();
+        cachedHashTotal = 0;
+    }
+    inline const std::unordered_set<u_int64_t>& getMemberHashes() const {
+        return memberHashes;
+    }
+    inline u_int64_t getCachedHashTotal() const { return cachedHashTotal; }
+    inline u_int64_t numberElements() const { return memberHashes.size(); }
 };
 
 template <typename Inner>
@@ -67,18 +97,16 @@ struct SetValueImpl {
 
     template <typename SetValueType>
     inline void possibleValueChange(SetValueType& val, size_t memberIndex) {
-        hashOfPossibleChange = mix(getValueHash(*members[memberIndex]));
+        hashOfPossibleChange = getValueHash(*members[memberIndex]);
         AnyValRef triggerMember = members[memberIndex];
         visitTriggers([&](auto& t) { t->possibleValueChange(triggerMember); },
                       val.triggers);
     }
     template <typename SetValueType>
     inline void valueChanged(SetValueType& val, size_t memberIndex) {
-        val.memberHashes.erase(hashOfPossibleChange);
-        val.cachedHashTotal -= hashOfPossibleChange;
-        u_int64_t hash = mix(getValueHash(*members[memberIndex]));
-        val.memberHashes.insert(hash);
-        val.cachedHashTotal += hash;
+        val.removeHash(hashOfPossibleChange);
+        u_int64_t hash = getValueHash(*members[memberIndex]);
+        val.addHash(hash);
         AnyValRef triggerMember = members[memberIndex];
         visitTriggers([&](auto& t) { t->valueChanged(triggerMember); },
                       val.triggers);
@@ -103,12 +131,8 @@ struct SetValueImpl {
         if (memberIndex < members.size()) {
             valBase(*members[memberIndex]).id = memberIndex;
         }
-        u_int64_t hash = mix(getValueHash(*member));
-        bool deleted = val.memberHashes.erase(hash);
-        static_cast<void>(deleted);
-        assert(deleted);
-        val.cachedHashTotal -= hash;
-
+        u_int64_t hash = getValueHash(*member);
+        val.removeHash(hash);
         AnyValRef triggerMember = member;
         visitTriggers([&](auto& t) { t->valueRemoved(triggerMember); },
                       val.triggers);
@@ -130,9 +154,8 @@ struct SetValueImpl {
         ValBase& newMemberBase = valBase(*member);
         newMemberBase.id = members.size() - 1;
         newMemberBase.container = &val;
-        u_int64_t hash = mix(getValueHash(*member));
-        val.memberHashes.insert(hash);
-        val.cachedHashTotal += hash;
+        u_int64_t hash = getValueHash(*member);
+        val.addHash(hash);
         AnyValRef triggerMember = members.back();
         visitTriggers([&](auto& t) { t->valueAdded(triggerMember); },
                       val.triggers);

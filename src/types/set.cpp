@@ -4,13 +4,12 @@
 #include "common/common.h"
 #include "operators/operatorBase.h"
 #include "types/typeOperations.h"
-#include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 
 template <>
 u_int64_t getValueHash<SetValue>(const SetValue& val) {
-    return val.cachedHashTotal;
+    return val.getCachedHashTotal();
 }
 
 template <>
@@ -102,10 +101,9 @@ u_int64_t getDomainSize<SetDomain>(const SetDomain& domain) {
 template <typename InnerValueRefType>
 void resetImpl(SetValue& val, SetValueImpl<InnerValueRefType>& valImpl) {
     val.triggers.clear();
+    val.clear();
     val.container = NULL;
     valImpl.members.clear();
-    val.memberHashes.clear();
-    val.cachedHashTotal = 0;
 }
 void reset(SetValue& val) {
     mpark::visit([&](auto& valImpl) { resetImpl(val, valImpl); },

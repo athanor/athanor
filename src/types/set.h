@@ -102,14 +102,18 @@ struct SetValueImpl {
         visitTriggers([&](auto& t) { t->possibleValueChange(triggerMember); },
                       val.triggers);
     }
+
     template <typename SetValueType>
-    inline void valueChanged(SetValueType& val, size_t memberIndex) {
+    inline void valueChangedSilent(SetValueType& val, size_t memberIndex) {
         val.removeHash(hashOfPossibleChange);
         u_int64_t hash = getValueHash(*members[memberIndex]);
         val.addHash(hash);
-        AnyValRef triggerMember = members[memberIndex];
-        visitTriggers([&](auto& t) { t->valueChanged(triggerMember); },
-                      val.triggers);
+    }
+
+    template <typename SetValueType>
+    inline void valueChanged(SetValueType& val, size_t memberIndex) {
+        valueChangedSilent(val, memberIndex);
+        val.signalValueChanged(members[memberIndex]);
     }
 
     template <typename Func, typename SetValueType>
@@ -122,7 +126,7 @@ struct SetValueImpl {
     }
 
     template <typename SetValueType>
-    inline Inner removeValue(SetValueType& val, size_t memberIndex) {
+    inline Inner removeValueSilent(SetValueType& val, size_t memberIndex) {
         assert(memberIndex < members.size());
         Inner member = std::move(members[memberIndex]);
         valBase(*member).container = NULL;
@@ -133,9 +137,6 @@ struct SetValueImpl {
         }
         u_int64_t hash = getValueHash(*member);
         val.removeHash(hash);
-        AnyValRef triggerMember = member;
-        visitTriggers([&](auto& t) { t->valueRemoved(triggerMember); },
-                      val.triggers);
         return member;
     }
 
@@ -145,8 +146,9 @@ struct SetValueImpl {
             removeValue(val, members.size() - 1);
         }
     }
+
     template <typename SetValueType>
-    inline bool addValue(SetValueType& val, const Inner& member) {
+    inline bool addValueSilent(SetValueType& val, const Inner& member) {
         if (val.containsMember(member)) {
             return false;
         }
@@ -156,10 +158,24 @@ struct SetValueImpl {
         newMemberBase.container = &val;
         u_int64_t hash = getValueHash(*member);
         val.addHash(hash);
-        AnyValRef triggerMember = members.back();
-        visitTriggers([&](auto& t) { t->valueAdded(triggerMember); },
-                      val.triggers);
         return true;
+    }
+
+    template <typename SetValueType>
+    inline Inner removeValue(SetValueType& val, size_t memberIndex) {
+        Inner removedValue = removeValueSilent(val, memberIndex);
+        val.signalValueRemoved(removedValue);
+        return removedValue;
+    }
+
+    template <typename SetValueType>
+    inline bool addValue(SetValueType& val, const Inner& member) {
+        if (addValueSilent(val, member)) {
+            val.signalValueAdded(members.back());
+            return true;
+        } else {
+            return false;
+        }
     }
 };
 
@@ -168,6 +184,20 @@ using SetValueImplWithValRefWrapper = SetValueImpl<ValRef<T>>;
 typedef Variantised<SetValueImplWithValRefWrapper> SetValueImplVariant;
 struct SetValue : public SetView, ValBase {
     SetValueImplVariant setValueImpl = SetValueImpl<ValRef<IntValue>>();
+
+    inline void signalValueAdded(const AnyValRef& newMember) {
+        visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
+    }
+
+    inline void signalValueRemoved(const AnyValRef& removedMember) {
+        visitTriggers([&](auto& t) { t->valueRemoved(removedMember); },
+                      triggers);
+    }
+
+    void signalValueChanged(const AnyValRef& changedMember) {
+        visitTriggers([&](auto& t) { t->valueChanged(changedMember); },
+                      triggers);
+    }
 };
 
 #endif /* SRC_TYPES_SET_H_ */

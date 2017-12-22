@@ -45,8 +45,8 @@ struct SetTrigger : public IterAssignedTrigger<SetValue> {
     typedef SetView View;
     virtual void valueRemoved(const AnyValRef& member) = 0;
     virtual void valueAdded(const AnyValRef& member) = 0;
-    virtual void possibleValueChange(const AnyValRef& member) = 0;
-    virtual void valueChanged(const AnyValRef& member) = 0;
+    virtual void possibleMemberValueChange(const AnyValRef& member) = 0;
+    virtual void memberValueChanged(const AnyValRef& member) = 0;
 };
 
 struct SetView {
@@ -96,19 +96,19 @@ struct SetValueImpl {
     u_int64_t hashOfPossibleChange;
 
     template <typename SetValueType>
-    inline void possibleValueChange(SetValueType& val, size_t memberIndex) {
+    inline void possibleMemberValueChange(SetValueType& val, size_t memberIndex) {
         val.assertValidState();
         hashOfPossibleChange = getValueHash(*members[memberIndex]);
         AnyValRef triggerMember = members[memberIndex];
         debug_log("Possible value change, member=" << members[memberIndex]
                                                    << " hash = "
                                                    << hashOfPossibleChange);
-        visitTriggers([&](auto& t) { t->possibleValueChange(triggerMember); },
+        visitTriggers([&](auto& t) { t->possibleMemberValueChange(triggerMember); },
                       val.triggers);
     }
 
     template <typename SetValueType>
-    inline void valueChangedSilent(SetValueType& val, size_t memberIndex) {
+    inline void memberValueChangedSilent(SetValueType& val, size_t memberIndex) {
         debug_log("changing value, member=" << members[memberIndex]
                                             << " hasBeforeChange= "
                                             << hashOfPossibleChange);
@@ -122,17 +122,17 @@ struct SetValueImpl {
     }
 
     template <typename SetValueType>
-    inline void valueChanged(SetValueType& val, size_t memberIndex) {
-        valueChangedSilent(val, memberIndex);
+    inline void memberValueChanged(SetValueType& val, size_t memberIndex) {
+        memberValueChangedSilent(val, memberIndex);
         val.signalValueChanged(members[memberIndex]);
     }
 
     template <typename Func, typename SetValueType>
     inline void changeMemberValue(Func&& func, SetValueType& val,
                                   size_t memberIndex) {
-        possibleValueChange(val, memberIndex);
+        possibleMemberValueChange(val, memberIndex);
         if (func()) {
-            valueChanged(val, memberIndex);
+            memberValueChanged(val, memberIndex);
         }
     }
 
@@ -213,7 +213,7 @@ struct SetValue : public SetView, ValBase {
 
     void signalValueChanged(const AnyValRef& changedMember) {
         assertValidState();
-        visitTriggers([&](auto& t) { t->valueChanged(changedMember); },
+        visitTriggers([&](auto& t) { t->memberValueChanged(changedMember); },
                       triggers);
     }
     void assertValidState();

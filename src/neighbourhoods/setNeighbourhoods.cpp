@@ -197,7 +197,7 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                 (params.vioDesc.hasChildViolation(val.id))
                     ? params.vioDesc.childViolations(val.id).selectRandomVar()
                     : globalRandom<u_int64_t>(0, valImpl.members.size() - 1);
-            valImpl.possibleValueChange(val, indexToChange);
+            valImpl.possibleMemberValueChange(val, indexToChange);
             ParentCheckCallBack parentCheck = [&](const AnyValRef& newValue) {
                 u_int64_t newHash = getValueHash(newValue);
                 if (val.getMemberHashes().count(newHash)) {
@@ -214,10 +214,10 @@ void setLiftSingleGenImpl(const SetDomain& domain,
 
             AnyValRef changingMember = valImpl.members[indexToChange];
             AcceptanceCallBack changeAccepted = [&]() {
-                valImpl.valueChanged(val, indexToChange);
+                valImpl.memberValueChanged(val, indexToChange);
                 requiresRevert = !params.changeAccepted();
                 if (requiresRevert) {
-                    valImpl.possibleValueChange(val, indexToChange);
+                    valImpl.possibleMemberValueChange(val, indexToChange);
                 }
                 return !requiresRevert;
             };
@@ -229,7 +229,7 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                                                            : emptyViolations));
             innerNhApply(innerNhParams);
             if (requiresRevert) {
-                valImpl.valueChanged(val, indexToChange);
+                valImpl.memberValueChanged(val, indexToChange);
             }
         });
     }

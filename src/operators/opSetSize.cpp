@@ -34,8 +34,8 @@ class OpSetSizeTrigger : public SetTrigger {
                       op->triggers);
     }
 
-    inline void possibleValueChange(const AnyValRef&) {}
-    inline void valueChanged(const AnyValRef&) {}
+    inline void possibleMemberValueChange(const AnyValRef&) {}
+    inline void memberValueChanged(const AnyValRef&) {}
     inline void iterHasNewValue(const SetValue&,
                                 const ValRef<SetValue>& newValue) {
         int64_t newSize = newValue->numberElements();

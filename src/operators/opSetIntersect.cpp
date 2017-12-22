@@ -73,17 +73,17 @@ class OpSetIntersectTrigger : public SetTrigger {
                           op->triggers);
         }
     }
-    inline void possibleValueChange(const AnyValRef& member) final {
+    inline void possibleMemberValueChange(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
         oldHashIter = op->getMemberHashes().find(hash);
         if (oldHashIter != op->getMemberHashes().end()) {
             visitTriggers(
-                [&](auto& trigger) { trigger->possibleValueChange(member); },
+                [&](auto& trigger) { trigger->possibleMemberValueChange(member); },
                 op->triggers);
         }
     }
 
-    inline void valueChanged(const AnyValRef& member) final {
+    inline void memberValueChanged(const AnyValRef& member) final {
         u_int64_t newHashOfMember = getValueHash(member);
         if (oldHashIter != op->getMemberHashes().end() &&
             newHashOfMember == *oldHashIter) {
@@ -98,7 +98,7 @@ class OpSetIntersectTrigger : public SetTrigger {
             if (containedInUnchangedSet) {
                 op->addHash(newHashOfMember);
                 visitTriggers(
-                    [&](auto& trigger) { trigger->valueChanged(member); },
+                    [&](auto& trigger) { trigger->memberValueChanged(member); },
                     op->triggers);
             } else {
                 visitTriggers(

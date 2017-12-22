@@ -35,11 +35,10 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
         }
     }
 
-    inline void possibleValueChange(const AnyValRef& oldValue) {
-
+    inline void possibleMemberValueChange(const AnyValRef& oldValue) {
         lastMemberHash = getValueHash(oldValue);
     }
-    inline void valueChanged(const AnyValRef& newValue) {
+    inline void memberValueChanged(const AnyValRef& newValue) {
         op->valueChanged(lastMemberHash, getValueHash(newValue));
     }
 

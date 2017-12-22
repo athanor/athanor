@@ -181,3 +181,38 @@ bool largerValue<SetValue>(const SetValue& u, const SetValue& v) {
         },
         u.setValueImpl);
 }
+
+void SetValue::assertValidState() {
+    mpark::visit(
+        [&](auto& valImpl) {
+            std::unordered_set<u_int64_t> seenHashes;
+            bool success = true;
+            if (getMemberHashes().size() != valImpl.members.size()) {
+                cerr << "getMemberHashes() and members differ in size.\n";
+                success = false;
+            } else {
+                for (auto& member : valImpl.members) {
+                    u_int64_t memberHash = getValueHash(*member);
+                    if (!seenHashes.insert(memberHash).second) {
+                        cerr << "Error: possible duplicate member: " << *member
+                             << endl;
+                        success = false;
+                        break;
+                    }
+                    if (!(getMemberHashes().count(memberHash))) {
+                        cerr << "Error: member " << *member
+                             << " has no corresponding hash in "
+                                "getMemberHashes().\n";
+                        success = false;
+                        break;
+                    }
+                }
+            }
+            if (!success) {
+                cerr << "Members: " << valImpl.members << endl;
+                cerr << "memberHashes: " << getMemberHashes() << endl;
+                assert(false);
+            }
+        },
+        setValueImpl);
+}

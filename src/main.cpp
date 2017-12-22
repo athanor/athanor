@@ -7,6 +7,17 @@
 using namespace std;
 
 int main() {
+    ModelBuilder builder;
+    auto domain = make_shared<SetDomain>(
+        maxSize(3), SetDomain(noSize(), IntDomain({intBound(1, 6)})));
+    auto a = builder.addVariable(domain);
+    Model m = builder.build();
+    m.csp.violation = 1;
+    HillClimber<RandomNeighbourhoodWithViolation> search(move(m));
+    search.search();
+}
+
+void setOfSetWithModulous() {
     auto zeroConst = ValRef<IntValue>(make_shared<IntValue>());
     zeroConst->value = 0;
     auto modulousConst = ValRef<IntValue>(make_shared<IntValue>());
@@ -27,6 +38,6 @@ int main() {
     innerForAll->setExpression(intEq(mod(j, modulousConst), zeroConst));
     builder.addConstraint(forAll);
     builder.addConstraint(intEq(setSize(a), sizeLimitConst));
-    HillClimber<InteractiveNeighbourhoodSelector> search(builder.build());
+    HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
     search.search();
 }

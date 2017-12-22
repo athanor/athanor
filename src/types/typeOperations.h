@@ -109,11 +109,6 @@ inline std::ostream& prettyPrint(std::ostream& os, const AnyValRef& v, T = 0) {
     return os;
 }
 
-template <typename Val>
-std::ostream& operator<<(std::ostream& os, const ValRef<Val>& v) {
-    return prettyPrint(os, v);
-}
-
 inline std::ostream& operator<<(std::ostream& os, const AnyValRef& v) {
     return prettyPrint(os, v);
 }

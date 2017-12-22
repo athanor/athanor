@@ -97,17 +97,28 @@ struct SetValueImpl {
 
     template <typename SetValueType>
     inline void possibleValueChange(SetValueType& val, size_t memberIndex) {
+        val.assertValidState();
         hashOfPossibleChange = getValueHash(*members[memberIndex]);
         AnyValRef triggerMember = members[memberIndex];
+        debug_log("Possible value change, member=" << members[memberIndex]
+                                                   << " hash = "
+                                                   << hashOfPossibleChange);
         visitTriggers([&](auto& t) { t->possibleValueChange(triggerMember); },
                       val.triggers);
     }
 
     template <typename SetValueType>
     inline void valueChangedSilent(SetValueType& val, size_t memberIndex) {
+        debug_log("changing value, member=" << members[memberIndex]
+                                            << " hasBeforeChange= "
+                                            << hashOfPossibleChange);
+
         val.removeHash(hashOfPossibleChange);
         u_int64_t hash = getValueHash(*members[memberIndex]);
         val.addHash(hash);
+        hashOfPossibleChange = hash;
+        debug_log("New hash = " << hashOfPossibleChange);
+        val.assertValidState();
     }
 
     template <typename SetValueType>
@@ -127,6 +138,7 @@ struct SetValueImpl {
 
     template <typename SetValueType>
     inline Inner removeValueSilent(SetValueType& val, size_t memberIndex) {
+        val.assertValidState();
         assert(memberIndex < members.size());
         Inner member = std::move(members[memberIndex]);
         valBase(*member).container = NULL;
@@ -149,6 +161,8 @@ struct SetValueImpl {
 
     template <typename SetValueType>
     inline bool addValueSilent(SetValueType& val, const Inner& member) {
+        debug_log("Adding value " << *member);
+        val.assertValidState();
         if (val.containsMember(member)) {
             return false;
         }
@@ -163,6 +177,7 @@ struct SetValueImpl {
 
     template <typename SetValueType>
     inline Inner removeValue(SetValueType& val, size_t memberIndex) {
+        debug_log("Removingvalue " << *members[memberIndex]);
         Inner removedValue = removeValueSilent(val, memberIndex);
         val.signalValueRemoved(removedValue);
         return removedValue;
@@ -186,18 +201,22 @@ struct SetValue : public SetView, ValBase {
     SetValueImplVariant setValueImpl = SetValueImpl<ValRef<IntValue>>();
 
     inline void signalValueAdded(const AnyValRef& newMember) {
+        assertValidState();
         visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
     }
 
     inline void signalValueRemoved(const AnyValRef& removedMember) {
+        assertValidState();
         visitTriggers([&](auto& t) { t->valueRemoved(removedMember); },
                       triggers);
     }
 
     void signalValueChanged(const AnyValRef& changedMember) {
+        assertValidState();
         visitTriggers([&](auto& t) { t->valueChanged(changedMember); },
                       triggers);
     }
+    void assertValidState();
 };
 
 #endif /* SRC_TYPES_SET_H_ */

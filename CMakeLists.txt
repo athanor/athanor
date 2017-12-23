@@ -52,7 +52,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-Wextra -Wall -O3 ")
 
 
 #debug flags
-set(CMAKE_CXX_FLAGS_DEBUG "-Wextra -Wall  -DDEBUG_MODE=1")
+set(CMAKE_CXX_FLAGS_DEBUG "-Wextra -Wall  -DDEBUG_MODE=1 -g")
 
 #default build type:
 if(NOT CMAKE_BUILD_TYPE) 

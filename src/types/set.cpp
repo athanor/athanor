@@ -202,6 +202,7 @@ void SetValue::assertValidState() {
         [&](auto& valImpl) {
             std::unordered_set<u_int64_t> seenHashes;
             bool success = true;
+            u_int64_t calculatedTotal = 0;
             if (getMemberHashes().size() != valImpl.members.size()) {
                 cerr << "getMemberHashes() and members differ in size.\n";
                 success = false;
@@ -218,6 +219,31 @@ void SetValue::assertValidState() {
                         cerr << "Error: member " << *member
                              << " has no corresponding hash in "
                                 "getMemberHashes().\n";
+                        success = false;
+                        break;
+                    }
+                    calculatedTotal += mix(memberHash);
+                }
+                if (success) {
+                    success = calculatedTotal == getCachedHashTotal();
+                    if (!success) {
+                        cerr << "Calculated hash total should be "
+                             << calculatedTotal << " but it was actually "
+                             << getCachedHashTotal() << endl;
+                    }
+                }
+            }
+            if (success) {
+                for (size_t i = 0; i < valImpl.members.size(); i++) {
+                    size_t id = valBase(*valImpl.members[i]).id;
+                    if (i != id) {
+                        cerr << "Error: found id " << id
+                             << " when it should be " << i << endl;
+                        cerr << "ids are: ";
+                        transform(
+                            begin(valImpl.members), end(valImpl.members),
+                            ostream_iterator<size_t>(cerr, ","),
+                            [](auto& member) { return valBase(*member).id; });
                         success = false;
                         break;
                     }

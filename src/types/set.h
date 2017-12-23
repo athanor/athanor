@@ -174,6 +174,7 @@ struct SetValueImpl {
         debug_log("Adding value " << *member);
         val.assertValidState();
         if (val.containsMember(member)) {
+            debug_log("rejected");
             return false;
         }
         members.push_back(member);

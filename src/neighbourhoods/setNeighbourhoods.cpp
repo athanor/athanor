@@ -193,9 +193,13 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                 ++params.stats.minorNodeCount;
                 return;
             }
+            ViolationDescription& vioDescAtThisLevel =
+                params.vioDesc.hasChildViolation(val.id)
+                    ? params.vioDesc.childViolations(val.id)
+                    : emptyViolations;
             u_int64_t indexToChange =
-                (params.vioDesc.hasChildViolation(val.id))
-                    ? params.vioDesc.childViolations(val.id).selectRandomVar()
+                (vioDescAtThisLevel.getTotalViolation() != 0)
+                    ? vioDescAtThisLevel.selectRandomVar()
                     : globalRandom<u_int64_t>(0, valImpl.members.size() - 1);
             valImpl.possibleMemberValueChange(val, indexToChange);
             ParentCheckCallBack parentCheck = [&](const AnyValRef& newValue) {
@@ -224,9 +228,7 @@ void setLiftSingleGenImpl(const SetDomain& domain,
             NeighbourhoodParams innerNhParams(
                 changeAccepted, parentCheck,
                 getTryLimit(valImpl.members.size(), innerDomainSize),
-                changingMember, params.stats,
-                ((params.vioDesc.getTotalViolation() != 0) ? params.vioDesc
-                                                           : emptyViolations));
+                changingMember, params.stats, vioDescAtThisLevel);
             innerNhApply(innerNhParams);
             if (requiresRevert) {
                 valImpl.memberValueChanged(val, indexToChange);

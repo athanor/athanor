@@ -35,7 +35,24 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
         }
     }
 
-    inline void setValueChanged(const SetValue&) final { assert(false); }
+    inline void setValueChanged(const SetValue& newValue) final {
+        for (auto& hashIndexPair : op->valueExprMap) {
+            const u_int64_t& hash = hashIndexPair.first;
+            if (!newValue.getMemberHashes().count(hash)) {
+                this->valueRemoved(hash);
+            }
+        }
+        mpark::visit(
+            [&](auto& newValImpl) {
+                for (auto& member : newValImpl.members) {
+                    u_int64_t hash = getValueHash(*member);
+                    if (!op->valueExprMap.count(hash)) {
+                        this->valueAdded(member);
+                    }
+                }
+            },
+            newValue.setValueImpl);
+    }
     inline void possibleMemberValueChange(const AnyValRef& oldValue) {
         lastMemberHash = getValueHash(oldValue);
     }
@@ -49,9 +66,9 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
             [&](auto& newValImpl) {
                 for (auto& hash : oldValue.getMemberHashes()) {
                     if (op->unrolledExprs.empty()) {
-                        // this check is only done as the quantifier op may use
-                        // optimisations  such that it does not repopulate with
-                        // alll the original exprs.
+                        // this check is only done as the quantifier op may
+                        // use optimisations  such that it does not
+                        // repopulate with alll the original exprs.
                         break;
                     }
                     this->valueRemoved(hash);

@@ -35,6 +35,7 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
         }
     }
 
+    inline void setValueChanged(const SetValue&) final { assert(false); }
     inline void possibleMemberValueChange(const AnyValRef& oldValue) {
         lastMemberHash = getValueHash(oldValue);
     }

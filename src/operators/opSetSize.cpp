@@ -33,7 +33,18 @@ class OpSetSizeTrigger : public SetTrigger {
         visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
                       op->triggers);
     }
-
+    inline void setValueChanged(const SetValue& newValue) final {
+        u_int64_t newSize = newValue.numberElements();
+        if ((int)newSize == op->value) {
+            return;
+        }
+        visitTriggers(
+            [&](auto& trigger) { trigger->possibleValueChange(op->value); },
+            op->triggers);
+        op->value = newSize;
+        visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
+                      op->triggers);
+    }
     inline void possibleMemberValueChange(const AnyValRef&) {}
     inline void memberValueChanged(const AnyValRef&) {}
     inline void iterHasNewValue(const SetValue&,

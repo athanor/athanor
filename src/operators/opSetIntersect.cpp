@@ -73,12 +73,16 @@ class OpSetIntersectTrigger : public SetTrigger {
                           op->triggers);
         }
     }
+
+    inline void setValueChanged(const SetValue&)  final { assert(false); }
     inline void possibleMemberValueChange(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
         oldHashIter = op->getMemberHashes().find(hash);
         if (oldHashIter != op->getMemberHashes().end()) {
             visitTriggers(
-                [&](auto& trigger) { trigger->possibleMemberValueChange(member); },
+                [&](auto& trigger) {
+                    trigger->possibleMemberValueChange(member);
+                },
                 op->triggers);
         }
     }

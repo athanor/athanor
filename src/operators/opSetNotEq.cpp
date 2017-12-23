@@ -39,7 +39,9 @@ class OpSetNotEqTrigger : public SetTrigger {
     }
 
     inline void valueAdded(const AnyValRef&) final { setViolation(*op, true); }
-
+    inline void setValueChanged(const SetValue&) final {
+        setViolation(*op, true);
+    }
     inline void possibleMemberValueChange(const AnyValRef&) final {}
 
     inline void memberValueChanged(const AnyValRef&) final {

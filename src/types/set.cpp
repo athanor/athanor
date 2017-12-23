@@ -38,10 +38,12 @@ void deepCopyImpl(const SetValueImpl<InnerValueRefType>& srcImpl,
     auto& targetImpl =
         mpark::get<SetValueImpl<InnerValueRefType>>(target.setValueImpl);
     // to be optimised later
-    targetImpl.removeAllValues(target);
+    target.clear();
+    targetImpl.members.clear();
     for (auto& member : srcImpl.members) {
-        targetImpl.addValue(target, deepCopy(*member));
+        targetImpl.addValueSilent(target, deepCopy(*member));
     }
+    target.signalValueChanged();
 }
 
 template <>

@@ -73,7 +73,23 @@ class OpSetIntersectTrigger : public SetTrigger {
         }
     }
 
-    inline void setValueChanged(const SetValue&) final { assert(false); }
+    inline void setValueChanged(const SetValue& newValue) final {
+        for (u_int64_t hash : op->getMemberHashes()) {
+            if (!newValue.getMemberHashes().count(hash)) {
+                this->valueRemoved(hash);
+            }
+        }
+        mpark::visit(
+            [&](auto& newValImpl) {
+                for (auto& member : newValImpl.members) {
+                    u_int64_t hash = getValueHash(*member);
+                    if (!op->getMemberHashes().count(hash)) {
+                        this->valueAdded(member);
+                    }
+                }
+            },
+            newValue.setValueImpl);
+    }
     inline void possibleMemberValueChange(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
         oldHashIter = op->getMemberHashes().find(hash);

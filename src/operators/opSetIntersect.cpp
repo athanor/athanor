@@ -74,10 +74,14 @@ class OpSetIntersectTrigger : public SetTrigger {
     }
 
     inline void setValueChanged(const SetValue& newValue) final {
+        std::unordered_set<u_int64_t> hashesToRemove;
         for (u_int64_t hash : op->getMemberHashes()) {
             if (!newValue.getMemberHashes().count(hash)) {
-                this->valueRemoved(hash);
+                hashesToRemove.insert(hash);
             }
+        }
+        for (auto& hash : hashesToRemove) {
+            this->valueRemoved(hash);
         }
         mpark::visit(
             [&](auto& newValImpl) {

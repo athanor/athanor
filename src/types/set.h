@@ -42,6 +42,10 @@ struct SetDomain {
 };
 
 struct SetTrigger : public IterAssignedTrigger<SetValue> {
+    struct SetDiff {
+        std::unordered_set<u_int64_t> membersAdded;
+        std::unordered_set<u_int64_t> membersRemoved;
+    };
     typedef SetView View;
     virtual void valueRemoved(u_int64_t hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyValRef& member) = 0;
@@ -143,6 +147,7 @@ struct SetValueImpl {
 
     template <typename SetValueType>
     inline Inner removeValueSilent(SetValueType& val, size_t memberIndex) {
+        debug_log("Removing value " << *members[memberIndex]);
         val.assertValidState();
         assert(memberIndex < members.size());
         Inner member = std::move(members[memberIndex]);

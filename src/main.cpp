@@ -5,16 +5,9 @@
 #include "types/typeOperations.h"
 
 using namespace std;
-
+void setOfSetWithModulous();
 int main() {
-    ModelBuilder builder;
-    auto domain = make_shared<SetDomain>(
-        maxSize(3), SetDomain(noSize(), IntDomain({intBound(1, 6)})));
-    auto a = builder.addVariable(domain);
-    Model m = builder.build();
-    m.csp.violation = 1;
-    HillClimber<RandomNeighbourhoodWithViolation> search(move(m));
-    search.search();
+setOfSetWithModulous();
 }
 
 void setOfSetWithModulous() {

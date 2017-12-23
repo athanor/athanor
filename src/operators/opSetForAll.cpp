@@ -36,11 +36,15 @@ struct OpSetForAll::ContainerTrigger : public SetTrigger {
     }
 
     inline void setValueChanged(const SetValue& newValue) final {
+        unordered_set<u_int64_t> hashesToRemove;
         for (auto& hashIndexPair : op->valueExprMap) {
             const u_int64_t& hash = hashIndexPair.first;
             if (!newValue.getMemberHashes().count(hash)) {
-                this->valueRemoved(hash);
+                hashesToRemove.insert(hash);
             }
+        }
+        for (auto& hash : hashesToRemove) {
+            this->valueRemoved(hash);
         }
         mpark::visit(
             [&](auto& newValImpl) {

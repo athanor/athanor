@@ -33,15 +33,27 @@ ostream& prettyPrint<SetValue>(ostream& os, const SetValue& v) {
 }
 
 template <typename InnerValueRefType>
-void deepCopyImpl(const SetValueImpl<InnerValueRefType>& srcImpl,
+void deepCopyImpl(const SetValue& src,
+                  const SetValueImpl<InnerValueRefType>& srcImpl,
                   SetValue& target) {
     auto& targetImpl =
         mpark::get<SetValueImpl<InnerValueRefType>>(target.setValueImpl);
     // to be optimised later
-    target.clear();
-    targetImpl.members.clear();
+    // cannot just clear vector as other constraints will hold pointers to
+    // values that are in this set and assume that they are still in this set
+    size_t index = 0;
+    while (index < targetImpl.members.size()) {
+        if (!src.getMemberHashes().count(
+                getValueHash(*targetImpl.members[index]))) {
+            targetImpl.removeValueSilent(target, index);
+        } else {
+            ++index;
+        }
+    }
     for (auto& member : srcImpl.members) {
-        targetImpl.addValueSilent(target, deepCopy(*member));
+        if (!src.getMemberHashes().count(getValueHash(*member))) {
+            targetImpl.addValueSilent(target, deepCopy(*member));
+        }
     }
     target.signalValueChanged();
 }
@@ -49,8 +61,9 @@ void deepCopyImpl(const SetValueImpl<InnerValueRefType>& srcImpl,
 template <>
 void deepCopy<SetValue>(const SetValue& src, SetValue& target) {
     assert(src.setValueImpl.index() == target.setValueImpl.index());
-    return visit([&](auto& srcImpl) { return deepCopyImpl(srcImpl, target); },
-                 src.setValueImpl);
+    return visit(
+        [&](auto& srcImpl) { return deepCopyImpl(src, srcImpl, target); },
+        src.setValueImpl);
 }
 
 template <>

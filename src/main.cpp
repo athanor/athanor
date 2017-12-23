@@ -20,7 +20,7 @@ void setOfSetWithModulous() {
 
     ModelBuilder builder;
     auto domain = make_shared<SetDomain>(
-        maxSize(3), SetDomain(noSize(), IntDomain({intBound(1, 6)})));
+        maxSize(3), SetDomain(noSize(), IntDomain({intBound(1, 10)})));
     auto a = builder.addVariable(domain);
     auto forAll = setForAll(a);
     auto i = forAll->newIterRef<SetValue>();

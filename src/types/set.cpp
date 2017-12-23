@@ -51,7 +51,7 @@ void deepCopyImpl(const SetValue& src,
         }
     }
     for (auto& member : srcImpl.members) {
-        if (!src.getMemberHashes().count(getValueHash(*member))) {
+        if (!target.getMemberHashes().count(getValueHash(*member))) {
             targetImpl.addValueSilent(target, deepCopy(*member));
         }
     }

@@ -47,11 +47,12 @@ endif()
 
 
 #release flags
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wextra -Wall -O3 ")
+#choosing not to inherit the previous release flags as don't want -ndebug 
+set(CMAKE_CXX_FLAGS_RELEASE "-Wextra -Wall -O3 ")
 
 
 #debug flags
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}  -Wextra -Wall  -DDEBUG_MODE=1")
+set(CMAKE_CXX_FLAGS_DEBUG "-Wextra -Wall  -DDEBUG_MODE=1")
 
 #default build type:
 if(NOT CMAKE_BUILD_TYPE) 

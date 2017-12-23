@@ -3,9 +3,11 @@
 #define SRC_CONSTRUCTORSHORTCUTS_H_
 #include "operators/opIntEq.h"
 #include "operators/opMod.h"
+#include "operators/opProd.h"
 #include "operators/opSetForAll.h"
 #include "operators/opSetNotEq.h"
 #include "operators/opSetSize.h"
+#include "operators/opSum.h"
 #include "types/allTypes.h"
 
 template <typename... Operands>
@@ -18,6 +20,29 @@ template <typename BoolReturningVec>
 std::shared_ptr<OpAnd> opAnd(BoolReturningVec&& operands) {
     return std::make_shared<OpAnd>(std::forward<BoolReturningVec>(operands));
 }
+
+template <typename... Operands>
+std::shared_ptr<OpSum> opSum(Operands&&... operands) {
+    return std::make_shared<OpSum>(
+        std::vector<IntReturning>({std::forward<Operands>(operands)...}));
+}
+
+template <typename IntReturningVec>
+std::shared_ptr<OpSum> opSum(IntReturningVec&& operands) {
+    return std::make_shared<OpSum>(std::forward<IntReturningVec>(operands));
+}
+
+template <typename... Operands>
+std::shared_ptr<OpProd> opProd(Operands&&... operands) {
+    return std::make_shared<OpProd>(
+        std::vector<IntReturning>({std::forward<Operands>(operands)...}));
+}
+
+template <typename IntReturningVec>
+std::shared_ptr<OpProd> opProd(IntReturningVec&& operands) {
+    return std::make_shared<OpProd>(std::forward<IntReturningVec>(operands));
+}
+
 template <typename Set>
 std::shared_ptr<OpSetSize> setSize(Set&& set) {
     return std::make_shared<OpSetSize>(std::forward<Set>(set));

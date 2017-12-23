@@ -14,14 +14,13 @@ void setOfSetWithModulous() {
     auto modulousConst = ValRef<IntValue>(make_shared<IntValue>());
     modulousConst->value = 2;
     auto sizeLimitConst = ValRef<IntValue>(make_shared<IntValue>());
-    sizeLimitConst->value = 8;
-
+    sizeLimitConst->value = 20;
     ModelBuilder builder;
 
     auto domain = make_shared<SetDomain>(
-        minSize(1), SetDomain(noSize(), IntDomain({intBound(1, 20)})));
+        minSize(1), SetDomain(noSize(), IntDomain({intBound(1, 42)})));
     auto a = builder.addVariable(domain);
-    builder.addConstraint(intEq(setSize(a), sizeLimitConst));
+    builder.addConstraint(intEq(opProd(setSize(a), setSize(a), setSize(a), setSize(a)), opProd(sizeLimitConst, sizeLimitConst, sizeLimitConst, sizeLimitConst)));
 
     auto forAll = setForAll(a);
     auto i = forAll->newIterRef<SetValue>();

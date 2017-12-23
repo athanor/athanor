@@ -49,13 +49,12 @@ class OpSetIntersectTrigger : public SetTrigger {
 
    public:
     OpSetIntersectTrigger(OpSetIntersect* op) : op(op) {}
-    inline void valueRemoved(const AnyValRef& member) final {
-        u_int64_t hash = getValueHash(member);
+    inline void valueRemoved(u_int64_t hash) final {
         unordered_set<u_int64_t>::iterator hashIter;
         if ((hashIter = op->getMemberHashes().find(hash)) !=
             op->getMemberHashes().end()) {
             op->removeHash(hash);
-            visitTriggers([&](auto& trigger) { trigger->valueRemoved(member); },
+            visitTriggers([&](auto& trigger) { trigger->valueRemoved(hash); },
                           op->triggers);
         }
     }
@@ -74,7 +73,7 @@ class OpSetIntersectTrigger : public SetTrigger {
         }
     }
 
-    inline void setValueChanged(const SetValue&)  final { assert(false); }
+    inline void setValueChanged(const SetValue&) final { assert(false); }
     inline void possibleMemberValueChange(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
         oldHashIter = op->getMemberHashes().find(hash);
@@ -106,7 +105,7 @@ class OpSetIntersectTrigger : public SetTrigger {
                     op->triggers);
             } else {
                 visitTriggers(
-                    [&](auto& trigger) { trigger->valueRemoved(member); },
+                    [&](auto& trigger) { trigger->valueRemoved(*oldHashIter); },
                     op->triggers);
             }
         } else if (containedInUnchangedSet) {

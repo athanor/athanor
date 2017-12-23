@@ -151,7 +151,7 @@ void setRemoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
             return;
         }
         debug_neighbourhood_action("Removed " << *removedMember);
-        val.signalValueRemoved(removedMember);
+        val.signalValueRemoved(getValueHash(*removedMember));
         if (!params.changeAccepted()) {
             debug_neighbourhood_action("Change rejected");
             valImpl.addValue(val, std::move(removedMember));

@@ -43,7 +43,7 @@ struct SetDomain {
 
 struct SetTrigger : public IterAssignedTrigger<SetValue> {
     typedef SetView View;
-    virtual void valueRemoved(const AnyValRef& member) = 0;
+    virtual void valueRemoved(u_int64_t hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyValRef& member) = 0;
     virtual void possibleMemberValueChange(const AnyValRef& member) = 0;
     virtual void memberValueChanged(const AnyValRef& member) = 0;
@@ -184,7 +184,7 @@ struct SetValueImpl {
     inline Inner removeValue(SetValueType& val, size_t memberIndex) {
         debug_log("Removingvalue " << *members[memberIndex]);
         Inner removedValue = removeValueSilent(val, memberIndex);
-        val.signalValueRemoved(removedValue);
+        val.signalValueRemoved(getValueHash(*removedValue));
         return removedValue;
     }
 
@@ -210,9 +210,9 @@ struct SetValue : public SetView, ValBase {
         visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
     }
 
-    inline void signalValueRemoved(const AnyValRef& removedMember) {
+    inline void signalValueRemoved(u_int64_t hashOfRemovedValue) {
         assertValidState();
-        visitTriggers([&](auto& t) { t->valueRemoved(removedMember); },
+        visitTriggers([&](auto& t) { t->valueRemoved(hashOfRemovedValue); },
                       triggers);
     }
 

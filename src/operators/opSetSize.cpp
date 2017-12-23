@@ -16,7 +16,7 @@ class OpSetSizeTrigger : public SetTrigger {
 
    public:
     OpSetSizeTrigger(OpSetSize* op) : op(op) {}
-    inline void valueRemoved(const AnyValRef&) final {
+    inline void valueRemoved(u_int64_t) final {
         visitTriggers(
             [&](auto& trigger) { trigger->possibleValueChange(op->value); },
             op->triggers);

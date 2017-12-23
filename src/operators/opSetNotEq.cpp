@@ -34,7 +34,7 @@ class OpSetNotEqTrigger : public SetTrigger {
 
    public:
     OpSetNotEqTrigger(OpSetNotEq* op) : op(op) {}
-    inline void valueRemoved(const AnyValRef&) final {
+    inline void valueRemoved(u_int64_t) final {
         setViolation(*op, true);
     }
 

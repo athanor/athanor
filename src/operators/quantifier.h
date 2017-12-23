@@ -121,15 +121,14 @@ struct Quantifier {
                                               unrolledExprs.back().first);
     }
 
-    inline std::pair<size_t, ReturnType> roll(const AnyValRef& val) {
-        debug_log("rolling " << val);
+    inline std::pair<size_t, ReturnType> roll(u_int64_t hash) {
+        debug_log("rolling " << hash);
         debug_code(this->hasConsistentState());
-        u_int64_t hash = getValueHash(val);
-
         assert(valueExprMap.count(hash));
         size_t index = valueExprMap[hash];
         std::pair<size_t, ReturnType> removedExpr =
             std::make_pair(index, std::move(unrolledExprs[index].first));
+        debug_log("hash points to value " << unrolledExprs[index].second);
         unrolledExprs[index] = std::move(unrolledExprs.back());
         unrolledExprs.pop_back();
         valueExprMap.erase(hash);
@@ -224,9 +223,9 @@ struct BoolQuantifier : public Quantifier<ContainerType, ContainerValueType,
         return indexExprPair;
     }
 
-    inline std::pair<size_t, BoolReturning> roll(const AnyValRef& val) {
+    inline std::pair<size_t, BoolReturning> roll(u_int64_t hash) {
         debug_code(hasConsistentState());
-        auto indexExprPair = QuantBase::roll(val);
+        auto indexExprPair = QuantBase::roll(hash);
         u_int64_t removedViolation =
             getView<BoolView>(indexExprPair.second).violation;
         static_cast<DerivingQuantifierType*>(this)->operandRemoved(

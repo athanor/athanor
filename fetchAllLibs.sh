@@ -1,1 +1,1 @@
-git pull && git submodule init && git submodule update --depth=1 && git submodule status
+git submodule init && git submodule update --depth=1 && git submodule status

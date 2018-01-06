@@ -1,5 +1,5 @@
 [submodule "include/3rdparty/variant"]
-	path = include/3rdparty/variant
+	path = include/variant
 	url = https://github.com/mpark/variant.git
 [submodule "include/auto-arg-parse"]
 	path = include/auto-arg-parse

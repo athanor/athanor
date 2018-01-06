@@ -5,7 +5,7 @@ project(sns)
 #auto arg parse
 
 add_subdirectory (include/auto-arg-parse)
-add_subdirectory (include/3rdparty/variant)
+add_subdirectory (include/variant)
 include_directories( include/PicoSHA2)
 
 #allow includes relative to src

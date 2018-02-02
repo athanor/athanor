@@ -1,6 +1,7 @@
 
 #ifndef SRC_OPERATORS_OPSETFORALL_H_
 #define SRC_OPERATORS_OPSETFORALL_H_
+/*
 #include "operators/opAnd.h"
 #include "operators/operatorBase.h"
 #include "operators/quantifier.h"
@@ -48,4 +49,5 @@ struct OpSetForAll : public BoolView,
         }
     }
 };
+*/
 #endif /* SRC_OPERATORS_OPSETFORALL_H_ */

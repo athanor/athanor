@@ -1,3 +1,4 @@
+/*
 #include "operators/opSetForAll.h"
 #include <cassert>
 
@@ -145,3 +146,4 @@ std::ostream& dumpState(std::ostream& os, const OpSetForAll& op) {
     os << "]";
     return os;
 }
+*/

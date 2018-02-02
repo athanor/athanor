@@ -1,3 +1,4 @@
+/*
 #include <iostream>
 #include "common/common.h"
 #include "constructorShortcuts.h"
@@ -32,4 +33,9 @@ void setOfSetWithModulous() {
     builder.addConstraint(forAll);
     HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
     search.search();
+}
+
+*/
+int main() {
+    
 }

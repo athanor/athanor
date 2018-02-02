@@ -1,6 +1,7 @@
 
 #ifndef SRC_OPERATORS_QUANTIFIER_H_
 #define SRC_OPERATORS_QUANTIFIER_H_
+/*
 #include <map>
 #include "operators/iterator.h"
 #include "operators/operatorBase.h"
@@ -203,4 +204,5 @@ struct Quantifier : public QuantifierView<ExprType> {
         return newQuantifier;
     }
 };
+*/
 #endif /* SRC_OPERATORS_QUANTIFIER_H_ */

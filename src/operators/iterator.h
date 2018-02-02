@@ -1,6 +1,6 @@
 
-#ifndef SRC_OPERATORS_QUANTIFIERBASE_H_
-#define SRC_OPERATORS_QUANTIFIERBASE_H_
+#ifndef SRC_OPERATORS_ITERATOR_H_
+#define SRC_OPERATORS_ITERATOR_H_
 #include <cassert>
 #include <unordered_map>
 #include <vector>
@@ -77,4 +77,5 @@ inline std::ostream& prettyPrint(std::ostream& os, const AnyIterRef& iter,
 inline std::ostream& operator<<(std::ostream& os, const AnyIterRef& iter) {
     return prettyPrint(os, iter);
 }
-#endif /* SRC_OPERATORS_QUANTIFIERBASE_H_ */
+
+#endif /* SRC_OPERATORS_ITERATOR_H_ */

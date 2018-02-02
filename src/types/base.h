@@ -47,6 +47,9 @@ template <typename T>
 struct AssociatedValueType;
 
 template <typename T>
+struct AssociatedViewType;
+
+template <typename T>
 struct IsDomainPtrType : public std::false_type {};
 template <typename T>
 struct IsDomainType : public std::false_type {};
@@ -69,6 +72,10 @@ struct TypeAsString;
     template <>                                                          \
     struct AssociatedValueType<name##Domain> {                           \
         typedef name##Value type;                                        \
+    };                                                                   \
+    template <>                                                          \
+    struct AssociatedViewType<name##Domain> {                            \
+        typedef name##View type;                                         \
     };                                                                   \
     template <>                                                          \
     struct TypeAsString<name##Value> {                                   \

@@ -2,7 +2,8 @@
 #define SRC_OPERATORS_OPERATORBASE_H_
 #include <type_traits>
 #include <utility>
-#include "operators/quantifierBase.h"
+
+#include "operators/iterator.h"
 #include "search/violationDescription.h"
 #include "types/base.h"
 #include "utils/cachedSharedPtr.h"
@@ -21,17 +22,41 @@ using BoolReturning =
                    std::shared_ptr<OpAnd>, std::shared_ptr<OpSetNotEq>,
                    std::shared_ptr<OpSetForAll>, std::shared_ptr<OpIntEq>>;
 
+template <>
+struct AssociatedValueType<BoolReturning> {
+    typedef BoolValue type;
+};
+
 // int returning
 using IntReturning =
     mpark::variant<ValRef<IntValue>, IterRef<IntValue>,
                    std::shared_ptr<OpSetSize>, std::shared_ptr<OpSum>,
                    std::shared_ptr<OpMod>, std::shared_ptr<OpProd>>;
 
+template <>
+struct AssociatedValueType<IntReturning> {
+    typedef IntValue type;
+};
+
 // set returning
 using SetReturning = mpark::variant<ValRef<SetValue>, IterRef<SetValue>,
                                     std::shared_ptr<OpSetIntersect>>;
+
+template <>
+struct AssociatedValueType<SetReturning> {
+    typedef SetValue type;
+};
+
+// helper class for template magic, allows to test operators if they have a
+// specific return type by testing if they are convertable to that type
+
 template <typename Op>
 class ReturnType {
+    // only one of the below test functions should ever be compiled, the rest
+    // should be disabled.  the only function below that is compiled is the one
+    // that can convert template type Op to the return  type mentioned in the
+    // function (e.g. Setreturning, boolreturning)
+
     template <typename T>
     static auto test() -> decltype(std::declval<SetReturning&>() = std::move(
                                        std::declval<std::shared_ptr<T>>()));
@@ -45,6 +70,7 @@ class ReturnType {
    public:
     typedef BaseType<decltype(ReturnType<Op>::test<Op>())> type;
 };
+
 template <typename Operator, typename ReturnTypeIn>
 using HasReturnType =
     std::is_same<ReturnTypeIn, typename ReturnType<Operator>::type>;

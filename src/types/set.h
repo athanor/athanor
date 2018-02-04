@@ -1,5 +1,6 @@
 #ifndef SRC_TYPES_SET_H_
 #define SRC_TYPES_SET_H_
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include "common/common.h"
@@ -42,26 +43,36 @@ struct SetDomain {
 };
 
 struct SetTrigger : public IterAssignedTrigger<SetValue> {
-    struct SetDiff {
-        std::unordered_set<u_int64_t> membersAdded;
-        std::unordered_set<u_int64_t> membersRemoved;
-    };
     typedef SetView View;
-    virtual void valueRemoved(u_int64_t hashOfRemovedValue) = 0;
+    virtual void valueRemoved(u_int64_t indexOfRemovedValue,
+                              u_int64_t hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyValRef& member) = 0;
-    virtual void possibleMemberValueChange(const AnyValRef& member) = 0;
-    virtual void memberValueChanged(const AnyValRef& member) = 0;
+    virtual void possibleMemberValueChange(u_int64_t index,
+                                           const AnyValRef& member) = 0;
+    virtual void memberValueChanged(size_t index, const AnyValRef& member) = 0;
 
-    virtual void setValueChanged(const SetValue& newValue) = 0;
+    virtual void setValueChanged(const SetView& newValue) = 0;
 };
 
 struct SetView {
-   private:
-    std::unordered_set<u_int64_t> memberHashes;
+    std::unordered_map<u_int64_t, u_int64_t> hashIndexMap;
+    AnyVec members;
     u_int64_t cachedHashTotal;
+    u_int64_t hashOfPossibleChange;
+    std::vector<std::shared_ptr<SetTrigger>> triggers;
+
+    template <typename InnerValueType>
+    inline ValRefVec<InnerValueType>& getMembers() {
+        return mpark::get<ValRefVec<InnerValueType>>(members);
+    }
 
    public:
-    std::vector<std::shared_ptr<SetTrigger>> triggers;
+    template <typename InnerValueType>
+    inline const ValRefVec<InnerValueType>& getMembers() const {
+        return mpark::get<ValRefVec<InnerValueType>>(members);
+    }
+
+    inline const AnyVec& memberVec() { return members; }
 
     template <typename ValueType>
     inline bool containsMember(const ValRef<ValueType>& member) const {
@@ -69,170 +80,186 @@ struct SetView {
     }
     template <typename ValueType>
     inline bool containsMember(const ValueType& member) const {
-        return memberHashes.count(getValueHash(member));
+        return hashIndexMap.count(getValueHash(member));
     }
-
-    inline void addHash(u_int64_t hash) {
-        bool inserted = memberHashes.insert(hash).second;
-        debug_code(assert(inserted));
-        static_cast<void>(inserted);
-        cachedHashTotal += mix(hash);
-    }
-    inline void removeHash(u_int64_t hash) {
-        bool removed = memberHashes.erase(hash);
-        debug_code(assert(remove));
-        static_cast<void>(removed);
-        cachedHashTotal -= mix(hash);
-    }
-
-    inline void clear() {
-        memberHashes.clear();
-        cachedHashTotal = 0;
-    }
-    inline const std::unordered_set<u_int64_t>& getMemberHashes() const {
-        return memberHashes;
-    }
-    inline u_int64_t getCachedHashTotal() const { return cachedHashTotal; }
-    inline u_int64_t numberElements() const { return memberHashes.size(); }
-};
-
-template <typename Inner>
-struct SetValueImpl {
-    std::vector<Inner> members;
-    u_int64_t hashOfPossibleChange;
-
-    template <typename SetValueType>
-    inline void possibleMemberValueChange(SetValueType& val,
-                                          size_t memberIndex) {
-        val.assertValidState();
-        hashOfPossibleChange = getValueHash(*members[memberIndex]);
-        AnyValRef triggerMember = members[memberIndex];
-        debug_log("Possible value change, member=" << members[memberIndex]
-                                                   << " hash = "
-                                                   << hashOfPossibleChange);
-        visitTriggers(
-            [&](auto& t) { t->possibleMemberValueChange(triggerMember); },
-            val.triggers);
-    }
-
-    template <typename SetValueType>
-    inline void memberValueChangedSilent(SetValueType& val,
-                                         size_t memberIndex) {
-        debug_log("changing value, member=" << members[memberIndex]
-                                            << " hasBeforeChange= "
-                                            << hashOfPossibleChange);
-
-        val.removeHash(hashOfPossibleChange);
-        u_int64_t hash = getValueHash(*members[memberIndex]);
-        val.addHash(hash);
-        hashOfPossibleChange = hash;
-        debug_log("New hash = " << hashOfPossibleChange);
-        val.assertValidState();
-    }
-
-    template <typename SetValueType>
-    inline void memberValueChanged(SetValueType& val, size_t memberIndex) {
-        memberValueChangedSilent(val, memberIndex);
-        val.signalMemberValueChanged(members[memberIndex]);
-    }
-
-    template <typename Func, typename SetValueType>
-    inline void changeMemberValue(Func&& func, SetValueType& val,
-                                  size_t memberIndex) {
-        possibleMemberValueChange(val, memberIndex);
-        if (func()) {
-            memberValueChanged(val, memberIndex);
-        }
-    }
-
-    template <typename SetValueType>
-    inline Inner removeValueSilent(SetValueType& val, size_t memberIndex) {
-        debug_log("Removing value " << *members[memberIndex]);
-        val.assertValidState();
-        assert(memberIndex < members.size());
-        Inner member = std::move(members[memberIndex]);
-        valBase(*member).container = NULL;
-        members[memberIndex] = std::move(members.back());
-        members.pop_back();
-        if (memberIndex < members.size()) {
-            valBase(*members[memberIndex]).id = memberIndex;
-        }
-        u_int64_t hash = getValueHash(*member);
-        val.removeHash(hash);
-        return member;
-    }
-
-    template <typename SetValueType>
-    void removeAllValues(SetValueType& val) {
-        while (!members.empty()) {
-            removeValue(val, members.size() - 1);
-        }
-    }
-
-    template <typename SetValueType>
-    inline bool addValueSilent(SetValueType& val, const Inner& member) {
+    template <typename InnerValueType>
+    inline bool addMember(const ValRef<InnerValueType>& member) {
+        auto& members = getMembers<InnerValueType>();
         debug_log("Adding value " << *member);
-        val.assertValidState();
-        if (val.containsMember(member)) {
+        if (containsMember(member)) {
             debug_log("rejected");
             return false;
         }
-        members.push_back(member);
-        ValBase& newMemberBase = valBase(*member);
-        newMemberBase.id = members.size() - 1;
-        newMemberBase.container = &val;
+
         u_int64_t hash = getValueHash(*member);
-        val.addHash(hash);
+        debug_code(assert(!hashIndexMap.count(hash)));
+        members.emplace_back(member);
+        hashIndexMap.emplace(hash, members.size() - 1);
+        cachedHashTotal += mix(hash);
         return true;
     }
 
-    template <typename SetValueType>
-    inline Inner removeValue(SetValueType& val, size_t memberIndex) {
-        debug_log("Removingvalue " << *members[memberIndex]);
-        Inner removedValue = removeValueSilent(val, memberIndex);
-        val.signalValueRemoved(getValueHash(*removedValue));
-        return removedValue;
+    inline void notifyMemberAdded(const AnyValRef& newMember) {
+        debug_code(assertValidState());
+        visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
     }
 
-    template <typename SetValueType>
-    inline bool addValue(SetValueType& val, const Inner& member) {
-        if (addValueSilent(val, member)) {
-            val.signalValueAdded(members.back());
+    template <typename InnerValueType>
+    inline bool addMemberAndNotify(const ValRef<InnerValueType>& member) {
+        if (addMember(member)) {
+            notifyMemberAdded(getMembers<InnerValueType>().back());
             return true;
         } else {
             return false;
         }
     }
-};
 
-template <typename T>
-using SetValueImplWithValRefWrapper = SetValueImpl<ValRef<T>>;
-typedef Variantised<SetValueImplWithValRefWrapper> SetValueImplVariant;
-struct SetValue : public SetView, ValBase {
-    SetValueImplVariant setValueImpl = SetValueImpl<ValRef<IntValue>>();
+    template <typename InnerValueType>
+    inline ValRef<InnerValueType> removeMember(u_int64_t index) {
+        auto& members = getMembers<InnerValueType>();
+        debug_code(assert(index < members.size()));
+        debug_log("Removing value " << *members[index]);
 
-    inline void signalValueAdded(const AnyValRef& newMember) {
-        assertValidState();
-        visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
+        u_int64_t hash = getValueHash(*members[index]);
+        debug_code(assert(hashIndexMap.count(hash)));
+        hashIndexMap.erase(hash);
+        cachedHashTotal -= mix(hash);
+        ValRef<InnerValueType> removedMember = std::move(members[index]);
+        valBase(*removedMember).container = NULL;
+        members[index] = std::move(members.back());
+        members.pop_back();
+        if (index < members.size()) {
+            debug_code(
+                assert(hashIndexMap.count(getValueHash(*members[index]))));
+            hashIndexMap[getValueHash(*members[index])] = index;
+        }
+        return removedMember;
     }
 
-    inline void signalValueRemoved(u_int64_t hashOfRemovedValue) {
-        assertValidState();
-        visitTriggers([&](auto& t) { t->valueRemoved(hashOfRemovedValue); },
-                      triggers);
+    inline void notifyMemberRemoved(u_int64_t index,
+                                    u_int64_t hashOfRemovedMember) {
+        debug_code(assertValidState());
+        visitTriggers(
+            [&](auto& t) { t->valueRemoved(index, hashOfRemovedMember); },
+            triggers);
     }
 
-    inline void signalMemberValueChanged(const AnyValRef& changedMember) {
-        assertValidState();
-        visitTriggers([&](auto& t) { t->memberValueChanged(changedMember); },
-                      triggers);
+    template <typename InnerValueType>
+    inline ValRef<InnerValueType> removeMemberAndNotify(u_int64_t index) {
+        ValRef<InnerValueType> removedValue =
+            removeMember<InnerValueType>(index);
+        notifyMemberRemoved(index, getValueHash(*removedValue));
+        return removedValue;
     }
-    inline void signalValueChanged() {
-        assertValidState();
+
+    template <typename InnerValueType>
+    inline void notifyPossibleMemberChange(u_int64_t index) {
+        auto& members = getMembers<InnerValueType>();
+        debug_code(assertValidState());
+        hashOfPossibleChange = getValueHash(*members[index]);
+        AnyValRef triggerMember = members[index];
+        debug_log("Possible value change, member="
+                  << members[index] << " hash = " << hashOfPossibleChange);
+        visitTriggers(
+            [&](auto& t) {
+                t->possibleMemberValueChange(index, triggerMember);
+            },
+            triggers);
+    }
+
+    template <typename InnerValueType>
+    inline u_int64_t memberChanged(u_int64_t oldHash, u_int64_t index) {
+        auto& members = getMembers<InnerValueType>();
+        u_int64_t newHash = getValueHash(*members[index]);
+        debug_code(assert(!hashIndexMap.count(newHash)));
+        hashIndexMap[newHash] = hashIndexMap[oldHash];
+        hashIndexMap.erase(oldHash);
+        return newHash;
+    }
+
+    inline void notifyMemberChanged(size_t index,
+                                    const AnyValRef& changedMember) {
+        debug_code(assertValidState());
+        visitTriggers(
+            [&](auto& t) { t->memberValueChanged(index, changedMember); },
+            triggers);
+    }
+
+    template <typename InnerValueType>
+    inline void memberChangedAndNotify(size_t index) {
+        hashOfPossibleChange =
+            memberChanged<InnerValueType>(hashOfPossibleChange, index);
+        notifyMemberChanged(index, getMembers<InnerValueType>()[index]);
+    }
+
+    template <typename InnerValueType, typename Func>
+    inline void changeMemberAndNotify(Func&& func, size_t index) {
+        notifyPossibleMemberChange<InnerValueType>(index);
+        if (func()) {
+            memberChangedAndNotify<InnerValueType>(index);
+        }
+    }
+
+    inline void notifyEntireSetChange() {
+        debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->setValueChanged(*this); }, triggers);
     }
 
+    inline const std::unordered_map<u_int64_t, u_int64_t>& getHashIndexMap()
+        const {
+        return hashIndexMap;
+    }
+
+    inline u_int64_t getCachedHashTotal() const { return cachedHashTotal; }
+    inline u_int64_t numberElements() const { return hashIndexMap.size(); }
+    void silentClear() {
+        mpark::visit(
+            [&](auto& membersImpl) {
+                cachedHashTotal = 0;
+                hashIndexMap.clear();
+                membersImpl.clear();
+
+            },
+            members);
+    }
+
     void assertValidState();
+};
+
+struct SetValue : public SetView, ValBase {
+    template <typename InnerValueType>
+    inline bool addMember(const ValRef<InnerValueType>& member) {
+        if (SetView::addMember(member)) {
+            valBase(*member).container = this;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    template <typename InnerValueType>
+    inline bool addMemberAndNotify(const ValRef<InnerValueType>& member) {
+        if (SetView::addMemberAndNotify(member)) {
+            valBase(*member).container = this;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    template <typename InnerValueType>
+    inline ValRef<InnerValueType> removeMember(u_int64_t index) {
+        auto removedMember = SetView::removeMember<InnerValueType>(index);
+        valBase(*removedMember).container = NULL;
+        return removedMember;
+    }
+    template <typename InnerValueType>
+    inline ValRef<InnerValueType> removeMemberAndNotify(u_int64_t index) {
+        auto removedMember =
+            SetView::removeMemberAndNotify<InnerValueType>(index);
+        valBase(*removedMember).container = NULL;
+        return removedMember;
+    }
 };
 
 #endif /* SRC_TYPES_SET_H_ */

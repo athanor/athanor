@@ -74,30 +74,12 @@ class ReturnType {
 template <typename Operator, typename ReturnTypeIn>
 using HasReturnType =
     std::is_same<ReturnTypeIn, typename ReturnType<Operator>::type>;
-// hack just to specialise the return type of some of the
-// evaluate functions
-
-template <typename T>
-using SetMembersVectorImpl = std::vector<ValRef<T>>;
-
-using SetMembersVector = Variantised<SetMembersVectorImpl>;
-
-template <typename T>
-struct EvaluateResult {
-    typedef void type;
-};
-
-template <>
-struct EvaluateResult<SetReturning> {
-    typedef SetMembersVector type;
-};
 
 #define operatorFuncs(name)                                                    \
     template <>                                                                \
     std::shared_ptr<name> makeShared<name>();                                  \
     void reset(name& op);                                                      \
-    typename EvaluateResult<typename ReturnType<name>::type>::type evaluate(   \
-        name&);                                                                \
+    void evaluate(name&);                                                      \
     void startTriggering(name&);                                               \
     void stopTriggering(name&);                                                \
     void updateViolationDescription(const name& op, u_int64_t parentViolation, \
@@ -117,8 +99,8 @@ inline View& getView(const Operator& op) {
 }
 
 template <typename Operator>
-inline decltype(auto) evaluate(Operator& op) {
-    return mpark::visit([&](auto& opImpl) { return evaluate(*opImpl); }, op);
+inline void evaluate(Operator& op) {
+    mpark::visit([&](auto& opImpl) { return evaluate(*opImpl); }, op);
 }
 template <typename Operator>
 inline void startTriggering(Operator& op) {

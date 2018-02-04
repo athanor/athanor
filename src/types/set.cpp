@@ -16,9 +16,9 @@ template <>
 ostream& prettyPrint<SetValue>(ostream& os, const SetValue& v) {
     os << "set({";
     mpark::visit(
-        [&](auto& vImpl) {
+        [&](auto& membersImpl) {
             bool first = true;
-            for (auto& memberPtr : vImpl.members) {
+            for (auto& memberPtr : membersImpl) {
                 if (first) {
                     first = false;
                 } else {
@@ -27,43 +27,45 @@ ostream& prettyPrint<SetValue>(ostream& os, const SetValue& v) {
                 prettyPrint(os, *memberPtr);
             }
         },
-        v.setValueImpl);
+        v.members);
     os << "})";
     return os;
 }
 
-template <typename InnerValueRefType>
+template <typename InnerValueType>
 void deepCopyImpl(const SetValue& src,
-                  const SetValueImpl<InnerValueRefType>& srcImpl,
+                  const ValRefVec<InnerValueType>& srcMemnersImpl,
                   SetValue& target) {
-    auto& targetImpl =
-        mpark::get<SetValueImpl<InnerValueRefType>>(target.setValueImpl);
+    auto& targetMembersImpl = target.getMembers<InnerValueType>();
     // to be optimised later
     // cannot just clear vector as other constraints will hold pointers to
     // values that are in this set and assume that they are still in this set
+    // instead, we remove values that are not   to be in the final target
     size_t index = 0;
-    while (index < targetImpl.members.size()) {
-        if (!src.getMemberHashes().count(
-                getValueHash(*targetImpl.members[index]))) {
-            targetImpl.removeValueSilent(target, index);
+    while (index < targetMembersImpl.size()) {
+        if (!src.containsMember(*targetMembersImpl[index])) {
+            target.removeMember<InnerValueType>(index);
         } else {
             ++index;
         }
     }
-    for (auto& member : srcImpl.members) {
-        if (!target.getMemberHashes().count(getValueHash(*member))) {
-            targetImpl.addValueSilent(target, deepCopy(*member));
+    for (auto& hashIndexPair : src.getHashIndexMap()) {
+        if (!target.getHashIndexMap().count(hashIndexPair.first)) {
+            target.addMember<InnerValueType>(
+                deepCopy(*srcMemnersImpl[hashIndexPair.second]));
         }
     }
-    target.signalValueChanged();
+    target.notifyEntireSetChange();
 }
 
 template <>
 void deepCopy<SetValue>(const SetValue& src, SetValue& target) {
-    assert(src.setValueImpl.index() == target.setValueImpl.index());
+    assert(src.members.index() == target.members.index());
     return visit(
-        [&](auto& srcImpl) { return deepCopyImpl(src, srcImpl, target); },
-        src.setValueImpl);
+        [&](auto& srcMembersImpl) {
+            return deepCopyImpl(src, srcMembersImpl, target);
+        },
+        src.members);
 }
 
 template <>
@@ -75,28 +77,27 @@ ostream& prettyPrint<SetDomain>(ostream& os, const SetDomain& d) {
     return os;
 }
 
-template <typename InnerValueRefType>
-void matchInnerTypeImpl(const SetValueImpl<InnerValueRefType>&,
-                        SetValue& target) {
-    if (mpark::get_if<SetValueImpl<InnerValueRefType>>(
-            &(target.setValueImpl)) == NULL) {
-        target.setValueImpl.emplace<SetValueImpl<InnerValueRefType>>();
+template <typename InnerValueType>
+void matchInnerTypeImpl(const ValRefVec<InnerValueType>&, SetValue& target) {
+    if (mpark::get_if<ValRefVec<InnerValueType>>(&(target.members)) == NULL) {
+        target.members.emplace<ValRefVec<InnerValueType>>();
     }
 }
 
 void matchInnerType(const SetValue& src, SetValue& target) {
-    mpark::visit([&](auto& srcImpl) { matchInnerTypeImpl(srcImpl, target); },
-                 src.setValueImpl);
+    mpark::visit(
+        [&](auto& srcMembersImpl) {
+            matchInnerTypeImpl(srcMembersImpl, target);
+        },
+        src.members);
 }
 
-template <typename InnerDomainPtrType>
-void matchInnerTypeFromDomain(const InnerDomainPtrType&, SetValue& target) {
-    typedef ValRef<typename AssociatedValueType<
-        typename InnerDomainPtrType::element_type>::type>
-        InnerValueRefType;
-    if (mpark::get_if<SetValueImpl<InnerValueRefType>>(
-            &(target.setValueImpl)) == NULL) {
-        target.setValueImpl.emplace<SetValueImpl<InnerValueRefType>>();
+template <typename InnerDomainType>
+void matchInnerTypeFromDomain(const std::shared_ptr<InnerDomainType>&,
+                              SetValue& target) {
+    typedef typename AssociatedValueType<InnerDomainType>::type InnerValueType;
+    if (mpark::get_if<ValRefVec<InnerValueType>>(&(target.members)) == NULL) {
+        target.members.emplace<ValRefVec<InnerValueType>>();
     }
 }
 
@@ -113,39 +114,35 @@ u_int64_t getDomainSize<SetDomain>(const SetDomain& domain) {
     return 1 << getDomainSize(domain.inner);
 }
 
-template <typename InnerValueRefType>
-void resetImpl(SetValue& val, SetValueImpl<InnerValueRefType>& valImpl) {
-    val.triggers.clear();
-    val.clear();
-    val.container = NULL;
-    valImpl.members.clear();
-}
 void reset(SetValue& val) {
-    mpark::visit([&](auto& valImpl) { resetImpl(val, valImpl); },
-                 val.setValueImpl);
+    val.container = NULL;
+    val.silentClear();
+    val.triggers.clear();
 }
 
-SetMembersVector evaluate(SetValue& val) {
-    return mpark::visit(
-        [&](auto& valImpl) -> SetMembersVector { return valImpl.members; },
-        val.setValueImpl);
-}
+void evaluate(SetValue&) {}
 void startTriggering(SetValue&) {}
 void stopTriggering(SetValue&) {}
 
-template <typename InnerValueRefType>
-void normaliseImpl(SetValueImpl<InnerValueRefType>& valImpl) {
-    for (auto& v : valImpl.members) {
+template <typename InnerValueType>
+void normaliseImpl(SetValue& val, ValRefVec<InnerValueType>& valMembersImpl) {
+    for (auto& v : valMembersImpl) {
         normalise(*v);
     }
-    sort(valImpl.members.begin(), valImpl.members.end(),
+    sort(valMembersImpl.begin(), valMembersImpl.end(),
          [](auto& u, auto& v) { return smallerValue(*u, *v); });
+
+    for (size_t i = 0; i < valMembersImpl.size(); i++) {
+        auto& member = valMembersImpl[i];
+        val.hashIndexMap[getValueHash(*member)] = i;
+    }
 }
 
 template <>
 void normalise<SetValue>(SetValue& val) {
-    mpark::visit([](auto& valImpl) { normaliseImpl(valImpl); },
-                 val.setValueImpl);
+    mpark::visit(
+        [&](auto& valMembersImpl) { normaliseImpl(val, valMembersImpl); },
+        val.members);
 }
 
 template <>
@@ -156,58 +153,61 @@ bool largerValue<SetValue>(const SetValue& u, const SetValue& v);
 template <>
 bool smallerValue<SetValue>(const SetValue& u, const SetValue& v) {
     return mpark::visit(
-        [&](auto& uImpl) {
-            auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v.setValueImpl);
-            if (uImpl.members.size() < vImpl.members.size()) {
+        [&](auto& uMembersImpl) {
+            auto& vMembersImpl =
+                mpark::get<BaseType<decltype(uMembersImpl)>>(v.members);
+            if (uMembersImpl.size() < vMembersImpl.size()) {
                 return true;
-            } else if (uImpl.members.size() > vImpl.members.size()) {
+            } else if (uMembersImpl.size() > vMembersImpl.size()) {
                 return false;
             }
-            for (size_t i = 0; i < uImpl.members.size(); ++i) {
-                if (smallerValue(*uImpl.members[i], *vImpl.members[i])) {
+            for (size_t i = 0; i < uMembersImpl.size(); ++i) {
+                if (smallerValue(*uMembersImpl[i], *vMembersImpl[i])) {
                     return true;
-                } else if (largerValue(*uImpl.members[i], *vImpl.members[i])) {
+                } else if (largerValue(*uMembersImpl[i], *vMembersImpl[i])) {
                     return false;
                 }
             }
             return false;
         },
-        u.setValueImpl);
+        u.members);
 }
 
 template <>
 bool largerValue<SetValue>(const SetValue& u, const SetValue& v) {
     return mpark::visit(
-        [&](auto& uImpl) {
-            auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v.setValueImpl);
-            if (uImpl.members.size() > vImpl.members.size()) {
+        [&](auto& uMembersImpl) {
+            auto& vMembersImpl =
+                mpark::get<BaseType<decltype(uMembersImpl)>>(v.members);
+            if (uMembersImpl.size() > vMembersImpl.size()) {
                 return true;
-            } else if (uImpl.members.size() < vImpl.members.size()) {
+            } else if (uMembersImpl.size() < vMembersImpl.size()) {
                 return false;
             }
-            for (size_t i = 0; i < uImpl.members.size(); ++i) {
-                if (largerValue(*uImpl.members[i], *vImpl.members[i])) {
+            for (size_t i = 0; i < uMembersImpl.size(); ++i) {
+                if (largerValue(*uMembersImpl[i], *vMembersImpl[i])) {
                     return true;
-                } else if (smallerValue(*uImpl.members[i], *vImpl.members[i])) {
+                } else if (smallerValue(*uMembersImpl[i], *vMembersImpl[i])) {
                     return false;
                 }
             }
             return false;
         },
-        u.setValueImpl);
+        u.members);
 }
 
-void SetValue::assertValidState() {
+void SetView::assertValidState() {
     mpark::visit(
-        [&](auto& valImpl) {
+        [&](auto& valMembersImpl) {
             std::unordered_set<u_int64_t> seenHashes;
             bool success = true;
             u_int64_t calculatedTotal = 0;
-            if (getMemberHashes().size() != valImpl.members.size()) {
-                cerr << "getMemberHashes() and members differ in size.\n";
+            if (getHashIndexMap().size() != valMembersImpl.size()) {
+                cerr << "getHashIndexMap() and members differ in size.\n";
                 success = false;
             } else {
-                for (auto& member : valImpl.members) {
+                for (size_t i = 0; i < valMembersImpl.size(); i++) {
+                    auto& member = valMembersImpl[i];
                     u_int64_t memberHash = getValueHash(*member);
                     if (!seenHashes.insert(memberHash).second) {
                         cerr << "Error: possible duplicate member: " << *member
@@ -215,10 +215,18 @@ void SetValue::assertValidState() {
                         success = false;
                         break;
                     }
-                    if (!(getMemberHashes().count(memberHash))) {
+                    if (!(getHashIndexMap().count(memberHash))) {
                         cerr << "Error: member " << *member
                              << " has no corresponding hash in "
-                                "getMemberHashes().\n";
+                                "getHashIndexMap().\n";
+                        success = false;
+                        break;
+                    }
+                    if (getHashIndexMap().at(memberHash) != i) {
+                        cerr << "Error: member " << *member << "  is at index "
+                             << i
+                             << " but the hashIndexMap says it should be at "
+                             << getHashIndexMap().at(memberHash) << endl;
                         success = false;
                         break;
                     }
@@ -234,14 +242,14 @@ void SetValue::assertValidState() {
                 }
             }
             if (success) {
-                for (size_t i = 0; i < valImpl.members.size(); i++) {
-                    size_t id = valBase(*valImpl.members[i]).id;
+                for (size_t i = 0; i < valMembersImpl.size(); i++) {
+                    size_t id = valBase(*valMembersImpl[i]).id;
                     if (i != id) {
                         cerr << "Error: found id " << id
                              << " when it should be " << i << endl;
                         cerr << "ids are: ";
                         transform(
-                            begin(valImpl.members), end(valImpl.members),
+                            begin(valMembersImpl), end(valMembersImpl),
                             ostream_iterator<size_t>(cerr, ","),
                             [](auto& member) { return valBase(*member).id; });
                         success = false;
@@ -250,10 +258,10 @@ void SetValue::assertValidState() {
                 }
             }
             if (!success) {
-                cerr << "Members: " << valImpl.members << endl;
-                cerr << "memberHashes: " << getMemberHashes() << endl;
+                cerr << "Members: " << valMembersImpl << endl;
+                cerr << "memberHashes: " << getHashIndexMap() << endl;
                 assert(false);
             }
         },
-        setValueImpl);
+        members);
 }

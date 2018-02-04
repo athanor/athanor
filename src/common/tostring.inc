@@ -2,6 +2,7 @@
 #include <list>
 #include <map>
 #include <set>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -79,5 +80,10 @@ std::ostream& operator<<(std::ostream& os, const std::unordered_set<T> setIn) {
 
 template <typename T1, typename T2>
 std::ostream& operator<<(std::ostream& os, const std::map<T1, T2> mapIn) {
+    return containerToArrayString(os, mapIn);
+}
+template <typename T1, typename T2>
+std::ostream& operator<<(std::ostream& os,
+                         const std::unordered_map<T1, T2> mapIn) {
     return containerToArrayString(os, mapIn);
 }

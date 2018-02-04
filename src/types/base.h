@@ -33,7 +33,11 @@ using Variantised =
 #undef variantValues
 
 // variant for values
-using AnyValRef = Variantised<ValRef>;
+typedef Variantised<ValRef> AnyValRef;
+// variant for vector of values
+template <typename InnerValueType>
+using ValRefVec = std::vector<ValRef<InnerValueType>>;
+typedef Variantised<ValRefVec> AnyVec;
 
 // variant for domains
 #define variantDomains(T) std::shared_ptr<T##Domain>

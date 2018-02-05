@@ -16,17 +16,20 @@ struct BoolView {
     u_int64_t violation;
     std::vector<std::shared_ptr<BoolTrigger>> triggers;
     template <typename Func>
-    inline void changeValue(Func&& func) {
+    inline bool changeValue(Func&& func) {
         u_int64_t oldViolation = violation;
-        func();
-        if (violation == oldViolation) {
-            return;
+        if (func() && violation != oldViolation) {
+            visitTriggers(
+                [&](auto& trigger) {
+                    trigger->possibleValueChange(oldViolation);
+                },
+                triggers);
+            visitTriggers(
+                [&](auto& trigger) { trigger->valueChanged(violation); },
+                triggers);
+            return true;
         }
-        visitTriggers(
-            [&](auto& trigger) { trigger->possibleValueChange(oldViolation); },
-            triggers);
-        visitTriggers([&](auto& trigger) { trigger->valueChanged(violation); },
-                      triggers);
+        return false;
     }
 };
 

@@ -30,15 +30,16 @@ struct IntView {
     int64_t value;
     std::vector<std::shared_ptr<IntTrigger>> triggers;
     template <typename Func>
-    inline void changeValue(Func&& func) {
+    inline bool changeValue(Func&& func) {
         int64_t oldValue = value;
-        func();
-        if (value == oldValue) {
-            return;
+
+        if (func() && value != oldValue) {
+            visitTriggers([&](auto& t) { t->possibleValueChange(oldValue); },
+                          triggers);
+            visitTriggers([&](auto& t) { t->valueChanged(value); }, triggers);
+            return true;
         }
-        visitTriggers([&](auto& t) { t->possibleValueChange(oldValue); },
-                      triggers);
-        visitTriggers([&](auto& t) { t->valueChanged(value); }, triggers);
+        return false;
     }
 };
 

@@ -17,14 +17,23 @@ class OpSetSizeTrigger : public SetTrigger {
    public:
     OpSetSizeTrigger(OpSetSize* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t) final {
-        op->changeValue([&]() { --op->value; });
+        op->changeValue([&]() {
+            --op->value;
+            return true;
+        });
     }
 
     inline void valueAdded(const AnyValRef&) final {
-        op->changeValue([&]() { ++op->value; });
+        op->changeValue([&]() {
+            ++op->value;
+            return true;
+        });
     }
     inline void setValueChanged(const SetView& newValue) final {
-        op->changeValue([&]() { op->value = newValue.numberElements(); });
+        op->changeValue([&]() {
+            op->value = newValue.numberElements();
+            return true;
+        });
     }
     inline void possibleMemberValueChange(u_int64_t, const AnyValRef&) final {}
     inline void memberValueChanged(u_int64_t, const AnyValRef&) final {}

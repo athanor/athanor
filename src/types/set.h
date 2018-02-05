@@ -172,9 +172,13 @@ struct SetView {
     inline u_int64_t memberChanged(u_int64_t oldHash, u_int64_t index) {
         auto& members = getMembers<InnerValueType>();
         u_int64_t newHash = getValueHash(*members[index]);
-        debug_code(assert(!hashIndexMap.count(newHash)));
-        hashIndexMap[newHash] = hashIndexMap[oldHash];
-        hashIndexMap.erase(oldHash);
+        if (newHash != oldHash) {
+            debug_code(assert(!hashIndexMap.count(newHash)));
+            hashIndexMap[newHash] = hashIndexMap[oldHash];
+            hashIndexMap.erase(oldHash);
+            cachedHashTotal -= oldHash;
+            cachedHashTotal += newHash;
+        }
         return newHash;
     }
 
@@ -188,8 +192,11 @@ struct SetView {
 
     template <typename InnerValueType>
     inline void memberChangedAndNotify(size_t index) {
-        hashOfPossibleChange =
-            memberChanged<InnerValueType>(hashOfPossibleChange, index);
+        u_int64_t oldHash = hashOfPossibleChange;
+        hashOfPossibleChange = memberChanged<InnerValueType>(oldHash, index);
+        if (oldHash == hashOfPossibleChange) {
+            return;
+        }
         notifyMemberChanged(index, getMembers<InnerValueType>()[index]);
     }
 
@@ -238,14 +245,18 @@ struct SetValue : public SetView, ValBase {
         }
     }
 
-    template <typename InnerValueType>
-    inline bool addMemberAndNotify(const ValRef<InnerValueType>& member) {
-        if (SetView::addMemberAndNotify(member)) {
-            valBase(*member).container = this;
-            return true;
-        } else {
-            return false;
+    template <typename InnerValueType, typename Func>
+    inline bool tryAddMember(const ValRef<InnerValueType>& member,
+                             Func&& func) {
+        if (SetView::addMember(member)) {
+            if (func()) {
+                valBase(*member).container = this;
+                SetView::notifyMemberAdded(member);
+                return true;
+            } else {
+            }
         }
+        return false;
     }
 
     template <typename InnerValueType>
@@ -254,12 +265,57 @@ struct SetValue : public SetView, ValBase {
         valBase(*removedMember).container = NULL;
         return removedMember;
     }
-    template <typename InnerValueType>
-    inline ValRef<InnerValueType> removeMemberAndNotify(u_int64_t index) {
-        auto removedMember =
-            SetView::removeMemberAndNotify<InnerValueType>(index);
-        valBase(*removedMember).container = NULL;
-        return removedMember;
+
+    template <typename InnerValueType, typename Func>
+    inline std::pair<bool, ValRef<InnerValueType>> tryRemoveMember(
+        u_int64_t index, Func&& func) {
+        auto removedMember = SetView::removeMember<InnerValueType>(index);
+        if (func()) {
+            valBase(*removedMember).container = NULL;
+            SetView::notifyMemberRemoved(index, getValueHash(*removedMember));
+            return std::make_pair(true, std::move(removedMember));
+        } else {
+            SetView::addMember(removedMember);
+            auto& members = getMembers<InnerValueType>();
+            std::swap(members[index], members.back());
+            hashIndexMap[getValueHash(*members[index])] = index;
+            hashIndexMap[getValueHash(*members.back())] = members.size() - 1;
+            debug_code(assertValidState());
+            return std::make_pair(false, ValRef<InnerValueType>(nullptr));
+        }
+    }
+
+    template <typename InnerValueType, typename Func>
+    inline bool tryMemberChange(size_t index, Func&& func) {
+        u_int64_t oldHash = hashOfPossibleChange;
+        hashOfPossibleChange = memberChanged<InnerValueType>(oldHash, index);
+        if (func()) {
+            SetView::notifyMemberChanged(index,
+                                         getMembers<InnerValueType>()[index]);
+            return true;
+        } else {
+            if (oldHash != hashOfPossibleChange) {
+                hashIndexMap[oldHash] = hashIndexMap[hashOfPossibleChange];
+                hashIndexMap.erase(hashOfPossibleChange);
+                cachedHashTotal -= hashOfPossibleChange;
+                cachedHashTotal += oldHash;
+                hashOfPossibleChange = oldHash;
+            }
+            return false;
+        }
+    }
+
+    template <typename Func>
+    bool tryAssignNewValue(SetValue& newvalue, Func&& func) {
+        // fake putting in the value first untill func()verifies that it is
+        // happy with the change
+        std::swap(*this, newvalue);
+        bool allowed = func();
+        std::swap(*this, newvalue);
+        if (allowed) {
+            deepCopy(newvalue, *this);
+        }
+        return allowed;
     }
 };
 

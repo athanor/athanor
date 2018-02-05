@@ -17,7 +17,10 @@ ostream& prettyPrint<IntValue>(ostream& os, const IntValue& v) {
 
 template <>
 void deepCopy<IntValue>(const IntValue& src, IntValue& target) {
-    target.changeValue([&]() { target.value = src.value; });
+    target.changeValue([&]() {
+        target.value = src.value;
+        return true;
+    });
 }
 
 template <>

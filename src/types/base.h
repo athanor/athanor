@@ -39,6 +39,21 @@ template <typename InnerValueType>
 using ValRefVec = std::vector<ValRef<InnerValueType>>;
 typedef Variantised<ValRefVec> AnyVec;
 
+template <typename T>
+struct ValType;
+
+template <typename T>
+struct ValType<ValRef<T>> {
+    typedef T type;
+};
+
+template <typename T>
+struct ValType<std::vector<ValRef<T>>> {
+    typedef T type;
+};
+
+#define valType(t) typename ValType<BaseType<decltype(t)>>::type
+
 // variant for domains
 #define variantDomains(T) std::shared_ptr<T##Domain>
 using AnyDomainRef =

@@ -49,7 +49,8 @@ struct SetTrigger : public IterAssignedTrigger<SetValue> {
     virtual void valueAdded(const AnyValRef& member) = 0;
     virtual void possibleMemberValueChange(u_int64_t index,
                                            const AnyValRef& member) = 0;
-    virtual void memberValueChanged(size_t index, const AnyValRef& member) = 0;
+    virtual void memberValueChanged(u_int64_t index,
+                                    const AnyValRef& member) = 0;
 
     virtual void setValueChanged(const SetView& newValue) = 0;
 };

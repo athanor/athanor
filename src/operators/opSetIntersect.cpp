@@ -1,139 +1,139 @@
 #include "operators/opSetIntersect.h"
 #include <iostream>
 #include <memory>
+#include "types/set.h"
 #include "types/typeOperations.h"
-
 using namespace std;
-SetMembersVector evaluate(OpSetIntersect& op) {
-    SetMembersVector leftVec = evaluate(op.left);
-    SetMembersVector rightVec = evaluate(op.right);
-    op.clear();
+void evaluate(OpSetIntersect& op) {
+    evaluate(op.left);
+    evaluate(op.right);
+    op.silentClear();
     SetView& leftSetView = getView<SetView>(op.left);
     SetView& rightSetView = getView<SetView>(op.right);
-    SetView& smallSetView = (leftSetView.getMemberHashes().size() <
-                             rightSetView.getMemberHashes().size())
+    SetView& smallSetView = (leftSetView.getHashIndexMap().size() <
+                             rightSetView.getHashIndexMap().size())
                                 ? leftSetView
                                 : rightSetView;
-    SetView& largeSetView = (leftSetView.getMemberHashes().size() <
-                             rightSetView.getMemberHashes().size())
+    SetView& largeSetView = (leftSetView.getHashIndexMap().size() <
+                             rightSetView.getHashIndexMap().size())
                                 ? rightSetView
                                 : leftSetView;
-    for (u_int64_t hash : smallSetView.getMemberHashes()) {
-        if (largeSetView.getMemberHashes().count(hash)) {
-            op.addHash(hash);
-        }
-    }
-    return mpark::visit(
-        [&](auto& leftVecImpl) -> SetMembersVector {
-            typedef BaseType<decltype(leftVecImpl)> VecType;
-            auto rightVecImpl = mpark::get<VecType>(rightVec);
-            VecType returnVec;
-            auto& smallerVec = (leftVecImpl.size() > rightVecImpl.size())
-                                   ? leftVecImpl
-                                   : rightVecImpl;
-            for (auto& ref : smallerVec) {
-                if (op.containsMember(*ref)) {
-                    returnVec.emplace_back(std::move(ref));
+    mpark::visit(
+        [&](auto& members) {
+            for (auto& hashIndexPair : smallSetView.getHashIndexMap()) {
+                if (largeSetView.getHashIndexMap().count(hashIndexPair.first)) {
+                    op.addMember(members[hashIndexPair.second]);
                 }
             }
-            return returnVec;
         },
-        leftVec);
+        smallSetView.members);
 }
 
 template <bool left>
 class OpSetIntersectTrigger : public SetTrigger {
    public:
     OpSetIntersect* op;
-    unordered_set<u_int64_t>::iterator oldHashIter;
+    unordered_map<u_int64_t, u_int64_t>::iterator oldHashIter;
 
    public:
     OpSetIntersectTrigger(OpSetIntersect* op) : op(op) {}
-    inline void valueRemoved(u_int64_t hash) final {
-        unordered_set<u_int64_t>::iterator hashIter;
-        if ((hashIter = op->getMemberHashes().find(hash)) !=
-            op->getMemberHashes().end()) {
-            op->removeHash(hash);
-            visitTriggers([&](auto& trigger) { trigger->valueRemoved(hash); },
-                          op->triggers);
+    inline void valueRemoved(u_int64_t, u_int64_t hash) final {
+        unordered_map<u_int64_t, u_int64_t>::const_iterator hashIter;
+        if ((hashIter = op->getHashIndexMap().find(hash)) !=
+            op->getHashIndexMap().end()) {
+            mpark::visit(
+                [&](auto& members) {
+                    op->removeMemberAndNotify<valType(members)>(
+                        hashIter->second);
+                },
+                op->members);
         }
     }
 
     inline void valueAdded(const AnyValRef& member) final {
         SetReturning& unchanged = (left) ? op->right : op->left;
         u_int64_t hash = getValueHash(member);
-        if (op->getMemberHashes().count(hash)) {
-            return;
-        }
+        debug_code(assert(!op->getHashIndexMap().count(hash)));
         SetView& viewOfUnchangedSet = getView<SetView>(unchanged);
-        if (viewOfUnchangedSet.getMemberHashes().count(hash)) {
-            op->addHash(hash);
-            visitTriggers([&](auto& trigger) { trigger->valueAdded(member); },
-                          op->triggers);
+        if (viewOfUnchangedSet.getHashIndexMap().count(hash)) {
+            mpark::visit(
+                [&](auto& memberImpl) { op->addMemberAndNotify(memberImpl); },
+                member);
         }
     }
 
-    inline void setValueChanged(const SetValue& newValue) final {
+    inline void setValueChanged(const SetView& newValue) final {
         std::unordered_set<u_int64_t> hashesToRemove;
-        for (u_int64_t hash : op->getMemberHashes()) {
-            if (!newValue.getMemberHashes().count(hash)) {
-                hashesToRemove.insert(hash);
+        for (auto& hashIndexPair : op->getHashIndexMap()) {
+            if (!newValue.getHashIndexMap().count(hashIndexPair.first)) {
+                hashesToRemove.insert(hashIndexPair.first);
             }
         }
         for (auto& hash : hashesToRemove) {
-            this->valueRemoved(hash);
+            this->valueRemoved(0, hash);
+            // 0 here is just a dummy value, assuming valueremoved does not use
+            // first parameter
         }
+        SetView& unchanged = getView<SetView>((left) ? op->right : op->left);
         mpark::visit(
-            [&](auto& newValImpl) {
-                for (auto& member : newValImpl.members) {
-                    u_int64_t hash = getValueHash(*member);
-                    if (!op->getMemberHashes().count(hash)) {
-                        this->valueAdded(member);
+            [&](auto& newMembersImpl) {
+
+                for (auto& hashIndexPair : newValue.getHashIndexMap()) {
+                    if (!op->getHashIndexMap().count(hashIndexPair.first) &&
+                        unchanged.getHashIndexMap().count(
+                            hashIndexPair.first)) {
+                        this->valueAdded(newMembersImpl[hashIndexPair.second]);
                     }
                 }
             },
-            newValue.setValueImpl);
+            newValue.members);
     }
-    inline void possibleMemberValueChange(const AnyValRef& member) final {
+
+    inline void possibleMemberValueChange(u_int64_t,
+                                          const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
-        oldHashIter = op->getMemberHashes().find(hash);
-        if (oldHashIter != op->getMemberHashes().end()) {
-            visitTriggers(
-                [&](auto& trigger) {
-                    trigger->possibleMemberValueChange(member);
+        oldHashIter = op->hashIndexMap.find(hash);
+        if (oldHashIter != op->getHashIndexMap().end()) {
+            mpark::visit(
+                [&](auto& member) {
+                    op->notifyPossibleMemberChange<valType(member)>(
+                        oldHashIter->second);
                 },
-                op->triggers);
+                member);
         }
     }
 
-    inline void memberValueChanged(const AnyValRef& member) final {
+    inline void memberValueChanged(u_int64_t, const AnyValRef& member) final {
         u_int64_t newHashOfMember = getValueHash(member);
-        if (oldHashIter != op->getMemberHashes().end() &&
-            newHashOfMember == *oldHashIter) {
+        if (oldHashIter != op->getHashIndexMap().end() &&
+            newHashOfMember == oldHashIter->first) {
             return;
         }
         SetReturning& unchanged = (left) ? op->right : op->left;
         bool containedInUnchangedSet =
-            getView<SetView>(unchanged).getMemberHashes().count(
+            getView<SetView>(unchanged).getHashIndexMap().count(
                 newHashOfMember);
-        if (oldHashIter != op->getMemberHashes().end()) {
-            op->removeHash(*oldHashIter);
+        if (oldHashIter != op->getHashIndexMap().end()) {
             if (containedInUnchangedSet) {
-                op->addHash(newHashOfMember);
-                visitTriggers(
-                    [&](auto& trigger) { trigger->memberValueChanged(member); },
-                    op->triggers);
+                mpark::visit(
+                    [&](auto& member) {
+                        op->memberChangedAndNotify<valType(member)>(
+                            oldHashIter->second);
+                    },
+                    member);
             } else {
-                visitTriggers(
-                    [&](auto& trigger) { trigger->valueRemoved(*oldHashIter); },
-                    op->triggers);
+                mpark::visit(
+                    [&](auto& member) {
+                        op->removeMemberAndNotify<valType(member)>(
+                            oldHashIter->second);
+                    },
+                    member);
             }
         } else if (containedInUnchangedSet) {
-            op->addHash(newHashOfMember);
-            visitTriggers([&](auto& trigger) { trigger->valueAdded(member); },
-                          op->triggers);
+            this->valueAdded(member);
         }
     }
+
     inline void iterHasNewValue(const SetValue&, const ValRef<SetValue>&) {
         assert(false);
     }

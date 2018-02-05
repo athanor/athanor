@@ -29,9 +29,6 @@ struct IntTrigger : public IterAssignedTrigger<IntValue> {
 struct IntView {
     int64_t value;
     std::vector<std::shared_ptr<IntTrigger>> triggers;
-};
-
-struct IntValue : public IntView, ValBase {
     template <typename Func>
     inline void changeValue(Func&& func) {
         int64_t oldValue = value;
@@ -44,5 +41,7 @@ struct IntValue : public IntView, ValBase {
         visitTriggers([&](auto& t) { t->valueChanged(value); }, triggers);
     }
 };
+
+struct IntValue : public IntView, ValBase {};
 
 #endif /* SRC_TYPES_INT_H_ */

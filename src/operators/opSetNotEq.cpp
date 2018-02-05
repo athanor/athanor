@@ -34,17 +34,17 @@ class OpSetNotEqTrigger : public SetTrigger {
 
    public:
     OpSetNotEqTrigger(OpSetNotEq* op) : op(op) {}
-    inline void valueRemoved(u_int64_t) final {
+    inline void valueRemoved(u_int64_t, u_int64_t) final {
         setViolation(*op, true);
     }
 
     inline void valueAdded(const AnyValRef&) final { setViolation(*op, true); }
-    inline void setValueChanged(const SetValue&) final {
+    inline void setValueChanged(const SetView&) final {
         setViolation(*op, true);
     }
-    inline void possibleMemberValueChange(const AnyValRef&) final {}
+    inline void possibleMemberValueChange(u_int64_t, const AnyValRef&) final {}
 
-    inline void memberValueChanged(const AnyValRef&) final {
+    inline void memberValueChanged(u_int64_t, const AnyValRef&) final {
         setViolation(*op, true);
     }
 

@@ -16,37 +16,18 @@ class OpSetSizeTrigger : public SetTrigger {
 
    public:
     OpSetSizeTrigger(OpSetSize* op) : op(op) {}
-    inline void valueRemoved(u_int64_t) final {
-        visitTriggers(
-            [&](auto& trigger) { trigger->possibleValueChange(op->value); },
-            op->triggers);
-        --op->value;
-        visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
-                      op->triggers);
+    inline void valueRemoved(u_int64_t, u_int64_t) final {
+        op->changeValue([&]() { --op->value; });
     }
 
     inline void valueAdded(const AnyValRef&) final {
-        visitTriggers(
-            [&](auto& trigger) { trigger->possibleValueChange(op->value); },
-            op->triggers);
-        ++op->value;
-        visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
-                      op->triggers);
+        op->changeValue([&]() { ++op->value; });
     }
-    inline void setValueChanged(const SetValue& newValue) final {
-        u_int64_t newSize = newValue.numberElements();
-        if ((int)newSize == op->value) {
-            return;
-        }
-        visitTriggers(
-            [&](auto& trigger) { trigger->possibleValueChange(op->value); },
-            op->triggers);
-        op->value = newSize;
-        visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
-                      op->triggers);
+    inline void setValueChanged(const SetView& newValue) final {
+        op->changeValue([&]() { op->value = newValue.numberElements(); });
     }
-    inline void possibleMemberValueChange(const AnyValRef&) {}
-    inline void memberValueChanged(const AnyValRef&) {}
+    inline void possibleMemberValueChange(u_int64_t, const AnyValRef&) final {}
+    inline void memberValueChanged(u_int64_t, const AnyValRef&) final {}
     inline void iterHasNewValue(const SetValue&,
                                 const ValRef<SetValue>& newValue) {
         int64_t newSize = newValue->numberElements();

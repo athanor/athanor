@@ -15,9 +15,6 @@ struct BoolTrigger : public IterAssignedTrigger<BoolValue> {
 struct BoolView {
     u_int64_t violation;
     std::vector<std::shared_ptr<BoolTrigger>> triggers;
-};
-
-struct BoolValue : public BoolView, ValBase {
     template <typename Func>
     inline void changeValue(Func&& func) {
         u_int64_t oldViolation = violation;
@@ -32,5 +29,7 @@ struct BoolValue : public BoolView, ValBase {
                       triggers);
     }
 };
+
+struct BoolValue : public BoolView, ValBase {};
 
 #endif /* SRC_TYPES_BOOL_H_ */

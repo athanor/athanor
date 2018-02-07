@@ -98,6 +98,9 @@ inline View& getView(const Operator& op) {
         op);
 }
 
+template <typename ExprType>
+struct QuantifierView;
+
 template <typename Operator>
 inline void evaluate(Operator& op) {
     mpark::visit([&](auto& opImpl) { return evaluate(*opImpl); }, op);

@@ -6,6 +6,7 @@
 #include "quantifierView.h"
 #include "types/bool.h"
 #include "utils/fastIterableIntSet.h"
+class OpAndTrigger;
 class QuantifierTrigger;
 struct OpAnd : public BoolView {
     std::shared_ptr<QuantifierView<BoolReturning>> quantifier;

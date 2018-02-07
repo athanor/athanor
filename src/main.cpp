@@ -21,7 +21,9 @@ void setOfSetWithModulous() {
     auto domain = make_shared<SetDomain>(
         minSize(1), SetDomain(noSize(), IntDomain({intBound(1, 42)})));
     auto a = builder.addVariable(domain);
-    builder.addConstraint(intEq(opProd(setSize(a), setSize(a), setSize(a), setSize(a)), opProd(sizeLimitConst, sizeLimitConst, sizeLimitConst, sizeLimitConst)));
+    builder.addConstraint(intEq(opProd(setSize(a), setSize(a), setSize(a),
+setSize(a)), opProd(sizeLimitConst, sizeLimitConst, sizeLimitConst,
+sizeLimitConst)));
 
     auto forAll = setForAll(a);
     auto i = forAll->newIterRef<SetValue>();
@@ -36,6 +38,4 @@ void setOfSetWithModulous() {
 }
 
 */
-int main() {
-    
-}
+int main() {}

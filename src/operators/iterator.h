@@ -15,11 +15,11 @@ struct Iterator {
 
     Iterator(int id, ValRef<T> ref) : id(id), ref(std::move(ref)) {}
     template <typename Func>
-    inline void triggerValueChange(const ValRef<T>& oldVal,
-                                   const ValRef<T>& newVal, Func&& callback) {
+    inline void changeValue(bool triggering, const ValRef<T>& oldVal,
+                            const ValRef<T>& newVal, Func&& callback) {
         ref = newVal;
         callback();
-        if (oldVal) {
+        if (triggering) {
             for (auto& trigger : unrollTriggers) {
                 trigger->iterHasNewValue(*oldVal, newVal);
             }

@@ -1,23 +1,20 @@
-
 #ifndef SRC_OPERATORS_QUANTIFIER_H_
 #define SRC_OPERATORS_QUANTIFIER_H_
-/*
-#include <map>
-#include "operators/iterator.h"
 #include "operators/operatorBase.h"
-#include "operators/quantifierBase.h"
-#include "types/bool.h"
+#include "operators/quantifierView.h"
 #include "types/typeOperations.h"
-#include "utils/fastIterableIntSet.h"
 
 template <typename ContainerType, typename ExprType>
 struct Quantifier : public QuantifierView<ExprType> {
+    typedef typename AssociatedValueType<ExprType>::type ExprValueType;
     typedef
         typename AssociatedValueType<ContainerType>::type ContainerValueType;
+
     const int quantId;
     ContainerType container;
-    ExprType expr = ValRef<ReturnValueType>(nullptr);
-
+    ExprType expr = ValRef<ExprValueType>(nullptr);
+    std::vector<AnyIterRef> unrolledIterVals;
+    std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
     inline static u_int64_t nextQuantId() {
         static u_int64_t quantId = 0;
         return quantId++;
@@ -25,6 +22,17 @@ struct Quantifier : public QuantifierView<ExprType> {
 
     Quantifier(ContainerType container, const int id = nextQuantId())
         : quantId(id), container(std::move(container)) {}
+    ~Quantifier() { stopTriggeringOnContainer(); }
+    Quantifier(const Quantifier<ContainerType, ExprType>&& other)
+        : QuantifierView(std::move(other)),
+          quantId(other.quantId),
+          container(std::move(other.container)),
+          expr(std::move(other.expr)),
+          unrolledIterVals(std::move(other.unrolledIterVals)),
+          triggering()(other.triggering()),
+          containerTrigger(std::move(other.containerTrigger)) {
+        setTriggerParent(this, containerTrigger);
+    }
 
     inline void setExpression(ExprType exprIn) { expr = std::move(exprIn); }
 
@@ -33,156 +41,71 @@ struct Quantifier : public QuantifierView<ExprType> {
         return IterRef<T>(quantId);
     }
 
-    inline void hasConsistentState() {
-        u_int64_t hash;
-        size_t index;
-        bool indexFound = true;
-        bool success = true;
-        if (numberExprs() != valueExprMap.size()) {
-            success = false;
-        } else {
-            for (size_t i = 0; i < numberExprs(); ++i) {
-                hash = getValueHash(iterValue(i));
-                index = i;
-                auto iter = valueExprMap.find(hash);
-                if (iter == valueExprMap.end()) {
-                    indexFound = false;
-                    success = false;
-                    break;
-                } else if (iter->second != index) {
-                    success = false;
-                    break;
-                }
-            }
-        }
-        if (!success) {
-            std::cerr << "Error: inconsistent state detected.\nFunction: "
-                      << __func__ << " file: " << __FILE__
-                      << ", line: " << __LINE__
-                      << "\nvalueExprMap: " << valueExprMap
-                      << "\nunrolledExprs: ";
-            for (size_t i = 0; i < numberExprs(); i++) {
-                std::cerr << iterValue(i) << ",";
-            }
-            std::cerr << std::endl;
-            std::cerr << "Explanation: ";
-            if (numberExprs() != valueExprMap.size()) {
-                std::cerr << "\nvalueExprMap has size " << valueExprMap.size()
-                          << " but unrolledExprs has size " << numberExprs()
-                          << std::endl;
-            } else if (!indexFound) {
-                std::cerr << "\nkey " << hash << " for index " << index
-                          << " was not found.\n";
-            } else {
-                std::cerr << "key " << hash << " maps to " << valueExprMap[hash]
-                          << " but it was instead found in position " << index
-                          << std::endl;
-            }
-            abort();
-        }
-    }
+    inline bool triggering() { return static_cast<bool>(containerTrigger); }
 
-    inline std::pair<size_t, ExprType&> unroll(
-        const AnyValRef& newValue, const bool startTriggeringExpr = true,
-        bool evaluateFreshExpr = false) {
+    inline void unroll(const AnyValRef& newValue) {
         debug_log("unrolling " << newValue);
-        debug_code(this->hasConsistentState());
-
-        u_int64_t hash = getValueHash(*newValImpl);
-
-        if (valueExprMap.count(hash)) {
-            debug_log("Value already here, increasing count");
-            size_t index = valueExprMap[hash];
-            increaseExprCount(index);
-            return std::make_pair<size_t, ExprType&>(index, expr(index));
-        }
-
         mpark::visit(
             [&](auto& newValImpl) {
                 typedef typename BaseType<decltype(newValImpl)>::element_type
                     IterValueType;
                 auto iterRef = this->newIterRef<IterValueType>();
-                evaluateFreshExpr |= numberExprs() == 0;
-                auto& exprToCopy = (evaluateFreshExpr) ? expr : lastExpr();
+                // choose which expr to copy from
+                // use previously unrolled expr if available as  can be most
+                // efficiently updated to new unrolled value  otherwise use expr
+                // template
+                auto& exprToCopy = (exprs.empty()) ? expr : exprs.back();
+                // decide if expr that is going to be unrolled needs evaluating.
+                // It needs evaluating if we are in triggering() mode and if the
+                // expr being unrolled is taken from the expr template as the
+                // expr will not have been evaluated before.  If we are instead
+                // copying from an already unrolled expr, it  need not be
+                // evaluated, simply copy it and trigger the change in value.
+                bool evaluateExpr = exprs.empty() && triggering();
                 const auto& oldValueOfIter =
-                    (evaluateFreshExpr)
-                        ? ValRef<IterValueType>(nullptr)
-                        : mpark::get<IterRef<IterValueType>>(lastIterValue())
-                              .getIterator()
-                              .getValue();
-                addUnrolledExpr(deepCopyForUnroll(exprToCopy, iterRef),
-                                iterRef);
-                iterRef.getIterator().triggerValueChange(
-                    oldValueOfIter, newValImpl, [&]() {
-                        if (evaluateFreshExpr) {
-                            evaluate(lastExpr());
+                    (exprs.empty()) ? ValRef<IterValueType>(nullptr)
+                                    : mpark::get<IterRef<IterValueType>>(
+                                          unrolledIterVals.back())
+                                          .getIterator()
+                                          .getValue();
+                unrolledIterVals.emplace_back(iterRef);
+
+                unrolledExprs.emplace_back(
+                    deepCopyForUnroll(exprToCopy, iterRef));
+                iterRef.getIterator().valueChange(
+                    triggering(), oldValueOfIter, newValImpl, [&]() {
+                        if (evaluateExpr) {
+                            evaluate(unrolledExprs.back().first);
                         }
-                        if (startTriggeringExpr) {
-                            startTriggering(lastExpr());
+                        if (triggering()) {
+                            startTriggering(unrolledExprs.back().first);
                         }
                     });
-                u_int64_t hash = getValueHash(*newValImpl);
-                valueExprMap.emplace(hash, numberExprs() - 1);
+                visitTriggers([&](auto& t) { t->exprUnrolled(exprs.back()); },
+                              triggers);
             },
             newValue);
-        debug_code(this->hasConsistentState());
-        return std::pair<size_t, ExprType&>(numberExprs() - 1, lastExpr());
     }
 
-    inline void roll(u_int64_t hash) {
-        debug_log("rolling " << hash);
-        debug_code(this->hasConsistentState());
-        debug_log("hash points to value " << iterValue(index));
-
-        size_t index = valueExprMap[hash];
-        if (decreaseExprCount(index) != 0) {
-            return;
-        }
-        valueExprMap.erase(hash);
-        if (index < numberExprs()) {
-            valueExprMap[getValueHash(iterValue(index))] = index;
-        }
-        debug_code(this->hasConsistentState());
+    inline void roll(u_int64_t index) {
+        debug_log("Rolling " << unrolledIterVals[index]);
+        ExprType removedExpr = std::move(exprs[index]);
+        exprs[index] = std::move(exprs.back());
+        unrolledIterVals[index] = std::move(unrolledIterVals.back());
+        exprs.pop_back();
+        unrolledIterVals.pop_back();
+        visitTriggers([&](auto& t) { t->exprRolled(index, removedExpr); },
+                      triggers);
     }
 
-    void valueChanged(u_int64_t oldHash, u_int64_t newHash) {
-        if (oldHash == newHash) {
-            return;
-        }
-        assert(valueExprMap.count(oldHash));
-        size_t oldIndex = valueExprMap[oldHash];
-        bool newExprExists = valueExprMap[newHash];
-        if (exprRepetitionCount(oldIndex) == 1) {
-            if (newExprExists) {
-                increaseExprCount(valueExprMap[newHash]);
-                decreaseExprCount(oldIndex);
-            } else {
-                valueExprMap[newHash] = valueExprMap[oldHash];
-            }
-                valueExprMap.erase(oldHash);
-        } else {
-            //old expr repetition count is > 0
-            decreaseExprCount(oldIndex);
-            if (newExprExists) {
-                increaseExprCount(valueExprMap[newHash]);
-            } else {
-
-            }
-        }
-
-        if (valueExprMap.count(newHash)) {
-            increaseExprCount(valueExprMap[hash]);
-            return;
-        }
-        valueExprMap[newHash] = debug_code(this->hasConsistentState());
-    }
-
-    Quantifier<ContainerType, ExprType> deepCopyQuantifierForUnroll(
-        const AnyIterRef& iterator) const {
-        Quantifier<ContainerType, ExprType> newQuantifier(
-            deepCopyForUnroll(container, iterator), quantId);
-        newQuantifier.expr = deepCopyForUnroll(expr, iterator);
-        // we want to identify if the unrolling value is the our
+    inline std::shared_ptr<QuantifierView<ExprType>>
+    deepCopyQuantifierForUnroll(const AnyIterRef& iterator) final {
+        auto newQuantifier =
+            std::make_shared<Quantifier<ContainerType, Exprtype>>(
+                deepCopyForUnroll(container, iterator), quantId);
+        newQuantifier->expr = deepCopyForUnroll(expr, iterator);
+        // this next if statement temperarily disabled.
+        // we want to identify if the unrolling value is our
         // container. i.e. this is the inner quantifier and the container we are
         // pointing to is going to be swapped out for a new one.
         // If so, we don't bother repopulating the unrolledExprs as they will be
@@ -196,13 +119,98 @@ struct Quantifier : public QuantifierView<ExprType> {
             containerPtr->getIterator().id == iteratorPtr->getIterator().id) {
             return newQuantifier;
         }
-        newQuantifier.valueExprMap = valueExprMap;
-        for (auto& expr : unrolledExprs) {
-            newQuantifier.unrolledExprs.emplace_back(
-                deepCopyForUnroll(expr.first, iterator), expr.second);
+        for (size_t i = 0; i < exprs.size(); ++i) {
+            auto& expr = exprs[i];
+            auto& iterVal = unrolledIterVals[i];
+            newQuantifier->exprs.emplace_back(
+                deepCopyForUnroll(expr, iterator));
+            newQuantifier->unrolledIterVals.emplace_back(iterVal);
         }
         return newQuantifier;
     }
+
+    inline void startTriggeringOnContainer() final {
+        containerTrigger =
+            std::make_shared<ContainerTrigger<ContainerType>>(this);
+        addTrigger(*this, containerTrigger);
+        startTriggering(container);
+        triggering() = true;
+    }
+    inline void stopTriggeringOnContainer() final {
+        if (containerTrigger) {
+            deleteTrigger(containerTrigger);
+            stopTriggering(container);
+        }
+        triggering() = false;
+    }
+    inline void initialUnroll() final {
+        evaluate(container);
+        InitialUnroller<ContainerType>::initialUnroll(*this);
+    }
+
+    template <typename Container>
+    struct ContainerTrigger;
+    template <typename T = int>  // template is there just to prevent compiler
+                                 // from instantiating
+    struct ContainerTrigger<SetReturning> : public SetTrigger, DelayedTrigger {
+        Quantifier<ContainerType, ExprType>* op;
+        std::vector<AnyValRef> valuesToUnroll;
+
+        Quantifier(ContainerTrigger<containerType, ExprType>* op) op(op) {}
+        inline void valueRemoved(u_int64_t indexOfRemovedValue) final {
+            op->roll(indexOfRemovedValue);
+        }
+        inline void valueAdded(const AnyValRef& member) final {
+            valuesToUnroll.emplace_back(move(val));
+            if (op->valuesToUnroll.size() == 1) {
+                addDelayedTrigger(op->containerTrigger);
+            }
+        }
+        inline void possibleMemberValueChange(u_int64_t,
+                                              const AnyValRef&) final {}
+        inline void memberValueChanged(u_int64_t, const AnyValRef&) final{};
+
+        inline void setValueChanged(const SetView& newValue) {
+            while (!op->exprs.empty()) {
+                this->valueremoved(op->exprs.size() - 1, 0);
+            }
+            mpark::visit(
+                [&](auto& membersImpl) {
+                    for (auto& member : membersImpl) {
+                        this->valueAdded(member);
+                    }
+                },
+                newValue.members);
+        }
+
+        inline void iterHasNewValue(const Setvalue&,
+                                    const ValRef<SetValue>& newValue) final {
+            this->setValueChanged(newValue);
+        }
+        void trigger() final {
+            while (!valuesToUnroll.empty()) {
+                op->unroll(valuesToUnroll.back());
+                valuesToUnroll.pop_back();
+            }
+        }
+    };
+
+    template <typename Container>
+    struct InitialUnroller;
+
+    template <typename T = int>
+    struct InitialUnrolleder<SetReturning> {
+        template <typename Quant>
+        void initialUnroll(Quant& quantifier) {
+            mpark::visit(
+                [&](auto& membersImpl) {
+                    for (auto& member : membersImpl) {
+                        quantifier.unrolled(member);
+                    }
+                },
+                getView<SetView>(quant->container).members);
+        }
+    }
 };
-*/
+
 #endif /* SRC_OPERATORS_QUANTIFIER_H_ */

@@ -58,6 +58,6 @@ void setWithModulous() {
     auto i = outerQuant->newIterRef<IntValue>();
     outerQuant->setExpression(intEq(mod(i, modulousConst), zeroConst));
     builder.addConstraint(outerForall);
-    HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
+    HillClimber<InteractiveNeighbourhoodSelector> search(builder.build());
     search.search();
 }

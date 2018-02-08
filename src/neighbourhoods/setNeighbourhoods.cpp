@@ -16,6 +16,7 @@ void assignRandomValueInDomainImpl(const SetDomain& domain,
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     size_t newNumberElements =
         globalRandom(domain.sizeAttr.minSize, domain.sizeAttr.maxSize);
+    newNumberElements = 3;
     // clear set and populate with new random elements
     while (val.numberElements() > 0) {
         val.removeMember<InnerValueType>(val.numberElements() - 1);

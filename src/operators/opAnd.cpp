@@ -68,7 +68,8 @@ class QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
         // if the expr/trigger moved from the end into index had a violation but
         // the expr previously at at index did not, then add the violation to
         // the index which now holds the moved expr
-        if (op->violatingOperands.erase(op->operandTriggers.size()) &&
+        if (index != op->operandTriggers.size() &&
+            op->violatingOperands.erase(op->operandTriggers.size()) &&
             !op->violatingOperands.count(index)) {
             op->violatingOperands.insert(index);
             // otherwise if the expr previously at index had a violation, it is
@@ -131,8 +132,10 @@ void stopTriggering(OpAnd& op) {
         deleteTrigger(op.operandTriggers.back());
         op.operandTriggers.pop_back();
     }
-    for (auto& operand : op.quantifier->exprs) {
-        stopTriggering(operand);
+    if (op.quantifier) {
+        for (auto& operand : op.quantifier->exprs) {
+            stopTriggering(operand);
+        }
     }
     if (op.quantifierTrigger) {
         deleteTrigger(op.quantifierTrigger);

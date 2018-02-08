@@ -16,11 +16,7 @@ enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
 struct Model {
     friend ModelBuilder;
     std::vector<std::pair<AnyDomainRef, AnyValRef>> variables;
-    std::vector<std::pair<AnyDomainRef, AnyValRef>>
-        variablesBackup;  // not used at the
-                          // moment, just
-                          // needed to invoke
-                          // neighbourhoods
+    std::vector<std::pair<AnyDomainRef, AnyValRef>> variablesBackup;
     std::vector<Neighbourhood> neighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
@@ -111,5 +107,6 @@ class ModelBuilder {
                      std::move(varNeighbourhoodMapping), std::move(constraints),
                      std::move(objective), optimiseMode);
     }
+
 };
 #endif /* SRC_SEARCH_MODEL_H_ */

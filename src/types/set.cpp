@@ -49,13 +49,15 @@ void deepCopyImpl(const SetValue& src,
             ++index;
         }
     }
-    for (auto& hashIndexPair : src.getHashIndexMap()) {
-        if (!target.getHashIndexMap().count(hashIndexPair.first)) {
-            target.addMember<InnerValueType>(
-                deepCopy(*srcMemnersImpl[hashIndexPair.second]));
+    for (auto& member : srcMemnersImpl) {
+        if (!target.getHashIndexMap().count(getValueHash(*member))) {
+            target.addMember(deepCopy(*member));
         }
     }
+    debug_code(target.assertValidState());
+    cout << "after deep copy value is " << target << endl;
     target.notifyEntireSetChange();
+    cout << "just checking, value is " << target << endl;
 }
 
 template <>

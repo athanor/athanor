@@ -127,7 +127,6 @@ struct SetView {
         hashIndexMap.erase(hash);
         cachedHashTotal -= mix(hash);
         ValRef<InnerValueType> removedMember = std::move(members[index]);
-        valBase(*removedMember).container = NULL;
         members[index] = std::move(members.back());
         members.pop_back();
         if (index < members.size()) {
@@ -177,8 +176,8 @@ struct SetView {
             debug_code(assert(!hashIndexMap.count(newHash)));
             hashIndexMap[newHash] = hashIndexMap[oldHash];
             hashIndexMap.erase(oldHash);
-            cachedHashTotal -= oldHash;
-            cachedHashTotal += newHash;
+            cachedHashTotal -= mix(oldHash);
+            cachedHashTotal += mix(newHash);
         }
         return newHash;
     }
@@ -240,6 +239,7 @@ struct SetValue : public SetView, ValBase {
     inline bool addMember(const ValRef<InnerValueType>& member) {
         if (SetView::addMember(member)) {
             valBase(*member).container = this;
+            valBase(*member).id = numberElements() - 1;
             return true;
         } else {
             return false;
@@ -252,6 +252,7 @@ struct SetValue : public SetView, ValBase {
         if (SetView::addMember(member)) {
             if (func()) {
                 valBase(*member).container = this;
+                valBase(*member).id = numberElements() - 1;
                 SetView::notifyMemberAdded(member);
                 return true;
             } else {
@@ -264,6 +265,9 @@ struct SetValue : public SetView, ValBase {
     inline ValRef<InnerValueType> removeMember(u_int64_t index) {
         auto removedMember = SetView::removeMember<InnerValueType>(index);
         valBase(*removedMember).container = NULL;
+        if (index < numberElements()) {
+            valBase(*getMembers<InnerValueType>()[index]).id = index;
+        }
         return removedMember;
     }
 
@@ -273,6 +277,10 @@ struct SetValue : public SetView, ValBase {
         auto removedMember = SetView::removeMember<InnerValueType>(index);
         if (func()) {
             valBase(*removedMember).container = NULL;
+            if (index < numberElements()) {
+                valBase(*getMembers<InnerValueType>()[index]).id = index;
+            }
+
             SetView::notifyMemberRemoved(index, getValueHash(*removedMember));
             return std::make_pair(true, std::move(removedMember));
         } else {
@@ -298,8 +306,8 @@ struct SetValue : public SetView, ValBase {
             if (oldHash != hashOfPossibleChange) {
                 hashIndexMap[oldHash] = hashIndexMap[hashOfPossibleChange];
                 hashIndexMap.erase(hashOfPossibleChange);
-                cachedHashTotal -= hashOfPossibleChange;
-                cachedHashTotal += oldHash;
+                cachedHashTotal -= mix(hashOfPossibleChange);
+                cachedHashTotal += mix(oldHash);
                 hashOfPossibleChange = oldHash;
             }
             return false;

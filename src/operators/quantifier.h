@@ -79,7 +79,8 @@ struct Quantifier : public QuantifierView<ExprType> {
 
                 exprs.emplace_back(deepCopyForUnroll(exprToCopy, iterRef));
                 iterRef.getIterator().changeValue(
-                    triggering(), oldValueOfIter, newValImpl, [&]() {
+                    triggering() && !evaluateExpr, oldValueOfIter, newValImpl,
+                    [&]() {
                         if (evaluateExpr) {
                             evaluate(exprs.back());
                         }
@@ -94,7 +95,8 @@ struct Quantifier : public QuantifierView<ExprType> {
     }
 
     inline void roll(u_int64_t index) {
-        debug_log("Rolling " << unrolledIterVals[index]);
+        debug_log("Rolling  index " << index << " with value "
+                                    << unrolledIterVals[index]);
         ExprType removedExpr = std::move(exprs[index]);
         exprs[index] = std::move(exprs.back());
         unrolledIterVals[index] = std::move(unrolledIterVals.back());
@@ -159,11 +161,16 @@ struct ContainerTrigger<SetReturning, ExprType> : public SetTrigger,
     inline void memberValueChanged(u_int64_t, const AnyValRef&) final{};
 
     inline void setValueChanged(const SetView& newValue) {
+        std::cout << "value is " << static_cast<const SetValue&>(newValue)
+                  << std::endl;
         while (!op->exprs.empty()) {
             this->valueRemoved(op->exprs.size() - 1, 0);
         }
+        std::cout << "value is " << static_cast<const SetValue&>(newValue)
+                  << std::endl;
         mpark::visit(
             [&](auto& membersImpl) {
+                std::cout << membersImpl << std::endl;
                 for (auto& member : membersImpl) {
                     this->valueAdded(member);
                 }
@@ -176,10 +183,10 @@ struct ContainerTrigger<SetReturning, ExprType> : public SetTrigger,
         this->setValueChanged(*newValue);
     }
     void trigger() final {
-        while (!valuesToUnroll.empty()) {
-            op->unroll(valuesToUnroll.back());
-            valuesToUnroll.pop_back();
+        for (auto& value : valuesToUnroll) {
+            op->unroll(value);
         }
+        valuesToUnroll.clear();
     }
 };
 

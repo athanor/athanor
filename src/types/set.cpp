@@ -55,9 +55,7 @@ void deepCopyImpl(const SetValue& src,
         }
     }
     debug_code(target.assertValidState());
-    cout << "after deep copy value is " << target << endl;
     target.notifyEntireSetChange();
-    cout << "just checking, value is " << target << endl;
 }
 
 template <>

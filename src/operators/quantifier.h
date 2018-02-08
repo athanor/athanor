@@ -161,16 +161,11 @@ struct ContainerTrigger<SetReturning, ExprType> : public SetTrigger,
     inline void memberValueChanged(u_int64_t, const AnyValRef&) final{};
 
     inline void setValueChanged(const SetView& newValue) {
-        std::cout << "value is " << static_cast<const SetValue&>(newValue)
-                  << std::endl;
         while (!op->exprs.empty()) {
             this->valueRemoved(op->exprs.size() - 1, 0);
         }
-        std::cout << "value is " << static_cast<const SetValue&>(newValue)
-                  << std::endl;
         mpark::visit(
             [&](auto& membersImpl) {
-                std::cout << membersImpl << std::endl;
                 for (auto& member : membersImpl) {
                     this->valueAdded(member);
                 }

@@ -193,7 +193,7 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                 AnyValRef changingMember =
                     val.getMembers<InnerValueType>()[indexToChange];
                 AcceptanceCallBack changeAccepted = [&]() {
-                    bool requiresRevert = !params.changeAccepted();
+                    requiresRevert = !params.changeAccepted();
                     if (requiresRevert) {
                         val.notifyPossibleMemberChange<InnerValueType>(
                             indexToChange);

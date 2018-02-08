@@ -179,6 +179,7 @@ struct SetView {
             cachedHashTotal -= mix(oldHash);
             cachedHashTotal += mix(newHash);
         }
+        debug_code(assertValidState());
         return newHash;
     }
 
@@ -296,6 +297,7 @@ struct SetValue : public SetView, ValBase {
 
     template <typename InnerValueType, typename Func>
     inline bool tryMemberChange(size_t index, Func&& func) {
+        std::cout << "trying change of " << getMembers<InnerValueType>()[index] << std::endl;
         u_int64_t oldHash = hashOfPossibleChange;
         hashOfPossibleChange = memberChanged<InnerValueType>(oldHash, index);
         if (func()) {

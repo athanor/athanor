@@ -42,7 +42,8 @@ struct Model {
           neighbourhoods(std::move(neighbourhoods)),
           neighbourhoodVarMapping(std::move(neighbourhoodVarMapping)),
           varNeighbourhoodMapping(std::move(varNeighbourhoodMapping)),
-          csp(std::move(constraints)),
+          csp(std::make_shared<FixedArray<BoolReturning>>(
+              std::move(constraints))),
           objective(std::move(objective)),
           optimiseMode(optimiseMode) {}
 };

@@ -40,7 +40,7 @@ class QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
    public:
     OpAnd* op;
     QuantifierTrigger(OpAnd* op) : op(op) {}
-    inline void exprUnrolled(const BoolReturning& expr) {
+    void exprUnrolled(const BoolReturning& expr) final {
         op->operandTriggers.emplace_back(
             std::make_shared<OpAndTrigger>(op, op->operandTriggers.size()));
         addTrigger(expr, op->operandTriggers.back());
@@ -54,7 +54,7 @@ class QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
         }
     }
 
-    inline void exprRolled(u_int64_t index, const BoolReturning& expr) final {
+    void exprRolled(u_int64_t index, const BoolReturning& expr) final {
         op->operandTriggers[index] = std::move(op->operandTriggers.back());
         op->operandTriggers.pop_back();
         if (index < op->operandTriggers.size()) {

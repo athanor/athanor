@@ -3,7 +3,7 @@
 #define SRC_OPERATORS_OPAND_H_
 #include <vector>
 #include "operators/operatorBase.h"
-#include "quantifierView.h"
+#include "operators/quantifierView.h"
 #include "types/bool.h"
 #include "utils/fastIterableIntSet.h"
 class OpAndTrigger;

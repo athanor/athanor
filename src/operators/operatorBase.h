@@ -56,19 +56,19 @@ class ReturnType {
     // should be disabled.  the only function below that is compiled is the one
     // that can convert template type Op to the return  type mentioned in the
     // function (e.g. Setreturning, boolreturning)
+#define forAllReturnTypes(f) f(SetReturning) f(IntReturning) f(BoolReturning)
+#define testReturnTypeFunc(RetType)                                        \
+    template <typename T>                                                  \
+    static auto test()->decltype(std::declval<RetType&>() = std::move(     \
+                                     std::declval<std::shared_ptr<T>>())); \
+    template <typename T>                                                  \
+    static auto test()->decltype(std::declval<RetType&>() =                \
+                                     std::move(std::declval<T>()));
 
-    template <typename T>
-    static auto test() -> decltype(std::declval<SetReturning&>() = std::move(
-                                       std::declval<std::shared_ptr<T>>()));
-    template <typename T>
-    static auto test() -> decltype(std::declval<BoolReturning&>() = std::move(
-                                       std::declval<std::shared_ptr<T>>()));
-    template <typename T>
-    static auto test() -> decltype(std::declval<IntReturning&>() = std::move(
-                                       std::declval<std::shared_ptr<T>>()));
-
-   public:
-    typedef BaseType<decltype(ReturnType<Op>::test<Op>())> type;
+    forAllReturnTypes(testReturnTypeFunc)
+#undef testReturnTypeFunc
+#undef forAllReturnTypes
+        public : typedef BaseType<decltype(ReturnType<Op>::test<Op>())> type;
 };
 
 template <typename Operator, typename ReturnTypeIn>

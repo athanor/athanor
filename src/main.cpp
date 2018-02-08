@@ -1,4 +1,4 @@
-/*
+
 #include <iostream>
 #include "common/common.h"
 #include "constructorShortcuts.h"
@@ -7,7 +7,9 @@
 
 using namespace std;
 void setOfSetWithModulous();
-int main() { setOfSetWithModulous(); }
+void setWithModulous();
+
+int main() { setWithModulous(); }
 
 void setOfSetWithModulous() {
     auto zeroConst = ValRef<IntValue>(make_shared<IntValue>());
@@ -15,27 +17,47 @@ void setOfSetWithModulous() {
     auto modulousConst = ValRef<IntValue>(make_shared<IntValue>());
     modulousConst->value = 2;
     auto sizeLimitConst = ValRef<IntValue>(make_shared<IntValue>());
-    sizeLimitConst->value = 20;
+    sizeLimitConst->value = 10;
     ModelBuilder builder;
 
     auto domain = make_shared<SetDomain>(
-        minSize(1), SetDomain(noSize(), IntDomain({intBound(1, 42)})));
+        minSize(1), SetDomain(noSize(), IntDomain({intBound(1, 40)})));
     auto a = builder.addVariable(domain);
-    builder.addConstraint(intEq(opProd(setSize(a), setSize(a), setSize(a),
-setSize(a)), opProd(sizeLimitConst, sizeLimitConst, sizeLimitConst,
-sizeLimitConst)));
+    builder.addConstraint(intEq(setSize(a), sizeLimitConst));
 
-    auto forAll = setForAll(a);
-    auto i = forAll->newIterRef<SetValue>();
-    auto innerForAll = setForAll(i);
-    forAll->setExpression(
+    auto outerQuant = quant<BoolReturning>(a);
+    auto outerForall = opAnd(outerQuant);
+    auto i = outerQuant->newIterRef<SetValue>();
+    auto innerQuant = quant<BoolReturning>(i);
+    auto innerForAll = opAnd(innerQuant);
+    outerQuant->setExpression(
         opAnd(intEq(setSize(i), sizeLimitConst), innerForAll));
-    auto j = innerForAll->newIterRef<IntValue>();
-    innerForAll->setExpression(intEq(mod(j, modulousConst), zeroConst));
-    builder.addConstraint(forAll);
+    auto j = innerQuant->newIterRef<IntValue>();
+    innerQuant->setExpression(intEq(mod(j, modulousConst), zeroConst));
+    builder.addConstraint(outerForall);
     HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
     search.search();
 }
 
-*/
-int main() {}
+void setWithModulous() {
+    auto zeroConst = ValRef<IntValue>(make_shared<IntValue>());
+    zeroConst->value = 0;
+    auto modulousConst = ValRef<IntValue>(make_shared<IntValue>());
+    modulousConst->value = 2;
+    auto sizeLimitConst = ValRef<IntValue>(make_shared<IntValue>());
+    sizeLimitConst->value = 10;
+    ModelBuilder builder;
+
+    auto domain =
+        make_shared<SetDomain>(minSize(1), IntDomain({intBound(1, 40)}));
+    auto a = builder.addVariable(domain);
+    builder.addConstraint(intEq(setSize(a), sizeLimitConst));
+
+    auto outerQuant = quant<BoolReturning>(a);
+    auto outerForall = opAnd(outerQuant);
+    auto i = outerQuant->newIterRef<IntValue>();
+    outerQuant->setExpression(intEq(mod(i, modulousConst), zeroConst));
+    builder.addConstraint(outerForall);
+    HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
+    search.search();
+}

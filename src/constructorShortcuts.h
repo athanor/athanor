@@ -4,21 +4,30 @@
 #include "operators/opIntEq.h"
 #include "operators/opMod.h"
 #include "operators/opProd.h"
-#include "operators/opSetForAll.h"
 #include "operators/opSetNotEq.h"
 #include "operators/opSetSize.h"
 #include "operators/opSum.h"
+#include "operators/quantifier.h"
 #include "types/allTypes.h"
 
-template <typename... Operands>
-std::shared_ptr<OpAnd> opAnd(Operands&&... operands) {
-    return std::make_shared<OpAnd>(
-        std::vector<BoolReturning>({std::forward<Operands>(operands)...}));
+template <typename Operand, typename... Operands>
+typename std::enable_if<
+    !std ::is_base_of<QuantifierView<BoolReturning>,
+                      typename BaseType<Operand>::element_type>::value,
+    std::shared_ptr<OpAnd>>::type
+opAnd(Operand&& operand, Operands&&... operands) {
+    return std::make_shared<OpAnd>(std::make_shared<FixedArray<BoolReturning>>(
+        std::vector<BoolReturning>({std::forward<Operand>(operand),
+                                    std::forward<Operands>(operands)...})));
 }
 
-template <typename BoolReturningVec>
-std::shared_ptr<OpAnd> opAnd(BoolReturningVec&& operands) {
-    return std::make_shared<OpAnd>(std::forward<BoolReturningVec>(operands));
+template <typename Quant,
+          typename std::enable_if<
+              std ::is_base_of<QuantifierView<BoolReturning>,
+                               typename BaseType<Quant>::element_type>::value,
+              int>::type = 0>
+inline auto opAnd(Quant&& quant) {
+    return std::make_shared<OpAnd>(std::forward<Quant>(quant));
 }
 
 template <typename... Operands>
@@ -48,9 +57,11 @@ std::shared_ptr<OpSetSize> setSize(Set&& set) {
     return std::make_shared<OpSetSize>(std::forward<Set>(set));
 }
 
-template <typename Set>
-std::shared_ptr<OpSetForAll> setForAll(Set&& set) {
-    return std::make_shared<OpSetForAll>(std::forward<Set>(set));
+template <typename ExprType, typename ContainerType>
+auto quant(ContainerType&& container) {
+    return std::make_shared<Quantifier<
+        typename ReturnType<BaseType<ContainerType>>::type, ExprType>>(
+        std::forward<ContainerType>(container));
 }
 template <typename L, typename R>
 std::shared_ptr<OpIntEq> intEq(L&& l, R&& r) {

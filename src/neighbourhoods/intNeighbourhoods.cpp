@@ -43,7 +43,12 @@ void intAssignRandomGen(const IntDomain& domain,
                 ++params.stats.minorNodeCount;
                 success = val.changeValue([&]() {
                     val.value = getRandomValueInDomain(domain);
-                    return params.parentCheck(params.primary);
+                    if (params.parentCheck(params.primary)) {
+                        return true;
+                    } else {
+                        val.value = backup;
+                        return false;
+                    }
                 });
                 if (success) {
                     debug_neighbourhood_action("New value is " << val);

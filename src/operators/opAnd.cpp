@@ -65,17 +65,10 @@ class QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
                            violationOfRemovedExpr > 0) ||
                           (!op->violatingOperands.count(index) &&
                            violationOfRemovedExpr == 0)));
-        // if the expr/trigger moved from the end into index had a violation but
-        // the expr previously at at index did not, then add the violation to
-        // the index which now holds the moved expr
-        if (index != op->operandTriggers.size() &&
-            op->violatingOperands.erase(op->operandTriggers.size()) &&
-            !op->violatingOperands.count(index)) {
+        op->violatingOperands.erase(index);
+        if (index < op->operandTriggers.size() &&
+            op->violatingOperands.erase(op->operandTriggers.size())) {
             op->violatingOperands.insert(index);
-            // otherwise if the expr previously at index had a violation, it is
-            // now gone
-        } else if (op->violatingOperands.count(index)) {
-            op->violatingOperands.erase(index);
         }
         op->changeValue([&]() {
             op->violation -= violationOfRemovedExpr;
@@ -162,7 +155,12 @@ shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
 }
 
 std::ostream& dumpState(std::ostream& os, const OpAnd& op) {
-    os << "OpAnd: violation=" << op.violation << "\noperands [";
+    os << "OpAnd: violation=" << op.violation << endl;
+    vector<u_int64_t> sortedViolatingOperands(op.violatingOperands.begin(),
+                                              op.violatingOperands.end());
+    sort(sortedViolatingOperands.begin(), sortedViolatingOperands.end());
+    os << "Violating indicies: " << sortedViolatingOperands << endl;
+    os << "operands [";
     bool first = true;
     for (auto& operand : op.quantifier->exprs) {
         if (first) {

@@ -45,11 +45,11 @@ void setWithModulous() {
     auto modulousConst = ValRef<IntValue>(make_shared<IntValue>());
     modulousConst->value = 2;
     auto sizeLimitConst = ValRef<IntValue>(make_shared<IntValue>());
-    sizeLimitConst->value = 10;
+    sizeLimitConst->value = 4;
     ModelBuilder builder;
 
     auto domain =
-        make_shared<SetDomain>(minSize(1), IntDomain({intBound(1, 40)}));
+        make_shared<SetDomain>(minSize(1), IntDomain({intBound(1, 3)}));
     auto a = builder.addVariable(domain);
     builder.addConstraint(intEq(setSize(a), sizeLimitConst));
 

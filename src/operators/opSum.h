@@ -1,18 +1,19 @@
-
 #ifndef SRC_OPERATORS_OPSUM_H_
 #define SRC_OPERATORS_OPSUM_H_
 #include <vector>
 #include "operators/operatorBase.h"
+#include "operators/quantifierView.h"
 #include "types/int.h"
 class OpSumTrigger;
-class OpSumTrigger;
 struct OpSum : public IntView {
-    std::vector<IntReturning> operands;
-    std::shared_ptr<OpSumTrigger> operandTrigger = nullptr;
+    class QuantifierTrigger;
+    std::shared_ptr<QuantifierView<IntReturning>> quantifier;
+    std::shared_ptr<OpSumTrigger> operandTrigger;
+    std::shared_ptr<QuantifierTrigger> quantifierTrigger;
 
-    OpSum(std::vector<IntReturning> operandsIn)
-        : operands(std::move(operandsIn)) {}
-
+   public:
+    OpSum(std::shared_ptr<QuantifierView<IntReturning>> quantifier)
+        : quantifier(std::move(quantifier)) {}
     OpSum(const OpSum& other) = delete;
     OpSum(OpSum&& other);
     ~OpSum() { stopTriggering(*this); }

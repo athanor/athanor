@@ -2,7 +2,7 @@
 #include <cassert>
 #include "utils/ignoreUnused.h"
 using namespace std;
-
+using QuantifierTrigger = OpAnd::QuantifierTrigger;
 class OpAndTrigger : public BoolTrigger {
    public:
     OpAnd* op;
@@ -36,7 +36,7 @@ class OpAndTrigger : public BoolTrigger {
     }
 };
 
-class QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
+class OpAnd::QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
    public:
     OpAnd* op;
     QuantifierTrigger(OpAnd* op) : op(op) {}

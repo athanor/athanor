@@ -30,15 +30,24 @@ inline auto opAnd(Quant&& quant) {
     return std::make_shared<OpAnd>(std::forward<Quant>(quant));
 }
 
-template <typename... Operands>
-std::shared_ptr<OpSum> opSum(Operands&&... operands) {
-    return std::make_shared<OpSum>(
-        std::vector<IntReturning>({std::forward<Operands>(operands)...}));
+template <typename Operand, typename... Operands>
+typename std::enable_if<
+    !std ::is_base_of<QuantifierView<IntReturning>,
+                      typename BaseType<Operand>::element_type>::value,
+    std::shared_ptr<OpSum>>::type
+opSum(Operand&& operand, Operands&&... operands) {
+    return std::make_shared<OpSum>(std::make_shared<FixedArray<IntReturning>>(
+        std::vector<IntReturning>({std::forward<Operand>(operand),
+                                   std::forward<Operands>(operands)...})));
 }
 
-template <typename IntReturningVec>
-std::shared_ptr<OpSum> opSum(IntReturningVec&& operands) {
-    return std::make_shared<OpSum>(std::forward<IntReturningVec>(operands));
+template <typename Quant,
+          typename std::enable_if<
+              std ::is_base_of<QuantifierView<IntReturning>,
+                               typename BaseType<Quant>::element_type>::value,
+              int>::type = 0>
+inline auto opSum(Quant&& quant) {
+    return std::make_shared<OpSum>(std::forward<Quant>(quant));
 }
 
 template <typename... Operands>

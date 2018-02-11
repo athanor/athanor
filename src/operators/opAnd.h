@@ -7,8 +7,8 @@
 #include "types/bool.h"
 #include "utils/fastIterableIntSet.h"
 class OpAndTrigger;
-class QuantifierTrigger;
 struct OpAnd : public BoolView {
+    class QuantifierTrigger;
     std::shared_ptr<QuantifierView<BoolReturning>> quantifier;
     FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
     std::vector<std::shared_ptr<OpAndTrigger>> operandTriggers;

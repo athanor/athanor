@@ -7,10 +7,12 @@
 #include "search/violationDescription.h"
 #include "types/base.h"
 #include "utils/cachedSharedPtr.h"
-#define buildForOperators(f, sep)                                           \
-    f(IntValue) sep f(OpSetSize) sep f(OpSum) sep f(BoolValue) sep f(OpAnd) \
-        sep f(OpSetNotEq) sep f(SetValue) sep f(OpSetIntersect)             \
-            sep sep f(OpIntEq) sep f(OpMod) sep f(OpProd)
+
+#define buildForOperators(f, sep)                                    \
+    f(BoolValue) sep f(IntValue) sep f(SetValue) sep f(MSetValue)    \
+        sep f(OpSetSize) sep f(OpSum) sep f(OpAnd) sep f(OpSetNotEq) \
+            sep f(OpSetIntersect) sep sep f(OpIntEq) sep f(OpMod)    \
+                sep f(OpProd)
 
 #define structDecls(name) struct name;
 buildForOperators(structDecls, );

@@ -6,7 +6,7 @@
 #include "utils/random.h"
 
 using namespace std;
-ViolationDescription emptyViolations;
+static ViolationDescription emptyViolations;
 
 template <typename InnerDomainPtrType>
 void assignRandomValueInDomainImpl(const SetDomain& domain,
@@ -39,7 +39,7 @@ void assignRandomValueInDomain<SetDomain>(const SetDomain& domain,
 }
 
 const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
-int getTryLimit(u_int64_t numberMembers, u_int64_t domainSize) {
+inline int getTryLimit(u_int64_t numberMembers, u_int64_t domainSize) {
     double successChance = (domainSize - numberMembers) / (double)domainSize;
     return (int)(ceil(NUMBER_TRIES_CONSTANT_MULTIPLIER / successChance));
 }

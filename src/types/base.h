@@ -7,7 +7,8 @@
 #include <vector>
 #include "utils/cachedSharedPtr.h"
 #include "utils/variantOperations.h"
-#define buildForAllTypes(f, sep) f(Bool) sep f(Int) sep f(Set)
+#define buildForAllTypes(f, sep) f(Bool) sep f(Int) sep f(Set) sep f(MSet)
+
 
 #define MACRO_COMMA ,
 

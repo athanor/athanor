@@ -235,7 +235,7 @@ struct SetView {
     void assertValidState();
 };
 
-struct SetValue : public SetView, ValBase {
+struct SetValue : public SetView, public ValBase {
     template <typename InnerValueType>
     inline bool addMember(const ValRef<InnerValueType>& member) {
         if (SetView::addMember(member)) {

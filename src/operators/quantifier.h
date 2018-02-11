@@ -199,4 +199,62 @@ struct InitialUnroller<SetReturning> {
     }
 };
 
+template <typename ExprType>
+struct ContainerTrigger<MSetReturning, ExprType> : public MSetTrigger,
+                                                   public DelayedTrigger {
+    Quantifier<MSetReturning, ExprType>* op;
+    std::vector<AnyValRef> valuesToUnroll;
+
+    ContainerTrigger(Quantifier<MSetReturning, ExprType>* op) : op(op) {}
+    inline void valueRemoved(u_int64_t indexOfRemovedValue, u_int64_t) final {
+        op->roll(indexOfRemovedValue);
+    }
+    inline void valueAdded(const AnyValRef& member) final {
+        valuesToUnroll.emplace_back(std::move(member));
+        if (valuesToUnroll.size() == 1) {
+            addDelayedTrigger(op->containerTrigger);
+        }
+    }
+    inline void possibleMemberValueChange(u_int64_t, const AnyValRef&) final {}
+    inline void memberValueChanged(u_int64_t, const AnyValRef&) final{};
+
+    inline void mSetValueChanged(const MSetView& newValue) {
+        while (!op->exprs.empty()) {
+            this->valueRemoved(op->exprs.size() - 1, 0);
+        }
+        mpark::visit(
+            [&](auto& membersImpl) {
+                for (auto& member : membersImpl) {
+                    this->valueAdded(member);
+                }
+            },
+            newValue.members);
+    }
+
+    inline void iterHasNewValue(const MSetValue&,
+                                const ValRef<MSetValue>& newValue) final {
+        this->mSetValueChanged(*newValue);
+    }
+    void trigger() final {
+        for (auto& value : valuesToUnroll) {
+            op->unroll(value);
+        }
+        valuesToUnroll.clear();
+    }
+};
+
+template <>
+struct InitialUnroller<MSetReturning> {
+    template <typename Quant>
+    static void initialUnroll(Quant& quantifier) {
+        mpark::visit(
+            [&](auto& membersImpl) {
+                for (auto& member : membersImpl) {
+                    quantifier.unroll(member);
+                }
+            },
+            getView<MSetView>(quantifier.container).members);
+    }
+};
+
 #endif /* SRC_OPERATORS_QUANTIFIER_H_ */

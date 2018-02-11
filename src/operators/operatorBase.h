@@ -44,6 +44,7 @@ struct AssociatedValueType<IntReturning> {
 using SetReturning = mpark::variant<ValRef<SetValue>, IterRef<SetValue>,
                                     std::shared_ptr<OpSetIntersect>>;
 
+using MSetReturning = mpark::variant<ValRef<MSetValue>, IterRef<MSetValue>>;
 template <>
 struct AssociatedValueType<SetReturning> {
     typedef SetValue type;
@@ -58,7 +59,8 @@ class ReturnType {
     // should be disabled.  the only function below that is compiled is the one
     // that can convert template type Op to the return  type mentioned in the
     // function (e.g. Setreturning, boolreturning)
-#define forAllReturnTypes(f) f(SetReturning) f(IntReturning) f(BoolReturning)
+#define forAllReturnTypes(f) \
+    f(SetReturning) f(MSetReturning) f(IntReturning) f(BoolReturning)
 #define testReturnTypeFunc(RetType)                                        \
     template <typename T>                                                  \
     static auto test()->decltype(std::declval<RetType&>() = std::move(     \

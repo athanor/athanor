@@ -1,6 +1,6 @@
 
-#ifndef SRC_OPERATORS_OPSUM_H_
-#define SRC_OPERATORS_OPSUM_H_
+#ifndef SRC_OPERATORS_OPMOD_H_
+#define SRC_OPERATORS_OPMOD_H_
 #include "operators/operatorBase.h"
 #include "types/int.h"
 
@@ -19,4 +19,4 @@ struct OpMod : public IntView {
     ~OpMod() { stopTriggering(*this); }
 };
 
-#endif /* SRC_OPERATORS_OPSUM_H_ */
+#endif /* SRC_OPERATORS_OPMOD_H_ */

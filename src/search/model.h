@@ -16,7 +16,6 @@ enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
 struct Model {
     friend ModelBuilder;
     std::vector<std::pair<AnyDomainRef, AnyValRef>> variables;
-    std::vector<std::pair<AnyDomainRef, AnyValRef>> variablesBackup;
     std::vector<Neighbourhood> neighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
@@ -27,14 +26,13 @@ struct Model {
 
    private:
     Model(std::vector<std::pair<AnyDomainRef, AnyValRef>> variables,
-          std::vector<std::pair<AnyDomainRef, AnyValRef>> variablesBackup,
           std::vector<Neighbourhood> neighbourhoods,
           std::vector<int> neighbourhoodVarMapping,
           std::vector<std::vector<int>> varNeighbourhoodMapping,
           std::vector<BoolReturning> constraints, IntReturning objective,
           OptimiseMode optimiseMode)
         : variables(std::move(variables)),
-          variablesBackup(std::move(variablesBackup)),
+
           neighbourhoods(std::move(neighbourhoods)),
           neighbourhoodVarMapping(std::move(neighbourhoodVarMapping)),
           varNeighbourhoodMapping(std::move(varNeighbourhoodMapping)),
@@ -95,18 +93,10 @@ class ModelBuilder {
                       previousNumberNeighbourhoods);
         }
         assert(neighbourhoods.size() > 0);
-        std::vector<std::pair<AnyDomainRef, AnyValRef>> variablesBackup;
-        std::transform(variables.begin(), variables.end(),
-                       std::back_inserter(variablesBackup), [](auto& var) {
-                           return std::make_pair(var.first,
-                                                 deepCopy(var.second));
-                       });
-        return Model(std::move(variables), std::move(variablesBackup),
-                     std::move(neighbourhoods),
+        return Model(std::move(variables), std::move(neighbourhoods),
                      std::move(neighbourhoodVarMapping),
                      std::move(varNeighbourhoodMapping), std::move(constraints),
                      std::move(objective), optimiseMode);
     }
-
 };
 #endif /* SRC_SEARCH_MODEL_H_ */

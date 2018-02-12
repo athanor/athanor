@@ -24,57 +24,50 @@ using BoolReturning =
                    std::shared_ptr<OpAnd>, std::shared_ptr<OpSetNotEq>,
                    std::shared_ptr<OpIntEq>>;
 
-template <>
-struct AssociatedValueType<BoolReturning> {
-    typedef BoolValue type;
-};
-
 // int returning
 using IntReturning =
     mpark::variant<ValRef<IntValue>, IterRef<IntValue>,
                    std::shared_ptr<OpSetSize>, std::shared_ptr<OpSum>,
                    std::shared_ptr<OpMod>, std::shared_ptr<OpProd>>;
 
-template <>
-struct AssociatedValueType<IntReturning> {
-    typedef IntValue type;
-};
-
 // set returning
 using SetReturning = mpark::variant<ValRef<SetValue>, IterRef<SetValue>,
                                     std::shared_ptr<OpSetIntersect>>;
 
 using MSetReturning = mpark::variant<ValRef<MSetValue>, IterRef<MSetValue>>;
-template <>
-struct AssociatedValueType<SetReturning> {
-    typedef SetValue type;
-};
 
 // helper class for template magic, allows to test operators if they have a
 // specific return type by testing if they are convertable to that type
 
+#define returnTypeToValueAssociations(name)       \
+    template <>                                   \
+    struct AssociatedValueType<name##Returning> { \
+        typedef name##Value type;                 \
+    };
+buildForAllTypes(returnTypeToValueAssociations, );
+#undef returnTypeToValueAssociations
 template <typename Op>
+
 class ReturnType {
     // only one of the below test functions should ever be compiled, the rest
     // should be disabled.  the only function below that is compiled is the one
     // that can convert template type Op to the return  type mentioned in the
     // function (e.g. Setreturning, boolreturning)
-#define forAllReturnTypes(f) \
-    f(SetReturning) f(MSetReturning) f(IntReturning) f(BoolReturning)
-#define testReturnTypeFunc(RetType)                                        \
-    template <typename T>                                                  \
-    static auto test()->decltype(std::declval<RetType&>() = std::move(     \
-                                     std::declval<std::shared_ptr<T>>())); \
-    template <typename T>                                                  \
-    static auto test()->decltype(std::declval<RetType&>() =                \
+#define testReturnTypeFunc(name)                                               \
+    template <typename T>                                                      \
+    static auto test()->decltype(std::declval<name##Returning&>() = std::move( \
+                                     std::declval<std::shared_ptr<T>>()));     \
+    template <typename T>                                                      \
+    static auto test()->decltype(std::declval<name##Returning&>() =            \
                                      std::move(std::declval<T>()));
 
-    forAllReturnTypes(testReturnTypeFunc)
+    buildForAllTypes(testReturnTypeFunc, );
 #undef testReturnTypeFunc
-#undef forAllReturnTypes
-        public : typedef BaseType<decltype(ReturnType<Op>::test<Op>())> type;
+   public:
+    typedef BaseType<decltype(ReturnType<Op>::test<Op>())> type;
 };
 
+#
 template <typename Operator, typename ReturnTypeIn>
 using HasReturnType =
     std::is_same<ReturnTypeIn, typename ReturnType<Operator>::type>;

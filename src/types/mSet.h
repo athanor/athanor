@@ -134,6 +134,27 @@ struct MSetValue : public MSetView, public ValBase {
             return false;
         }
     }
+
+    template <typename InnerValueType>
+    inline ValRef<InnerValueType> removeMember(u_int64_t index) {
+        auto& members = getMembers<InnerValueType>();
+        debug_code(assert(index < members.size()));
+        debug_log("MSet removing value " << *members[index]);
+        ValRef<InnerValueType> removedMember = std::move(members[index]);
+        members[index] = std::move(members.back());
+        members.pop_back();
+        valBase(*removedMember).container = NULL;
+        return removedMember;
+    }
+
+    template <typename InnerValueType>
+    inline void addMember(const ValRef<InnerValueType>& member) {
+        auto& members = getMembers<InnerValueType>();
+        debug_log("MSet adding value " << *member);
+        members.emplace_back(member);
+        valBase(*members.back()).container = this;
+        valBase(*members.back()).id = members.size() - 1;
+    }
 };
 
 #endif /* SRC_TYPES_MSET_H_ */

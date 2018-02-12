@@ -14,6 +14,42 @@ template <typename NeighbourhoodSelectionStrategy>
 class HillClimber {
     Model model;
     NeighbourhoodSelectionStrategy selectionStrategy;
+    u_int64_t bestViolation;
+    int64_t bestObjValue;
+    bool newBestValueFound = false;
+    StatsContainer stats;
+
+    inline bool acceptValue() {
+        bool objAtLeastAsGood;
+        int64_t newObjValue = objAtLeastAsGood =
+            getView<IntView>(model.objective).value;
+        switch (model.optimiseMode) {
+            case OptimiseMode::MAXIMISE:
+                objAtLeastAsGood = newObjValue >= bestObjValue;
+                break;
+            case OptimiseMode::MINIMISE:
+                objAtLeastAsGood = newObjValue <= bestObjValue;
+                break;
+            case OptimiseMode::NONE:
+                objAtLeastAsGood = false;
+                break;
+        }
+        if (objAtLeastAsGood) {
+            bestObjValue = newObjValue;
+        }
+        bool violationBetter = model.csp.violation < bestViolation;
+        if (violationBetter) {
+            bestViolation = model.csp.violation;
+        }
+        newBestValueFound =
+            violationBetter ||
+            (model.csp.violation == bestViolation &&
+             (model.optimiseMode == OptimiseMode::NONE || objAtLeastAsGood));
+        if (newBestValueFound) {
+            newBestSolution();
+        }
+        return newBestValueFound;
+    }
 
    public:
     HillClimber(Model model)
@@ -26,40 +62,38 @@ class HillClimber {
                        std::ostream_iterator<std::string>(std::cout, "\n"),
                        [](auto& n) -> std::string& { return n.name; });
 
-        StatsContainer stats;
         stats.startTimer();
-        BoolView& cspView = model.csp;
         for (auto& var : model.variables) {
             assignRandomValueInDomain(var.first, var.second);
         }
         evaluate(model.csp);
+        bestViolation = model.csp.violation;
         startTriggering(model.csp);
-        u_int64_t bestViolation = cspView.violation;
-        newBestSolution(bestViolation);
+
+        if (model.optimiseMode != OptimiseMode::NONE) {
+            evaluate(model.objective);
+            bestObjValue = getView<IntView>(model.objective).value;
+            startTriggering(model.objective);
+        }
+        newBestSolution();
         selectionStrategy.initialise(model);
-        AcceptanceCallBack callback = [&]() {
-            return cspView.violation <= bestViolation;
-        };
-        while (cspView.violation != 0 && stats.majorNodeCount < 3000000) {
-            debug_code(dumpState(std::cout << "state start\n", model.csp)
-                       << "\nstate end\n");
+        AcceptanceCallBack callback = [&]() { return this->acceptValue(); };
+        while (!finished()) {
             ++stats.majorNodeCount;
             int nextNeighbourhoodIndex =
                 selectionStrategy.nextNeighbourhood(model);
             Neighbourhood& neighbourhood =
                 model.neighbourhoods[nextNeighbourhoodIndex];
-            debug_neighbourhood_action(neighbourhood.name << ":");
-            debug_code(newBestSolution(model.csp.violation));
+            debug_code(debug_log("Before neighbourhood application, state is:");
+                       newBestSolution());
+            debug_neighbourhood_action(
+                "Applying neighbourhood: " << neighbourhood.name << ":");
             auto& var =
                 model.variables
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
             NeighbourhoodParams params(callback, alwaysTrue, 1, var.second,
                                        stats, model.vioDesc);
             neighbourhood.apply(params);
-            if (cspView.violation < bestViolation) {
-                bestViolation = cspView.violation;
-                newBestSolution(bestViolation);
-            }
             selectionStrategy.reportResult(
                 NeighbourhoodResult(model, bestViolation));
         }
@@ -67,21 +101,25 @@ class HillClimber {
         std::cout << stats << std::endl;
     }
 
-    inline void newBestSolution(u_int64_t bestViolation) {
-        std::cout << "best v " << bestViolation << std::endl;
-        dumpState(std::cout, model.variables[0].second) << std::endl;
-        for (size_t i = 0; i < model.variables.size(); ++i) {
-            model.variablesBackup[i].second =
-                deepCopy(model.variables[i].second);
-            normalise(model.variablesBackup[i].second);
-        }
-        std::sort(
-            model.variablesBackup.begin(), model.variablesBackup.end(),
-            [](auto& u, auto& v) { return smallerValue(u.second, v.second); });
-        std::cout << "new best violation: " << bestViolation << std::endl;
-        for (auto& v : model.variablesBackup) {
+    inline void newBestSolution() {
+        std::cout << "Violation " << bestViolation << ", objective "
+                  << bestObjValue << std::endl;
+
+        for (auto& v : model.variables) {
             prettyPrint(std::cout << "var: ", v.second) << std::endl;
         }
+        debug_code(debug_log("CSP state:");
+                   dumpState(std::cout, model.csp) << std::endl;
+                   if (model.optimiseMode != OptimiseMode::NONE) {
+                       debug_log("Objective state:");
+                       dumpState(std::cout, model.objective) << std::endl;
+                   });
+    }
+
+    inline bool finished() {
+        return (model.optimiseMode == OptimiseMode::NONE &&
+                bestViolation == 0) ||
+               stats.majorNodeCount >= 3000000;
     }
 };
 #endif /* SRC_SEARCH_SEARCHSTRATEGIES_H_ */

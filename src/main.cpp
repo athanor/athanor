@@ -87,7 +87,7 @@ void mSetOfSetWithModulousAndMaxSizeSum() {
     innerQuant->setExpression(intEq(mod(j, modulousConst), zeroConst));
     builder.addConstraint(outerForall);
     auto outerIntQuant = quant<IntReturning>(a);
-    auto outerSum = opSum(outerIntQuant);
+    auto outerSum = sum(outerIntQuant);
     auto k = outerIntQuant->newIterRef<SetValue>();
     outerIntQuant->setExpression(setSize(k));
     builder.setObjective(OptimiseMode::MAXIMISE, outerSum);
@@ -137,12 +137,20 @@ void sonet(const int argc, const char** argv) {
         exactSize(numberRings), SetDomain(maxSize(capacity), nodesDomain));
     auto networkVar = builder.addVariable(mSetDomain);
     auto outerIntQuant = quant<IntReturning>(networkVar);
-    auto outerSum = opSum(outerIntQuant);
+    auto outerSum = sum(outerIntQuant);
     auto k = outerIntQuant->newIterRef<SetValue>();
     outerIntQuant->setExpression(setSize(k));
     builder.setObjective(OptimiseMode::MINIMISE, outerSum);
-    //--tbc
-    todoImpl();
+    // constraints
+    auto outerQuant = quant<BoolReturning>(demandConst);
+    auto forAll = opAnd(outerQuant);
+    auto i = outerQuant->newIterRef<SetValue>();
+    auto innerQuant = quant<BoolReturning>(networkVar);
+    auto exists = opOr(innerQuant);
+    outerQuant->setExpression(exists);
+    auto j = innerQuant->newIterRef<SetValue>();
+    innerQuant->setExpression(subset(i, j));
+    builder.addConstraint(forAll);
     HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
     search.search();
 }

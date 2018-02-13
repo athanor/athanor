@@ -3,9 +3,11 @@
 #define SRC_CONSTRUCTORSHORTCUTS_H_
 #include "operators/opIntEq.h"
 #include "operators/opMod.h"
+#include "operators/opOr.h"
 #include "operators/opProd.h"
 #include "operators/opSetNotEq.h"
 #include "operators/opSetSize.h"
+#include "operators/opSubset.h"
 #include "operators/opSum.h"
 #include "operators/quantifier.h"
 #include "types/allTypes.h"
@@ -32,10 +34,30 @@ inline auto opAnd(Quant&& quant) {
 
 template <typename Operand, typename... Operands>
 typename std::enable_if<
+    !std ::is_base_of<QuantifierView<BoolReturning>,
+                      typename BaseType<Operand>::element_type>::value,
+    std::shared_ptr<OpOr>>::type
+opOr(Operand&& operand, Operands&&... operands) {
+    return std::make_shared<OpOr>(std::make_shared<FixedArray<BoolReturning>>(
+        std::vector<BoolReturning>({std::forward<Operand>(operand),
+                                    std::forward<Operands>(operands)...})));
+}
+
+template <typename Quant,
+          typename std::enable_if<
+              std ::is_base_of<QuantifierView<BoolReturning>,
+                               typename BaseType<Quant>::element_type>::value,
+              int>::type = 0>
+inline auto opOr(Quant&& quant) {
+    return std::make_shared<OpOr>(std::forward<Quant>(quant));
+}
+
+template <typename Operand, typename... Operands>
+typename std::enable_if<
     !std ::is_base_of<QuantifierView<IntReturning>,
                       typename BaseType<Operand>::element_type>::value,
     std::shared_ptr<OpSum>>::type
-opSum(Operand&& operand, Operands&&... operands) {
+sum(Operand&& operand, Operands&&... operands) {
     return std::make_shared<OpSum>(std::make_shared<FixedArray<IntReturning>>(
         std::vector<IntReturning>({std::forward<Operand>(operand),
                                    std::forward<Operands>(operands)...})));
@@ -46,7 +68,7 @@ template <typename Quant,
               std ::is_base_of<QuantifierView<IntReturning>,
                                typename BaseType<Quant>::element_type>::value,
               int>::type = 0>
-inline auto opSum(Quant&& quant) {
+inline auto sum(Quant&& quant) {
     return std::make_shared<OpSum>(std::forward<Quant>(quant));
 }
 
@@ -83,5 +105,9 @@ std::shared_ptr<OpMod> mod(L&& l, R&& r) {
 template <typename L, typename R>
 std::shared_ptr<OpSetNotEq> setNotEq(L&& l, R&& r) {
     return std::make_shared<OpSetNotEq>(std::forward<L>(l), std::forward<R>(r));
+}
+template <typename L, typename R>
+std::shared_ptr<OpSubset> subset(L&& l, R&& r) {
+    return std::make_shared<OpSubset>(std::forward<L>(l), std::forward<R>(r));
 }
 #endif /* SRC_CONSTRUCTORSHORTCUTS_H_ */

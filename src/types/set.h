@@ -14,9 +14,9 @@ struct SetDomain {
     SizeAttr sizeAttr;
     AnyDomainRef inner;
     // template hack to accept only domains
-    template <
-        typename DomainType,
-        typename std::enable_if<IsDomainType<DomainType>::value, int>::type = 0>
+    template <typename DomainType,
+              typename std::enable_if<IsDomainType<BaseType<DomainType>>::value,
+                                      int>::type = 0>
     SetDomain(SizeAttr sizeAttr, DomainType&& inner)
         : sizeAttr(sizeAttr),
           inner(std::make_shared<
@@ -26,9 +26,10 @@ struct SetDomain {
     }
 
     // template hack to accept only pointers to domains
-    template <typename DomainPtrType,
-              typename std::enable_if<IsDomainPtrType<DomainPtrType>::value,
-                                      int>::type = 0>
+    template <
+        typename DomainPtrType,
+        typename std::enable_if<IsDomainPtrType<BaseType<DomainPtrType>>::value,
+                                int>::type = 0>
     SetDomain(SizeAttr sizeAttr, DomainPtrType&& inner)
         : sizeAttr(sizeAttr), inner(std::forward<DomainPtrType>(inner)) {
         trimMaxSize();

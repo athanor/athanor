@@ -159,7 +159,7 @@ std::ostream& dumpState(std::ostream& os, const OpAnd& op) {
     vector<u_int64_t> sortedViolatingOperands(op.violatingOperands.begin(),
                                               op.violatingOperands.end());
     sort(sortedViolatingOperands.begin(), sortedViolatingOperands.end());
-    os << "Violating indicies: " << sortedViolatingOperands << endl;
+    os << "Violating indices: " << sortedViolatingOperands << endl;
     os << "operands [";
     bool first = true;
     for (auto& operand : op.quantifier->exprs) {

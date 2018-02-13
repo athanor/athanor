@@ -61,6 +61,11 @@ class FastIterableIntSet {
     inline auto cend() const { return contents.cend(); }
     inline size_t size() const { return contents.size(); }
 
+    inline void clear() {
+        contents.clear();
+        elementIndexes.clear();
+    }
+
    private:
     inline size_t translate(int64_t element) { return element - minElement; }
 

@@ -12,7 +12,7 @@
     f(BoolValue) sep f(IntValue) sep f(SetValue) sep f(MSetValue)    \
         sep f(OpSetSize) sep f(OpSum) sep f(OpAnd) sep f(OpSetNotEq) \
             sep f(OpSetIntersect) sep sep f(OpIntEq) sep f(OpMod)    \
-                sep f(OpProd)
+                sep f(OpProd) sep f(OpOr)
 
 #define structDecls(name) struct name;
 buildForOperators(structDecls, );
@@ -22,7 +22,7 @@ buildForOperators(structDecls, );
 using BoolReturning =
     mpark::variant<ValRef<BoolValue>, IterRef<BoolValue>,
                    std::shared_ptr<OpAnd>, std::shared_ptr<OpSetNotEq>,
-                   std::shared_ptr<OpIntEq>>;
+                   std::shared_ptr<OpIntEq>, std::shared_ptr<OpOr>>;
 
 // int returning
 using IntReturning =
@@ -34,6 +34,7 @@ using IntReturning =
 using SetReturning = mpark::variant<ValRef<SetValue>, IterRef<SetValue>,
                                     std::shared_ptr<OpSetIntersect>>;
 
+// MSet returning
 using MSetReturning = mpark::variant<ValRef<MSetValue>, IterRef<MSetValue>>;
 
 // helper class for template magic, allows to test operators if they have a

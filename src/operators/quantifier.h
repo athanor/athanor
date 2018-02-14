@@ -10,6 +10,11 @@ struct InitialUnroller;
 template <typename Container, typename ExprType>
 struct ContainerTrigger;
 
+inline static u_int64_t nextQuantId() {
+    static u_int64_t quantId = 0;
+    return quantId++;
+}
+
 template <typename ContainerType, typename ExprType>
 struct Quantifier : public QuantifierView<ExprType> {
     using QuantifierView<ExprType>::exprs;
@@ -23,10 +28,6 @@ struct Quantifier : public QuantifierView<ExprType> {
     ExprType expr = ValRef<ExprValueType>(nullptr);
     std::vector<AnyIterRef> unrolledIterVals;
     std::shared_ptr<ContainerTrigger<ContainerType, ExprType>> containerTrigger;
-    inline static u_int64_t nextQuantId() {
-        static u_int64_t quantId = 0;
-        return quantId++;
-    }
 
     Quantifier(ContainerType container, const int id = nextQuantId())
         : quantId(id), container(std::move(container)) {}

@@ -13,6 +13,33 @@ void setOfSetWithModulous();
 void setWithModulous();
 void mSetOfSetWithModulousAndMaxSizeSum();
 void sonet(const int argc, const char** argv);
+using namespace AutoArgParse;
+ArgParser argParser;
+auto& fileArg = argParser.add<Arg<ifstream>>(
+    "path_to_file", Policy::MANDATORY, "Path to parameter file.",
+    [](const std::string& path) -> ifstream {
+        ifstream file;
+        file.open(path);
+        if (file.good()) {
+            return file;
+        } else {
+            throw ErrorMessage("Error opening file: " + path);
+        }
+    });
+auto& randomSeedFlag = argParser.add<ComplexFlag>(
+    "--randomSeed", Policy::OPTIONAL, "Specify a random seed.",
+    [](const string&) { useSeedForRandom = true; });
+auto& seedArg = randomSeedFlag.add<Arg<int>>(
+    "integer_seed", Policy::MANDATORY,
+    "Integer seed to use for random generator.",
+    chain(Converter<int>(), [](int value) {
+        if (value < 0) {
+            throw ErrorMessage("Seed must be greater or equal to 0.");
+        } else {
+            seedForRandom = (u_int64_t)(value);
+            return value;
+        }
+    }));
 int main(const int argc, const char** argv) { sonet(argc, argv); }
 
 void setOfSetWithModulous() {
@@ -96,19 +123,6 @@ void mSetOfSetWithModulousAndMaxSizeSum() {
 }
 
 void sonet(const int argc, const char** argv) {
-    using namespace AutoArgParse;
-    ArgParser argParser;
-    auto& fileArg = argParser.add<Arg<ifstream>>(
-        "path_to_file", Policy::MANDATORY, "Path to sonet instance.",
-        [](const std::string& path) -> ifstream {
-            ifstream file;
-            file.open(path);
-            if (file.good()) {
-                return file;
-            } else {
-                throw ErrorMessage("Error opening file: " + path);
-            }
-        });
     argParser.validateArgs(argc, argv);
     auto& is = fileArg.get();
     u_int64_t numberNodes, numberRings, capacity;
@@ -120,6 +134,7 @@ void sonet(const int argc, const char** argv) {
     auto innerSetDomain = make_shared<SetDomain>(exactSize(2), nodesDomain);
     auto demandConst =
         constructValueFromDomain(SetDomain(noSize(), innerSetDomain));
+    demandConst->container = &constantPool;
     u_int64_t a, b;
     while (is && is >> a && is && is >> b) {
         auto innerSet = constructValueFromDomain(*innerSetDomain);
@@ -131,6 +146,11 @@ void sonet(const int argc, const char** argv) {
         innerSet->addMember(bVal);
         demandConst->addMember(innerSet);
     }
+    cout << "Input:\n";
+    cout << "letting numberNodes be " << numberNodes << endl;
+    cout << "letting numberRings be " << numberRings << endl;
+    cout << "letting capacity be " << capacity << endl;
+    cout << "letting demand be " << *demandConst << endl;
     ModelBuilder builder;
 
     auto mSetDomain = make_shared<MSetDomain>(

@@ -63,27 +63,11 @@ struct MSetView {
     AnyVec members;
     u_int64_t hashOfPossibleChange;
     std::vector<std::shared_ptr<MSetTrigger>> triggers;
-    template <typename InnerValueType>
-    inline ValRef<InnerValueType> removeMember(u_int64_t index) {
-        auto& members = getMembers<InnerValueType>();
-        debug_code(assert(index < members.size()));
-        debug_log("MSet removing value " << *members[index]);
-        ValRef<InnerValueType> removedMember = std::move(members[index]);
-        members[index] = std::move(members.back());
-        members.pop_back();
-        return removedMember;
-    }
-
-    template <typename InnerValueType>
-    inline void addMember(const ValRef<InnerValueType>& member) {
-        auto& members = getMembers<InnerValueType>();
-        debug_log("MSet adding value " << *member);
-        members.emplace_back(member);
-    }
 
     template <typename InnerValueType>
     inline void notifyPossibleMemberChange(u_int64_t index) {
         auto& members = getMembers<InnerValueType>();
+        debug_code(assert(index < members.size()));
         hashOfPossibleChange = getValueHash(*members[index]);
         AnyValRef triggerMember = members[index];
         debug_log("MSet possible value change, member="
@@ -97,6 +81,7 @@ struct MSetView {
     template <typename InnerValueType>
     inline u_int64_t memberChanged(u_int64_t index) {
         auto& members = getMembers<InnerValueType>();
+        debug_code(assert(index < members.size()));
         u_int64_t newHash = getValueHash(*members[index]);
         return newHash;
     }
@@ -152,7 +137,8 @@ struct MSetValue : public MSetView, public ValBase {
         auto& members = getMembers<InnerValueType>();
         debug_log("MSet adding value " << *member);
         members.emplace_back(member);
-        valBase(*members.back()).container = this;
+        valBase(*members.back()).container =
+            (this->container == &constantPool) ? &constantPool : this;
         valBase(*members.back()).id = members.size() - 1;
     }
 };

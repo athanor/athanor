@@ -35,7 +35,7 @@ class OpOrTrigger : public BoolTrigger {
             op->minViolationIndices.insert(index);
         } else if (newViolation == minViolation) {
             op->minViolationIndices.insert(index);
-        } else if (op->minViolationIndices.size() > 0) {
+        } else if (op->minViolationIndices.size() > 1) {
             op->minViolationIndices.erase(index);
         } else if (op->minViolationIndices.count(index)) {
             // This is the last value holding the current min and it is now been
@@ -109,6 +109,9 @@ void evaluate(OpOr& op) {
     if (op.quantifier->exprs.size() == 0) {
         op.violation = twoToThe32;
         return;
+    }
+    for (auto& operand : op.quantifier->exprs) {
+        evaluate(operand);
     }
     u_int64_t minViolation =
         getView<BoolView>(op.quantifier->exprs[0]).violation;

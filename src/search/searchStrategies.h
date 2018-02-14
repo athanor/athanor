@@ -43,8 +43,9 @@ class HillClimber {
             solutionAllowed =
                 deltaViolation > 0 || (deltaViolation == 0 && deltaObj >= 0);
         } else {
-            solutionAllowed = deltaViolation >= 0 && deltaObj > 0;
-            if (solutionAllowed) {
+            solutionAllowed = deltaViolation >= 0 &&
+                              getDeltaObj(bestObjValue, newObjValue) > 0;
+            if (solutionAllowed && model.csp.violation == 0) {
                 otherPhase = false;
                 numberNodesAtLastEvent = stats.majorNodeCount;
             }
@@ -52,11 +53,15 @@ class HillClimber {
         if (!solutionAllowed) {
             return false;
         } else {
+            if (deltaViolation > 0 || (deltaViolation == 0 && deltaObj > 0)) {
+                numberNodesAtLastEvent = stats.majorNodeCount;
+            }
+
             lastViolation = model.csp.violation;
             if (model.optimiseMode != OptimiseMode::NONE) {
                 lastObjValue = newObjValue;
             }
-//            std::cerr << lastViolation << "," << lastObjValue << std::endl;
+            std::cout << lastViolation << "," << lastObjValue << std::endl;
             int64_t deltaBestViolation = bestViolation - lastViolation;
             int64_t deltaBestObj = getDeltaObj(bestObjValue, lastObjValue);
             bool strictlyBetter = deltaBestViolation > 0 ||
@@ -145,10 +150,13 @@ class HillClimber {
     }
 
     inline bool finished() {
-        if (stats.majorNodeCount - numberNodesAtLastEvent > 10000) {
+        if (stats.majorNodeCount - numberNodesAtLastEvent > 40000) {
             lastViolation = bestViolation + violationBackOff;
+            std::cout << "Setting last violation to " << lastViolation
+                      << std::endl;
             ++violationBackOff;
             otherPhase = true;
+            numberNodesAtLastEvent = stats.majorNodeCount;
         }
         return (model.optimiseMode == OptimiseMode::NONE &&
                 bestViolation == 0) ||

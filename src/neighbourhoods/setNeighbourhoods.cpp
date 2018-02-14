@@ -22,6 +22,7 @@ void assignRandomValueInDomainImpl(const SetDomain& domain,
     }
     while (newNumberElements > val.numberElements()) {
         auto newMember = constructValueFromDomain(*innerDomainPtr);
+        newMember->container = &val;
         do {
             assignRandomValueInDomain(*innerDomainPtr, *newMember);
         } while (!val.addMember(newMember));
@@ -231,7 +232,9 @@ void setAssignRandomGen(const SetDomain& domain,
             debug_neighbourhood_action(
                 "Assigning random value: original value is " << val);
             auto backup = deepCopy(val);
+            backup->container = val.container;
             auto newValue = constructValueFromDomain(domain);
+            newValue->container = val.container;
             bool success;
             do {
                 ++params.stats.minorNodeCount;

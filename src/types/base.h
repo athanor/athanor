@@ -9,7 +9,6 @@
 #include "utils/variantOperations.h"
 #define buildForAllTypes(f, sep) f(Bool) sep f(Int) sep f(Set) sep f(MSet)
 
-
 #define MACRO_COMMA ,
 
 template <typename T>
@@ -23,7 +22,7 @@ using BaseType =
 buildForAllTypes(declDomainsAndValues, )
 #undef declDomainsAndValues
     template <typename T>
-    using ValRef = CachedSharedPtr<T>;
+    using ValRef = StandardSharedPtr<T>;
 
 // short cut for building a variant of any other templated class, where the
 // class is templated over a value (SetValue,IntValue, etc.)

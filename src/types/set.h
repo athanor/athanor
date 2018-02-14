@@ -99,6 +99,7 @@ struct SetView {
         members.emplace_back(member);
         hashIndexMap.emplace(hash, members.size() - 1);
         cachedHashTotal += mix(hash);
+        debug_code(assertValidState());
         return true;
     }
 
@@ -243,6 +244,7 @@ struct SetValue : public SetView, public ValBase {
             valBase(*member).container =
                 (this->container == &constantPool) ? &constantPool : this;
             valBase(*member).id = numberElements() - 1;
+            debug_code(assertValidVarBases());
             return true;
         } else {
             return false;
@@ -272,6 +274,7 @@ struct SetValue : public SetView, public ValBase {
         if (index < numberElements()) {
             valBase(*getMembers<InnerValueType>()[index]).id = index;
         }
+        debug_code(assertValidVarBases());
         return removedMember;
     }
 
@@ -284,7 +287,7 @@ struct SetValue : public SetView, public ValBase {
             if (index < numberElements()) {
                 valBase(*getMembers<InnerValueType>()[index]).id = index;
             }
-
+            debug_code(assertValidVarBases());
             SetView::notifyMemberRemoved(index, getValueHash(*removedMember));
             return std::make_pair(true, std::move(removedMember));
         } else {
@@ -294,6 +297,7 @@ struct SetValue : public SetView, public ValBase {
             hashIndexMap[getValueHash(*members[index])] = index;
             hashIndexMap[getValueHash(*members.back())] = members.size() - 1;
             debug_code(assertValidState());
+            debug_code(assertValidVarBases());
             return std::make_pair(false, ValRef<InnerValueType>(nullptr));
         }
     }
@@ -330,6 +334,7 @@ struct SetValue : public SetView, public ValBase {
         }
         return allowed;
     }
+    void assertValidVarBases();
 };
 
 #endif /* SRC_TYPES_SET_H_ */

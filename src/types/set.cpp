@@ -14,7 +14,7 @@ u_int64_t getValueHash<SetValue>(const SetValue& val) {
 
 template <>
 ostream& prettyPrint<SetValue>(ostream& os, const SetValue& v) {
-    os << "set({";
+    os << "{";
     mpark::visit(
         [&](auto& membersImpl) {
             bool first = true;
@@ -28,7 +28,7 @@ ostream& prettyPrint<SetValue>(ostream& os, const SetValue& v) {
             }
         },
         v.members);
-    os << "})";
+    os << "}";
     return os;
 }
 
@@ -195,7 +195,6 @@ bool largerValue<SetValue>(const SetValue& u, const SetValue& v) {
         },
         u.members);
 }
-
 void SetView::assertValidState() {
     mpark::visit(
         [&](auto& valMembersImpl) {
@@ -241,8 +240,37 @@ void SetView::assertValidState() {
                     }
                 }
             }
-            if (success) {
-                for (size_t i = 0; i < valMembersImpl.size(); i++) {
+            if (!success) {
+                cerr << "Members: " << valMembersImpl << endl;
+                cerr << "memberHashes: " << getHashIndexMap() << endl;
+                assert(false);
+            }
+        },
+        members);
+}
+
+void SetValue::assertValidVarBases() {
+    mpark::visit(
+        [&](auto& valMembersImpl) {
+            if (valMembersImpl.empty()) {
+                return;
+            }
+            bool success = true;
+            bool foundConstant =
+                valBase(*valMembersImpl[0]).container == &constantPool;
+            for (size_t i = 0; i < valMembersImpl.size(); i++) {
+                if (foundConstant !=
+                    (valBase(*valMembersImpl[i]).container == &constantPool)) {
+                    cerr << "Mix of constant and non constant members."
+                            "found in set.\n";
+                    success = false;
+                    cerr << "Is Member 0 constant? " << foundConstant << endl;
+                    cerr << "Is Member " << i << " constant? "
+                         << (valBase(*valMembersImpl[i]).container ==
+                             &constantPool)
+                         << endl;
+                    break;
+                } else if (!foundConstant) {
                     size_t id = valBase(*valMembersImpl[i]).id;
                     if (i != id) {
                         cerr << "Error: found id " << id
@@ -254,6 +282,10 @@ void SetView::assertValidState() {
                             [](auto& member) { return valBase(*member).id; });
                         success = false;
                         break;
+                    } else if (valBase(*valMembersImpl[i]).container != this) {
+                        cerr << "member " << i
+                             << "'s container does not point to this set."
+                             << endl;
                     }
                 }
             }

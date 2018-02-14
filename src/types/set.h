@@ -88,7 +88,8 @@ struct SetView {
     template <typename InnerValueType>
     inline bool addMember(const ValRef<InnerValueType>& member) {
         auto& members = getMembers<InnerValueType>();
-        debug_log("Adding value " << *member);
+        debug_log("Adding value " << *member << " with hash "
+                                  << getValueHash(*member));
         if (containsMember(member)) {
             debug_log("rejected");
             return false;

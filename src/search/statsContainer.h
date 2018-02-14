@@ -21,8 +21,9 @@ struct StatsContainer {
     }
 
     friend inline std::ostream& operator<<(std::ostream& os,
-                                           const StatsContainer& stats) {
+                                           StatsContainer& stats) {
         os << "Stats:\n";
+        stats.endTimer();
         os << "Major node count: " << stats.majorNodeCount << std::endl;
         os << "Minor node count: " << stats.minorNodeCount << std::endl;
         std::chrono::duration<double> timeTaken =

@@ -15,45 +15,59 @@ class HillClimber {
     Model model;
     NeighbourhoodSelectionStrategy selectionStrategy;
     u_int64_t lastViolation;
+    u_int64_t violationBackOff = 1;
+    bool otherPhase = false;
     u_int64_t bestViolation;
-    int64_t allowedViolationDelta = 0;
+    int64_t lastObjValue;
     int64_t bestObjValue;
     bool newBestValueFound = false;
     StatsContainer stats;
-    u_int64_t numberNodesAtLastSolution;
-    inline bool acceptValue() {
-        u_int64_t newObjValue = getView<IntView>(model.objective).value;
-        int64_t deltaObj;
+    u_int64_t numberNodesAtLastEvent;
 
+    int64_t getDeltaObj(int64_t oldObj, int64_t newObj) {
         switch (model.optimiseMode) {
             case OptimiseMode::MAXIMISE:
-                deltaObj = newObjValue - bestObjValue;
-                break;
+                return newObj - oldObj;
             case OptimiseMode::MINIMISE:
-                deltaObj = bestObjValue - newObjValue;
-                break;
+                return oldObj - newObj;
             case OptimiseMode::NONE:
-                deltaObj = 0;
-                break;
+                return 0;
         }
+    }
+    inline bool acceptValue() {
+        u_int64_t newObjValue = getView<IntView>(model.objective).value;
+        int64_t deltaObj = getDeltaObj(lastObjValue, newObjValue);
         int64_t deltaViolation = lastViolation - model.csp.violation;
-        bool solutionAllowed =
-            deltaViolation + allowedViolationDelta > 0 ||
-            (deltaViolation + allowedViolationDelta == 0 && deltaObj >= 0);
+        bool solutionAllowed;
+        if (!otherPhase) {
+            solutionAllowed =
+                deltaViolation > 0 || (deltaViolation == 0 && deltaObj >= 0);
+        } else {
+            solutionAllowed = deltaViolation >= 0 && deltaObj > 0;
+            if (solutionAllowed) {
+                otherPhase = false;
+                numberNodesAtLastEvent = stats.majorNodeCount;
+            }
+        }
         if (!solutionAllowed) {
             return false;
         } else {
             lastViolation = model.csp.violation;
-            if (lastViolation < bestViolation) {
-                bestViolation = lastViolation;
-            }
             if (model.optimiseMode != OptimiseMode::NONE) {
-                bestObjValue = newObjValue;
+                lastObjValue = newObjValue;
             }
+//            std::cerr << lastViolation << "," << lastObjValue << std::endl;
             int64_t deltaBestViolation = bestViolation - lastViolation;
+            int64_t deltaBestObj = getDeltaObj(bestObjValue, lastObjValue);
             bool strictlyBetter = deltaBestViolation > 0 ||
-                                  (deltaBestViolation == 0 && deltaObj > 0);
+                                  (deltaBestViolation == 0 &&
+                                   (model.optimiseMode == OptimiseMode::NONE ||
+                                    deltaBestObj > 0));
             if (strictlyBetter) {
+                bestViolation = lastViolation;
+                if (model.optimiseMode != OptimiseMode::NONE) {
+                    bestObjValue = lastObjValue;
+                }
                 newBestSolution();
             }
             return true;
@@ -77,11 +91,13 @@ class HillClimber {
         }
         evaluate(model.csp);
         lastViolation = model.csp.violation;
+        bestViolation = lastViolation;
         startTriggering(model.csp);
 
         if (model.optimiseMode != OptimiseMode::NONE) {
             evaluate(model.objective);
-            bestObjValue = getView<IntView>(model.objective).value;
+            lastObjValue = getView<IntView>(model.objective).value;
+            bestObjValue = lastObjValue;
             startTriggering(model.objective);
         }
         newBestSolution();
@@ -111,10 +127,11 @@ class HillClimber {
     }
 
     inline void newBestSolution() {
-        allowedViolationDelta = 0;
-        numberNodesAtLastSolution = stats.majorNodeCount;
+        violationBackOff = 1;
+        numberNodesAtLastEvent = stats.majorNodeCount;
         std::cout << "Violation " << lastViolation << ", objective "
-                  << bestObjValue << std::endl;
+                  << lastObjValue << std::endl;
+        std::cout << stats << std::endl;
 
         for (auto& v : model.variables) {
             prettyPrint(std::cout << "var: ", v.second) << std::endl;
@@ -128,11 +145,13 @@ class HillClimber {
     }
 
     inline bool finished() {
-        if (stats.majorNodeCount - numberNodesAtLastSolution > 1000000) {
-            allowedViolationDelta += 1;
+        if (stats.majorNodeCount - numberNodesAtLastEvent > 10000) {
+            lastViolation = bestViolation + violationBackOff;
+            ++violationBackOff;
+            otherPhase = true;
         }
         return (model.optimiseMode == OptimiseMode::NONE &&
-                lastViolation == 0) ||
+                bestViolation == 0) ||
                stats.majorNodeCount >= 30000000;
     }
 };

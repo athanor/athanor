@@ -1,6 +1,7 @@
 
 #include <autoArgParse/argParser.h>
 #include <iostream>
+#include <unordered_map>
 #include "common/common.h"
 
 #include <fstream>
@@ -40,6 +41,23 @@ auto& seedArg = randomSeedFlag.add<Arg<int>>(
             return value;
         }
     }));
+void testHashes() {
+    const size_t max = 10000;
+    unordered_map<u_int64_t, pair<u_int64_t, u_int64_t>> seenHashes;
+    for (u_int64_t i = 0; i < max; ++i) {
+        for (u_int64_t j = i; j < max; ++j) {
+            u_int64_t hashSum = mix(i) + mix(j);
+            if (seenHashes.count(hashSum)) {
+                cerr << "Error, found collision:\n";
+                cerr << "mix(" << i << ") + mix(" << j << ") collides with ";
+                auto& pair = seenHashes[hashSum];
+                cerr << "mix(" << pair.first << ") + mix(" << pair.second
+                     << ")\nBoth produce total hash of " << hashSum << endl;
+                exit(1);
+            }
+        }
+    }
+}
 int main(const int argc, const char** argv) { sonet(argc, argv); }
 
 void setOfSetWithModulous() {

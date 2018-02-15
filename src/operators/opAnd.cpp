@@ -1,4 +1,5 @@
 #include "operators/opAnd.h"
+#include <algorithm>
 #include <cassert>
 #include "utils/ignoreUnused.h"
 using namespace std;

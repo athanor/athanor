@@ -7,7 +7,7 @@ project(sns)
 add_subdirectory (include/auto-arg-parse)
 add_subdirectory (include/variant)
 include_directories( include/PicoSHA2)
-
+include_directories( include/json)
 #allow includes relative to src
 include_directories( src )
 

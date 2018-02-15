@@ -58,7 +58,12 @@ void testHashes() {
         }
     }
 }
-int main(const int argc, const char** argv) { sonet(argc, argv); }
+void jsonTest();
+int main(const int argc, const char** argv) {
+    jsonTest();
+    //sonet(argc, argv);
+    ignoreUnused(argc,argv);
+}
 
 void setOfSetWithModulous() {
     auto zeroConst = ValRef<IntValue>(make_shared<IntValue>());

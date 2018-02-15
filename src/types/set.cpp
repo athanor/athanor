@@ -77,34 +77,19 @@ ostream& prettyPrint<SetDomain>(ostream& os, const SetDomain& d) {
     return os;
 }
 
-template <typename InnerValueType>
-void matchInnerTypeImpl(const ValRefVec<InnerValueType>&, SetValue& target) {
-    if (mpark::get_if<ValRefVec<InnerValueType>>(&(target.members)) == NULL) {
-        target.members.emplace<ValRefVec<InnerValueType>>();
-    }
-}
-
 void matchInnerType(const SetValue& src, SetValue& target) {
     mpark::visit(
         [&](auto& srcMembersImpl) {
-            matchInnerTypeImpl(srcMembersImpl, target);
+            target.setInnerType<valType(srcMembersImpl)>();
         },
         src.members);
-}
-
-template <typename InnerDomainType>
-void matchInnerTypeFromDomain(const std::shared_ptr<InnerDomainType>&,
-                              SetValue& target) {
-    typedef typename AssociatedValueType<InnerDomainType>::type InnerValueType;
-    if (mpark::get_if<ValRefVec<InnerValueType>>(&(target.members)) == NULL) {
-        target.members.emplace<ValRefVec<InnerValueType>>();
-    }
 }
 
 void matchInnerType(const SetDomain& domain, SetValue& target) {
     mpark::visit(
         [&](auto& innerDomainImpl) {
-            matchInnerTypeFromDomain(innerDomainImpl, target);
+            target.setInnerType<typename AssociatedValueType<typename BaseType<
+                decltype(innerDomainImpl)>::element_type>::type>();
         },
         domain.inner);
 }

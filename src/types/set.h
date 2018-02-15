@@ -336,6 +336,13 @@ struct SetValue : public SetView, public ValBase {
         return allowed;
     }
     void assertValidVarBases();
+
+    template <typename InnerValueType>
+    void setInnerType() {
+        if (mpark::get_if<ValRefVec<InnerValueType>>(&(members)) == NULL) {
+            members.emplace<ValRefVec<InnerValueType>>();
+        }
+    }
 };
 
 #endif /* SRC_TYPES_SET_H_ */

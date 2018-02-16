@@ -8,11 +8,11 @@
 #include "types/base.h"
 #include "utils/cachedSharedPtr.h"
 
-#define buildForOperators(f, sep)                                    \
-    f(BoolValue) sep f(IntValue) sep f(SetValue) sep f(MSetValue)    \
-        sep f(OpSetSize) sep f(OpSum) sep f(OpAnd) sep f(OpSetNotEq) \
-            sep f(OpSetIntersect) sep sep f(OpIntEq) sep f(OpMod)    \
-                sep f(OpProd) sep f(OpOr) sep f(OpSubset)
+#define buildForOperators(f, sep)                                           \
+    f(BoolValue) sep f(IntValue) sep f(SetValue) sep f(MSetValue)           \
+        sep f(OpSetSize) sep f(OpSum) sep f(OpAnd) sep f(OpSetNotEq)        \
+            sep f(OpSetIntersect) sep f(OpIntEq) sep f(OpMod) sep f(OpProd) \
+                sep f(OpOr) sep f(OpSubset)
 
 #define structDecls(name) struct name;
 buildForOperators(structDecls, );
@@ -38,6 +38,10 @@ using SetReturning = mpark::variant<ValRef<SetValue>, IterRef<SetValue>,
 // MSet returning
 using MSetReturning = mpark::variant<ValRef<MSetValue>, IterRef<MSetValue>>;
 
+// variant to hold any type of constraint
+#define makeOpRef(Op) std::shared_ptr<Op>
+using AnyOpRef = mpark::variant<buildForOperators(makeOpRef, MACRO_COMMA)>;
+#undef makeOpRef
 // helper class for template magic, allows to test operators if they have a
 // specific return type by testing if they are convertable to that type
 

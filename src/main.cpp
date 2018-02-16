@@ -5,6 +5,7 @@
 #include "common/common.h"
 
 #include <fstream>
+#include <json.hpp>
 #include "constructorShortcuts.h"
 #include "search/searchStrategies.h"
 #include "types/typeOperations.h"
@@ -58,11 +59,10 @@ void testHashes() {
         }
     }
 }
-void jsonTest();
+void jsonTest(const int argc, const char** argv);
 int main(const int argc, const char** argv) {
-    jsonTest();
-    //sonet(argc, argv);
-    ignoreUnused(argc,argv);
+    // sonet(argc, argv);
+    jsonTest(argc, argv);
 }
 
 void setOfSetWithModulous() {
@@ -196,4 +196,122 @@ void sonet(const int argc, const char** argv) {
     builder.addConstraint(forAll);
     HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
     search.search();
+}
+using namespace nlohmann;
+struct ParsedModel {
+    ModelBuilder builder;
+    std::unordered_map<std::string, AnyValRef> vars;
+    std::unordered_map<std::string, AnyOpRef> constantExprs;
+};
+
+std::pair<bool, AnyValRef> tryParseValue(json& essenceExpr,
+                                         ParsedModel& parsedModel);
+AnyValRef parseValue(json& essenceExpr, ParsedModel& parsedModel) {
+    auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
+    if (boolValuePair.first) {
+        return std::move(boolValuePair.second);
+    } else {
+        cerr << "Trying to parse a value with in a letting, not sure what type "
+                "of "
+                "essence expression this is: "
+             << essenceExpr << endl;
+        abort();
+    }
+}
+
+ValRef<SetValue> parseConstantSet(json& essenceSetConstant,
+                                  ParsedModel& parsedModel) {
+    ValRef<SetValue> val = make<SetValue>();
+    // just in case set is empty, not handling the case but at least leaving
+    // inner type not undefined  assertions will catch it later
+    if (essenceSetConstant.size() == 0) {
+        val->setInnerType<IntValue>();
+        cerr << "Not sure how to work out type of empty set yet, will handle "
+                "this later.";
+        todoImpl();
+    }
+    mpark::visit(
+        [&](auto&& firstMember) {
+            typedef valType(firstMember) InnerValueType;
+            val->setInnerType<InnerValueType>();
+            val->addMember(firstMember);
+            for (size_t i = 1; i < essenceSetConstant.size(); ++i) {
+                val->addMember(mpark::get<ValRef<InnerValueType>>(
+                    parseValue(essenceSetConstant[i], parsedModel)));
+            }
+        },
+        parseValue(essenceSetConstant[0], parsedModel));
+    return val;
+}
+
+AnyValRef parseAbstractLiteral(json& abstractLit, ParsedModel& parsedModel) {
+    if (abstractLit.count("AbsLitSet")) {
+        return parseConstantSet(abstractLit["AbsLitSet"], parsedModel);
+    } else {
+        cerr << "Not sure what type of abstract literal this is: "
+             << abstractLit << endl;
+        abort();
+    }
+}
+
+AnyValRef parseConstant(json& essenceConstant, ParsedModel&) {
+    if (essenceConstant.count("ConstantInt")) {
+        auto val = make<IntValue>();
+        val->value = essenceConstant["ConstantInt"];
+        return val;
+    } else if (essenceConstant.count("ConstantBool")) {
+        auto val = make<BoolValue>();
+        val->violation = bool(essenceConstant["ConstantBool"]);
+        return val;
+    } else {
+        cerr << "Not sure what type of constant this is: " << essenceConstant
+             << endl;
+        abort();
+    }
+}
+
+pair<bool, AnyValRef> tryParseValue(json& essenceExpr,
+                                    ParsedModel& parsedModel) {
+    if (essenceExpr.count("Constant")) {
+        return std::make_pair(
+            true, parseConstant(essenceExpr["Constant"], parsedModel));
+    } else if (essenceExpr.count("AbstractLiteral")) {
+        return std::make_pair(
+            true,
+            parseAbstractLiteral(essenceExpr["AbstractLiteral"], parsedModel));
+    } else if (essenceExpr.count("Reference")) {
+        auto& essenceReference = essenceExpr["Reference"];
+        std::string referenceName = essenceReference[0]["Name"];
+        if (!parsedModel.vars.count(referenceName)) {
+            cerr << "Found reference to value with name \"" << referenceName
+                 << "\" but this does not appear to be in scope.\n"
+                 << essenceExpr << endl;
+            abort();
+        } else {
+            return std::make_pair(true, parsedModel.vars.at(referenceName));
+        }
+    }
+    return std::make_pair(false, AnyValRef(ValRef<IntValue>(nullptr)));
+}
+
+void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
+    std::string lettingName = lettingArray[0]["Name"];
+    parsedModel.vars.emplace(lettingName,
+                             parseValue(lettingArray[1], parsedModel));
+}
+
+void jsonTest(const int argc, const char** argv) {
+    argParser.validateArgs(argc, argv);
+    auto& is = fileArg.get();
+    json j;
+    is >> j;
+    ParsedModel parsedModel;
+    for (auto& statement : j["mStatements"]) {
+        if (statement.count("Declaration") &&
+            statement["Declaration"].count("Letting")) {
+            handleLettingDeclaration(statement["Declaration"]["Letting"],
+                                     parsedModel);
+        }
+    }
+    cout << parsedModel.vars << endl;
 }

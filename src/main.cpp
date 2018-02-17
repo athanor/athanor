@@ -365,6 +365,19 @@ shared_ptr<SetDomain> parseDomainSet(json& setDomainExpr,
                                   parseDomain(setDomainExpr[2], parsedModel));
 }
 
+shared_ptr<MSetDomain> parseDomainMSet(json& mSetDomainExpr,
+                                       ParsedModel& parsedModel) {
+    SizeAttr sizeAttr = parseSizeAttr(mSetDomainExpr[1][0], parsedModel);
+    if (!mSetDomainExpr[1][1].count("OccurAttr_None")) {
+        cerr << "Error: for the moment, given attribute must be "
+                "OccurAttr_None.  This is not handled yet: "
+             << mSetDomainExpr[1][1] << endl;
+        abort();
+    }
+    return make_shared<MSetDomain>(sizeAttr,
+                                   parseDomain(mSetDomainExpr[2], parsedModel));
+}
+
 pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
                                         ParsedModel& parsedModel) {
     if (domainExpr.count("DomainInt")) {
@@ -376,6 +389,9 @@ pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
     } else if (domainExpr.count("DomainSet")) {
         return make_pair(true,
                          parseDomainSet(domainExpr["DomainSet"], parsedModel));
+    } else if (domainExpr.count("DomainMSet")) {
+        return make_pair(
+            true, parseDomainMSet(domainExpr["DomainMSet"], parsedModel));
     }
     return make_pair(false, AnyDomainRef(shared_ptr<IntDomain>(nullptr)));
 }
@@ -408,5 +424,6 @@ void jsonTest(const int argc, const char** argv) {
                                      parsedModel);
         }
     }
+    cout << parsedModel.vars << endl;
     cout << parsedModel.domainLettings << endl;
 }

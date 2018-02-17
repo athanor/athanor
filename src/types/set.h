@@ -34,6 +34,14 @@ struct SetDomain {
         : sizeAttr(sizeAttr), inner(std::forward<DomainPtrType>(inner)) {
         trimMaxSize();
     }
+    template <typename AnyDomainRefType,
+              typename std::enable_if<
+                  std::is_same<BaseType<AnyDomainRefType>, AnyDomainRef>::value,
+                  int>::type = 0>
+    SetDomain(SizeAttr sizeAttr, AnyDomainRefType&& inner)
+        : sizeAttr(sizeAttr), inner(std::forward<AnyDomainRefType>(inner)) {
+        trimMaxSize();
+    }
 
    private:
     inline void trimMaxSize() {

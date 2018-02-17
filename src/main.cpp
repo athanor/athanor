@@ -220,6 +220,11 @@ AnyValRef parseValue(json& essenceExpr, ParsedModel& parsedModel) {
     }
 }
 
+int64_t parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel) {
+    return mpark::get<ValRef<IntValue>>(parseValue(essenceExpr, parsedModel))
+        ->value;
+}
+
 AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {
     auto boolDomainPair = tryParseDomain(essenceExpr, parsedModel);
     if (boolDomainPair.first) {
@@ -307,50 +312,70 @@ pair<bool, AnyValRef> tryParseValue(json& essenceExpr,
 
 shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
                                      ParsedModel& parsedModel) {
-        vector<pair<int64_t, int64_t>> ranges;
+    vector<pair<int64_t, int64_t>> ranges;
     for (auto& rangeExpr : intDomainExpr) {
-        AnyValRef from = ValRef<IntValue>(nullptr),
-                  to = ValRef<IntValue>(nullptr);
+        int64_t from, to;
+
         if (rangeExpr.count("RangeBounded")) {
-            from = parseValue(rangeExpr["RangeBounded"][0], parsedModel);
-            to = parseValue(rangeExpr["RangeBounded"][1], parsedModel);
+            from = parseValueAsInt(rangeExpr["RangeBounded"][0], parsedModel);
+            to = parseValueAsInt(rangeExpr["RangeBounded"][1], parsedModel);
         } else if (rangeExpr.count("RangeSingle")) {
-            from = parseValue(rangeExpr["RangeSingle"], parsedModel);
+            from = parseValueAsInt(rangeExpr["RangeSingle"], parsedModel);
             to = from;
         } else {
             cerr << "Unrecognised type of int range: " << rangeExpr << endl;
             abort();
         }
-                ranges.emplace_back(mpark::get<ValRef<IntValue>>(from)->value,
-                            mpark::get<ValRef<IntValue>>(to)->value);
+        ranges.emplace_back(from, to);
     }
     return make_shared<IntDomain>(move(ranges));
 }
 
-shared_ptr<BoolDomain> parseDomainBool(json& boolDomainExpr,
-                                       ParsedModel& parsedModel) {
-    todoImpl(boolDomainExpr, parsedModel);
+shared_ptr<BoolDomain> parseDomainBool(json&, ParsedModel&) {
+    return make_shared<BoolDomain>();
+}
+
+SizeAttr parseSizeAttr(json& sizeAttrExpr, ParsedModel& parsedModel) {
+    if (sizeAttrExpr.count("SizeAttr_None")) {
+        return noSize();
+    } else if (sizeAttrExpr.count("SizeAttr_MinSize")) {
+        return minSize(
+            parseValueAsInt(sizeAttrExpr["SizeAttr_MinSize"], parsedModel));
+    } else if (sizeAttrExpr.count("SizeAttr_MaxSize")) {
+        return maxSize(
+            parseValueAsInt(sizeAttrExpr["SizeAttr_MaxSize"], parsedModel));
+    } else if (sizeAttrExpr.count("SizeAttr_Size")) {
+        return exactSize(
+            parseValueAsInt(sizeAttrExpr["SizeAttr_Size"], parsedModel));
+    } else if (sizeAttrExpr.count("SizeAttr_MinMaxSize")) {
+        auto& sizeRangeExpr = sizeAttrExpr["SizeAttr_MinMaxSize"];
+        return sizeRange(parseValueAsInt(sizeRangeExpr[0], parsedModel),
+                         parseValueAsInt(sizeRangeExpr[1], parsedModel));
+    } else {
+        cerr << "Could not parse this as a size attribute: " << sizeAttrExpr
+             << endl;
+        abort();
+    }
 }
 
 shared_ptr<SetDomain> parseDomainSet(json& setDomainExpr,
                                      ParsedModel& parsedModel) {
-    todoImpl(setDomainExpr, parsedModel);
+    SizeAttr sizeAttr = parseSizeAttr(setDomainExpr[1], parsedModel);
+    return make_shared<SetDomain>(sizeAttr,
+                                  parseDomain(setDomainExpr[2], parsedModel));
 }
 
-pair<bool, AnyDomainRef> tryParseDomain(json& essenceExpr,
+pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
                                         ParsedModel& parsedModel) {
-    if (essenceExpr.count("Domain")) {
-        auto& domainExpr = essenceExpr["Domain"];
-        if (domainExpr.count("DomainInt")) {
-            return make_pair(
-                true, parseDomainInt(domainExpr["DomainInt"], parsedModel));
-        } else if (domainExpr.count("DomainBool")) {
-            return make_pair(
-                true, parseDomainBool(domainExpr["DomainBool"], parsedModel));
-        } else if (domainExpr.count("DomainSet")) {
-            return make_pair(
-                true, parseDomainSet(domainExpr["DomainSet"], parsedModel));
-        }
+    if (domainExpr.count("DomainInt")) {
+        return make_pair(true,
+                         parseDomainInt(domainExpr["DomainInt"], parsedModel));
+    } else if (domainExpr.count("DomainBool")) {
+        return make_pair(
+            true, parseDomainBool(domainExpr["DomainBool"], parsedModel));
+    } else if (domainExpr.count("DomainSet")) {
+        return make_pair(true,
+                         parseDomainSet(domainExpr["DomainSet"], parsedModel));
     }
     return make_pair(false, AnyDomainRef(shared_ptr<IntDomain>(nullptr)));
 }
@@ -362,9 +387,9 @@ void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
         parsedModel.vars.emplace(lettingName, boolValuePair.second);
         return;
     }
-    auto boolDomainPair = tryParseDomain(lettingArray[1], parsedModel);
-    if (boolDomainPair.first) {
-        parsedModel.domainLettings.emplace(lettingName, boolDomainPair.second);
+    if (lettingArray[1].count("Domain")) {
+        auto domain = parseDomain(lettingArray[1]["Domain"], parsedModel);
+        parsedModel.domainLettings.emplace(lettingName, domain);
         return;
     }
     cerr << "Not sure how to parse this letting: " << lettingArray << endl;

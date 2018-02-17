@@ -59,10 +59,10 @@ void testHashes() {
         }
     }
 }
-void jsonTest(const int argc, const char** argv);
+void parseModel(const int argc, const char** argv);
 int main(const int argc, const char** argv) {
     // sonet(argc, argv);
-    jsonTest(argc, argv);
+    parseModel(argc, argv);
 }
 
 void setOfSetWithModulous() {
@@ -423,17 +423,33 @@ void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
     cerr << "Not sure how to parse this letting: " << lettingArray << endl;
 }
 
-void jsonTest(const int argc, const char** argv) {
+void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {
+    string findName = findArray[1]["Name"];
+    auto findDomain = parseDomain(findArray[2], parsedModel);
+    mpark::visit(
+        [&](auto& domainImpl) {
+            parsedModel.vars.emplace(
+                findName,
+                AnyValRef(parsedModel.builder.addVariable(domainImpl)));
+        },
+        findDomain);
+}
+
+void parseModel(const int argc, const char** argv) {
     argParser.validateArgs(argc, argv);
     auto& is = fileArg.get();
     json j;
     is >> j;
     ParsedModel parsedModel;
     for (auto& statement : j["mStatements"]) {
-        if (statement.count("Declaration") &&
-            statement["Declaration"].count("Letting")) {
-            handleLettingDeclaration(statement["Declaration"]["Letting"],
-                                     parsedModel);
+        if (statement.count("Declaration")) {
+            auto& declaration = statement["Declaration"];
+            if (declaration.count("Letting")) {
+                handleLettingDeclaration(declaration["Letting"], parsedModel);
+            } else if (declaration.count("FindOrGiven") &&
+                       declaration["FindOrGiven"][0] == "Find") {
+                handleFindDeclaration(declaration["FindOrGiven"], parsedModel);
+            }
         }
     }
     cout << parsedModel.vars << endl;

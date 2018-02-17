@@ -4,7 +4,6 @@
 #include <unordered_set>
 #include <vector>
 #include "common/common.h"
-#include "types/allTypes.h"
 #include "types/base.h"
 #include "types/sizeAttr.h"
 #include "types/typeOperations.h"

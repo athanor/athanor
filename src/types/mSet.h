@@ -4,7 +4,6 @@
 #include <unordered_set>
 #include <vector>
 #include "common/common.h"
-#include "types/allTypes.h"
 #include "types/base.h"
 #include "types/sizeAttr.h"
 #include "types/typeOperations.h"
@@ -26,7 +25,7 @@ struct MSetDomain {
           inner(std::make_shared<
                 typename std::remove_reference<DomainType>::type>(
               std::forward<DomainType>(inner))) {
-        trimMaxSize();
+        checkMaxSize();
     }
 
     // template hack to accept only pointers to domains
@@ -35,14 +34,25 @@ struct MSetDomain {
                                       int>::type = 0>
     MSetDomain(SizeAttr sizeAttr, DomainPtrType&& inner)
         : sizeAttr(sizeAttr), inner(std::forward<DomainPtrType>(inner)) {
-        trimMaxSize();
+        checkMaxSize();
+    }
+
+    template <typename AnyDomainRefType,
+              typename std::enable_if<
+                  std::is_same<BaseType<AnyDomainRefType>, AnyDomainRef>::value,
+                  int>::type = 0>
+    MSetDomain(SizeAttr sizeAttr, AnyDomainRefType&& inner)
+        : sizeAttr(sizeAttr), inner(std::forward<AnyDomainRefType>(inner)) {
+        checkMaxSize();
     }
 
    private:
-    inline void trimMaxSize() {
-        u_int64_t innerDomainSize = getDomainSize(inner);
-        if (innerDomainSize < sizeAttr.maxSize) {
-            sizeAttr.maxSize = innerDomainSize;
+    void checkMaxSize() {
+        if (sizeAttr.sizeType == SizeAttr::SizeAttrType::NO_SIZE ||
+            sizeAttr.sizeType == SizeAttr::SizeAttrType::MIN_SIZE) {
+            std::cerr << "Error, MSet domain must be initialised with "
+                         "maxSize() or exactSize()\n";
+            abort();
         }
     }
 };

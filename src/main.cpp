@@ -19,7 +19,7 @@ using namespace AutoArgParse;
 ArgParser argParser;
 auto& fileArg = argParser.add<Arg<ifstream>>(
     "path_to_file", Policy::MANDATORY, "Path to parameter file.",
-    [](const std::string& path) -> ifstream {
+    [](const string& path) -> ifstream {
         ifstream file;
         file.open(path);
         if (file.good()) {
@@ -200,21 +200,32 @@ void sonet(const int argc, const char** argv) {
 using namespace nlohmann;
 struct ParsedModel {
     ModelBuilder builder;
-    std::unordered_map<std::string, AnyValRef> vars;
-    std::unordered_map<std::string, AnyOpRef> constantExprs;
+    unordered_map<string, AnyValRef> vars;
+    unordered_map<string, AnyDomainRef> domainLettings;
+    unordered_map<string, AnyOpRef> constantExprs;
 };
 
-std::pair<bool, AnyValRef> tryParseValue(json& essenceExpr,
-                                         ParsedModel& parsedModel);
+pair<bool, AnyValRef> tryParseValue(json& essenceExpr,
+                                    ParsedModel& parsedModel);
+pair<bool, AnyDomainRef> tryParseDomain(json& essenceExpr,
+                                        ParsedModel& parsedModel);
+
 AnyValRef parseValue(json& essenceExpr, ParsedModel& parsedModel) {
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
     if (boolValuePair.first) {
-        return std::move(boolValuePair.second);
+        return move(boolValuePair.second);
     } else {
-        cerr << "Trying to parse a value with in a letting, not sure what type "
-                "of "
-                "essence expression this is: "
-             << essenceExpr << endl;
+        cerr << "Failed to parse value: " << essenceExpr << endl;
+        abort();
+    }
+}
+
+AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {
+    auto boolDomainPair = tryParseDomain(essenceExpr, parsedModel);
+    if (boolDomainPair.first) {
+        return move(boolDomainPair.second);
+    } else {
+        cerr << "Failed to parse domain: " << essenceExpr << endl;
         abort();
     }
 }
@@ -273,31 +284,90 @@ AnyValRef parseConstant(json& essenceConstant, ParsedModel&) {
 pair<bool, AnyValRef> tryParseValue(json& essenceExpr,
                                     ParsedModel& parsedModel) {
     if (essenceExpr.count("Constant")) {
-        return std::make_pair(
-            true, parseConstant(essenceExpr["Constant"], parsedModel));
+        return make_pair(true,
+                         parseConstant(essenceExpr["Constant"], parsedModel));
     } else if (essenceExpr.count("AbstractLiteral")) {
-        return std::make_pair(
+        return make_pair(
             true,
             parseAbstractLiteral(essenceExpr["AbstractLiteral"], parsedModel));
     } else if (essenceExpr.count("Reference")) {
         auto& essenceReference = essenceExpr["Reference"];
-        std::string referenceName = essenceReference[0]["Name"];
+        string referenceName = essenceReference[0]["Name"];
         if (!parsedModel.vars.count(referenceName)) {
             cerr << "Found reference to value with name \"" << referenceName
                  << "\" but this does not appear to be in scope.\n"
                  << essenceExpr << endl;
             abort();
         } else {
-            return std::make_pair(true, parsedModel.vars.at(referenceName));
+            return make_pair(true, parsedModel.vars.at(referenceName));
         }
     }
-    return std::make_pair(false, AnyValRef(ValRef<IntValue>(nullptr)));
+    return make_pair(false, AnyValRef(ValRef<IntValue>(nullptr)));
+}
+
+shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
+                                     ParsedModel& parsedModel) {
+        vector<pair<int64_t, int64_t>> ranges;
+    for (auto& rangeExpr : intDomainExpr) {
+        AnyValRef from = ValRef<IntValue>(nullptr),
+                  to = ValRef<IntValue>(nullptr);
+        if (rangeExpr.count("RangeBounded")) {
+            from = parseValue(rangeExpr["RangeBounded"][0], parsedModel);
+            to = parseValue(rangeExpr["RangeBounded"][1], parsedModel);
+        } else if (rangeExpr.count("RangeSingle")) {
+            from = parseValue(rangeExpr["RangeSingle"], parsedModel);
+            to = from;
+        } else {
+            cerr << "Unrecognised type of int range: " << rangeExpr << endl;
+            abort();
+        }
+                ranges.emplace_back(mpark::get<ValRef<IntValue>>(from)->value,
+                            mpark::get<ValRef<IntValue>>(to)->value);
+    }
+    return make_shared<IntDomain>(move(ranges));
+}
+
+shared_ptr<BoolDomain> parseDomainBool(json& boolDomainExpr,
+                                       ParsedModel& parsedModel) {
+    todoImpl(boolDomainExpr, parsedModel);
+}
+
+shared_ptr<SetDomain> parseDomainSet(json& setDomainExpr,
+                                     ParsedModel& parsedModel) {
+    todoImpl(setDomainExpr, parsedModel);
+}
+
+pair<bool, AnyDomainRef> tryParseDomain(json& essenceExpr,
+                                        ParsedModel& parsedModel) {
+    if (essenceExpr.count("Domain")) {
+        auto& domainExpr = essenceExpr["Domain"];
+        if (domainExpr.count("DomainInt")) {
+            return make_pair(
+                true, parseDomainInt(domainExpr["DomainInt"], parsedModel));
+        } else if (domainExpr.count("DomainBool")) {
+            return make_pair(
+                true, parseDomainBool(domainExpr["DomainBool"], parsedModel));
+        } else if (domainExpr.count("DomainSet")) {
+            return make_pair(
+                true, parseDomainSet(domainExpr["DomainSet"], parsedModel));
+        }
+    }
+    return make_pair(false, AnyDomainRef(shared_ptr<IntDomain>(nullptr)));
 }
 
 void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
-    std::string lettingName = lettingArray[0]["Name"];
-    parsedModel.vars.emplace(lettingName,
-                             parseValue(lettingArray[1], parsedModel));
+    string lettingName = lettingArray[0]["Name"];
+    auto boolValuePair = tryParseValue(lettingArray[1], parsedModel);
+    if (boolValuePair.first) {
+        parsedModel.vars.emplace(lettingName, boolValuePair.second);
+        return;
+    }
+    auto boolDomainPair = tryParseDomain(lettingArray[1], parsedModel);
+    if (boolDomainPair.first) {
+        parsedModel.domainLettings.emplace(lettingName, boolDomainPair.second);
+        return;
+    }
+    cerr << "Not sure how to parse this letting: " << lettingArray << endl;
 }
 
 void jsonTest(const int argc, const char** argv) {
@@ -313,5 +383,5 @@ void jsonTest(const int argc, const char** argv) {
                                      parsedModel);
         }
     }
-    cout << parsedModel.vars << endl;
+    cout << parsedModel.domainLettings << endl;
 }

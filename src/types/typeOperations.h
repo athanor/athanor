@@ -112,10 +112,22 @@ inline std::ostream& prettyPrint(std::ostream& os, const AnyValRef& v, T = 0) {
 inline std::ostream& operator<<(std::ostream& os, const AnyValRef& v) {
     return prettyPrint(os, v);
 }
+
+inline std::ostream& operator<<(std::ostream& os, const AnyDomainRef& d) {
+    return prettyPrint(os, d);
+}
 template <typename Val>
-inline typename std::enable_if<IsValueType<Val>::value, std::ostream&>::type
+inline typename std::enable_if<IsValueType<BaseType<Val>>::value,
+                               std::ostream&>::type
 operator<<(std::ostream& os, const Val& v) {
     return prettyPrint(os, v);
+}
+
+template <typename Domain>
+inline typename std::enable_if<IsDomainType<BaseType<Domain>>::value,
+                               std::ostream&>::type
+operator<<(std::ostream& os, const Domain& d) {
+    return prettyPrint(os, d);
 }
 
 #endif /* SRC_TYPES_TYPEOPERATIONS_H_ */

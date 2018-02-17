@@ -392,6 +392,18 @@ pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
     } else if (domainExpr.count("DomainMSet")) {
         return make_pair(
             true, parseDomainMSet(domainExpr["DomainMSet"], parsedModel));
+    } else if (domainExpr.count("DomainReference")) {
+        auto& domainReference = domainExpr["DomainReference"];
+        string referenceName = domainReference[0]["Name"];
+        if (!parsedModel.domainLettings.count(referenceName)) {
+            cerr << "Found reference to domainwith name \"" << referenceName
+                 << "\" but this does not appear to be in scope.\n"
+                 << domainExpr << endl;
+            abort();
+        } else {
+            return make_pair(true,
+                             parsedModel.domainLettings.at(referenceName));
+        }
     }
     return make_pair(false, AnyDomainRef(shared_ptr<IntDomain>(nullptr)));
 }

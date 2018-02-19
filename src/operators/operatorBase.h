@@ -82,7 +82,7 @@ class ReturnType {
 };
 
 #
-template <typename Operator, typename ReturnTypeIn>
+template <typename ReturnTypeIn, typename Operator>
 using HasReturnType =
     std::is_same<ReturnTypeIn, typename ReturnType<Operator>::type>;
 

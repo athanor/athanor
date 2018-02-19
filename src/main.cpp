@@ -11,11 +11,9 @@
 #include "types/typeOperations.h"
 
 using namespace std;
-void setOfSetWithModulous();
-void setWithModulous();
-void mSetOfSetWithModulousAndMaxSizeSum();
-void sonet(const int argc, const char** argv);
 using namespace AutoArgParse;
+using namespace nlohmann;
+
 ArgParser argParser;
 auto& fileArg = argParser.add<Arg<ifstream>>(
     "path_to_file", Policy::MANDATORY, "Path to parameter file.",
@@ -65,150 +63,18 @@ int main(const int argc, const char** argv) {
     parseModel(argc, argv);
 }
 
-void setOfSetWithModulous() {
-    auto zeroConst = ValRef<IntValue>(make_shared<IntValue>());
-    zeroConst->value = 0;
-    auto modulousConst = ValRef<IntValue>(make_shared<IntValue>());
-    modulousConst->value = 2;
-    auto sizeLimitConst = ValRef<IntValue>(make_shared<IntValue>());
-    sizeLimitConst->value = 10;
-    ModelBuilder builder;
-
-    auto domain = make_shared<SetDomain>(
-        minSize(1), SetDomain(noSize(), IntDomain({intBound(1, 40)})));
-    auto a = builder.addVariable(domain);
-    builder.addConstraint(intEq(setSize(a), sizeLimitConst));
-
-    auto outerQuant = quant<BoolReturning>(a);
-    auto outerForall = opAnd(outerQuant);
-    auto i = outerQuant->newIterRef<SetValue>();
-    auto innerQuant = quant<BoolReturning>(i);
-    auto innerForAll = opAnd(innerQuant);
-    outerQuant->setExpression(
-        opAnd(intEq(setSize(i), sizeLimitConst), innerForAll));
-    auto j = innerQuant->newIterRef<IntValue>();
-    innerQuant->setExpression(intEq(mod(j, modulousConst), zeroConst));
-    builder.addConstraint(outerForall);
-    HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
-    search.search();
-}
-
-void setWithModulous() {
-    auto zeroConst = ValRef<IntValue>(make_shared<IntValue>());
-    zeroConst->value = 0;
-    auto modulousConst = ValRef<IntValue>(make_shared<IntValue>());
-    modulousConst->value = 2;
-    auto sizeLimitConst = ValRef<IntValue>(make_shared<IntValue>());
-    sizeLimitConst->value = 4;
-    ModelBuilder builder;
-
-    auto domain =
-        make_shared<SetDomain>(minSize(1), IntDomain({intBound(1, 3)}));
-    auto a = builder.addVariable(domain);
-    builder.addConstraint(intEq(setSize(a), sizeLimitConst));
-
-    auto outerQuant = quant<BoolReturning>(a);
-    auto outerForall = opAnd(outerQuant);
-    auto i = outerQuant->newIterRef<IntValue>();
-    outerQuant->setExpression(intEq(mod(i, modulousConst), zeroConst));
-    builder.addConstraint(outerForall);
-    HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
-    search.search();
-}
-
-void mSetOfSetWithModulousAndMaxSizeSum() {
-    auto zeroConst = ValRef<IntValue>(make_shared<IntValue>());
-    zeroConst->value = 0;
-    auto modulousConst = ValRef<IntValue>(make_shared<IntValue>());
-    modulousConst->value = 2;
-    ModelBuilder builder;
-
-    auto domain = make_shared<MSetDomain>(
-        exactSize(2), SetDomain(noSize(), IntDomain({intBound(1, 20)})));
-    auto a = builder.addVariable(domain);
-
-    auto outerQuant = quant<BoolReturning>(a);
-    auto outerForall = opAnd(outerQuant);
-    auto i = outerQuant->newIterRef<SetValue>();
-    auto innerQuant = quant<BoolReturning>(i);
-    auto innerForAll = opAnd(innerQuant);
-    outerQuant->setExpression(innerForAll);
-    auto j = innerQuant->newIterRef<IntValue>();
-    innerQuant->setExpression(intEq(mod(j, modulousConst), zeroConst));
-    builder.addConstraint(outerForall);
-    auto outerIntQuant = quant<IntReturning>(a);
-    auto outerSum = sum(outerIntQuant);
-    auto k = outerIntQuant->newIterRef<SetValue>();
-    outerIntQuant->setExpression(setSize(k));
-    builder.setObjective(OptimiseMode::MAXIMISE, outerSum);
-    HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
-    search.search();
-}
-
-void sonet(const int argc, const char** argv) {
-    argParser.validateArgs(argc, argv);
-    auto& is = fileArg.get();
-    u_int64_t numberNodes, numberRings, capacity;
-    is >> numberNodes;
-    is >> numberRings;
-    is >> capacity;
-    auto nodesDomain = make_shared<IntDomain>(
-        vector<pair<int64_t, int64_t>>({intBound(1, numberNodes)}));
-    auto innerSetDomain = make_shared<SetDomain>(exactSize(2), nodesDomain);
-    auto demandConst =
-        constructValueFromDomain(SetDomain(noSize(), innerSetDomain));
-    demandConst->container = &constantPool;
-    u_int64_t a, b;
-    while (is && is >> a && is && is >> b) {
-        auto innerSet = constructValueFromDomain(*innerSetDomain);
-        auto aVal = constructValueFromDomain(*nodesDomain);
-        auto bVal = constructValueFromDomain(*nodesDomain);
-        aVal->value = a;
-        bVal->value = b;
-        innerSet->addMember(aVal);
-        innerSet->addMember(bVal);
-        demandConst->addMember(innerSet);
-    }
-    cout << "Input:\n";
-    cout << "letting numberNodes be " << numberNodes << endl;
-    cout << "letting numberRings be " << numberRings << endl;
-    cout << "letting capacity be " << capacity << endl;
-    cout << "letting demand be " << *demandConst << endl;
-    ModelBuilder builder;
-
-    auto mSetDomain = make_shared<MSetDomain>(
-        exactSize(numberRings), SetDomain(maxSize(capacity), nodesDomain));
-    auto networkVar = builder.addVariable(mSetDomain);
-    auto outerIntQuant = quant<IntReturning>(networkVar);
-    auto outerSum = sum(outerIntQuant);
-    auto k = outerIntQuant->newIterRef<SetValue>();
-    outerIntQuant->setExpression(setSize(k));
-    builder.setObjective(OptimiseMode::MINIMISE, outerSum);
-    // constraints
-    auto outerQuant = quant<BoolReturning>(demandConst);
-    auto forAll = opAnd(outerQuant);
-    auto i = outerQuant->newIterRef<SetValue>();
-    auto innerQuant = quant<BoolReturning>(networkVar);
-    auto exists = opOr(innerQuant);
-    outerQuant->setExpression(exists);
-    auto j = innerQuant->newIterRef<SetValue>();
-    innerQuant->setExpression(subset(i, j));
-    builder.addConstraint(forAll);
-    HillClimber<RandomNeighbourhoodWithViolation> search(builder.build());
-    search.search();
-}
-using namespace nlohmann;
 struct ParsedModel {
     ModelBuilder builder;
     unordered_map<string, AnyValRef> vars;
     unordered_map<string, AnyDomainRef> domainLettings;
-    unordered_map<string, AnyOpRef> constantExprs;
+    unordered_map<string, AnyExprRef> constantExprs;
 };
 
 pair<bool, AnyValRef> tryParseValue(json& essenceExpr,
                                     ParsedModel& parsedModel);
 pair<bool, AnyDomainRef> tryParseDomain(json& essenceExpr,
                                         ParsedModel& parsedModel);
+pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr, ParsedModel& parsedModel);
 
 AnyValRef parseValue(json& essenceExpr, ParsedModel& parsedModel) {
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
@@ -223,6 +89,16 @@ AnyValRef parseValue(json& essenceExpr, ParsedModel& parsedModel) {
 int64_t parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel) {
     return mpark::get<ValRef<IntValue>>(parseValue(essenceExpr, parsedModel))
         ->value;
+}
+
+AnyExprRef parseExpr(json& essenceExpr, ParsedModel& parsedModel) {
+    auto boolConstraintPair = tryParseExpr(essenceExpr, parsedModel);
+    if (boolConstraintPair.first) {
+        return move(boolConstraintPair.second);
+    } else {
+        cerr << "Failed to parse expression: " << essenceExpr << endl;
+        abort();
+    }
 }
 
 AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {
@@ -408,6 +284,54 @@ pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
     return make_pair(false, AnyDomainRef(shared_ptr<IntDomain>(nullptr)));
 }
 
+template <typename RetType, typename Constraint, typename Func>
+RetType expect(Constraint&& constraint, Func&& func) {
+    return mpark::visit(
+        [&](auto&& constraint) -> RetType {
+            return staticIf<HasReturnType<
+                RetType, BaseType<decltype(constraint)>>::value>(
+                       [&](auto&& constraint) -> RetType {
+                           return std::forward<decltype(constraint)>(
+                               constraint);
+                       })
+                .otherwise([&](auto&& constraint) -> RetType {
+                    func(std::forward<decltype(constraint)>(constraint));
+                    abort();
+                })(std::forward<decltype(constraint)>(constraint));
+        },
+        std::forward<Constraint>(constraint));
+}
+
+shared_ptr<OpIntEq> parseOpIntEq(json& intEqExpr, ParsedModel& parsedModel) {
+    string errorMessage =
+        "Expected int returning expression within Op Int Eq: ";
+    IntReturning left = expect<IntReturning>(
+        parseExpr(intEqExpr[0], parsedModel),
+        [&](auto&&) { cerr << errorMessage << intEqExpr[0]; });
+    IntReturning right = expect<IntReturning>(
+        parseExpr(intEqExpr[1], parsedModel),
+        [&](auto&&) { cerr << errorMessage << intEqExpr[1]; });
+    return make_shared<OpIntEq>(std::move(left), std::move(right));
+}
+
+pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr, ParsedModel& parsedModel) {
+    if (essenceExpr.count("Op")) {
+        auto& op = essenceExpr["Op"];
+        if (op.count("MkOpEq")) {
+            return std::make_pair(true,
+                                  parseOpIntEq(op["MkOpEq"], parsedModel));
+        }
+    }
+    auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
+    if (boolValuePair.first) {
+        return std::make_pair(
+            true,
+            mpark::visit([](auto& val) -> AnyExprRef { return move(val); },
+                         boolValuePair.second));
+    }
+    return std::make_pair(false, ValRef<IntValue>(nullptr));
+}
+
 void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
     string lettingName = lettingArray[0]["Name"];
     auto boolValuePair = tryParseValue(lettingArray[1], parsedModel);
@@ -435,6 +359,17 @@ void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {
         findDomain);
 }
 
+void parseExprs(json& suchThat, ParsedModel& parsedModel) {
+    for (auto& op : suchThat) {
+        BoolReturning constraint =
+            expect<BoolReturning>(parseExpr(op, parsedModel), [&](auto&&) {
+                cerr << "Expected Bool returning constraint within such that: "
+                     << op << endl;
+            });
+        parsedModel.builder.addConstraint(constraint);
+    }
+}
+
 void parseModel(const int argc, const char** argv) {
     argParser.validateArgs(argc, argv);
     auto& is = fileArg.get();
@@ -450,6 +385,8 @@ void parseModel(const int argc, const char** argv) {
                        declaration["FindOrGiven"][0] == "Find") {
                 handleFindDeclaration(declaration["FindOrGiven"], parsedModel);
             }
+        } else if (statement.count("SuchThat")) {
+            parseExprs(statement["SuchThat"], parsedModel);
         }
     }
     cout << parsedModel.vars << endl;

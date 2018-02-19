@@ -27,6 +27,33 @@ template <class... Fs>
 OverLoaded<Fs...> overloaded(Fs&&... fs) {
     return OverLoaded<Fs...>(std::forward<Fs>(fs)...);
 }
+
+template <bool, typename Func>
+struct StaticIf;
+
+template <typename Func>
+struct StaticIf<true, Func> : public Func {
+    StaticIf(Func&& func) : Func(std::forward<Func>(func)) {}
+    template <typename Func2>
+    inline StaticIf<true, Func> otherwise(Func2&&) {
+        return std::move(*this);
+    }
+};
+
+template <typename Func>
+struct StaticIf<false, Func> {
+    StaticIf(Func&&) {}
+    template <typename Func2>
+    inline decltype(auto) otherwise(Func2&& func) {
+        return std::forward<Func2>(func);
+    }
+};
+
+template <bool cond, typename Func>
+auto staticIf(Func&& func) {
+    return StaticIf<cond, Func>(std::forward<Func>(func));
+}
+
 /*
 template <class T>
 struct AlwaysFalse : std::false_type {};
@@ -39,4 +66,5 @@ struct AlwaysFalse : std::false_type {};
     static_assert(AlwaysFalse<std::decay_t<decltype(variant_value)>>::value, \
                   "non-exhaustive visitor!");
 */
+
 #endif /* SRC_VARIANTOPERATIONS_H_ */

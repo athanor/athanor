@@ -40,18 +40,26 @@ using MSetReturning = mpark::variant<ValRef<MSetValue>, IterRef<MSetValue>>;
 
 // variant to hold any type of constraint
 #define makeOpRef(Op) std::shared_ptr<Op>
-using AnyOpRef = mpark::variant<buildForOperators(makeOpRef, MACRO_COMMA)>;
+#define makeOpRefFromVal(name) ValRef<name##Value>, IterRef<name##Value>
+using AnyExprRef =
+    mpark::variant<buildForOperators(makeOpRef, MACRO_COMMA),
+                   buildForAllTypes(makeOpRefFromVal, MACRO_COMMA)>;
+#undef makeOpRefFromVal
 #undef makeOpRef
 // helper class for template magic, allows to test operators if they have a
 // specific return type by testing if they are convertable to that type
 
-#define returnTypeToValueAssociations(name)       \
+#define returnTypeDefs(name)                      \
     template <>                                   \
     struct AssociatedValueType<name##Returning> { \
         typedef name##Value type;                 \
+    };                                            \
+    template <>                                   \
+    struct TypeAsString<name##Returning> {        \
+        static const std::string value;           \
     };
-buildForAllTypes(returnTypeToValueAssociations, );
-#undef returnTypeToValueAssociations
+buildForAllTypes(returnTypeDefs, );
+#undef returnTypeDefs
 template <typename Op>
 
 class ReturnType {

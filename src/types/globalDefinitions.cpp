@@ -2,6 +2,7 @@
 /*contains definitions for functions that use the same code for every type,
  * using macros to do the specialisation to avoid having to include this file,
  * which includes all the types */
+#include "operators/operatorBase.h"
 #include "search/violationDescription.h"
 #include "types/allTypes.h"
 #define quote(x) #x
@@ -20,6 +21,7 @@ inline ViolationDescription& registerViolations(const ValBase* val,
     }                                                                          \
     const std::string TypeAsString<name##Value>::value = quote(name##Value);   \
     const std::string TypeAsString<name##Domain>::value = quote(name##Domain); \
+    const std::string TypeAsString<name##Returning>::value = quote(name##Returning); \
     template <>                                                                \
     ValBase& valBase<name##Value>(name##Value & v) {                           \
         return v;                                                              \

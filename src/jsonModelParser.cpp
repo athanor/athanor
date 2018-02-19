@@ -261,6 +261,17 @@ shared_ptr<OpIntEq> parseOpIntEq(json& intEqExpr, ParsedModel& parsedModel) {
     return make_shared<OpIntEq>(std::move(left), std::move(right));
 }
 
+shared_ptr<OpMod> parseOpMod(json& intEqExpr, ParsedModel& parsedModel) {
+    string errorMessage = "Expected int returning expression within Op mod: ";
+    IntReturning left = expect<IntReturning>(
+        parseExpr(intEqExpr[0], parsedModel),
+        [&](auto&&) { cerr << errorMessage << intEqExpr[0]; });
+    IntReturning right = expect<IntReturning>(
+        parseExpr(intEqExpr[1], parsedModel),
+        [&](auto&&) { cerr << errorMessage << intEqExpr[1]; });
+    return make_shared<OpMod>(std::move(left), std::move(right));
+}
+
 pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
                                     ParsedModel& parsedModel) {
     if (essenceExpr.count("Op")) {
@@ -268,6 +279,9 @@ pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
         if (op.count("MkOpEq")) {
             return std::make_pair(true,
                                   parseOpIntEq(op["MkOpEq"], parsedModel));
+        }
+        if (op.count("MkOpMod")) {
+            return std::make_pair(true, parseOpMod(op["MkOpMod"], parsedModel));
         }
     }
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);

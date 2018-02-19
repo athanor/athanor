@@ -61,13 +61,11 @@ class HillClimber {
             if (model.optimiseMode != OptimiseMode::NONE) {
                 lastObjValue = newObjValue;
             }
-            std::cout << lastViolation << "," << lastObjValue << std::endl;
             int64_t deltaBestViolation = bestViolation - lastViolation;
             int64_t deltaBestObj = getDeltaObj(bestObjValue, lastObjValue);
             bool strictlyBetter = deltaBestViolation > 0 ||
-                                  (deltaBestViolation == 0 &&
-                                   (model.optimiseMode == OptimiseMode::NONE ||
-                                    deltaBestObj > 0));
+                                  (model.optimiseMode != OptimiseMode::NONE &&
+                                   deltaBestViolation == 0 && deltaBestObj > 0);
             if (strictlyBetter) {
                 bestViolation = lastViolation;
                 if (model.optimiseMode != OptimiseMode::NONE) {
@@ -134,8 +132,11 @@ class HillClimber {
     inline void newBestSolution() {
         violationBackOff = 1;
         numberNodesAtLastEvent = stats.majorNodeCount;
-        std::cout << "Violation " << lastViolation << ", objective "
-                  << lastObjValue << std::endl;
+        std::cout << "Violation " << lastViolation;
+        if (model.optimiseMode != OptimiseMode::NONE) {
+            std::cout << ", objective " << lastObjValue;
+        }
+        std::cout << std::endl;
         std::cout << stats << std::endl;
 
         for (auto& v : model.variables) {

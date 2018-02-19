@@ -60,5 +60,6 @@ int main(const int argc, const char** argv) {
     argParser.validateArgs(argc, argv);
     ParsedModel parsedModel = parseModelFromJson(fileArg.get());
     Model model = parsedModel.builder->build();
-    dumpState(cout, model.csp) << endl;
+    auto search = HillClimber<RandomNeighbourhoodWithViolation>(move(model));
+    search.search();
 }

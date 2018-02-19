@@ -30,12 +30,21 @@ OverLoaded<Fs...> overloaded(Fs&&... fs) {
 
 template <bool, typename Func>
 struct StaticIf;
+template <bool cond, typename Func>
+auto staticIf(Func&& func) {
+    return StaticIf<cond, Func>(std::forward<Func>(func));
+}
 
 template <typename Func>
 struct StaticIf<true, Func> : public Func {
     StaticIf(Func&& func) : Func(std::forward<Func>(func)) {}
     template <typename Func2>
     inline StaticIf<true, Func> otherwise(Func2&&) {
+        return std::move(*this);
+    }
+
+    template <bool, typename Func2>
+    inline StaticIf<true, Func> elseIf(Func2&&) {
         return std::move(*this);
     }
 };
@@ -47,12 +56,11 @@ struct StaticIf<false, Func> {
     inline decltype(auto) otherwise(Func2&& func) {
         return std::forward<Func2>(func);
     }
+    template <bool condition, typename Func2>
+    inline decltype(auto) elseIf(Func2&& func) {
+        return staticIf<condition>(std::forward<Func2>(func));
+    }
 };
-
-template <bool cond, typename Func>
-auto staticIf(Func&& func) {
-    return StaticIf<cond, Func>(std::forward<Func>(func));
-}
 
 /*
 template <class T>

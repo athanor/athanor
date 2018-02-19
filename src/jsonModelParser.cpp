@@ -233,20 +233,19 @@ RetType expect(Constraint&& constraint, Func&& func) {
             return staticIf<HasReturnType<
                 RetType, BaseType<decltype(constraint)>>::value>(
                        [&](auto&& constraint) -> RetType {
-                           return std::forward<decltype(constraint)>(
-                               constraint);
+                           return forward<decltype(constraint)>(constraint);
                        })
                 .otherwise([&](auto&& constraint) -> RetType {
-                    func(std::forward<decltype(constraint)>(constraint));
+                    func(forward<decltype(constraint)>(constraint));
                     cerr << "\nType found was instead "
                          << TypeAsString<
                                 typename ReturnType<typename BaseType<decltype(
                                     constraint)>::element_type>::type>::value
                          << endl;
                     abort();
-                })(std::forward<decltype(constraint)>(constraint));
+                })(forward<decltype(constraint)>(constraint));
         },
-        std::forward<Constraint>(constraint));
+        forward<Constraint>(constraint));
 }
 
 shared_ptr<OpIntEq> parseOpIntEq(json& intEqExpr, ParsedModel& parsedModel) {
@@ -258,18 +257,51 @@ shared_ptr<OpIntEq> parseOpIntEq(json& intEqExpr, ParsedModel& parsedModel) {
     IntReturning right = expect<IntReturning>(
         parseExpr(intEqExpr[1], parsedModel),
         [&](auto&&) { cerr << errorMessage << intEqExpr[1]; });
-    return make_shared<OpIntEq>(std::move(left), std::move(right));
+    return make_shared<OpIntEq>(move(left), move(right));
 }
 
-shared_ptr<OpMod> parseOpMod(json& intEqExpr, ParsedModel& parsedModel) {
+shared_ptr<OpMod> parseOpMod(json& modExpr, ParsedModel& parsedModel) {
     string errorMessage = "Expected int returning expression within Op mod: ";
     IntReturning left = expect<IntReturning>(
-        parseExpr(intEqExpr[0], parsedModel),
-        [&](auto&&) { cerr << errorMessage << intEqExpr[0]; });
+        parseExpr(modExpr[0], parsedModel),
+        [&](auto&&) { cerr << errorMessage << modExpr[0]; });
     IntReturning right = expect<IntReturning>(
-        parseExpr(intEqExpr[1], parsedModel),
-        [&](auto&&) { cerr << errorMessage << intEqExpr[1]; });
-    return make_shared<OpMod>(std::move(left), std::move(right));
+        parseExpr(modExpr[1], parsedModel),
+        [&](auto&&) { cerr << errorMessage << modExpr[1]; });
+    return make_shared<OpMod>(move(left), move(right));
+}
+
+shared_ptr<OpSubset> parseOpSubset(json& subsetExpr, ParsedModel& parsedModel) {
+    string errorMessage =
+        "Expected set returning expression within Op subset: ";
+    SetReturning left = expect<SetReturning>(
+        parseExpr(subsetExpr[0], parsedModel),
+        [&](auto&&) { cerr << errorMessage << subsetExpr[0]; });
+    SetReturning right = expect<SetReturning>(
+        parseExpr(subsetExpr[1], parsedModel),
+        [&](auto&&) { cerr << errorMessage << subsetExpr[1]; });
+    return make_shared<OpSubset>(move(left), move(right));
+}
+
+AnyExprRef parseOpTwoBars(json& operandExpr, ParsedModel& parsedModel) {
+    AnyExprRef operand = parseExpr(operandExpr, parsedModel);
+    return mpark::visit(
+        [&](auto& operand) {
+            return staticIf<HasReturnType<SetReturning,
+                                          BaseType<decltype(operand)>>::value>(
+                       [&](auto& operand) -> AnyExprRef {
+                           return make_shared<OpSetSize>(operand);
+                       })
+                .otherwise([&](auto& operand) -> AnyExprRef {
+                    cerr << "Error, not yet handling OpTwoBars with an operand "
+                            "of type "
+                         << TypeAsString<typename ReturnType<
+                                BaseType<decltype(operand)>>::type>::value
+                         << ": " << operandExpr << endl;
+                    abort();
+                })(operand);
+        },
+        operand);
 }
 
 pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
@@ -277,21 +309,28 @@ pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
     if (essenceExpr.count("Op")) {
         auto& op = essenceExpr["Op"];
         if (op.count("MkOpEq")) {
-            return std::make_pair(true,
-                                  parseOpIntEq(op["MkOpEq"], parsedModel));
+            return make_pair(true, parseOpIntEq(op["MkOpEq"], parsedModel));
         }
         if (op.count("MkOpMod")) {
-            return std::make_pair(true, parseOpMod(op["MkOpMod"], parsedModel));
+            return make_pair(true, parseOpMod(op["MkOpMod"], parsedModel));
+        }
+        if (op.count("MkOpTwoBars")) {
+            return make_pair(true,
+                             parseOpTwoBars(op["MkOpTwoBars"], parsedModel));
+        }
+        if (op.count("MkOpSubsetEq")) {
+            return make_pair(true,
+                             parseOpSubset(op["MkOpSubsetEq"], parsedModel));
         }
     }
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
     if (boolValuePair.first) {
-        return std::make_pair(
+        return make_pair(
             true,
             mpark::visit([](auto& val) -> AnyExprRef { return move(val); },
                          boolValuePair.second));
     }
-    return std::make_pair(false, ValRef<IntValue>(nullptr));
+    return make_pair(false, ValRef<IntValue>(nullptr));
 }
 
 void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {

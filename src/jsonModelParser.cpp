@@ -271,7 +271,7 @@ shared_ptr<OpMod> parseOpMod(json& modExpr, ParsedModel& parsedModel) {
     return make_shared<OpMod>(move(left), move(right));
 }
 
-shared_ptr<OpSubset> parseOpSubset(json& subsetExpr, ParsedModel& parsedModel) {
+shared_ptr<OpSubsetEq> parseOpSubsetEq(json& subsetExpr, ParsedModel& parsedModel) {
     string errorMessage =
         "Expected set returning expression within Op subset: ";
     SetReturning left = expect<SetReturning>(
@@ -280,7 +280,7 @@ shared_ptr<OpSubset> parseOpSubset(json& subsetExpr, ParsedModel& parsedModel) {
     SetReturning right = expect<SetReturning>(
         parseExpr(subsetExpr[1], parsedModel),
         [&](auto&&) { cerr << errorMessage << subsetExpr[1]; });
-    return make_shared<OpSubset>(move(left), move(right));
+    return make_shared<OpSubsetEq>(move(left), move(right));
 }
 
 AnyExprRef parseOpTwoBars(json& operandExpr, ParsedModel& parsedModel) {
@@ -320,7 +320,7 @@ pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
         }
         if (op.count("MkOpSubsetEq")) {
             return make_pair(true,
-                             parseOpSubset(op["MkOpSubsetEq"], parsedModel));
+                             parseOpSubsetEq(op["MkOpSubsetEq"], parsedModel));
         }
     }
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);

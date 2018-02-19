@@ -1,14 +1,14 @@
-#include "operators/opSubset.h"
+#include "operators/opSubsetEq.h"
 #include <iostream>
 #include <memory>
 #include "types/set.h"
 #include "types/typeOperations.h"
 using namespace std;
 
-using LeftSetTrigger = OpSubset::LeftSetTrigger;
-using RightSetTrigger = OpSubset::RightSetTrigger;
+using LeftSetTrigger = OpSubsetEq::LeftSetTrigger;
+using RightSetTrigger = OpSubsetEq::RightSetTrigger;
 
-inline void evaluate(OpSubset& op, const SetView& leftSetView,
+inline void evaluate(OpSubsetEq& op, const SetView& leftSetView,
                      const SetView& rightSetView) {
     op.violation = 0;
     for (auto& hashIndexPair : leftSetView.getHashIndexMap()) {
@@ -16,19 +16,19 @@ inline void evaluate(OpSubset& op, const SetView& leftSetView,
             !rightSetView.getHashIndexMap().count(hashIndexPair.first);
     }
 }
-void evaluate(OpSubset& op) {
+void evaluate(OpSubsetEq& op) {
     evaluate(op.left);
     evaluate(op.right);
     evaluate(op, getView<SetView>(op.left), getView<SetView>(op.right));
 }
 
-struct OpSubset::LeftSetTrigger : public SetTrigger {
+struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
    public:
-    OpSubset* op;
+    OpSubsetEq* op;
     u_int64_t oldHash;
 
    public:
-    LeftSetTrigger(OpSubset* op) : op(op) {}
+    LeftSetTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t hash) final {
         if (!getView<SetView>(op->right).getHashIndexMap().count(hash)) {
             op->changeValue([&]() { --op->violation; return true; });
@@ -63,11 +63,11 @@ struct OpSubset::LeftSetTrigger : public SetTrigger {
     }
 };
 
-struct OpSubset::RightSetTrigger : public SetTrigger {
-    OpSubset* op;
+struct OpSubsetEq::RightSetTrigger : public SetTrigger {
+    OpSubsetEq* op;
     u_int64_t oldHash;
 
-    RightSetTrigger(OpSubset* op) : op(op) {}
+    RightSetTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t hash) final {
         if (getView<SetView>(op->left).getHashIndexMap().count(hash)) {
             op->changeValue([&]() { ++op->violation; return true; });
@@ -104,7 +104,7 @@ struct OpSubset::RightSetTrigger : public SetTrigger {
     }
 };
 
-OpSubset::OpSubset(OpSubset&& other)
+OpSubsetEq::OpSubsetEq(OpSubsetEq&& other)
     : BoolView(std::move(other)),
       left(std::move(other.left)),
       right(std::move(other.right)),
@@ -113,7 +113,7 @@ OpSubset::OpSubset(OpSubset&& other)
     setTriggerParent(this, leftTrigger, rightTrigger);
 }
 
-void startTriggering(OpSubset& op) {
+void startTriggering(OpSubsetEq& op) {
     op.leftTrigger = make_shared<LeftSetTrigger>(&op);
     op.rightTrigger = make_shared<RightSetTrigger>(&op);
     addTrigger(op.left, op.leftTrigger);
@@ -122,7 +122,7 @@ void startTriggering(OpSubset& op) {
     startTriggering(op.right);
 }
 
-void stopTriggering(OpSubset& op) {
+void stopTriggering(OpSubsetEq& op) {
     if (op.leftTrigger) {
         deleteTrigger(op.leftTrigger);
         op.leftTrigger = nullptr;
@@ -135,23 +135,23 @@ void stopTriggering(OpSubset& op) {
     }
 }
 
-void updateViolationDescription(const OpSubset& op, u_int64_t,
+void updateViolationDescription(const OpSubsetEq& op, u_int64_t,
                                 ViolationDescription& vioDesc) {
     updateViolationDescription(op.left, op.violation, vioDesc);
     updateViolationDescription(op.right, op.violation, vioDesc);
 }
 
-std::shared_ptr<OpSubset> deepCopyForUnroll(const OpSubset& op,
+std::shared_ptr<OpSubsetEq> deepCopyForUnroll(const OpSubsetEq& op,
                                             const AnyIterRef& iterator) {
-    auto newOpSubset =
-        make_shared<OpSubset>(deepCopyForUnroll(op.left, iterator),
+    auto newOpSubsetEq =
+        make_shared<OpSubsetEq>(deepCopyForUnroll(op.left, iterator),
                               deepCopyForUnroll(op.right, iterator));
-    newOpSubset->violation = op.violation;
-    return newOpSubset;
+    newOpSubsetEq->violation = op.violation;
+    return newOpSubsetEq;
 }
 
-std::ostream& dumpState(std::ostream& os, const OpSubset& op) {
-    os << "OpSubset: violation=" << op.violation << "\nLeft: ";
+std::ostream& dumpState(std::ostream& os, const OpSubsetEq& op) {
+    os << "OpSubsetEq: violation=" << op.violation << "\nLeft: ";
     dumpState(os, op.left);
     os << "\nRight: ";
     dumpState(os, op.right);

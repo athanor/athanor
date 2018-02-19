@@ -7,7 +7,7 @@
 #include "operators/opProd.h"
 #include "operators/opSetNotEq.h"
 #include "operators/opSetSize.h"
-#include "operators/opSubset.h"
+#include "operators/opSubsetEq.h"
 #include "operators/opSum.h"
 #include "operators/quantifier.h"
 #include "types/allTypes.h"
@@ -107,7 +107,7 @@ std::shared_ptr<OpSetNotEq> setNotEq(L&& l, R&& r) {
     return std::make_shared<OpSetNotEq>(std::forward<L>(l), std::forward<R>(r));
 }
 template <typename L, typename R>
-std::shared_ptr<OpSubset> subset(L&& l, R&& r) {
-    return std::make_shared<OpSubset>(std::forward<L>(l), std::forward<R>(r));
+std::shared_ptr<OpSubsetEq> subset(L&& l, R&& r) {
+    return std::make_shared<OpSubsetEq>(std::forward<L>(l), std::forward<R>(r));
 }
 #endif /* SRC_CONSTRUCTORSHORTCUTS_H_ */

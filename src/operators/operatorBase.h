@@ -12,7 +12,7 @@
     f(BoolValue) sep f(IntValue) sep f(SetValue) sep f(MSetValue)           \
         sep f(OpSetSize) sep f(OpSum) sep f(OpAnd) sep f(OpSetNotEq)        \
             sep f(OpSetIntersect) sep f(OpIntEq) sep f(OpMod) sep f(OpProd) \
-                sep f(OpOr) sep f(OpSubset)
+                sep f(OpOr) sep f(OpSubsetEq)
 
 #define structDecls(name) struct name;
 buildForOperators(structDecls, );
@@ -23,7 +23,7 @@ using BoolReturning =
     mpark::variant<ValRef<BoolValue>, IterRef<BoolValue>,
                    std::shared_ptr<OpAnd>, std::shared_ptr<OpSetNotEq>,
                    std::shared_ptr<OpIntEq>, std::shared_ptr<OpOr>,
-                   std::shared_ptr<OpSubset>>;
+                   std::shared_ptr<OpSubsetEq>>;
 
 // int returning
 using IntReturning =

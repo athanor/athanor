@@ -11,14 +11,15 @@ using namespace std;
 using namespace nlohmann;
 
 ParsedModel::ParsedModel() : builder(make_unique<ModelBuilder>()) {}
-pair<bool, AnyValRef> tryParseValue(json& essenceExpr,
-                                    ParsedModel& parsedModel);
+pair<bool, pair<AnyDomainRef, AnyValRef>> tryParseValue(
+    json& essenceExpr, ParsedModel& parsedModel);
 pair<bool, AnyDomainRef> tryParseDomain(json& essenceExpr,
                                         ParsedModel& parsedModel);
 pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
                                     ParsedModel& parsedModel);
 
-AnyValRef parseValue(json& essenceExpr, ParsedModel& parsedModel) {
+pair<AnyDomainRef, AnyValRef> parseValue(json& essenceExpr,
+                                         ParsedModel& parsedModel) {
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
     if (boolValuePair.first) {
         return move(boolValuePair.second);
@@ -29,7 +30,8 @@ AnyValRef parseValue(json& essenceExpr, ParsedModel& parsedModel) {
 }
 
 int64_t parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel) {
-    return mpark::get<ValRef<IntValue>>(parseValue(essenceExpr, parsedModel))
+    return mpark::get<ValRef<IntValue>>(
+               parseValue(essenceExpr, parsedModel).second)
         ->value;
 }
 
@@ -53,32 +55,33 @@ AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {
     }
 }
 
-ValRef<SetValue> parseConstantSet(json& essenceSetConstant,
-                                  ParsedModel& parsedModel) {
+pair<shared_ptr<SetDomain>, ValRef<SetValue>> parseConstantSet(
+    json& essenceSetConstant, ParsedModel& parsedModel) {
     ValRef<SetValue> val = make<SetValue>();
-    // just in case set is empty, not handling the case but at least leaving
-    // inner type not undefined  assertions will catch it later
     if (essenceSetConstant.size() == 0) {
         val->setInnerType<IntValue>();
         cerr << "Not sure how to work out type of empty set yet, will handle "
                 "this later.";
         todoImpl();
     }
-    mpark::visit(
-        [&](auto&& firstMember) {
-            typedef valType(firstMember) InnerValueType;
+    return mpark::visit(
+        [&](auto&& innerDomain) {
+            typedef typename AssociatedValueType<typename BaseType<decltype(
+                innerDomain)>::element_type>::type InnerValueType;
             val->setInnerType<InnerValueType>();
-            val->addMember(firstMember);
-            for (size_t i = 1; i < essenceSetConstant.size(); ++i) {
+            for (size_t i = 0; i < essenceSetConstant.size(); ++i) {
                 val->addMember(mpark::get<ValRef<InnerValueType>>(
-                    parseValue(essenceSetConstant[i], parsedModel)));
+                    parseValue(essenceSetConstant[i], parsedModel).second));
             }
+            return make_pair(make_shared<SetDomain>(
+                                 exactSize(val->numberElements()), innerDomain),
+                             val);
         },
-        parseValue(essenceSetConstant[0], parsedModel));
-    return val;
+        parseValue(essenceSetConstant[0], parsedModel).first);
 }
 
-AnyValRef parseAbstractLiteral(json& abstractLit, ParsedModel& parsedModel) {
+pair<AnyDomainRef, AnyValRef> parseAbstractLiteral(json& abstractLit,
+                                                   ParsedModel& parsedModel) {
     if (abstractLit.count("AbsLitSet")) {
         return parseConstantSet(abstractLit["AbsLitSet"], parsedModel);
     } else {
@@ -88,15 +91,18 @@ AnyValRef parseAbstractLiteral(json& abstractLit, ParsedModel& parsedModel) {
     }
 }
 
-AnyValRef parseConstant(json& essenceConstant, ParsedModel&) {
+pair<AnyDomainRef, AnyValRef> parseConstant(json& essenceConstant,
+                                            ParsedModel&) {
     if (essenceConstant.count("ConstantInt")) {
         auto val = make<IntValue>();
         val->value = essenceConstant["ConstantInt"];
-        return val;
+        return make_pair(make_shared<IntDomain>(vector<pair<int64_t, int64_t>>(
+                             {intBound(val->value, val->value)})),
+                         val);
     } else if (essenceConstant.count("ConstantBool")) {
         auto val = make<BoolValue>();
         val->violation = bool(essenceConstant["ConstantBool"]);
-        return val;
+        return make_pair(make_shared<BoolDomain>(), val);
     } else {
         cerr << "Not sure what type of constant this is: " << essenceConstant
              << endl;
@@ -104,8 +110,8 @@ AnyValRef parseConstant(json& essenceConstant, ParsedModel&) {
     }
 }
 
-pair<bool, AnyValRef> tryParseValue(json& essenceExpr,
-                                    ParsedModel& parsedModel) {
+pair<bool, pair<AnyDomainRef, AnyValRef>> tryParseValue(
+    json& essenceExpr, ParsedModel& parsedModel) {
     if (essenceExpr.count("Constant")) {
         return make_pair(true,
                          parseConstant(essenceExpr["Constant"], parsedModel));
@@ -125,7 +131,9 @@ pair<bool, AnyValRef> tryParseValue(json& essenceExpr,
             return make_pair(true, parsedModel.vars.at(referenceName));
         }
     }
-    return make_pair(false, AnyValRef(ValRef<IntValue>(nullptr)));
+    return make_pair(false,
+                     make_pair(AnyDomainRef(shared_ptr<IntDomain>(nullptr)),
+                               AnyValRef(ValRef<IntValue>(nullptr))));
 }
 
 shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
@@ -271,7 +279,8 @@ shared_ptr<OpMod> parseOpMod(json& modExpr, ParsedModel& parsedModel) {
     return make_shared<OpMod>(move(left), move(right));
 }
 
-shared_ptr<OpSubsetEq> parseOpSubsetEq(json& subsetExpr, ParsedModel& parsedModel) {
+shared_ptr<OpSubsetEq> parseOpSubsetEq(json& subsetExpr,
+                                       ParsedModel& parsedModel) {
     string errorMessage =
         "Expected set returning expression within Op subset: ";
     SetReturning left = expect<SetReturning>(
@@ -287,19 +296,19 @@ AnyExprRef parseOpTwoBars(json& operandExpr, ParsedModel& parsedModel) {
     AnyExprRef operand = parseExpr(operandExpr, parsedModel);
     return mpark::visit(
         [&](auto& operand) {
-            return staticIf<HasReturnType<SetReturning,
-                                          BaseType<decltype(operand)>>::value>(
-                       [&](auto& operand) -> AnyExprRef {
-                           return make_shared<OpSetSize>(operand);
-                       })
-                .otherwise([&](auto& operand) -> AnyExprRef {
+            typedef typename ReturnType<BaseType<decltype(operand)>>::type
+                OperandReturnType;
+            return overloaded(
+                [&](SetReturning&& set) -> AnyExprRef {
+                    return make_shared<OpSetSize>(set);
+                },
+                [&](auto &&) -> AnyExprRef {
                     cerr << "Error, not yet handling OpTwoBars with an operand "
                             "of type "
-                         << TypeAsString<typename ReturnType<
-                                BaseType<decltype(operand)>>::type>::value
-                         << ": " << operandExpr << endl;
+                         << TypeAsString<OperandReturnType>::value << ": "
+                         << operandExpr << endl;
                     abort();
-                })(operand);
+                })(OperandReturnType(operand));
         },
         operand);
 }
@@ -328,7 +337,7 @@ pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
         return make_pair(
             true,
             mpark::visit([](auto& val) -> AnyExprRef { return move(val); },
-                         boolValuePair.second));
+                         boolValuePair.second.second));
     }
     return make_pair(false, ValRef<IntValue>(nullptr));
 }
@@ -355,7 +364,9 @@ void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {
         [&](auto& domainImpl) {
             parsedModel.vars.emplace(
                 findName,
-                AnyValRef(parsedModel.builder->addVariable(domainImpl)));
+                make_pair(
+                    domainImpl,
+                    AnyValRef(parsedModel.builder->addVariable(domainImpl))));
         },
         findDomain);
 }
@@ -388,5 +399,7 @@ ParsedModel parseModelFromJson(istream& is) {
             parseExprs(statement["SuchThat"], parsedModel);
         }
     }
+    cout << parsedModel.vars << endl;
+    exit(0);
     return parsedModel;
 }

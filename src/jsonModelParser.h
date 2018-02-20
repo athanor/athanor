@@ -9,7 +9,7 @@
 class ModelBuilder;
 struct ParsedModel {
     std::unique_ptr<ModelBuilder> builder;
-    std::unordered_map<std::string, AnyValRef> vars;
+    std::unordered_map<std::string, std::pair<AnyDomainRef, AnyValRef>> vars;
     std::unordered_map<std::string, AnyDomainRef> domainLettings;
     std::unordered_map<std::string, AnyExprRef> constantExprs;
     ParsedModel();

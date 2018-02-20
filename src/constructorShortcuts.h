@@ -107,7 +107,7 @@ std::shared_ptr<OpSetNotEq> setNotEq(L&& l, R&& r) {
     return std::make_shared<OpSetNotEq>(std::forward<L>(l), std::forward<R>(r));
 }
 template <typename L, typename R>
-std::shared_ptr<OpSubsetEq> subset(L&& l, R&& r) {
+std::shared_ptr<OpSubsetEq> subsetEq(L&& l, R&& r) {
     return std::make_shared<OpSubsetEq>(std::forward<L>(l), std::forward<R>(r));
 }
 #endif /* SRC_CONSTRUCTORSHORTCUTS_H_ */

@@ -9,14 +9,24 @@
 
 using namespace std;
 using namespace nlohmann;
+auto fakeIntDomain =
+    make_shared<IntDomain>(vector<pair<int64_t, int64_t>>({intBound(0, 0)}));
+auto fakeBoolDomain = make_shared<BoolDomain>();
+shared_ptr<SetDomain> fakeSetDomain(const AnyDomainRef& ref) {
+    return make_shared<SetDomain>(exactSize(0), ref);
+}
+
+shared_ptr<MSetDomain> fakeMSetDomain(const AnyDomainRef& ref) {
+    return make_shared<MSetDomain>(exactSize(0), ref);
+}
 
 ParsedModel::ParsedModel() : builder(make_unique<ModelBuilder>()) {}
 pair<bool, pair<AnyDomainRef, AnyValRef>> tryParseValue(
     json& essenceExpr, ParsedModel& parsedModel);
 pair<bool, AnyDomainRef> tryParseDomain(json& essenceExpr,
                                         ParsedModel& parsedModel);
-pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
-                                    ParsedModel& parsedModel);
+pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
+    json& essenceExpr, ParsedModel& parsedModel);
 
 pair<AnyDomainRef, AnyValRef> parseValue(json& essenceExpr,
                                          ParsedModel& parsedModel) {
@@ -35,7 +45,8 @@ int64_t parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel) {
         ->value;
 }
 
-AnyExprRef parseExpr(json& essenceExpr, ParsedModel& parsedModel) {
+pair<AnyDomainRef, AnyExprRef> parseExpr(json& essenceExpr,
+                                         ParsedModel& parsedModel) {
     auto boolConstraintPair = tryParseExpr(essenceExpr, parsedModel);
     if (boolConstraintPair.first) {
         return move(boolConstraintPair.second);
@@ -96,13 +107,11 @@ pair<AnyDomainRef, AnyValRef> parseConstant(json& essenceConstant,
     if (essenceConstant.count("ConstantInt")) {
         auto val = make<IntValue>();
         val->value = essenceConstant["ConstantInt"];
-        return make_pair(make_shared<IntDomain>(vector<pair<int64_t, int64_t>>(
-                             {intBound(val->value, val->value)})),
-                         val);
+        return make_pair(fakeIntDomain, val);
     } else if (essenceConstant.count("ConstantBool")) {
         auto val = make<BoolValue>();
         val->violation = bool(essenceConstant["ConstantBool"]);
-        return make_pair(make_shared<BoolDomain>(), val);
+        return make_pair(fakeBoolDomain, val);
     } else {
         cerr << "Not sure what type of constant this is: " << essenceConstant
              << endl;
@@ -158,7 +167,7 @@ shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
 }
 
 shared_ptr<BoolDomain> parseDomainBool(json&, ParsedModel&) {
-    return make_shared<BoolDomain>();
+    return fakeBoolDomain;
 }
 
 SizeAttr parseSizeAttr(json& sizeAttrExpr, ParsedModel& parsedModel) {
@@ -256,53 +265,61 @@ RetType expect(Constraint&& constraint, Func&& func) {
         forward<Constraint>(constraint));
 }
 
-shared_ptr<OpIntEq> parseOpIntEq(json& intEqExpr, ParsedModel& parsedModel) {
+pair<shared_ptr<BoolDomain>, shared_ptr<OpIntEq>> parseOpIntEq(
+    json& intEqExpr, ParsedModel& parsedModel) {
     string errorMessage =
         "Expected int returning expression within Op Int Eq: ";
     IntReturning left = expect<IntReturning>(
-        parseExpr(intEqExpr[0], parsedModel),
+        parseExpr(intEqExpr[0], parsedModel).second,
         [&](auto&&) { cerr << errorMessage << intEqExpr[0]; });
     IntReturning right = expect<IntReturning>(
-        parseExpr(intEqExpr[1], parsedModel),
+        parseExpr(intEqExpr[1], parsedModel).second,
         [&](auto&&) { cerr << errorMessage << intEqExpr[1]; });
-    return make_shared<OpIntEq>(move(left), move(right));
+    return make_pair(fakeBoolDomain,
+                     make_shared<OpIntEq>(move(left), move(right)));
 }
 
-shared_ptr<OpMod> parseOpMod(json& modExpr, ParsedModel& parsedModel) {
+pair<shared_ptr<IntDomain>, shared_ptr<OpMod>> parseOpMod(
+    json& modExpr, ParsedModel& parsedModel) {
     string errorMessage = "Expected int returning expression within Op mod: ";
     IntReturning left = expect<IntReturning>(
-        parseExpr(modExpr[0], parsedModel),
+        parseExpr(modExpr[0], parsedModel).second,
         [&](auto&&) { cerr << errorMessage << modExpr[0]; });
     IntReturning right = expect<IntReturning>(
-        parseExpr(modExpr[1], parsedModel),
+        parseExpr(modExpr[1], parsedModel).second,
         [&](auto&&) { cerr << errorMessage << modExpr[1]; });
-    return make_shared<OpMod>(move(left), move(right));
+    return make_pair(fakeIntDomain,
+                     make_shared<OpMod>(move(left), move(right)));
 }
 
-shared_ptr<OpSubsetEq> parseOpSubsetEq(json& subsetExpr,
-                                       ParsedModel& parsedModel) {
+pair<shared_ptr<BoolDomain>, shared_ptr<OpSubsetEq>> parseOpSubsetEq(
+    json& subsetExpr, ParsedModel& parsedModel) {
     string errorMessage =
         "Expected set returning expression within Op subset: ";
     SetReturning left = expect<SetReturning>(
-        parseExpr(subsetExpr[0], parsedModel),
+        parseExpr(subsetExpr[0], parsedModel).second,
         [&](auto&&) { cerr << errorMessage << subsetExpr[0]; });
     SetReturning right = expect<SetReturning>(
-        parseExpr(subsetExpr[1], parsedModel),
+        parseExpr(subsetExpr[1], parsedModel).second,
         [&](auto&&) { cerr << errorMessage << subsetExpr[1]; });
-    return make_shared<OpSubsetEq>(move(left), move(right));
+    return make_pair(fakeBoolDomain,
+                     make_shared<OpSubsetEq>(move(left), move(right)));
 }
 
-AnyExprRef parseOpTwoBars(json& operandExpr, ParsedModel& parsedModel) {
-    AnyExprRef operand = parseExpr(operandExpr, parsedModel);
+pair<shared_ptr<IntDomain>, AnyExprRef> parseOpTwoBars(
+    json& operandExpr, ParsedModel& parsedModel) {
+    AnyExprRef operand = parseExpr(operandExpr, parsedModel).second;
     return mpark::visit(
         [&](auto& operand) {
             typedef typename ReturnType<BaseType<decltype(operand)>>::type
                 OperandReturnType;
             return overloaded(
-                [&](SetReturning&& set) -> AnyExprRef {
-                    return make_shared<OpSetSize>(set);
+                [&](SetReturning&& set)
+                    -> pair<shared_ptr<IntDomain>, AnyExprRef> {
+                    return make_pair(fakeIntDomain,
+                                     make_shared<OpSetSize>(set));
                 },
-                [&](auto &&) -> AnyExprRef {
+                [&](auto &&) -> pair<shared_ptr<IntDomain>, AnyExprRef> {
                     cerr << "Error, not yet handling OpTwoBars with an operand "
                             "of type "
                          << TypeAsString<OperandReturnType>::value << ": "
@@ -318,8 +335,8 @@ shared_ptr<FixedArray<ExprType>> parseConstantMatrix(json& matrixExpr,
                                                      ParsedModel& parsedModel) {
     vector<ExprType> elements;
     for (auto& elementExpr : matrixExpr) {
-        ExprType element =
-            expect<ExprType>(parseExpr(elementExpr, parsedModel), [&](auto&) {
+        ExprType element = expect<ExprType>(
+            parseExpr(elementExpr, parsedModel).second, [&](auto&) {
                 cerr << "Error whilst parsing one of the elements to a "
                         "constant matrix: "
                      << elementExpr << endl;
@@ -376,9 +393,13 @@ shared_ptr<QuantifierView<ExprType>> parseQuantifierOrMatrix(
     }
 }
 
-shared_ptr<OpAnd> parseOpAnd(json& opAndArgs, ParsedModel& parsedModel) {}
-pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
-                                    ParsedModel& parsedModel) {
+pair<shared_ptr<BoolDomain>, shared_ptr<OpAnd>> parseOpAnd(
+    json& opAndArgs, ParsedModel& parsedModel) {
+    todoImpl(opAndArgs, parsedModel);
+}
+
+pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
+    json& essenceExpr, ParsedModel& parsedModel) {
     if (essenceExpr.count("Op")) {
         auto& op = essenceExpr["Op"];
         if (op.count("MkOpEq")) {
@@ -403,10 +424,13 @@ pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
     if (boolValuePair.first) {
         return make_pair(
             true,
-            mpark::visit([](auto& val) -> AnyExprRef { return move(val); },
-                         boolValuePair.second.second));
+            make_pair(
+                boolValuePair.second.first,
+                mpark::visit([](auto& val) -> AnyExprRef { return move(val); },
+                             boolValuePair.second.second)));
     }
-    return make_pair(false, ValRef<IntValue>(nullptr));
+    return make_pair(false,
+                     make_pair(fakeBoolDomain, ValRef<IntValue>(nullptr)));
 }
 
 void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
@@ -440,8 +464,8 @@ void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {
 
 void parseExprs(json& suchThat, ParsedModel& parsedModel) {
     for (auto& op : suchThat) {
-        BoolReturning constraint =
-            expect<BoolReturning>(parseExpr(op, parsedModel), [&](auto&&) {
+        BoolReturning constraint = expect<BoolReturning>(
+            parseExpr(op, parsedModel).second, [&](auto&&) {
                 cerr << "Expected Bool returning constraint within such that: "
                      << op << endl;
             });

@@ -313,6 +313,70 @@ AnyExprRef parseOpTwoBars(json& operandExpr, ParsedModel& parsedModel) {
         operand);
 }
 
+template <typename ExprType>
+shared_ptr<FixedArray<ExprType>> parseConstantMatrix(json& matrixExpr,
+                                                     ParsedModel& parsedModel) {
+    vector<ExprType> elements;
+    for (auto& elementExpr : matrixExpr) {
+        ExprType element =
+            expect<ExprType>(parseExpr(elementExpr, parsedModel), [&](auto&) {
+                cerr << "Error whilst parsing one of the elements to a "
+                        "constant matrix: "
+                     << elementExpr << endl;
+            });
+        elements.emplace_back(move(element));
+    }
+    return make_shared<FixedArray>(move(elements));
+}
+
+template <typename ExprType>
+shared_ptr<QuantifierView<ExprType>> parseComprehension(
+    json& comprExpr, ParsedModel& parsedModel) {
+    todoImpl(comprExpr, parsedModel);
+    /*
+    auto& generatorExpr = comprExpr[1];
+    AnyExprRef container = parseExpr(generatorExpr[1], parsedModel);
+    return mpark::visit(
+        [&](auto& container) {
+            typedef typename ReturnType<BaseType<decltype(container)>>::type
+                ContainerReturnType;
+            return overloaded(
+                [&](SetReturning& container) ->
+    shared_ptr<QuantifierView<ExprType>>  { auto quantifier =
+    make_shared<Quantifier<ContainerReturnType, ExprType>>(container));
+            saveIterator(generatorExpr[0], quantifier, container)
+                },
+                [&](auto &&) -> AnyExprRef {
+                    cerr << "Error, not yet handling OpTwoBars with an "
+                            "container "
+                            "of type "
+                         << TypeAsString<OperandReturnType>::value << ": "
+                         << operandExpr << endl;
+                    abort();
+                })(OperandReturnType(container));
+        },
+        container);
+        */
+}
+template <typename ExprType>
+shared_ptr<QuantifierView<ExprType>> parseQuantifierOrMatrix(
+    json& expr, ParsedModel& parsedModel) {
+    if (expr.count("AbstractLiteral")) {
+        if (expr["AbstractLiteral"].count("AbsLitMatrix")) {
+            return parseConstantMatrix<ExprType>(
+                expr["AbstractLiteral"]["AbsLitMatrix"], parsedModel);
+        } else {
+            cerr << "Not sure how to parse this type within the context of an "
+                    "argument list, expected constant matrix or quantifier.\n"
+                 << expr << endl;
+            abort();
+        }
+    } else if (expr.count("Comprehension")) {
+        return parseComprehension<ExprType>(expr["Comprehension"], parsedModel);
+    }
+}
+
+shared_ptr<OpAnd> parseOpAnd(json& opAndArgs, ParsedModel& parsedModel) {}
 pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
                                     ParsedModel& parsedModel) {
     if (essenceExpr.count("Op")) {
@@ -330,6 +394,9 @@ pair<bool, AnyExprRef> tryParseExpr(json& essenceExpr,
         if (op.count("MkOpSubsetEq")) {
             return make_pair(true,
                              parseOpSubsetEq(op["MkOpSubsetEq"], parsedModel));
+        }
+        if (op.count("MkOpAnd")) {
+            return make_pair(true, parseOpAnd(op["MkOpAnd"], parsedModel));
         }
     }
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);

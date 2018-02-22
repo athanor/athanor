@@ -16,6 +16,13 @@ shared_ptr<SetDomain> fakeSetDomain(const AnyDomainRef& ref) {
     return make_shared<SetDomain>(exactSize(0), ref);
 }
 
+template <typename DestVariant, typename Variant>
+DestVariant variantConvert(Variant&& v) {
+    return mpark::visit(
+        [](auto&& v) -> DestVariant { return forward<decltype(v)>(v); },
+        forward<Variant>(v));
+}
+
 shared_ptr<MSetDomain> fakeMSetDomain(const AnyDomainRef& ref) {
     return make_shared<MSetDomain>(exactSize(0), ref);
 }
@@ -131,13 +138,13 @@ pair<bool, pair<AnyDomainRef, AnyValRef>> tryParseValue(
     } else if (essenceExpr.count("Reference")) {
         auto& essenceReference = essenceExpr["Reference"];
         string referenceName = essenceReference[0]["Name"];
-        if (!parsedModel.vars.count(referenceName)) {
+        if (parsedModel.vars.count(referenceName)) {
+            return make_pair(true, parsedModel.vars.at(referenceName));
+        } else {
             cerr << "Found reference to value with name \"" << referenceName
                  << "\" but this does not appear to be in scope.\n"
                  << essenceExpr << endl;
             abort();
-        } else {
-            return make_pair(true, parsedModel.vars.at(referenceName));
         }
     }
     return make_pair(false,
@@ -265,20 +272,6 @@ RetType expect(Constraint&& constraint, Func&& func) {
         forward<Constraint>(constraint));
 }
 
-pair<shared_ptr<BoolDomain>, shared_ptr<OpIntEq>> parseOpIntEq(
-    json& intEqExpr, ParsedModel& parsedModel) {
-    string errorMessage =
-        "Expected int returning expression within Op Int Eq: ";
-    IntReturning left = expect<IntReturning>(
-        parseExpr(intEqExpr[0], parsedModel).second,
-        [&](auto&&) { cerr << errorMessage << intEqExpr[0]; });
-    IntReturning right = expect<IntReturning>(
-        parseExpr(intEqExpr[1], parsedModel).second,
-        [&](auto&&) { cerr << errorMessage << intEqExpr[1]; });
-    return make_pair(fakeBoolDomain,
-                     make_shared<OpIntEq>(move(left), move(right)));
-}
-
 pair<shared_ptr<IntDomain>, shared_ptr<OpMod>> parseOpMod(
     json& modExpr, ParsedModel& parsedModel) {
     string errorMessage = "Expected int returning expression within Op mod: ";
@@ -330,50 +323,119 @@ pair<shared_ptr<IntDomain>, AnyExprRef> parseOpTwoBars(
         operand);
 }
 
+pair<shared_ptr<BoolDomain>, AnyExprRef> parseOpEq(json& operandsExpr,
+                                                   ParsedModel& parsedModel) {
+    AnyExprRef left = parseExpr(operandsExpr[0], parsedModel).second;
+    AnyExprRef right = parseExpr(operandsExpr[1], parsedModel).second;
+    return mpark::visit(
+        [&](auto& left) {
+            typedef typename ReturnType<BaseType<decltype(left)>>::type
+                LeftReturnType;
+            auto errorHandler = [&] (auto&&) {
+                cerr << "Expected right operand to be of same type as left, i.e. " << TypeAsString<LeftReturnType>::value << endl;
+            };
+            return overloaded(
+                [&](IntReturning&& left)
+                    -> pair<shared_ptr<BoolDomain>, AnyExprRef> {
+                    return make_pair(fakeBoolDomain,
+                                     make_shared<OpIntEq>(
+                                         left, expect<IntReturning>(right, errorHandler)));
+                },
+                [&](auto &&) -> pair<shared_ptr<BoolDomain>, AnyExprRef> {
+                    cerr
+                        << "Error, not yet handling OpEq with operands of type "
+                        << TypeAsString<LeftReturnType>::value << ": "
+                        << operandsExpr << endl;
+                    abort();
+                })(LeftReturnType(left));
+        },
+        left);
+}
+
 template <typename ExprType>
 shared_ptr<FixedArray<ExprType>> parseConstantMatrix(json& matrixExpr,
                                                      ParsedModel& parsedModel) {
     vector<ExprType> elements;
     for (auto& elementExpr : matrixExpr) {
         ExprType element = expect<ExprType>(
-            parseExpr(elementExpr, parsedModel).second, [&](auto&) {
+            parseExpr(elementExpr, parsedModel).second, [&](auto&&) {
                 cerr << "Error whilst parsing one of the elements to a "
                         "constant matrix: "
                      << elementExpr << endl;
             });
         elements.emplace_back(move(element));
     }
-    return make_shared<FixedArray>(move(elements));
+    return make_shared<FixedArray<ExprType>>(move(elements));
 }
+
+template <typename ExprType, typename ContainerDomainType, typename Quantifier>
+void addExprToQuantifier(json& comprExpr,
+                         shared_ptr<ContainerDomainType>& containerDomain,
+                         Quantifier& quantifier, ParsedModel& parsedModel) {
+    auto& generatorExpr = comprExpr[1][0]["Generator"]["GenInExpr"];
+    string name;
+    mpark::visit(
+        [&](auto& innerDomain) {
+            typedef typename BaseType<decltype(innerDomain)>::element_type
+                InnerDomainType;
+            typedef typename AssociatedValueType<InnerDomainType>::type
+                InnerValueType;
+            name = generatorExpr[0]["Single"]["Name"];
+            auto iter = quantifier->template newIterRef<InnerValueType>();
+            parsedModel.scopedVars.emplace(name, make_pair(innerDomain, iter));
+        },
+        (containerDomain->inner));
+    quantifier->setExpression(expect<ExprType>(
+        parseExpr(comprExpr[0], parsedModel).second, [&](auto&&) {}));
+    parsedModel.scopedVars.erase(name);
+}
+
+template <typename ExprType, typename ContainerReturnType,
+          typename ContainerDomainPtrType>
+auto buildQuant(json& comprExpr, ContainerReturnType& container,
+                ContainerDomainPtrType&& domain, ParsedModel& parsedModel) {
+    auto quantifier =
+        make_shared<Quantifier<ContainerReturnType, ExprType>>(container);
+    addExprToQuantifier<ExprType>(comprExpr, domain, quantifier, parsedModel);
+    return quantifier;
+};
 
 template <typename ExprType>
 shared_ptr<QuantifierView<ExprType>> parseComprehension(
     json& comprExpr, ParsedModel& parsedModel) {
-    todoImpl(comprExpr, parsedModel);
-    /*
-    auto& generatorExpr = comprExpr[1];
-    AnyExprRef container = parseExpr(generatorExpr[1], parsedModel);
+    auto& generatorExpr = comprExpr[1][0]["Generator"]["GenInExpr"];
+
+    auto errorHandler = [&](auto&&,
+                            auto &&) -> shared_ptr<QuantifierView<ExprType>> {
+        cerr << "Error, not yet handling quantifier for this type: "
+             << generatorExpr << endl;
+        abort();
+    };
+        auto domainContainerPair = parseExpr(generatorExpr[1], parsedModel);
     return mpark::visit(
         [&](auto& container) {
             typedef typename ReturnType<BaseType<decltype(container)>>::type
                 ContainerReturnType;
             return overloaded(
-                [&](SetReturning& container) ->
-    shared_ptr<QuantifierView<ExprType>>  { auto quantifier =
-    make_shared<Quantifier<ContainerReturnType, ExprType>>(container));
-            saveIterator(generatorExpr[0], quantifier, container)
+                [&](SetReturning&& set,
+                    auto &&) -> shared_ptr<QuantifierView<ExprType>> {
+                    auto& domain = mpark::get<shared_ptr<SetDomain>>(
+                        domainContainerPair.first);
+
+                    return buildQuant<ExprType>(comprExpr, set, domain,
+                                                parsedModel);
                 },
-                [&](auto &&) -> AnyExprRef {
-                    cerr << "Error, not yet handling OpTwoBars with an "
-                            "container "
-                            "of type "
-                         << TypeAsString<OperandReturnType>::value << ": "
-                         << operandExpr << endl;
-                    abort();
-                })(OperandReturnType(container));
+                [&](MSetReturning&& mSet, auto&&) -> shared_ptr<QuantifierView<ExprType>> {
+                    auto& domain = mpark::get<shared_ptr<MSetDomain>>(
+                        domainContainerPair.first);
+
+                    return buildQuant<ExprType>(comprExpr, mSet, domain,
+                                                parsedModel);
+                },
+                move(errorHandler))(ContainerReturnType(container),
+                                    ContainerReturnType(container));
         },
-        container);
-        */
+        domainContainerPair.second);
 }
 template <typename ExprType>
 shared_ptr<QuantifierView<ExprType>> parseQuantifierOrMatrix(
@@ -382,20 +444,14 @@ shared_ptr<QuantifierView<ExprType>> parseQuantifierOrMatrix(
         if (expr["AbstractLiteral"].count("AbsLitMatrix")) {
             return parseConstantMatrix<ExprType>(
                 expr["AbstractLiteral"]["AbsLitMatrix"], parsedModel);
-        } else {
-            cerr << "Not sure how to parse this type within the context of an "
-                    "argument list, expected constant matrix or quantifier.\n"
-                 << expr << endl;
-            abort();
         }
     } else if (expr.count("Comprehension")) {
         return parseComprehension<ExprType>(expr["Comprehension"], parsedModel);
     }
-}
-
-pair<shared_ptr<BoolDomain>, shared_ptr<OpAnd>> parseOpAnd(
-    json& opAndArgs, ParsedModel& parsedModel) {
-    todoImpl(opAndArgs, parsedModel);
+    cerr << "Not sure how to parse this type within the context of an "
+            "argument list, expected constant matrix or quantifier.\n"
+         << expr << endl;
+    abort();
 }
 
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
@@ -403,7 +459,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     if (essenceExpr.count("Op")) {
         auto& op = essenceExpr["Op"];
         if (op.count("MkOpEq")) {
-            return make_pair(true, parseOpIntEq(op["MkOpEq"], parsedModel));
+            return make_pair(true, parseOpEq(op["MkOpEq"], parsedModel));
         }
         if (op.count("MkOpMod")) {
             return make_pair(true, parseOpMod(op["MkOpMod"], parsedModel));
@@ -417,18 +473,34 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
                              parseOpSubsetEq(op["MkOpSubsetEq"], parsedModel));
         }
         if (op.count("MkOpAnd")) {
-            return make_pair(true, parseOpAnd(op["MkOpAnd"], parsedModel));
+            return make_pair(
+                true, make_pair(fakeBoolDomain,
+                                make_shared<OpAnd>(
+                                    parseQuantifierOrMatrix<BoolReturning>(
+                                        op["MkOpAnd"], parsedModel))));
         }
     }
+
+    if (essenceExpr.count("Reference")) {
+        auto& essenceReference = essenceExpr["Reference"];
+        string referenceName = essenceReference[0]["Name"];
+        if (parsedModel.scopedVars.count(referenceName)) {
+            auto& domainVarPair = parsedModel.scopedVars.at(referenceName);
+            return make_pair(
+                true,
+                make_pair(domainVarPair.first,
+                          variantConvert<AnyExprRef>(domainVarPair.second)));
+        }
+    }
+
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
     if (boolValuePair.first) {
         return make_pair(
             true,
-            make_pair(
-                boolValuePair.second.first,
-                mpark::visit([](auto& val) -> AnyExprRef { return move(val); },
-                             boolValuePair.second.second)));
+            make_pair(boolValuePair.second.first,
+                      variantConvert<AnyExprRef>(boolValuePair.second.second)));
     }
+
     return make_pair(false,
                      make_pair(fakeBoolDomain, ValRef<IntValue>(nullptr)));
 }
@@ -490,7 +562,5 @@ ParsedModel parseModelFromJson(istream& is) {
             parseExprs(statement["SuchThat"], parsedModel);
         }
     }
-    cout << parsedModel.vars << endl;
-    exit(0);
     return parsedModel;
 }

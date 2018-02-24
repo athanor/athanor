@@ -16,6 +16,10 @@ shared_ptr<SetDomain> fakeSetDomain(const AnyDomainRef& ref) {
     return make_shared<SetDomain>(exactSize(0), ref);
 }
 
+shared_ptr<MSetDomain> fakeMSetDomain(const AnyDomainRef& ref) {
+    return make_shared<MSetDomain>(exactSize(0), ref);
+}
+
 template <typename DestVariant, typename Variant>
 DestVariant variantConvert(Variant&& v) {
     return mpark::visit(
@@ -23,20 +27,16 @@ DestVariant variantConvert(Variant&& v) {
         forward<Variant>(v));
 }
 
-shared_ptr<MSetDomain> fakeMSetDomain(const AnyDomainRef& ref) {
-    return make_shared<MSetDomain>(exactSize(0), ref);
-}
-
 ParsedModel::ParsedModel() : builder(make_unique<ModelBuilder>()) {}
-pair<bool, pair<AnyDomainRef, AnyValRef>> tryParseValue(
+pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
     json& essenceExpr, ParsedModel& parsedModel);
 pair<bool, AnyDomainRef> tryParseDomain(json& essenceExpr,
                                         ParsedModel& parsedModel);
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     json& essenceExpr, ParsedModel& parsedModel);
 
-pair<AnyDomainRef, AnyValRef> parseValue(json& essenceExpr,
-                                         ParsedModel& parsedModel) {
+pair<AnyDomainRef, AnyExprRef> parseValue(json& essenceExpr,
+                                          ParsedModel& parsedModel) {
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
     if (boolValuePair.first) {
         return move(boolValuePair.second);
@@ -46,9 +46,27 @@ pair<AnyDomainRef, AnyValRef> parseValue(json& essenceExpr,
     }
 }
 
+template <typename T>
+ValRef<T> toValRefOverload(const ValRef<T>& ref) {
+    return ref;
+}
+template <typename Op, typename ValueType = typename AssociatedValueType<
+                           typename ReturnType<Op>::type>::type>
+ValRef<ValueType> toValRefOverload(const Op& op) {
+    evaluate(*op);
+    ValRef<ValueType> val = make<ValueType>();
+    typedef typename AssociatedViewType<ValueType>::type View;
+    static_cast<View&>(*val) = static_cast<View&>(*op);
+    return val;
+}
+AnyValRef toValRef(const AnyExprRef& op) {
+    return mpark::visit(
+        [&](auto& op) -> AnyValRef { return toValRefOverload(op); }, op);
+}
+
 int64_t parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel) {
     return mpark::get<ValRef<IntValue>>(
-               parseValue(essenceExpr, parsedModel).second)
+               toValRef(parseValue(essenceExpr, parsedModel).second))
         ->value;
 }
 
@@ -88,8 +106,8 @@ pair<shared_ptr<SetDomain>, ValRef<SetValue>> parseConstantSet(
                 innerDomain)>::element_type>::type InnerValueType;
             val->setInnerType<InnerValueType>();
             for (size_t i = 0; i < essenceSetConstant.size(); ++i) {
-                val->addMember(mpark::get<ValRef<InnerValueType>>(
-                    parseValue(essenceSetConstant[i], parsedModel).second));
+                val->addMember(mpark::get<ValRef<InnerValueType>>(toValRef(
+                    parseValue(essenceSetConstant[i], parsedModel).second)));
             }
             return make_pair(make_shared<SetDomain>(
                                  exactSize(val->numberElements()), innerDomain),
@@ -98,48 +116,30 @@ pair<shared_ptr<SetDomain>, ValRef<SetValue>> parseConstantSet(
         parseValue(essenceSetConstant[0], parsedModel).first);
 }
 
-pair<AnyDomainRef, AnyValRef> parseAbstractLiteral(json& abstractLit,
-                                                   ParsedModel& parsedModel) {
-    if (abstractLit.count("AbsLitSet")) {
-        return parseConstantSet(abstractLit["AbsLitSet"], parsedModel);
-    } else {
-        cerr << "Not sure what type of abstract literal this is: "
-             << abstractLit << endl;
-        abort();
-    }
-}
-
-pair<AnyDomainRef, AnyValRef> parseConstant(json& essenceConstant,
-                                            ParsedModel&) {
-    if (essenceConstant.count("ConstantInt")) {
-        auto val = make<IntValue>();
-        val->value = essenceConstant["ConstantInt"];
-        return make_pair(fakeIntDomain, val);
-    } else if (essenceConstant.count("ConstantBool")) {
-        auto val = make<BoolValue>();
-        val->violation = bool(essenceConstant["ConstantBool"]);
-        return make_pair(fakeBoolDomain, val);
-    } else {
-        cerr << "Not sure what type of constant this is: " << essenceConstant
-             << endl;
-        abort();
-    }
-}
-
-pair<bool, pair<AnyDomainRef, AnyValRef>> tryParseValue(
+pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
     json& essenceExpr, ParsedModel& parsedModel) {
     if (essenceExpr.count("Constant")) {
-        return make_pair(true,
-                         parseConstant(essenceExpr["Constant"], parsedModel));
+        return tryParseValue(essenceExpr["Constant"], parsedModel);
+    } else if (essenceExpr.count("ConstantAbstract")) {
+        return tryParseValue(essenceExpr["ConstantAbstract"], parsedModel);
     } else if (essenceExpr.count("AbstractLiteral")) {
+        return tryParseValue(essenceExpr["AbstractLiteral"], parsedModel);
+    } else if (essenceExpr.count("ConstantInt")) {
+        auto val = make<IntValue>();
+        val->value = essenceExpr["ConstantInt"];
+        return make_pair(true, make_pair(fakeIntDomain, val));
+    } else if (essenceExpr.count("ConstantBool")) {
+        auto val = make<BoolValue>();
+        val->violation = (bool(essenceExpr["ConstantBool"])) ? 0 : 1;
+        return make_pair(true, make_pair(fakeBoolDomain, val));
+    } else if (essenceExpr.count("AbsLitSet")) {
         return make_pair(
-            true,
-            parseAbstractLiteral(essenceExpr["AbstractLiteral"], parsedModel));
+            true, parseConstantSet(essenceExpr["AbsLitSet"], parsedModel));
     } else if (essenceExpr.count("Reference")) {
         auto& essenceReference = essenceExpr["Reference"];
         string referenceName = essenceReference[0]["Name"];
-        if (parsedModel.vars.count(referenceName)) {
-            return make_pair(true, parsedModel.vars.at(referenceName));
+        if (parsedModel.namedExprs.count(referenceName)) {
+            return make_pair(true, parsedModel.namedExprs.at(referenceName));
         } else {
             cerr << "Found reference to value with name \"" << referenceName
                  << "\" but this does not appear to be in scope.\n"
@@ -149,7 +149,7 @@ pair<bool, pair<AnyDomainRef, AnyValRef>> tryParseValue(
     }
     return make_pair(false,
                      make_pair(AnyDomainRef(shared_ptr<IntDomain>(nullptr)),
-                               AnyValRef(ValRef<IntValue>(nullptr))));
+                               AnyExprRef(ValRef<IntValue>(nullptr))));
 }
 
 shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
@@ -386,12 +386,12 @@ void addExprToQuantifier(json& comprExpr,
                 InnerValueType;
             name = generatorExpr[0]["Single"]["Name"];
             auto iter = quantifier->template newIterRef<InnerValueType>();
-            parsedModel.scopedVars.emplace(name, make_pair(innerDomain, iter));
+            parsedModel.namedExprs.emplace(name, make_pair(innerDomain, iter));
         },
         (containerDomain->inner));
     quantifier->setExpression(expect<ExprType>(
         parseExpr(comprExpr[0], parsedModel).second, [&](auto&&) {}));
-    parsedModel.scopedVars.erase(name);
+    parsedModel.namedExprs.erase(name);
 }
 
 template <typename ExprType, typename ContainerReturnType,
@@ -493,26 +493,10 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
         }
     }
 
-    if (essenceExpr.count("Reference")) {
-        auto& essenceReference = essenceExpr["Reference"];
-        string referenceName = essenceReference[0]["Name"];
-        if (parsedModel.scopedVars.count(referenceName)) {
-            auto& domainVarPair = parsedModel.scopedVars.at(referenceName);
-            return make_pair(
-                true,
-                make_pair(domainVarPair.first,
-                          variantConvert<AnyExprRef>(domainVarPair.second)));
-        }
-    }
-
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
     if (boolValuePair.first) {
-        return make_pair(
-            true,
-            make_pair(boolValuePair.second.first,
-                      variantConvert<AnyExprRef>(boolValuePair.second.second)));
+        return boolValuePair;
     }
-
     return make_pair(false,
                      make_pair(fakeBoolDomain, ValRef<IntValue>(nullptr)));
 }
@@ -521,7 +505,7 @@ void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
     string lettingName = lettingArray[0]["Name"];
     auto boolValuePair = tryParseValue(lettingArray[1], parsedModel);
     if (boolValuePair.first) {
-        parsedModel.vars.emplace(lettingName, boolValuePair.second);
+        parsedModel.namedExprs.emplace(lettingName, boolValuePair.second);
         return;
     }
     if (lettingArray[1].count("Domain")) {
@@ -537,11 +521,11 @@ void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {
     auto findDomain = parseDomain(findArray[2], parsedModel);
     mpark::visit(
         [&](auto& domainImpl) {
-            parsedModel.vars.emplace(
+            parsedModel.namedExprs.emplace(
                 findName,
                 make_pair(
                     domainImpl,
-                    AnyValRef(parsedModel.builder->addVariable(domainImpl))));
+                    AnyExprRef(parsedModel.builder->addVariable(domainImpl))));
         },
         findDomain);
 }

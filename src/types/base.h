@@ -93,7 +93,7 @@ struct TypeAsString;
         typedef name##Value type;                                        \
     };                                                                   \
     template <>                                                          \
-    struct AssociatedViewType<name##Domain> {                            \
+    struct AssociatedViewType<name##Value> {                             \
         typedef name##View type;                                         \
     };                                                                   \
     template <>                                                          \

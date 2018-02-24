@@ -1,6 +1,7 @@
 
 #ifndef SRC_OPERATORS_OPSETINTERSECT_H_
 #define SRC_OPERATORS_OPSETINTERSECT_H_
+/*
 #include "operators/operatorBase.h"
 #include "types/set.h"
 template <bool isLeft>
@@ -17,5 +18,5 @@ struct OpSetIntersect : public SetView {
     OpSetIntersect(OpSetIntersect&& other);
     ~OpSetIntersect() { stopTriggering(*this); }
 };
-
+*/
 #endif /* SRC_OPERATORS_OPSETINTERSECT_H_ */

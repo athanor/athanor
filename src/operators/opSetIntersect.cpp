@@ -1,4 +1,5 @@
-#include "operators/opSetIntersect.h"
+
+/*#include "operators/opSetIntersect.h"
 #include <iostream>
 #include <memory>
 #include "types/set.h"
@@ -187,3 +188,5 @@ std::ostream& dumpState(std::ostream& os, const OpSetIntersect&) {
     assert(false);
     return os;
 }
+
+*/

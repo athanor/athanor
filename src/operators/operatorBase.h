@@ -8,11 +8,11 @@
 #include "types/base.h"
 #include "utils/cachedSharedPtr.h"
 
-#define buildForOperators(f, sep)                                           \
-    f(BoolValue) sep f(IntValue) sep f(SetValue) sep f(MSetValue)           \
-        sep f(OpSetSize) sep f(OpSum) sep f(OpAnd) sep f(OpSetNotEq)        \
-            sep f(OpSetIntersect) sep f(OpIntEq) sep f(OpMod) sep f(OpProd) \
-                sep f(OpOr) sep f(OpSubsetEq)
+#define buildForOperators(f, sep)                                    \
+    f(BoolValue) sep f(IntValue) sep f(SetValue) sep f(MSetValue)    \
+        sep f(OpSetSize) sep f(OpSum) sep f(OpAnd) sep f(OpSetNotEq) \
+            sep f(OpIntEq) sep f(OpMod) sep f(OpProd) sep f(OpOr)    \
+                sep f(OpSubsetEq)
 
 #define structDecls(name) struct name;
 buildForOperators(structDecls, );
@@ -32,15 +32,26 @@ using IntReturning =
                    std::shared_ptr<OpMod>, std::shared_ptr<OpProd>>;
 
 // set returning
-using SetReturning = mpark::variant<ValRef<SetValue>, IterRef<SetValue>,
-                                    std::shared_ptr<OpSetIntersect>>;
+using SetReturning = mpark::variant<ValRef<SetValue>, IterRef<SetValue>>;
 
 // MSet returning
 using MSetReturning = mpark::variant<ValRef<MSetValue>, IterRef<MSetValue>>;
 
+template <typename T>
+struct ValRefOrPtr {
+    template <typename Op>
+    static typename std::enable_if<IsValueType<Op>::value, ValRef<Op>>::type
+    test();
+    template <typename Op>
+    static typename std::enable_if<!IsValueType<Op>::value,
+                                   std::shared_ptr<Op>>::type
+    test();
+    typedef decltype(ValRefOrPtr<T>::test<T>()) type;
+};
+
 // variant to hold any type of constraint
-#define makeOpRef(Op) std::shared_ptr<Op>
-#define makeOpRefFromVal(name) ValRef<name##Value>, IterRef<name##Value>
+#define makeOpRef(Op) typename ValRefOrPtr<Op>::type
+#define makeOpRefFromVal(name) IterRef<name##Value>
 using AnyExprRef =
     mpark::variant<buildForOperators(makeOpRef, MACRO_COMMA),
                    buildForAllTypes(makeOpRefFromVal, MACRO_COMMA)>;

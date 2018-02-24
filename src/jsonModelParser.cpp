@@ -331,15 +331,18 @@ pair<shared_ptr<BoolDomain>, AnyExprRef> parseOpEq(json& operandsExpr,
         [&](auto& left) {
             typedef typename ReturnType<BaseType<decltype(left)>>::type
                 LeftReturnType;
-            auto errorHandler = [&] (auto&&) {
-                cerr << "Expected right operand to be of same type as left, i.e. " << TypeAsString<LeftReturnType>::value << endl;
+            auto errorHandler = [&](auto&&) {
+                cerr << "Expected right operand to be of same type as left, "
+                        "i.e. "
+                     << TypeAsString<LeftReturnType>::value << endl;
             };
             return overloaded(
                 [&](IntReturning&& left)
                     -> pair<shared_ptr<BoolDomain>, AnyExprRef> {
-                    return make_pair(fakeBoolDomain,
-                                     make_shared<OpIntEq>(
-                                         left, expect<IntReturning>(right, errorHandler)));
+                    return make_pair(
+                        fakeBoolDomain,
+                        make_shared<OpIntEq>(
+                            left, expect<IntReturning>(right, errorHandler)));
                 },
                 [&](auto &&) -> pair<shared_ptr<BoolDomain>, AnyExprRef> {
                     cerr
@@ -356,7 +359,8 @@ template <typename ExprType>
 shared_ptr<FixedArray<ExprType>> parseConstantMatrix(json& matrixExpr,
                                                      ParsedModel& parsedModel) {
     vector<ExprType> elements;
-    for (auto& elementExpr : matrixExpr) {
+
+    for (auto& elementExpr : matrixExpr[1]) {
         ExprType element = expect<ExprType>(
             parseExpr(elementExpr, parsedModel).second, [&](auto&&) {
                 cerr << "Error whilst parsing one of the elements to a "
@@ -411,7 +415,7 @@ shared_ptr<QuantifierView<ExprType>> parseComprehension(
              << generatorExpr << endl;
         abort();
     };
-        auto domainContainerPair = parseExpr(generatorExpr[1], parsedModel);
+    auto domainContainerPair = parseExpr(generatorExpr[1], parsedModel);
     return mpark::visit(
         [&](auto& container) {
             typedef typename ReturnType<BaseType<decltype(container)>>::type
@@ -425,7 +429,8 @@ shared_ptr<QuantifierView<ExprType>> parseComprehension(
                     return buildQuant<ExprType>(comprExpr, set, domain,
                                                 parsedModel);
                 },
-                [&](MSetReturning&& mSet, auto&&) -> shared_ptr<QuantifierView<ExprType>> {
+                [&](MSetReturning&& mSet,
+                    auto &&) -> shared_ptr<QuantifierView<ExprType>> {
                     auto& domain = mpark::get<shared_ptr<MSetDomain>>(
                         domainContainerPair.first);
 

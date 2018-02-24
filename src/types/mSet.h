@@ -147,8 +147,7 @@ struct MSetValue : public MSetView, public ValBase {
         auto& members = getMembers<InnerValueType>();
         debug_log("MSet adding value " << *member);
         members.emplace_back(member);
-        valBase(*members.back()).container =
-            (this->container == &constantPool) ? &constantPool : this;
+        valBase(*members.back()).container = this;
         valBase(*members.back()).id = members.size() - 1;
     }
 };

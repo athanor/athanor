@@ -49,6 +49,8 @@ void deepCopyImpl(const SetValue& src,
             ++index;
         }
     }
+    cout << "after removing some values during copy, target is constant: "
+         << (target.container == &constantPool) << endl;
     for (auto& member : srcMemnersImpl) {
         if (!target.getHashIndexMap().count(getValueHash(*member))) {
             target.addMember(deepCopy(*member));
@@ -241,43 +243,32 @@ void SetValue::assertValidVarBases() {
                 return;
             }
             bool success = true;
-            bool foundConstant =
-                valBase(*valMembersImpl[0]).container == &constantPool;
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
-                if (foundConstant !=
-                    (valBase(*valMembersImpl[i]).container == &constantPool)) {
-                    cerr << "Mix of constant and non constant members."
-                            "found in set.\n";
+                if (valBase(*valMembersImpl[i]).container != this) {
                     success = false;
-                    cerr << "Is Member 0 constant? " << foundConstant << endl;
-                    cerr << "Is Member " << i << " constant? "
-                         << (valBase(*valMembersImpl[i]).container ==
-                             &constantPool)
-                         << endl;
-                    break;
-                } else if (!foundConstant) {
-                    size_t id = valBase(*valMembersImpl[i]).id;
-                    if (i != id) {
-                        cerr << "Error: found id " << id
-                             << " when it should be " << i << endl;
-                        cerr << "ids are: ";
-                        transform(
-                            begin(valMembersImpl), end(valMembersImpl),
-                            ostream_iterator<size_t>(cerr, ","),
-                            [](auto& member) { return valBase(*member).id; });
-                        success = false;
-                        break;
-                    } else if (valBase(*valMembersImpl[i]).container != this) {
-                        cerr << "member " << i
-                             << "'s container does not point to this set."
-                             << endl;
-                    }
+                    cerr << "member " << i
+                         << "'s container does not point to this set." << endl;
                 }
             }
             if (!success) {
                 cerr << "Members: " << valMembersImpl << endl;
                 cerr << "memberHashes: " << getHashIndexMap() << endl;
+                printVarBases();
                 assert(false);
+            }
+        },
+        members);
+}
+
+void SetValue::printVarBases() {
+    mpark::visit(
+        [&](auto& valMembersImpl) {
+            cout << "parent is constant: " << (this->container == &constantPool)
+                 << endl;
+            for (auto& member : valMembersImpl) {
+                cout << "val id: " << valBase(*member).id << endl;
+                cout << "is constant: "
+                     << (valBase(*member).container == &constantPool) << endl;
             }
         },
         members);

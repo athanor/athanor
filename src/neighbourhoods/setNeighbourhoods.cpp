@@ -22,7 +22,6 @@ void assignRandomValueInDomainImpl(const SetDomain& domain,
     }
     while (newNumberElements > val.numberElements()) {
         auto newMember = constructValueFromDomain(*innerDomainPtr);
-        valBase(*newMember).container = &val;
         do {
             assignRandomValueInDomain(*innerDomainPtr, *newMember);
         } while (!val.addMember(newMember));

@@ -249,8 +249,7 @@ struct SetValue : public SetView, public ValBase {
     template <typename InnerValueType>
     inline bool addMember(const ValRef<InnerValueType>& member) {
         if (SetView::addMember(member)) {
-            valBase(*member).container =
-                (this->container == &constantPool) ? &constantPool : this;
+            valBase(*member).container = this;
             valBase(*member).id = numberElements() - 1;
             debug_code(assertValidVarBases());
             return true;
@@ -264,8 +263,7 @@ struct SetValue : public SetView, public ValBase {
                              Func&& func) {
         if (SetView::addMember(member)) {
             if (func()) {
-                valBase(*member).container =
-                    (this->container == &constantPool) ? &constantPool : this;
+                valBase(*member).container = this;
                 valBase(*member).id = numberElements() - 1;
                 SetView::notifyMemberAdded(member);
                 return true;
@@ -350,6 +348,8 @@ struct SetValue : public SetView, public ValBase {
             members.emplace<ValRefVec<InnerValueType>>();
         }
     }
+
+    void printVarBases();
 };
 
 #endif /* SRC_TYPES_SET_H_ */

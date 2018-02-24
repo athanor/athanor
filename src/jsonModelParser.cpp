@@ -484,6 +484,13 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
                                     parseQuantifierOrMatrix<BoolReturning>(
                                         op["MkOpAnd"], parsedModel))));
         }
+        if (op.count("MkOpOr")) {
+            return make_pair(
+                true, make_pair(fakeBoolDomain,
+                                make_shared<OpOr>(
+                                    parseQuantifierOrMatrix<BoolReturning>(
+                                        op["MkOpOr"], parsedModel))));
+        }
     }
 
     if (essenceExpr.count("Reference")) {

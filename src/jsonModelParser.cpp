@@ -35,6 +35,17 @@ pair<bool, AnyDomainRef> tryParseDomain(json& essenceExpr,
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     json& essenceExpr, ParsedModel& parsedModel);
 
+pair<AnyDomainRef, AnyExprRef> parseExpr(json& essenceExpr,
+                                         ParsedModel& parsedModel) {
+    auto boolConstraintPair = tryParseExpr(essenceExpr, parsedModel);
+    if (boolConstraintPair.first) {
+        return move(boolConstraintPair.second);
+    } else {
+        cerr << "Failed to parse expression: " << essenceExpr << endl;
+        abort();
+    }
+}
+
 pair<AnyDomainRef, AnyExprRef> parseValue(json& essenceExpr,
                                           ParsedModel& parsedModel) {
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
@@ -66,19 +77,8 @@ AnyValRef toValRef(const AnyExprRef& op) {
 
 int64_t parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel) {
     return mpark::get<ValRef<IntValue>>(
-               toValRef(parseValue(essenceExpr, parsedModel).second))
+               toValRef(parseExpr(essenceExpr, parsedModel).second))
         ->value;
-}
-
-pair<AnyDomainRef, AnyExprRef> parseExpr(json& essenceExpr,
-                                         ParsedModel& parsedModel) {
-    auto boolConstraintPair = tryParseExpr(essenceExpr, parsedModel);
-    if (boolConstraintPair.first) {
-        return move(boolConstraintPair.second);
-    } else {
-        cerr << "Failed to parse expression: " << essenceExpr << endl;
-        abort();
-    }
 }
 
 AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {
@@ -107,7 +107,7 @@ pair<shared_ptr<SetDomain>, ValRef<SetValue>> parseConstantSet(
             val->setInnerType<InnerValueType>();
             for (size_t i = 0; i < essenceSetConstant.size(); ++i) {
                 val->addMember(mpark::get<ValRef<InnerValueType>>(toValRef(
-                    parseValue(essenceSetConstant[i], parsedModel).second)));
+                    parseExpr(essenceSetConstant[i], parsedModel).second)));
             }
             return make_pair(make_shared<SetDomain>(
                                  exactSize(val->numberElements()), innerDomain),

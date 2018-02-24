@@ -491,6 +491,27 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
                                     parseQuantifierOrMatrix<BoolReturning>(
                                         op["MkOpOr"], parsedModel))));
         }
+        if (op.count("MkOpOr")) {
+            return make_pair(
+                true, make_pair(fakeBoolDomain,
+                                make_shared<OpOr>(
+                                    parseQuantifierOrMatrix<BoolReturning>(
+                                        op["MkOpOr"], parsedModel))));
+        }
+        if (op.count("MkOpSum")) {
+            return make_pair(
+                true, make_pair(fakeIntDomain,
+                                make_shared<OpSum>(
+                                    parseQuantifierOrMatrix<IntReturning>(
+                                        op["MkOpSum"], parsedModel))));
+        }
+        if (op.count("MkOpProduct")) {
+            return make_pair(
+                true, make_pair(fakeIntDomain,
+                                make_shared<OpProd>(
+                                    parseQuantifierOrMatrix<IntReturning>(
+                                        op["MkOpProduct"], parsedModel))));
+        }
     }
 
     auto boolValuePair = tryParseValue(essenceExpr, parsedModel);

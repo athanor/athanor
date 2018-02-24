@@ -268,6 +268,8 @@ struct SetValue : public SetView, public ValBase {
                 SetView::notifyMemberAdded(member);
                 return true;
             } else {
+                SetView::removeMember<InnerValueType>(numberElements() - 1);
+                valBase(*member).container = NULL;
             }
         }
         return false;

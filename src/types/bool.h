@@ -39,12 +39,16 @@ template <>
 struct DefinedTrigger<BoolValue> : public BoolTrigger {
     ValRef<BoolValue> val;
     DefinedTrigger(const ValRef<BoolValue>& val) : val(val) {}
-    inline void possibleValueChange(u_int64_t) {}
+    inline void possibleValueChange(u_int64_t) final {}
     inline void valueChanged(u_int64_t violation) {
         val->changeValue([&]() {
             val->violation = violation;
             return true;
         });
+    }
+    void iterHasNewValue(const BoolValue&, const ValRef<BoolValue>&) final {
+        assert(false);
+        abort();
     }
 };
 

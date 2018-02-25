@@ -374,6 +374,10 @@ struct DefinedTrigger<SetValue> : public SetTrigger {
     }
 
     void setValueChanged(const SetView& newValue) { todoImpl(newValue); }
+    void iterHasNewValue(const SetValue&, const ValRef<SetValue>&) final {
+        assert(false);
+        abort();
+    }
 };
 
 #endif /* SRC_TYPES_SET_H_ */

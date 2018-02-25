@@ -139,8 +139,11 @@ class HillClimber {
         std::cout << std::endl;
         std::cout << stats << std::endl;
 
-        for (auto& v : model.variables) {
-            prettyPrint(std::cout << "var: ", v.second) << std::endl;
+        for (size_t i = 0; i < model.variables.size(); ++i) {
+            auto& v = model.variables[i];
+            prettyPrint(std::cout << "var: " << model.variableNames[i] << ": ",
+                        v.second)
+                << std::endl;
         }
         debug_code(debug_log("CSP state:");
                    dumpState(std::cout, model.csp) << std::endl;

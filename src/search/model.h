@@ -16,6 +16,7 @@ enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
 struct Model {
     friend ModelBuilder;
     std::vector<std::pair<AnyDomainRef, AnyValRef>> variables;
+    std::vector<std::string> variableNames;
     std::vector<Neighbourhood> neighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
@@ -26,12 +27,14 @@ struct Model {
 
    private:
     Model(std::vector<std::pair<AnyDomainRef, AnyValRef>> variables,
+          std::vector<std::string> variableNames,
           std::vector<Neighbourhood> neighbourhoods,
           std::vector<int> neighbourhoodVarMapping,
           std::vector<std::vector<int>> varNeighbourhoodMapping,
           std::vector<BoolReturning> constraints, IntReturning objective,
           OptimiseMode optimiseMode)
         : variables(std::move(variables)),
+          variableNames(std::move(variableNames)),
 
           neighbourhoods(std::move(neighbourhoods)),
           neighbourhoodVarMapping(std::move(neighbourhoodVarMapping)),
@@ -44,6 +47,7 @@ struct Model {
 
 class ModelBuilder {
     std::vector<std::pair<AnyDomainRef, AnyValRef>> variables;
+    std::vector<std::string> variableNames;
     std::vector<BoolReturning> constraints;
     IntReturning objective = constructValueFromDomain(
         IntDomain({intBound(0, 0)}));  // non applicable default
@@ -55,18 +59,25 @@ class ModelBuilder {
     ModelBuilder() {}
 
     inline void addConstraint(BoolReturning constraint) {
-        constraints.emplace_back(std::move(constraint));
+        if (constraintHandledByDefine(constraint)) {
+            return;
+        } else {
+            constraints.emplace_back(std::move(constraint));
+        }
     }
+
     template <typename DomainPtrType,
               typename ValueType = typename AssociatedValueType<
                   typename DomainPtrType::element_type>::type>
-    inline ValRef<ValueType> addVariable(const DomainPtrType& domainImpl) {
+    inline ValRef<ValueType> addVariable(std::string name,
+                                         const DomainPtrType& domainImpl) {
         variables.emplace_back(AnyDomainRef(domainImpl),
                                AnyValRef(ValRef<ValueType>(nullptr)));
         auto& val = variables.back().second.emplace<ValRef<ValueType>>(
             constructValueFromDomain(*domainImpl));
         valBase(*val).id = variables.size() - 1;
         valBase(*val).container = NULL;
+        variableNames.emplace_back(std::move(name));
         return val;
     }
 
@@ -80,6 +91,11 @@ class ModelBuilder {
         std::vector<int> neighbourhoodVarMapping;
         std::vector<std::vector<int>> varNeighbourhoodMapping;
         for (size_t i = 0; i < variables.size(); ++i) {
+            if (mpark::visit(
+                    [](auto& val) { return val->container == &constantPool; },
+                    variables[i].second)) {
+                continue;
+            }
             auto& domain = variables[i].first;
             size_t previousNumberNeighbourhoods = neighbourhoods.size();
             generateNeighbourhoods(domain, neighbourhoods);
@@ -93,10 +109,41 @@ class ModelBuilder {
                       previousNumberNeighbourhoods);
         }
         assert(neighbourhoods.size() > 0);
-        return Model(std::move(variables), std::move(neighbourhoods),
+        return Model(std::move(variables), std::move(variableNames),
+                     std::move(neighbourhoods),
                      std::move(neighbourhoodVarMapping),
                      std::move(varNeighbourhoodMapping), std::move(constraints),
                      std::move(objective), optimiseMode);
+    }
+    template <typename T, typename Variant>
+    inline ValRef<T>* asValRef(Variant& v) {
+        return mpark::get_if<ValRef<T>>(&v);
+    }
+
+    inline bool constraintHandledByDefine(BoolReturning& constraint) {
+        return mpark::visit(
+            overloaded(
+                [&](std::shared_ptr<OpIntEq>& op) {
+                    auto l = asValRef<IntValue>(op->left);
+                    auto r = asValRef<IntValue>(op->right);
+                    if (l && (*l)->container != &constantPool) {
+                        define(*l, op->right);
+                        return true;
+                    } else if (r && (*r)->container != &constantPool) {
+                        define(*r, op->left);
+                        return true;
+                    }
+                    return false;
+                },
+                [&](auto&) { return false; }),
+            constraint);
+    }
+
+    template <typename ValueType, typename ReturningType = typename ReturnType<
+                                      ValRef<ValueType>>::type>
+    void define(ValRef<ValueType> val, ReturningType expr) {
+        addTrigger(expr, std::make_shared<DefinedTrigger<ValueType>>(val));
+        val->container = &constantPool;
     }
 };
 #endif /* SRC_SEARCH_MODEL_H_ */

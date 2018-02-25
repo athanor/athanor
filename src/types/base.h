@@ -1,5 +1,6 @@
 #ifndef SRC_TYPES_BASE_H_
 #define SRC_TYPES_BASE_H_
+#include <cassert>
 #include <functional>
 #include <iostream>
 #include <limits>

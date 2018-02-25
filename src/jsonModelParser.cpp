@@ -543,10 +543,9 @@ void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {
     mpark::visit(
         [&](auto& domainImpl) {
             parsedModel.namedExprs.emplace(
-                findName,
-                make_pair(
-                    domainImpl,
-                    AnyExprRef(parsedModel.builder->addVariable(domainImpl))));
+                findName, make_pair(domainImpl,
+                                    AnyExprRef(parsedModel.builder->addVariable(
+                                        findName, domainImpl))));
         },
         findDomain);
 }

@@ -171,6 +171,11 @@ struct DefinedTrigger<MSetValue> : public MSetTrigger {
     }
 
     void mSetValueChanged(const MSetView& newValue) { todoImpl(newValue); }
+
+    void iterHasNewValue(const MSetValue&, const ValRef<MSetValue>&) final {
+        assert(false);
+        abort();
+    }
 };
 
 #endif /* SRC_TYPES_MSET_H_ */

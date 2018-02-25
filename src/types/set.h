@@ -8,6 +8,7 @@
 #include "types/sizeAttr.h"
 #include "types/typeOperations.h"
 #include "utils/hashUtils.h"
+#include "utils/ignoreUnused.h"
 
 struct SetDomain {
     SizeAttr sizeAttr;
@@ -352,6 +353,27 @@ struct SetValue : public SetView, public ValBase {
     }
 
     void printVarBases();
+};
+
+template <>
+struct DefinedTrigger<SetValue> : public SetTrigger {
+    ValRef<SetValue> val;
+    DefinedTrigger(const ValRef<SetValue>& val) : val(val) {}
+    inline void valueRemoved(u_int64_t indexOfRemovedValue,
+                             u_int64_t hashOfRemovedValue) {
+        todoImpl(indexOfRemovedValue, hashOfRemovedValue);
+    }
+    inline void valueAdded(const AnyValRef& member) { todoImpl(member); }
+    virtual inline void possibleMemberValueChange(u_int64_t index,
+                                                  const AnyValRef& member) {
+        todoImpl(index, member);
+    }
+    virtual void memberValueChanged(u_int64_t index, const AnyValRef& member) {
+        todoImpl(index, member);
+        ;
+    }
+
+    void setValueChanged(const SetView& newValue) { todoImpl(newValue); }
 };
 
 #endif /* SRC_TYPES_SET_H_ */

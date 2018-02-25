@@ -152,4 +152,25 @@ struct MSetValue : public MSetView, public ValBase {
     }
 };
 
+template <>
+struct DefinedTrigger<MSetValue> : public MSetTrigger {
+    ValRef<MSetValue> val;
+    DefinedTrigger(const ValRef<MSetValue>& val) : val(val) {}
+    inline void valueRemoved(u_int64_t indexOfRemovedValue,
+                             u_int64_t hashOfRemovedValue) {
+        todoImpl(indexOfRemovedValue, hashOfRemovedValue);
+    }
+    inline void valueAdded(const AnyValRef& member) { todoImpl(member); }
+    virtual inline void possibleMemberValueChange(u_int64_t index,
+                                                  const AnyValRef& member) {
+        todoImpl(index, member);
+    }
+    virtual void memberValueChanged(u_int64_t index, const AnyValRef& member) {
+        todoImpl(index, member);
+        ;
+    }
+
+    void mSetValueChanged(const MSetView& newValue) { todoImpl(newValue); }
+};
+
 #endif /* SRC_TYPES_MSET_H_ */

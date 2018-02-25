@@ -45,4 +45,17 @@ struct IntView {
 
 struct IntValue : public IntView, ValBase {};
 
+template <>
+struct DefinedTrigger<IntValue> : public IntTrigger {
+    ValRef<IntValue> val;
+    DefinedTrigger(const ValRef<IntValue>& val) : val(val) {}
+    inline void possibleValueChange(int64_t) {}
+    inline void valueChanged(int64_t value) {
+        val->changeValue([&]() {
+            val->value = value;
+            return true;
+        });
+    }
+};
+
 #endif /* SRC_TYPES_INT_H_ */

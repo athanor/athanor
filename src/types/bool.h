@@ -35,4 +35,17 @@ struct BoolView {
 
 struct BoolValue : public BoolView, ValBase {};
 
+template <>
+struct DefinedTrigger<BoolValue> : public BoolTrigger {
+    ValRef<BoolValue> val;
+    DefinedTrigger(const ValRef<BoolValue>& val) : val(val) {}
+    inline void possibleValueChange(u_int64_t) {}
+    inline void valueChanged(u_int64_t violation) {
+        val->changeValue([&]() {
+            val->violation = violation;
+            return true;
+        });
+    }
+};
+
 #endif /* SRC_TYPES_BOOL_H_ */

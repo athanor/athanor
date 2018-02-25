@@ -137,6 +137,8 @@ struct Quantifier : public QuantifierView<ExprType> {
         }
     }
     inline void initialUnroll() final {
+        unrolledIterVals.clear();
+        exprs.clear();
         evaluate(container);
         InitialUnroller<ContainerType>::initialUnroll(*this);
     }

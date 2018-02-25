@@ -49,8 +49,6 @@ void deepCopyImpl(const SetValue& src,
             ++index;
         }
     }
-    cout << "after removing some values during copy, target is constant: "
-         << (target.container == &constantPool) << endl;
     for (auto& member : srcMemnersImpl) {
         if (!target.getHashIndexMap().count(getValueHash(*member))) {
             target.addMember(deepCopy(*member));

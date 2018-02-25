@@ -20,40 +20,19 @@ struct Model {
     std::vector<Neighbourhood> neighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
-    OpAnd csp;
-    IntReturning objective;
-    OptimiseMode optimiseMode;
+    OpAnd csp = OpAnd(std::make_shared<FixedArray<BoolReturning>>(
+        std::vector<BoolReturning>()));
+    IntReturning objective = make<IntValue>();
+    OptimiseMode optimiseMode = OptimiseMode::NONE;
+    ;
     ViolationDescription vioDesc;
 
    private:
-    Model(std::vector<std::pair<AnyDomainRef, AnyValRef>> variables,
-          std::vector<std::string> variableNames,
-          std::vector<Neighbourhood> neighbourhoods,
-          std::vector<int> neighbourhoodVarMapping,
-          std::vector<std::vector<int>> varNeighbourhoodMapping,
-          std::vector<BoolReturning> constraints, IntReturning objective,
-          OptimiseMode optimiseMode)
-        : variables(std::move(variables)),
-          variableNames(std::move(variableNames)),
-
-          neighbourhoods(std::move(neighbourhoods)),
-          neighbourhoodVarMapping(std::move(neighbourhoodVarMapping)),
-          varNeighbourhoodMapping(std::move(varNeighbourhoodMapping)),
-          csp(std::make_shared<FixedArray<BoolReturning>>(
-              std::move(constraints))),
-          objective(std::move(objective)),
-          optimiseMode(optimiseMode) {}
+    Model() {}
 };
 
 class ModelBuilder {
-    std::vector<std::pair<AnyDomainRef, AnyValRef>> variables;
-    std::vector<std::string> variableNames;
-    std::vector<BoolReturning> constraints;
-    IntReturning objective = constructValueFromDomain(
-        IntDomain({intBound(0, 0)}));  // non applicable default
-                                       // to avoid undefined
-                                       // variant
-    OptimiseMode optimiseMode = OptimiseMode::NONE;
+    Model model;
 
    public:
     ModelBuilder() {}
@@ -62,7 +41,7 @@ class ModelBuilder {
         if (constraintHandledByDefine(constraint)) {
             return;
         } else {
-            constraints.emplace_back(std::move(constraint));
+            model.csp.quantifier->exprs.emplace_back(std::move(constraint));
         }
     }
 
@@ -71,49 +50,41 @@ class ModelBuilder {
                   typename DomainPtrType::element_type>::type>
     inline ValRef<ValueType> addVariable(std::string name,
                                          const DomainPtrType& domainImpl) {
-        variables.emplace_back(AnyDomainRef(domainImpl),
-                               AnyValRef(ValRef<ValueType>(nullptr)));
-        auto& val = variables.back().second.emplace<ValRef<ValueType>>(
+        model.variables.emplace_back(AnyDomainRef(domainImpl),
+                                     AnyValRef(ValRef<ValueType>(nullptr)));
+        auto& val = model.variables.back().second.emplace<ValRef<ValueType>>(
             constructValueFromDomain(*domainImpl));
-        valBase(*val).id = variables.size() - 1;
+        valBase(*val).id = model.variables.size() - 1;
         valBase(*val).container = NULL;
-        variableNames.emplace_back(std::move(name));
+        model.variableNames.emplace_back(std::move(name));
         return val;
     }
 
     inline void setObjective(OptimiseMode mode, IntReturning obj) {
-        objective = std::move(obj);
-        optimiseMode = mode;
-        ;
+        model.objective = std::move(obj);
+        model.optimiseMode = mode;
     }
     Model build() {
-        std::vector<Neighbourhood> neighbourhoods;
-        std::vector<int> neighbourhoodVarMapping;
-        std::vector<std::vector<int>> varNeighbourhoodMapping;
-        for (size_t i = 0; i < variables.size(); ++i) {
+        for (size_t i = 0; i < model.variables.size(); ++i) {
             if (mpark::visit(
                     [](auto& val) { return val->container == &constantPool; },
-                    variables[i].second)) {
+                    model.variables[i].second)) {
                 continue;
             }
-            auto& domain = variables[i].first;
-            size_t previousNumberNeighbourhoods = neighbourhoods.size();
-            generateNeighbourhoods(domain, neighbourhoods);
-            neighbourhoodVarMapping.insert(
-                neighbourhoodVarMapping.end(),
-                neighbourhoods.size() - previousNumberNeighbourhoods, i);
-            varNeighbourhoodMapping.emplace_back(neighbourhoods.size() -
-                                                 previousNumberNeighbourhoods);
-            std::iota(varNeighbourhoodMapping.back().begin(),
-                      varNeighbourhoodMapping.back().end(),
+            auto& domain = model.variables[i].first;
+            size_t previousNumberNeighbourhoods = model.neighbourhoods.size();
+            generateNeighbourhoods(domain, model.neighbourhoods);
+            model.neighbourhoodVarMapping.insert(
+                model.neighbourhoodVarMapping.end(),
+                model.neighbourhoods.size() - previousNumberNeighbourhoods, i);
+            model.varNeighbourhoodMapping.emplace_back(
+                model.neighbourhoods.size() - previousNumberNeighbourhoods);
+            std::iota(model.varNeighbourhoodMapping.back().begin(),
+                      model.varNeighbourhoodMapping.back().end(),
                       previousNumberNeighbourhoods);
         }
-        assert(neighbourhoods.size() > 0);
-        return Model(std::move(variables), std::move(variableNames),
-                     std::move(neighbourhoods),
-                     std::move(neighbourhoodVarMapping),
-                     std::move(varNeighbourhoodMapping), std::move(constraints),
-                     std::move(objective), optimiseMode);
+        assert(model.neighbourhoods.size() > 0);
+        return std::move(model);
     }
     template <typename T, typename Variant>
     inline ValRef<T>* asValRef(Variant& v) {

@@ -72,6 +72,11 @@ struct SetView {
     u_int64_t hashOfPossibleChange;
     std::vector<std::shared_ptr<SetTrigger>> triggers;
 
+    inline void initFrom(SetView& other) {
+        hashIndexMap = other.hashIndexMap;
+        members = other.members;
+        cachedHashTotal = other.cachedHashTotal;
+    }
     template <typename InnerValueType>
     inline ValRefVec<InnerValueType>& getMembers() {
         return mpark::get<ValRefVec<InnerValueType>>(members);

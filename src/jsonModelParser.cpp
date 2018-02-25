@@ -20,13 +20,6 @@ shared_ptr<MSetDomain> fakeMSetDomain(const AnyDomainRef& ref) {
     return make_shared<MSetDomain>(exactSize(0), ref);
 }
 
-template <typename DestVariant, typename Variant>
-DestVariant variantConvert(Variant&& v) {
-    return mpark::visit(
-        [](auto&& v) -> DestVariant { return forward<decltype(v)>(v); },
-        forward<Variant>(v));
-}
-
 ParsedModel::ParsedModel() : builder(make_unique<ModelBuilder>()) {}
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
     json& essenceExpr, ParsedModel& parsedModel);

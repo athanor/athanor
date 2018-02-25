@@ -29,6 +29,9 @@ struct IntTrigger : public IterAssignedTrigger<IntValue> {
 struct IntView {
     int64_t value;
     std::vector<std::shared_ptr<IntTrigger>> triggers;
+
+    inline void initFrom(IntView& other) { value = other.value; }
+
     template <typename Func>
     inline bool changeValue(Func&& func) {
         int64_t oldValue = value;

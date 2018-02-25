@@ -74,6 +74,7 @@ struct MSetView {
     u_int64_t hashOfPossibleChange;
     std::vector<std::shared_ptr<MSetTrigger>> triggers;
 
+    inline void initFrom(MSetView& other) { members = other.members; }
     template <typename InnerValueType>
     inline void notifyPossibleMemberChange(u_int64_t index) {
         auto& members = getMembers<InnerValueType>();

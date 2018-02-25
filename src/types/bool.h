@@ -15,6 +15,8 @@ struct BoolTrigger : public IterAssignedTrigger<BoolValue> {
 struct BoolView {
     u_int64_t violation;
     std::vector<std::shared_ptr<BoolTrigger>> triggers;
+
+    inline void initFrom(BoolView& other) { violation = other.violation; }
     template <typename Func>
     inline bool changeValue(Func&& func) {
         u_int64_t oldViolation = violation;

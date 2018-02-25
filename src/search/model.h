@@ -26,6 +26,7 @@ struct Model {
     OptimiseMode optimiseMode = OptimiseMode::NONE;
     ;
     ViolationDescription vioDesc;
+    std::vector<std::pair<AnyValRef, AnyExprRef>> definedMappings;
 
    private:
     Model() {}
@@ -115,6 +116,7 @@ class ModelBuilder {
     void define(ValRef<ValueType> val, ReturningType expr) {
         addTrigger(expr, std::make_shared<DefinedTrigger<ValueType>>(val));
         val->container = &constantPool;
+        model.definedMappings.emplace_back(AnyValRef(val), toExprRef(expr));
     }
 };
 #endif /* SRC_SEARCH_MODEL_H_ */

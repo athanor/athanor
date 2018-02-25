@@ -92,6 +92,7 @@ class HillClimber {
         for (auto& var : model.variables) {
             assignRandomValueInDomain(var.first, var.second);
         }
+        evaluateDefinedVariables();
         evaluate(model.csp);
         lastViolation = model.csp.violation;
         bestViolation = lastViolation;
@@ -165,6 +166,24 @@ class HillClimber {
         return (model.optimiseMode == OptimiseMode::NONE &&
                 bestViolation == 0) ||
                stats.majorNodeCount >= 30000000;
+    }
+
+    inline void evaluateDefinedVariables() {
+        for (auto& varExprPair : model.definedMappings) {
+            mpark::visit(
+                [&](auto& expr) {
+                    typedef typename ReturnType<BaseType<decltype(expr)>>::type
+                        ReturningType;
+                    typedef typename AssociatedValueType<ReturningType>::type
+                        ValueType;
+                    ValRef<ValueType>& val =
+                        mpark::get<ValRef<ValueType>>(varExprPair.first);
+                    evaluate(*expr);
+                    dumpState(std::cout << "evaluated ", *expr) << std::endl;
+                    val->initFrom(*expr);
+                },
+                varExprPair.second);
+        }
     }
 };
 #endif /* SRC_SEARCH_SEARCHSTRATEGIES_H_ */

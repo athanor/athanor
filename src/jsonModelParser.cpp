@@ -554,6 +554,18 @@ void parseExprs(json& suchThat, ParsedModel& parsedModel) {
     }
 }
 
+inline void parseObjective(json& objExpr, ParsedModel& parsedModel) {
+    string modeStr = objExpr[0];
+    OptimiseMode mode = (modeStr == "Minimising") ? OptimiseMode::MINIMISE
+                                                  : OptimiseMode::MAXIMISE;
+
+    IntReturning objConstraint = expect<IntReturning>(
+        parseExpr(objExpr[1], parsedModel).second, [&](auto&&) {
+            cerr << "Expected int returning expression for objective: "
+                 << objExpr << endl;
+        });
+    parsedModel.builder->setObjective(mode, objConstraint);
+}
 ParsedModel parseModelFromJson(istream& is) {
     json j;
     is >> j;
@@ -569,6 +581,8 @@ ParsedModel parseModelFromJson(istream& is) {
             }
         } else if (statement.count("SuchThat")) {
             parseExprs(statement["SuchThat"], parsedModel);
+        } else if (statement.count("Objective")) {
+            parseObjective(statement["Objective"], parsedModel);
         }
     }
     return parsedModel;

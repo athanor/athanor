@@ -31,20 +31,28 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
     LeftSetTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t hash) final {
         if (!getView<SetView>(op->right).getHashIndexMap().count(hash)) {
-            op->changeValue([&]() { --op->violation; return true; });
+            op->changeValue([&]() {
+                --op->violation;
+                return true;
+            });
         }
     }
 
     inline void valueAdded(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
         if (!getView<SetView>(op->right).getHashIndexMap().count(hash)) {
-            op->changeValue([&]() { ++op->violation; return true; });
+            op->changeValue([&]() {
+                ++op->violation;
+                return true;
+            });
         }
     }
 
     inline void setValueChanged(const SetView& newValue) final {
-        op->changeValue(
-            [&]() { evaluate(*op, newValue, getView<SetView>(op->right)); return true; });
+        op->changeValue([&]() {
+            evaluate(*op, newValue, getView<SetView>(op->right));
+            return true;
+        });
     }
 
     inline void possibleMemberValueChange(u_int64_t,
@@ -70,14 +78,20 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
     RightSetTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t hash) final {
         if (getView<SetView>(op->left).getHashIndexMap().count(hash)) {
-            op->changeValue([&]() { ++op->violation; return true; });
+            op->changeValue([&]() {
+                ++op->violation;
+                return true;
+            });
         }
     }
 
     inline void valueAdded(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
         if (getView<SetView>(op->left).getHashIndexMap().count(hash)) {
-            op->changeValue([&]() { --op->violation; return true; });
+            op->changeValue([&]() {
+                --op->violation;
+                return true;
+            });
         }
     }
 
@@ -114,12 +128,14 @@ OpSubsetEq::OpSubsetEq(OpSubsetEq&& other)
 }
 
 void startTriggering(OpSubsetEq& op) {
-    op.leftTrigger = make_shared<LeftSetTrigger>(&op);
-    op.rightTrigger = make_shared<RightSetTrigger>(&op);
-    addTrigger(op.left, op.leftTrigger);
-    addTrigger(op.right, op.rightTrigger);
-    startTriggering(op.left);
-    startTriggering(op.right);
+    if (!op.leftTrigger) {
+        op.leftTrigger = make_shared<LeftSetTrigger>(&op);
+        op.rightTrigger = make_shared<RightSetTrigger>(&op);
+        addTrigger(op.left, op.leftTrigger);
+        addTrigger(op.right, op.rightTrigger);
+        startTriggering(op.left);
+        startTriggering(op.right);
+    }
 }
 
 void stopTriggering(OpSubsetEq& op) {
@@ -142,10 +158,10 @@ void updateViolationDescription(const OpSubsetEq& op, u_int64_t,
 }
 
 std::shared_ptr<OpSubsetEq> deepCopyForUnroll(const OpSubsetEq& op,
-                                            const AnyIterRef& iterator) {
+                                              const AnyIterRef& iterator) {
     auto newOpSubsetEq =
         make_shared<OpSubsetEq>(deepCopyForUnroll(op.left, iterator),
-                              deepCopyForUnroll(op.right, iterator));
+                                deepCopyForUnroll(op.right, iterator));
     newOpSubsetEq->violation = op.violation;
     return newOpSubsetEq;
 }

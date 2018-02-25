@@ -108,16 +108,18 @@ OpAnd::OpAnd(OpAnd&& other)
 }
 
 void startTriggering(OpAnd& op) {
-    op.quantifierTrigger = std::make_shared<QuantifierTrigger>(&op);
-    addTrigger(op.quantifier, op.quantifierTrigger);
-    op.quantifier->startTriggeringOnContainer();
+    if (!op.quantifierTrigger) {
+        op.quantifierTrigger = std::make_shared<QuantifierTrigger>(&op);
+        addTrigger(op.quantifier, op.quantifierTrigger);
+        op.quantifier->startTriggeringOnContainer();
 
-    for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
-        auto& operand = op.quantifier->exprs[i];
-        auto trigger = make_shared<OpAndTrigger>(&op, i);
-        addTrigger(operand, trigger);
-        op.operandTriggers.emplace_back(move(trigger));
-        startTriggering(operand);
+        for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
+            auto& operand = op.quantifier->exprs[i];
+            auto trigger = make_shared<OpAndTrigger>(&op, i);
+            addTrigger(operand, trigger);
+            op.operandTriggers.emplace_back(move(trigger));
+            startTriggering(operand);
+        }
     }
 }
 

@@ -72,14 +72,16 @@ OpSum::OpSum(OpSum&& other)
 }
 
 void startTriggering(OpSum& op) {
-    op.quantifierTrigger = std::make_shared<QuantifierTrigger>(&op);
-    addTrigger(op.quantifier, op.quantifierTrigger);
-    op.quantifier->startTriggeringOnContainer();
-    op.operandTrigger = make_shared<OpSumTrigger>(&op);
-    for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
-        auto& operand = op.quantifier->exprs[i];
-        addTrigger(operand, op.operandTrigger);
-        startTriggering(operand);
+    if (!op.quantifierTrigger) {
+        op.quantifierTrigger = std::make_shared<QuantifierTrigger>(&op);
+        addTrigger(op.quantifier, op.quantifierTrigger);
+        op.quantifier->startTriggeringOnContainer();
+        op.operandTrigger = make_shared<OpSumTrigger>(&op);
+        for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
+            auto& operand = op.quantifier->exprs[i];
+            addTrigger(operand, op.operandTrigger);
+            startTriggering(operand);
+        }
     }
 }
 

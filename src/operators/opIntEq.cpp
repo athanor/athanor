@@ -46,11 +46,13 @@ OpIntEq::OpIntEq(OpIntEq&& other)
 }
 
 void startTriggering(OpIntEq& op) {
-    op.operandTrigger = make_shared<OpIntEq::Trigger>(&op);
-    addTrigger(op.left, op.operandTrigger);
-    addTrigger(op.right, op.operandTrigger);
-    startTriggering(op.left);
-    startTriggering(op.right);
+    if (!op.operandTrigger) {
+        op.operandTrigger = make_shared<OpIntEq::Trigger>(&op);
+        addTrigger(op.left, op.operandTrigger);
+        addTrigger(op.right, op.operandTrigger);
+        startTriggering(op.left);
+        startTriggering(op.right);
+    }
 }
 
 void stopTriggering(OpIntEq& op) {

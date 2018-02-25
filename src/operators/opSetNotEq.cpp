@@ -63,11 +63,13 @@ OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
 }
 
 void startTriggering(OpSetNotEq& op) {
-    op.trigger = make_shared<OpSetNotEqTrigger>(&op);
-    addTrigger(op.left, op.trigger);
-    addTrigger(op.right, op.trigger);
-    startTriggering(op.left);
-    startTriggering(op.right);
+    if (!op.trigger) {
+        op.trigger = make_shared<OpSetNotEqTrigger>(&op);
+        addTrigger(op.left, op.trigger);
+        addTrigger(op.right, op.trigger);
+        startTriggering(op.left);
+        startTriggering(op.right);
+    }
 }
 
 void stopTriggering(OpSetNotEq& op) {

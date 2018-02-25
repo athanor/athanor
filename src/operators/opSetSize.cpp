@@ -59,9 +59,11 @@ OpSetSize::OpSetSize(OpSetSize&& other)
     setTriggerParent(this, operandTrigger);
 }
 void startTriggering(OpSetSize& op) {
-    op.operandTrigger = make_shared<OpSetSizeTrigger>(&op);
-    addTrigger(op.operand, op.operandTrigger);
-    startTriggering(op.operand);
+    if (!op.operandTrigger) {
+        op.operandTrigger = make_shared<OpSetSizeTrigger>(&op);
+        addTrigger(op.operand, op.operandTrigger);
+        startTriggering(op.operand);
+    }
 }
 
 void stopTriggering(OpSetSize& op) {

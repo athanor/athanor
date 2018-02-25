@@ -89,13 +89,12 @@ class HillClimber {
                        [](auto& n) -> std::string& { return n.name; });
 
         stats.startTimer();
-        for (auto& var : model.variables) {
-            assignRandomValueInDomain(var.first, var.second);
-        }
+        assignRandomValueToVariables();
         evaluateDefinedVariables();
         evaluate(model.csp);
         lastViolation = model.csp.violation;
         bestViolation = lastViolation;
+        startTriggeringOnDefinedVariables();
         startTriggering(model.csp);
 
         if (model.optimiseMode != OptimiseMode::NONE) {
@@ -168,6 +167,16 @@ class HillClimber {
                stats.majorNodeCount >= 30000000;
     }
 
+    inline void assignRandomValueToVariables() {
+        for (auto& var : model.variables) {
+            if (mpark::visit(
+                    [](auto& val) { return val->container == &constantPool; },
+                    var.second)) {
+                continue;
+            }
+            assignRandomValueInDomain(var.first, var.second);
+        }
+    }
     inline void evaluateDefinedVariables() {
         for (auto& varExprPair : model.definedMappings) {
             mpark::visit(
@@ -183,6 +192,12 @@ class HillClimber {
                     val->initFrom(*expr);
                 },
                 varExprPair.second);
+        }
+    }
+    inline void startTriggeringOnDefinedVariables() {
+        for (auto& varExprPair : model.definedMappings) {
+            mpark::visit([&](auto& expr) { startTriggering(*expr); },
+                         varExprPair.second);
         }
     }
 };

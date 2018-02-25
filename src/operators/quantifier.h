@@ -124,6 +124,9 @@ struct Quantifier : public QuantifierView<ExprType> {
     }
 
     inline void startTriggeringOnContainer() final {
+        if (triggering()) {
+            return;
+        }
         containerTrigger =
             std::make_shared<ContainerTrigger<ContainerType, ExprType>>(this);
         addTrigger(container, containerTrigger);

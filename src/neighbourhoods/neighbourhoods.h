@@ -42,17 +42,39 @@ struct Neighbourhood {
         : name(std::move(name)), apply(std::move(apply)) {}
 };
 
+template <typename Domain>
+using NeighbourhoodGenerator = void (*)(const Domain&,
+                                        std::vector<Neighbourhood>&);
+
+template <typename Domain>
+struct MultiInstanceNeighbourhoodGenerator {
+    const int numberInstances;
+    NeighbourhoodGenerator<Domain> generator;
+};
+
+template <typename Domain>
+using NeighbourhoodVec = std::vector<NeighbourhoodGenerator<Domain>>;
+
+template <typename Domain>
+using MultiInstanceNeighbourhoodVec =
+    std::vector<MultiInstanceNeighbourhoodGenerator<Domain>>;
+
 template <typename DomainType>
 struct NeighbourhoodGenList;
 
-template <typename Domain>
-using NeighbourhoodVec =
-    std::vector<void (*)(const Domain&, std::vector<Neighbourhood>&)>;
-#define makeGeneratorDecls(name)                           \
-    template <>                                            \
-    struct NeighbourhoodGenList<name##Domain> {            \
-        static const NeighbourhoodVec<name##Domain> value; \
+template <typename DomainType>
+struct MultiInstanceNeighbourhoodGenList;
+
+#define makeGeneratorDecls(name)                                        \
+    template <>                                                         \
+    struct NeighbourhoodGenList<name##Domain> {                         \
+        static const NeighbourhoodVec<name##Domain> value;              \
+    };                                                                  \
+    template <>                                                         \
+    struct MultiInstanceNeighbourhoodGenList<name##Domain> {            \
+        static const MultiInstanceNeighbourhoodVec<name##Domain> value; \
     };
+
 buildForAllTypes(makeGeneratorDecls, )
 #undef makeGeneratorDecls
     template <typename DomainPtrType>

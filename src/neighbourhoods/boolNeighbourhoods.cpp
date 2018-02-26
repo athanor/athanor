@@ -51,5 +51,5 @@ void boolAssignRandomGen(const BoolDomain& domain,
         });
 }
 
-const NeighbourhoodGenList<BoolDomain>::type
-    NeighbourhoodGenList<BoolDomain>::value = {boolAssignRandomGen};
+const NeighbourhoodVec<BoolDomain> NeighbourhoodGenList<BoolDomain>::value = {
+    boolAssignRandomGen};

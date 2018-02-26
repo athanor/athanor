@@ -44,13 +44,14 @@ struct Neighbourhood {
 
 template <typename DomainType>
 struct NeighbourhoodGenList;
-#define makeGeneratorDecls(name)                                   \
-    template <>                                                    \
-    struct NeighbourhoodGenList<name##Domain> {                    \
-        typedef std::vector<void (*)(const name##Domain&,          \
-                                     std::vector<Neighbourhood>&)> \
-            type;                                                  \
-        static const type value;                                   \
+
+template <typename Domain>
+using NeighbourhoodVec =
+    std::vector<void (*)(const Domain&, std::vector<Neighbourhood>&)>;
+#define makeGeneratorDecls(name)                           \
+    template <>                                            \
+    struct NeighbourhoodGenList<name##Domain> {            \
+        static const NeighbourhoodVec<name##Domain> value; \
     };
 buildForAllTypes(makeGeneratorDecls, )
 #undef makeGeneratorDecls

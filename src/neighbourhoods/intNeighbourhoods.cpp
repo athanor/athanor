@@ -69,5 +69,5 @@ void intAssignRandomGen(const IntDomain& domain,
         });
 }
 
-const NeighbourhoodGenList<IntDomain>::type
-    NeighbourhoodGenList<IntDomain>::value = {intAssignRandomGen};
+const NeighbourhoodVec<IntDomain> NeighbourhoodGenList<IntDomain>::value = {
+    intAssignRandomGen};

@@ -105,5 +105,5 @@ void mSetLiftSingleGen(const MSetDomain& domain,
         domain.inner);
 }
 
-const NeighbourhoodGenList<MSetDomain>::type
-    NeighbourhoodGenList<MSetDomain>::value = {mSetLiftSingleGen};
+const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::value = {
+    mSetLiftSingleGen};

@@ -45,7 +45,7 @@ class OpAnd::QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
         op->operandTriggers.emplace_back(
             std::make_shared<OpAndTrigger>(op, op->operandTriggers.size()));
         addTrigger(expr, op->operandTriggers.back());
-        u_int64_t violation = getView<BoolView>(expr).violation;
+        u_int64_t violation = getView(expr).violation;
         if (violation > 0) {
             op->violatingOperands.insert(op->operandTriggers.size() - 1);
             op->changeValue([&]() {
@@ -61,7 +61,7 @@ class OpAnd::QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
         if (index < op->operandTriggers.size()) {
             op->operandTriggers[index]->index = index;
         }
-        u_int64_t violationOfRemovedExpr = getView<BoolView>(expr).violation;
+        u_int64_t violationOfRemovedExpr = getView(expr).violation;
         debug_code(assert((op->violatingOperands.count(index) &&
                            violationOfRemovedExpr > 0) ||
                           (!op->violatingOperands.count(index) &&
@@ -89,11 +89,11 @@ void evaluate(OpAnd& op) {
     for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
         auto& operand = op.quantifier->exprs[i];
         evaluate(operand);
-        u_int64_t violation = getView<BoolView>(operand).violation;
+        u_int64_t violation = getView(operand).violation;
         if (violation > 0) {
             op.violatingOperands.insert(i);
         }
-        op.violation += getView<BoolView>(operand).violation;
+        op.violation += getView(operand).violation;
     }
 }
 

@@ -7,7 +7,6 @@
 #include "types/base.h"
 struct BoolDomain {};
 struct BoolTrigger : public IterAssignedTrigger<BoolValue> {
-    typedef BoolView View;
     virtual void possibleValueChange(u_int64_t OldViolation) = 0;
     virtual void valueChanged(u_int64_t newViolation) = 0;
 };

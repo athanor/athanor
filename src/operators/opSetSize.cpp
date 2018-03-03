@@ -7,7 +7,7 @@ using namespace std;
 
 void evaluate(OpSetSize& op) {
     evaluate(op.operand);
-    op.value = getView<SetView>(op.operand).numberElements();
+    op.value = getView(op.operand).numberElements();
 }
 
 class OpSetSizeTrigger : public SetTrigger {

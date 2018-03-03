@@ -121,7 +121,10 @@ inline AnyExprRef toExprRef(Variant&& v) {
 buildForOperators(operatorFuncs, );
 #undef operatorFuncs
 
-template <typename View, typename Operator>
+template <
+    typename Operator,
+    typename View = typename AssociatedViewType<typename AssociatedValueType<
+        typename ReturnType<Operator>::type>::type>::type>
 inline View& getView(const Operator& op) {
     return mpark::visit(
         [&](auto& opImpl) -> View& { return reinterpret_cast<View&>(*opImpl); },

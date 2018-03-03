@@ -233,7 +233,7 @@ inline void saveTriggerOverload(
 template <typename Op, typename Trigger>
 inline void saveTriggerOverload(Op& op,
                                 const std::shared_ptr<Trigger>& trigger) {
-    getView<typename Trigger::View>(op).triggers.emplace_back(trigger);
+    getView(op).triggers.emplace_back(trigger);
 
     mpark::visit(overloaded(
                      [&](IterRef<typename Trigger::ValueType>& ref) {
@@ -242,6 +242,7 @@ inline void saveTriggerOverload(Op& op,
                      [](auto&) {}),
                  op);
 }
+
 template <typename Op, typename Trigger>
 void addTrigger(Op& op, const std::shared_ptr<Trigger>& trigger) {
     saveTriggerOverload(op, trigger);

@@ -201,7 +201,7 @@ struct InitialUnroller<SetReturning> {
                     quantifier.unroll(member);
                 }
             },
-            getView<SetView>(quantifier.container).members);
+            getView(quantifier.container).members);
     }
 };
 
@@ -259,7 +259,7 @@ struct InitialUnroller<MSetReturning> {
                     quantifier.unroll(member);
                 }
             },
-            getView<MSetView>(quantifier.container).members);
+            getView(quantifier.container).members);
     }
 };
 

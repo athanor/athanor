@@ -6,8 +6,8 @@
 using namespace std;
 
 inline void setViolation(OpSetNotEq& op, bool trigger) {
-    SetView& leftSetView = getView<SetView>(op.left);
-    SetView& rightSetView = getView<SetView>(op.right);
+    SetView& leftSetView = getView(op.left);
+    SetView& rightSetView = getView(op.right);
     u_int64_t oldViolation = op.violation;
     op.violation =
         (leftSetView.cachedHashTotal == rightSetView.cachedHashTotal)

@@ -19,7 +19,7 @@ inline void evaluate(OpSubsetEq& op, const SetView& leftSetView,
 void evaluate(OpSubsetEq& op) {
     evaluate(op.left);
     evaluate(op.right);
-    evaluate(op, getView<SetView>(op.left), getView<SetView>(op.right));
+    evaluate(op, getView(op.left), getView(op.right));
 }
 
 struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
@@ -30,7 +30,7 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
    public:
     LeftSetTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t hash) final {
-        if (!getView<SetView>(op->right).hashIndexMap.count(hash)) {
+        if (!getView(op->right).hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 --op->violation;
                 return true;
@@ -40,7 +40,7 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
 
     inline void valueAdded(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
-        if (!getView<SetView>(op->right).hashIndexMap.count(hash)) {
+        if (!getView(op->right).hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 ++op->violation;
                 return true;
@@ -50,7 +50,7 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
 
     inline void setValueChanged(const SetView& newValue) final {
         op->changeValue([&]() {
-            evaluate(*op, newValue, getView<SetView>(op->right));
+            evaluate(*op, newValue, getView(op->right));
             return true;
         });
     }
@@ -77,7 +77,7 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
 
     RightSetTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t hash) final {
-        if (getView<SetView>(op->left).hashIndexMap.count(hash)) {
+        if (getView(op->left).hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 ++op->violation;
                 return true;
@@ -87,7 +87,7 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
 
     inline void valueAdded(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
-        if (getView<SetView>(op->left).hashIndexMap.count(hash)) {
+        if (getView(op->left).hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 --op->violation;
                 return true;
@@ -97,7 +97,7 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
 
     inline void setValueChanged(const SetView& newValue) final {
         op->changeValue([&]() {
-            evaluate(*op, getView<SetView>(op->left), newValue);
+            evaluate(*op, getView(op->left), newValue);
             return true;
         });
     }

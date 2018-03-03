@@ -7,8 +7,8 @@ using namespace std;
 void evaluate(OpIntEq& op) {
     evaluate(op.left);
     evaluate(op.right);
-    op.violation = std::abs(getView<IntView>(op.left).value -
-                            getView<IntView>(op.right).value);
+    op.violation = std::abs(getView(op.left).value -
+                            getView(op.right).value);
 }
 
 struct OpIntEq::Trigger : public IntTrigger {
@@ -16,8 +16,8 @@ struct OpIntEq::Trigger : public IntTrigger {
     Trigger(OpIntEq* op) : op(op) {}
     inline void possibleValueChange(int64_t) final {}
     inline void valueChanged(int64_t) final {
-        u_int64_t newViolation = std::abs(getView<IntView>(op->left).value -
-                                          getView<IntView>(op->right).value);
+        u_int64_t newViolation = std::abs(getView(op->left).value -
+                                          getView(op->right).value);
         if (newViolation == op->violation) {
             return;
         }

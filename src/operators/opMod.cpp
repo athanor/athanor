@@ -8,7 +8,7 @@ void evaluate(OpMod& op) {
     evaluate(op.left);
     evaluate(op.right);
     op.value =
-        getView<IntView>(op.left).value % getView<IntView>(op.right).value;
+        getView(op.left).value % getView(op.right).value;
 }
 
 struct OpMod::Trigger : public IntTrigger {
@@ -16,8 +16,8 @@ struct OpMod::Trigger : public IntTrigger {
     Trigger(OpMod* op) : op(op) {}
     inline void possibleValueChange(int64_t) final {}
     inline void valueChanged(int64_t) final {
-        int64_t newValue = getView<IntView>(op->left).value %
-                           getView<IntView>(op->right).value;
+        int64_t newValue = getView(op->left).value %
+                           getView(op->right).value;
         if (newValue == op->value) {
             return;
         }

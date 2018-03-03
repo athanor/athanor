@@ -31,7 +31,7 @@ class OpProd::QuantifierTrigger : public QuantifierView<IntReturning>::Trigger {
     OpProd* op;
     QuantifierTrigger(OpProd* op) : op(op) {}
     void exprUnrolled(const IntReturning& expr) final {
-        u_int64_t value = getView<IntView>(expr).value;
+        u_int64_t value = getView(expr).value;
         addTrigger(expr, op->operandTrigger);
         op->changeValue([&]() {
             op->value *= value;
@@ -40,7 +40,7 @@ class OpProd::QuantifierTrigger : public QuantifierView<IntReturning>::Trigger {
     }
 
     void exprRolled(u_int64_t, const IntReturning& expr) final {
-        int64_t valueOfRemovedExpr = getView<IntView>(expr).value;
+        int64_t valueOfRemovedExpr = getView(expr).value;
         op->changeValue([&]() {
             op->value /= valueOfRemovedExpr;
             return true;
@@ -59,7 +59,7 @@ void evaluate(OpProd& op) {
     for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
         auto& operand = op.quantifier->exprs[i];
         evaluate(operand);
-        op.value *= getView<IntView>(operand).value;
+        op.value *= getView(operand).value;
     }
 }
 

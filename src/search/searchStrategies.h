@@ -35,7 +35,7 @@ class HillClimber {
         }
     }
     inline bool acceptValue() {
-        u_int64_t newObjValue = getView<IntView>(model.objective).value;
+        u_int64_t newObjValue = getView(model.objective).value;
         int64_t deltaObj = getDeltaObj(lastObjValue, newObjValue);
         int64_t deltaViolation = lastViolation - model.csp.violation;
         bool solutionAllowed;
@@ -99,7 +99,7 @@ class HillClimber {
 
         if (model.optimiseMode != OptimiseMode::NONE) {
             evaluate(model.objective);
-            lastObjValue = getView<IntView>(model.objective).value;
+            lastObjValue = getView(model.objective).value;
             bestObjValue = lastObjValue;
             startTriggering(model.objective);
         }

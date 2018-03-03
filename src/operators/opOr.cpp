@@ -8,7 +8,7 @@ using QuantifierTrigger = OpOr::QuantifierTrigger;
 inline u_int64_t findNewMinViolation(OpOr& op, u_int64_t minViolation) {
     for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
         auto& operand = op.quantifier->exprs[i];
-        u_int64_t violation = getView<BoolView>(operand).violation;
+        u_int64_t violation = getView(operand).violation;
         if (violation < minViolation) {
             minViolation = violation;
             op.minViolationIndices.clear();
@@ -63,7 +63,7 @@ class OpOr::QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
         op->operandTriggers.emplace_back(
             std::make_shared<OpOrTrigger>(op, op->operandTriggers.size()));
         addTrigger(expr, op->operandTriggers.back());
-        u_int64_t violation = getView<BoolView>(expr).violation;
+        u_int64_t violation = getView(expr).violation;
         op->operandTriggers.back()->valueChanged(violation);
     }
 
@@ -86,7 +86,7 @@ class OpOr::QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
                 return;
             } else {
                 u_int64_t minViolation =
-                    getView<BoolView>(op->quantifier->exprs[0]).violation;
+                    getView(op->quantifier->exprs[0]).violation;
                 op->minViolationIndices.insert(0);
                 minViolation = findNewMinViolation(*op, minViolation);
                 op->changeValue([&]() {
@@ -114,7 +114,7 @@ void evaluate(OpOr& op) {
         evaluate(operand);
     }
     u_int64_t minViolation =
-        getView<BoolView>(op.quantifier->exprs[0]).violation;
+        getView(op.quantifier->exprs[0]).violation;
     op.minViolationIndices.insert(0);
     minViolation = findNewMinViolation(op, minViolation);
     op.violation = minViolation;

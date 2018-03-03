@@ -58,7 +58,6 @@ struct MSetDomain {
 };
 
 struct MSetTrigger : public IterAssignedTrigger<MSetValue> {
-    typedef MSetView View;
     virtual void valueRemoved(u_int64_t indexOfRemovedValue,
                               u_int64_t hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyValRef& member) = 0;

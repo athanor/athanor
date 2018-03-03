@@ -11,9 +11,9 @@ using RightSetTrigger = OpSubsetEq::RightSetTrigger;
 inline void evaluate(OpSubsetEq& op, const SetView& leftSetView,
                      const SetView& rightSetView) {
     op.violation = 0;
-    for (auto& hashIndexPair : leftSetView.getHashIndexMap()) {
+    for (auto& hashIndexPair : leftSetView.hashIndexMap) {
         op.violation +=
-            !rightSetView.getHashIndexMap().count(hashIndexPair.first);
+            !rightSetView.hashIndexMap.count(hashIndexPair.first);
     }
 }
 void evaluate(OpSubsetEq& op) {
@@ -30,7 +30,7 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
    public:
     LeftSetTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t hash) final {
-        if (!getView<SetView>(op->right).getHashIndexMap().count(hash)) {
+        if (!getView<SetView>(op->right).hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 --op->violation;
                 return true;
@@ -40,7 +40,7 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
 
     inline void valueAdded(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
-        if (!getView<SetView>(op->right).getHashIndexMap().count(hash)) {
+        if (!getView<SetView>(op->right).hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 ++op->violation;
                 return true;
@@ -77,7 +77,7 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
 
     RightSetTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t hash) final {
-        if (getView<SetView>(op->left).getHashIndexMap().count(hash)) {
+        if (getView<SetView>(op->left).hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 ++op->violation;
                 return true;
@@ -87,7 +87,7 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
 
     inline void valueAdded(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
-        if (getView<SetView>(op->left).getHashIndexMap().count(hash)) {
+        if (getView<SetView>(op->left).hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 --op->violation;
                 return true;

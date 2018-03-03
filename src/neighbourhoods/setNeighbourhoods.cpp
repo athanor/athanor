@@ -181,7 +181,7 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                 ParentCheckCallBack parentCheck =
                     [&](const AnyValRef& newValue) {
                         u_int64_t newHash = getValueHash(newValue);
-                        return !val.getHashIndexMap().count(newHash) &&
+                        return !val.hashIndexMap.count(newHash) &&
                                val.tryMemberChange<InnerValueType>(
                                    indexToChange, [&]() {
                                        return params.parentCheck(

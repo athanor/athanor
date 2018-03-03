@@ -11,18 +11,18 @@ void evaluate(OpSetIntersect& op) {
     op.silentClear();
     SetView& leftSetView = getView<SetView>(op.left);
     SetView& rightSetView = getView<SetView>(op.right);
-    SetView& smallSetView = (leftSetView.getHashIndexMap().size() <
-                             rightSetView.getHashIndexMap().size())
+    SetView& smallSetView = (leftSetView.hashIndexMap.size() <
+                             rightSetView.hashIndexMap.size())
                                 ? leftSetView
                                 : rightSetView;
-    SetView& largeSetView = (leftSetView.getHashIndexMap().size() <
-                             rightSetView.getHashIndexMap().size())
+    SetView& largeSetView = (leftSetView.hashIndexMap.size() <
+                             rightSetView.hashIndexMap.size())
                                 ? rightSetView
                                 : leftSetView;
     mpark::visit(
         [&](auto& members) {
-            for (auto& hashIndexPair : smallSetView.getHashIndexMap()) {
-                if (largeSetView.getHashIndexMap().count(hashIndexPair.first)) {
+            for (auto& hashIndexPair : smallSetView.hashIndexMap) {
+                if (largeSetView.hashIndexMap.count(hashIndexPair.first)) {
                     op.addMember(members[hashIndexPair.second]);
                 }
             }
@@ -40,8 +40,8 @@ class OpSetIntersectTrigger : public SetTrigger {
     OpSetIntersectTrigger(OpSetIntersect* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t hash) final {
         unordered_map<u_int64_t, u_int64_t>::const_iterator hashIter;
-        if ((hashIter = op->getHashIndexMap().find(hash)) !=
-            op->getHashIndexMap().end()) {
+        if ((hashIter = op->hashIndexMap.find(hash)) !=
+            op->hashIndexMap.end()) {
             mpark::visit(
                 [&](auto& members) {
                     op->removeMemberAndNotify<valType(members)>(
@@ -54,9 +54,9 @@ class OpSetIntersectTrigger : public SetTrigger {
     inline void valueAdded(const AnyValRef& member) final {
         SetReturning& unchanged = (left) ? op->right : op->left;
         u_int64_t hash = getValueHash(member);
-        debug_code(assert(!op->getHashIndexMap().count(hash)));
+        debug_code(assert(!op->hashIndexMap.count(hash)));
         SetView& viewOfUnchangedSet = getView<SetView>(unchanged);
-        if (viewOfUnchangedSet.getHashIndexMap().count(hash)) {
+        if (viewOfUnchangedSet.hashIndexMap.count(hash)) {
             mpark::visit(
                 [&](auto& memberImpl) { op->addMemberAndNotify(memberImpl); },
                 member);
@@ -65,8 +65,8 @@ class OpSetIntersectTrigger : public SetTrigger {
 
     inline void setValueChanged(const SetView& newValue) final {
         std::unordered_set<u_int64_t> hashesToRemove;
-        for (auto& hashIndexPair : op->getHashIndexMap()) {
-            if (!newValue.getHashIndexMap().count(hashIndexPair.first)) {
+        for (auto& hashIndexPair : op->hashIndexMap) {
+            if (!newValue.hashIndexMap.count(hashIndexPair.first)) {
                 hashesToRemove.insert(hashIndexPair.first);
             }
         }
@@ -79,9 +79,9 @@ class OpSetIntersectTrigger : public SetTrigger {
         mpark::visit(
             [&](auto& newMembersImpl) {
 
-                for (auto& hashIndexPair : newValue.getHashIndexMap()) {
-                    if (!op->getHashIndexMap().count(hashIndexPair.first) &&
-                        unchanged.getHashIndexMap().count(
+                for (auto& hashIndexPair : newValue.hashIndexMap) {
+                    if (!op->hashIndexMap.count(hashIndexPair.first) &&
+                        unchanged.hashIndexMap.count(
                             hashIndexPair.first)) {
                         this->valueAdded(newMembersImpl[hashIndexPair.second]);
                     }
@@ -94,7 +94,7 @@ class OpSetIntersectTrigger : public SetTrigger {
                                           const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
         oldHashIter = op->hashIndexMap.find(hash);
-        if (oldHashIter != op->getHashIndexMap().end()) {
+        if (oldHashIter != op->hashIndexMap.end()) {
             mpark::visit(
                 [&](auto& member) {
                     op->notifyPossibleMemberChange<valType(member)>(
@@ -106,15 +106,15 @@ class OpSetIntersectTrigger : public SetTrigger {
 
     inline void memberValueChanged(u_int64_t, const AnyValRef& member) final {
         u_int64_t newHashOfMember = getValueHash(member);
-        if (oldHashIter != op->getHashIndexMap().end() &&
+        if (oldHashIter != op->hashIndexMap.end() &&
             newHashOfMember == oldHashIter->first) {
             return;
         }
         SetReturning& unchanged = (left) ? op->right : op->left;
         bool containedInUnchangedSet =
-            getView<SetView>(unchanged).getHashIndexMap().count(
+            getView<SetView>(unchanged).hashIndexMap.count(
                 newHashOfMember);
-        if (oldHashIter != op->getHashIndexMap().end()) {
+        if (oldHashIter != op->hashIndexMap.end()) {
             if (containedInUnchangedSet) {
                 mpark::visit(
                     [&](auto& member) {

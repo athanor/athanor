@@ -9,7 +9,7 @@ using namespace std;
 
 template <>
 u_int64_t getValueHash<SetValue>(const SetValue& val) {
-    return val.getCachedHashTotal();
+    return val.cachedHashTotal;
 }
 
 template <>
@@ -50,7 +50,7 @@ void deepCopyImpl(const SetValue& src,
         }
     }
     for (auto& member : srcMemnersImpl) {
-        if (!target.getHashIndexMap().count(getValueHash(*member))) {
+        if (!target.hashIndexMap.count(getValueHash(*member))) {
             target.addMember(deepCopy(*member));
         }
     }
@@ -186,8 +186,8 @@ void SetView::assertValidState() {
             std::unordered_set<u_int64_t> seenHashes;
             bool success = true;
             u_int64_t calculatedTotal = 0;
-            if (getHashIndexMap().size() != valMembersImpl.size()) {
-                cerr << "getHashIndexMap() and members differ in size.\n";
+            if (hashIndexMap.size() != valMembersImpl.size()) {
+                cerr << "hashIndexMap and members differ in size.\n";
                 success = false;
             } else {
                 for (size_t i = 0; i < valMembersImpl.size(); i++) {
@@ -199,35 +199,35 @@ void SetView::assertValidState() {
                         success = false;
                         break;
                     }
-                    if (!(getHashIndexMap().count(memberHash))) {
+                    if (!(hashIndexMap.count(memberHash))) {
                         cerr << "Error: member " << *member
                              << " has no corresponding hash in "
-                                "getHashIndexMap().\n";
+                                "hashIndexMap.\n";
                         success = false;
                         break;
                     }
-                    if (getHashIndexMap().at(memberHash) != i) {
+                    if (hashIndexMap.at(memberHash) != i) {
                         cerr << "Error: member " << *member << "  is at index "
                              << i
                              << " but the hashIndexMap says it should be at "
-                             << getHashIndexMap().at(memberHash) << endl;
+                             << hashIndexMap.at(memberHash) << endl;
                         success = false;
                         break;
                     }
                     calculatedTotal += mix(memberHash);
                 }
                 if (success) {
-                    success = calculatedTotal == getCachedHashTotal();
+                    success = calculatedTotal == cachedHashTotal;
                     if (!success) {
                         cerr << "Calculated hash total should be "
                              << calculatedTotal << " but it was actually "
-                             << getCachedHashTotal() << endl;
+                             << cachedHashTotal << endl;
                     }
                 }
             }
             if (!success) {
                 cerr << "Members: " << valMembersImpl << endl;
-                cerr << "memberHashes: " << getHashIndexMap() << endl;
+                cerr << "memberHashes: " << hashIndexMap << endl;
                 assert(false);
             }
         },
@@ -250,7 +250,7 @@ void SetValue::assertValidVarBases() {
             }
             if (!success) {
                 cerr << "Members: " << valMembersImpl << endl;
-                cerr << "memberHashes: " << getHashIndexMap() << endl;
+                cerr << "memberHashes: " << hashIndexMap << endl;
                 printVarBases();
                 assert(false);
             }

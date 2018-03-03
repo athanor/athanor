@@ -10,7 +10,7 @@ inline void setViolation(OpSetNotEq& op, bool trigger) {
     SetView& rightSetView = getView<SetView>(op.right);
     u_int64_t oldViolation = op.violation;
     op.violation =
-        (leftSetView.getCachedHashTotal() == rightSetView.getCachedHashTotal())
+        (leftSetView.cachedHashTotal == rightSetView.cachedHashTotal)
             ? 1
             : 0;
     if (trigger && op.violation != oldViolation) {

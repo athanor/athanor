@@ -66,38 +66,14 @@ struct SetTrigger : public IterAssignedTrigger<SetValue> {
 };
 
 struct SetView {
+    friend SetValue;
     std::unordered_map<u_int64_t, u_int64_t> hashIndexMap;
     AnyVec members;
     u_int64_t cachedHashTotal;
     u_int64_t hashOfPossibleChange;
     std::vector<std::shared_ptr<SetTrigger>> triggers;
 
-    inline void initFrom(SetView& other) {
-        hashIndexMap = other.hashIndexMap;
-        members = other.members;
-        cachedHashTotal = other.cachedHashTotal;
-    }
-    template <typename InnerValueType>
-    inline ValRefVec<InnerValueType>& getMembers() {
-        return mpark::get<ValRefVec<InnerValueType>>(members);
-    }
-
-   public:
-    template <typename InnerValueType>
-    inline const ValRefVec<InnerValueType>& getMembers() const {
-        return mpark::get<ValRefVec<InnerValueType>>(members);
-    }
-
-    inline const AnyVec& memberVec() { return members; }
-
-    template <typename ValueType>
-    inline bool containsMember(const ValRef<ValueType>& member) const {
-        return containsMember(*member);
-    }
-    template <typename ValueType>
-    inline bool containsMember(const ValueType& member) const {
-        return hashIndexMap.count(getValueHash(member));
-    }
+   private:
     template <typename InnerValueType>
     inline bool addMember(const ValRef<InnerValueType>& member) {
         auto& members = getMembers<InnerValueType>();
@@ -120,16 +96,6 @@ struct SetView {
     inline void notifyMemberAdded(const AnyValRef& newMember) {
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
-    }
-
-    template <typename InnerValueType>
-    inline bool addMemberAndNotify(const ValRef<InnerValueType>& member) {
-        if (addMember(member)) {
-            notifyMemberAdded(getMembers<InnerValueType>().back());
-            return true;
-        } else {
-            return false;
-        }
     }
 
     template <typename InnerValueType>
@@ -162,6 +128,51 @@ struct SetView {
     }
 
     template <typename InnerValueType>
+    inline u_int64_t memberChanged(u_int64_t oldHash, u_int64_t index) {
+        auto& members = getMembers<InnerValueType>();
+        u_int64_t newHash = getValueHash(*members[index]);
+        if (newHash != oldHash) {
+            debug_code(assert(!hashIndexMap.count(newHash)));
+            hashIndexMap[newHash] = hashIndexMap[oldHash];
+            hashIndexMap.erase(oldHash);
+            cachedHashTotal -= mix(oldHash);
+            cachedHashTotal += mix(newHash);
+        }
+        debug_code(assertValidState());
+        return newHash;
+    }
+
+    inline void notifyMemberChanged(size_t index,
+                                    const AnyValRef& changedMember) {
+        debug_code(assertValidState());
+        visitTriggers(
+            [&](auto& t) { t->memberValueChanged(index, changedMember); },
+            triggers);
+    }
+
+    void silentClear() {
+        mpark::visit(
+            [&](auto& membersImpl) {
+                cachedHashTotal = 0;
+                hashIndexMap.clear();
+                membersImpl.clear();
+
+            },
+            members);
+    }
+
+   public:
+    template <typename InnerValueType>
+    inline bool addMemberAndNotify(const ValRef<InnerValueType>& member) {
+        if (addMember(member)) {
+            notifyMemberAdded(getMembers<InnerValueType>().back());
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    template <typename InnerValueType>
     inline ValRef<InnerValueType> removeMemberAndNotify(u_int64_t index) {
         ValRef<InnerValueType> removedValue =
             removeMember<InnerValueType>(index);
@@ -185,29 +196,6 @@ struct SetView {
     }
 
     template <typename InnerValueType>
-    inline u_int64_t memberChanged(u_int64_t oldHash, u_int64_t index) {
-        auto& members = getMembers<InnerValueType>();
-        u_int64_t newHash = getValueHash(*members[index]);
-        if (newHash != oldHash) {
-            debug_code(assert(!hashIndexMap.count(newHash)));
-            hashIndexMap[newHash] = hashIndexMap[oldHash];
-            hashIndexMap.erase(oldHash);
-            cachedHashTotal -= mix(oldHash);
-            cachedHashTotal += mix(newHash);
-        }
-        debug_code(assertValidState());
-        return newHash;
-    }
-
-    inline void notifyMemberChanged(size_t index,
-                                    const AnyValRef& changedMember) {
-        debug_code(assertValidState());
-        visitTriggers(
-            [&](auto& t) { t->memberValueChanged(index, changedMember); },
-            triggers);
-    }
-
-    template <typename InnerValueType>
     inline void memberChangedAndNotify(size_t index) {
         u_int64_t oldHash = hashOfPossibleChange;
         hashOfPossibleChange = memberChanged<InnerValueType>(oldHash, index);
@@ -217,41 +205,42 @@ struct SetView {
         notifyMemberChanged(index, getMembers<InnerValueType>()[index]);
     }
 
-    template <typename InnerValueType, typename Func>
-    inline void changeMemberAndNotify(Func&& func, size_t index) {
-        notifyPossibleMemberChange<InnerValueType>(index);
-        if (func()) {
-            memberChangedAndNotify<InnerValueType>(index);
-        }
-    }
-
     inline void notifyEntireSetChange() {
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->setValueChanged(*this); }, triggers);
     }
 
-    inline const std::unordered_map<u_int64_t, u_int64_t>& getHashIndexMap()
-        const {
-        return hashIndexMap;
+    inline void initFrom(SetView& other) {
+        hashIndexMap = other.hashIndexMap;
+        members = other.members;
+        cachedHashTotal = other.cachedHashTotal;
     }
 
-    inline u_int64_t getCachedHashTotal() const { return cachedHashTotal; }
+    template <typename InnerValueType>
+    inline ValRefVec<InnerValueType>& getMembers() {
+        return mpark::get<ValRefVec<InnerValueType>>(members);
+    }
+
+    template <typename InnerValueType>
+    inline const ValRefVec<InnerValueType>& getMembers() const {
+        return mpark::get<ValRefVec<InnerValueType>>(members);
+    }
+
+    template <typename ValueType>
+    inline bool containsMember(const ValRef<ValueType>& member) const {
+        return containsMember(*member);
+    }
+    template <typename ValueType>
+    inline bool containsMember(const ValueType& member) const {
+        return hashIndexMap.count(getValueHash(member));
+    }
+
     inline u_int64_t numberElements() const { return hashIndexMap.size(); }
-    void silentClear() {
-        mpark::visit(
-            [&](auto& membersImpl) {
-                cachedHashTotal = 0;
-                hashIndexMap.clear();
-                membersImpl.clear();
-
-            },
-            members);
-    }
-
     void assertValidState();
 };
 
 struct SetValue : public SetView, public ValBase {
+    using SetView::silentClear;
     template <typename InnerValueType>
     inline bool addMember(const ValRef<InnerValueType>& member) {
         if (SetView::addMember(member)) {

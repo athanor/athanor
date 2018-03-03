@@ -89,7 +89,8 @@ struct Quantifier : public QuantifierView<ExprType> {
                             startTriggering(exprs.back());
                         }
                     });
-                visitTriggers([&](auto& t) { t->exprUnrolled(exprs.back()); },
+                auto &triggerMember = exprs.back();
+                visitTriggers([&](auto& t) { t->exprUnrolled(triggerMember); },
                               triggers);
             },
             newValue);

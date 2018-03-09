@@ -1,4 +1,5 @@
 #include "operators/opOr.h"
+#include <algorithm>
 #include <cassert>
 #include "utils/ignoreUnused.h"
 using namespace std;
@@ -113,8 +114,7 @@ void evaluate(OpOr& op) {
     for (auto& operand : op.quantifier->exprs) {
         evaluate(operand);
     }
-    u_int64_t minViolation =
-        getView(op.quantifier->exprs[0]).violation;
+    u_int64_t minViolation = getView(op.quantifier->exprs[0]).violation;
     op.minViolationIndices.insert(0);
     minViolation = findNewMinViolation(op, minViolation);
     op.violation = minViolation;

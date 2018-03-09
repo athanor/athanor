@@ -32,6 +32,9 @@ class HillClimber {
                 return oldObj - newObj;
             case OptimiseMode::NONE:
                 return 0;
+            default:
+                assert(false);
+                abort();
         }
     }
     inline bool acceptValue() {

@@ -6,12 +6,29 @@
 #include <limits>
 #include <memory>
 #include <vector>
-#include "utils/cachedSharedPtr.h"
 #include "utils/variantOperations.h"
 #define buildForAllTypes(f, sep) f(Bool) sep f(Int) sep f(Set) sep f(MSet)
 
 #define MACRO_COMMA ,
+// Want a shared ptr like class that is not convertable to shared ptr
+template <typename T>
+class StandardSharedPtr {
+   public:
+    typedef T element_type;
 
+   private:
+    std::shared_ptr<T> ref;
+
+   public:
+    StandardSharedPtr(std::shared_ptr<T> ref) : ref(std::move(ref)) {}
+    inline explicit operator bool() const noexcept {
+        return ref.operator bool();
+    }
+    inline T& operator*() const { return ref.operator*(); }
+    inline T* operator->() const noexcept { return ref.operator->(); }
+};
+template <typename T>
+std::shared_ptr<T> makeShared();
 template <typename T>
 using BaseType =
     typename std::remove_cv<typename std::remove_reference<T>::type>::type;
@@ -22,47 +39,11 @@ using BaseType =
     struct name##Domain;
 buildForAllTypes(declDomainsAndValues, )
 #undef declDomainsAndValues
+
+    // associations between values, domains and views
+
     template <typename T>
-    using ValRef = StandardSharedPtr<T>;
-
-// short cut for building a variant of any other templated class, where the
-// class is templated over a value (SetValue,IntValue, etc.)
-#define variantValues(V) T<V##Value>
-template <template <typename> class T>
-using Variantised =
-    mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
-#undef variantValues
-
-// variant for values
-typedef Variantised<ValRef> AnyValRef;
-// variant for vector of values
-template <typename InnerValueType>
-using ValRefVec = std::vector<ValRef<InnerValueType>>;
-typedef Variantised<ValRefVec> AnyVec;
-
-template <typename T>
-struct ValType;
-
-template <typename T>
-struct ValType<ValRef<T>> {
-    typedef T type;
-};
-
-template <typename T>
-struct ValType<std::vector<ValRef<T>>> {
-    typedef T type;
-};
-
-#define valType(t) typename ValType<BaseType<decltype(t)>>::type
-
-// variant for domains
-#define variantDomains(T) std::shared_ptr<T##Domain>
-using AnyDomainRef =
-    mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
-#undef variantDomains
-
-template <typename T>
-struct AssociatedDomain;
+    struct AssociatedDomain;
 template <typename T>
 struct AssociatedValueType;
 
@@ -79,8 +60,6 @@ struct IsValueType : public std::false_type {};
 template <typename T>
 struct TypeAsString;
 #define makeAssociations(name)                                           \
-    template <>                                                          \
-    std::shared_ptr<name##Value> makeShared<name##Value>();              \
     void matchInnerType(const name##Domain& domain, name##Value& value); \
     void matchInnerType(const name##Value& other, name##Value& value);   \
     void reset(name##Value& value);                                      \
@@ -117,6 +96,84 @@ struct TypeAsString;
 
 buildForAllTypes(makeAssociations, );
 #undef makeAssociations
+
+template <typename T>
+struct ValRef : public StandardSharedPtr<T> {
+    using StandardSharedPtr<T>::StandardSharedPtr;
+};
+
+template <typename T>
+struct ViewRef : public StandardSharedPtr<T> {
+    using StandardSharedPtr<T>::StandardSharedPtr;
+};
+
+template <typename T,
+          typename std::enable_if<IsValueType<T>::value, int>::type = 0>
+ValRef<T> make() {
+    return ValRef<T>(makeShared<T>());
+}
+
+// short cut for building a variant of any other templated class, where the
+// class is templated over a value (SetValue,IntValue, etc.)
+#define variantValues(V) T<V##Value>
+template <template <typename> class T>
+using Variantised =
+    mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
+#undef variantValues
+
+// variant for values
+typedef Variantised<ValRef> AnyValRef;
+// variant for vector of values
+template <typename InnerValueType>
+using ValRefVec = std::vector<ValRef<InnerValueType>>;
+typedef Variantised<ValRefVec> AnyVec;
+
+template <typename T>
+struct ValType;
+
+template <typename T>
+struct ValType<ValRef<T>> {
+    typedef T type;
+};
+
+template <typename T>
+struct ValType<std::vector<ValRef<T>>> {
+    typedef T type;
+};
+
+#define valType(t) typename ValType<BaseType<decltype(t)>>::type
+
+// variant for views
+template <typename T>
+using ViewRefMaker = ViewRef<typename AssociatedViewType<T>::type>;
+typedef Variantised<ViewRefMaker> AnyViewRef;
+// variant for vector of views
+template <typename InnerValueType>
+using ViewRefVec = std::vector<ValRef<InnerValueType>>;
+template <typename T>
+using ViewRefVecMaker = ViewRefVec<typename AssociatedViewType<T>::type>;
+typedef Variantised<ViewRefVecMaker> AnyViewVec;
+
+template <typename T>
+struct ViewType;
+
+template <typename T>
+struct ViewType<ViewRef<T>> {
+    typedef T type;
+};
+
+template <typename T>
+struct ViewType<std::vector<ViewRef<T>>> {
+    typedef T type;
+};
+
+#define viewType(t) typename ViewType<BaseType<decltype(t)>>::type
+
+// variant for domains
+#define variantDomains(T) std::shared_ptr<T##Domain>
+using AnyDomainRef =
+    mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
+#undef variantDomains
 
 struct ValBase;
 extern ValBase constantPool;

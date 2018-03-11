@@ -69,7 +69,7 @@ struct MSetTrigger : public IterAssignedTrigger<MSetValue> {
     virtual void mSetValueChanged(const MSetView& newValue) = 0;
 };
 struct MSetView {
-    AnyVec members;
+    AnyValVec members;
     u_int64_t hashOfPossibleChange;
     std::vector<std::shared_ptr<MSetTrigger>> triggers;
 

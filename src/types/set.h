@@ -67,7 +67,7 @@ struct SetTrigger : public IterAssignedTrigger<SetValue> {
 struct SetView {
     friend SetValue;
     std::unordered_map<u_int64_t, u_int64_t> hashIndexMap;
-    AnyVec members;
+    AnyValVec members;
     u_int64_t cachedHashTotal;
     u_int64_t hashOfPossibleChange;
     std::vector<std::shared_ptr<SetTrigger>> triggers;

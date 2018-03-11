@@ -126,7 +126,7 @@ typedef Variantised<ValRef> AnyValRef;
 // variant for vector of values
 template <typename InnerValueType>
 using ValRefVec = std::vector<ValRef<InnerValueType>>;
-typedef Variantised<ValRefVec> AnyVec;
+typedef Variantised<ValRefVec> AnyValVec;
 
 template <typename T>
 struct ValType;

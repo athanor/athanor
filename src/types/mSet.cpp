@@ -8,13 +8,13 @@
 using namespace std;
 
 template <>
-u_int64_t getValueHash<MSetValue>(const MSetValue& val) {
-    todoImpl(val);
+u_int64_t getValueHash<MSetView>(const MSetView& val) {
+    return val.cachedHashTotal;
 }
 
 template <>
-ostream& prettyPrint<MSetValue>(ostream& os, const MSetValue& v) {
-    os << "MSet(";
+ostream& prettyPrint<MSetView>(ostream& os, const MSetView& v) {
+    os << "{";
     mpark::visit(
         [&](auto& membersImpl) {
             bool first = true;
@@ -28,15 +28,23 @@ ostream& prettyPrint<MSetValue>(ostream& os, const MSetValue& v) {
             }
         },
         v.members);
-    os << ")";
+    os << "}";
     return os;
 }
 
-template <typename InnerValueType>
-void deepCopyImpl(const MSetValue& src,
-                  const ValRefVec<InnerValueType>& srcMemnersImpl,
+template <typename InnerViewType>
+void deepCopyImpl(const MSetValue&,
+                  const ViewRefVec<InnerViewType>& srcMemnersImpl,
                   MSetValue& target) {
-    todoImpl(src, srcMemnersImpl, target);
+    auto& targetMembersImpl = target.getMembers<InnerViewType>();
+    // to be optimised later
+    targetMembersImpl.clear();
+
+    for (auto& member : srcMemnersImpl) {
+        target.addMember(deepCopy(*assumeAsValue(member)));
+    }
+    debug_code(target.assertValidState());
+    target.notifyEntireMSetChange();
 }
 
 template <>
@@ -51,41 +59,27 @@ void deepCopy<MSetValue>(const MSetValue& src, MSetValue& target) {
 
 template <>
 ostream& prettyPrint<MSetDomain>(ostream& os, const MSetDomain& d) {
-    os << "MSet(";
+    os << "mSet(";
     os << d.sizeAttr << ",";
     prettyPrint(os, d.inner);
     os << ")";
     return os;
 }
 
-template <typename InnerValueType>
-void matchInnerTypeImpl(const ValRefVec<InnerValueType>&, MSetValue& target) {
-    if (mpark::get_if<ValRefVec<InnerValueType>>(&(target.members)) == NULL) {
-        target.members.emplace<ValRefVec<InnerValueType>>();
-    }
-}
-
 void matchInnerType(const MSetValue& src, MSetValue& target) {
     mpark::visit(
         [&](auto& srcMembersImpl) {
-            matchInnerTypeImpl(srcMembersImpl, target);
+            target.setInnerType<viewType(srcMembersImpl)>();
         },
         src.members);
-}
-
-template <typename InnerDomainType>
-void matchInnerTypeFromDomain(const std::shared_ptr<InnerDomainType>&,
-                              MSetValue& target) {
-    typedef typename AssociatedValueType<InnerDomainType>::type InnerValueType;
-    if (mpark::get_if<ValRefVec<InnerValueType>>(&(target.members)) == NULL) {
-        target.members.emplace<ValRefVec<InnerValueType>>();
-    }
 }
 
 void matchInnerType(const MSetDomain& domain, MSetValue& target) {
     mpark::visit(
         [&](auto& innerDomainImpl) {
-            matchInnerTypeFromDomain(innerDomainImpl, target);
+            target.setInnerType<typename AssociatedViewType<
+                typename AssociatedValueType<typename BaseType<decltype(
+                    innerDomainImpl)>::element_type>::type>::type>();
         },
         domain.inner);
 }
@@ -97,22 +91,22 @@ u_int64_t getDomainSize<MSetDomain>(const MSetDomain& domain) {
 
 void reset(MSetValue& val) {
     val.container = NULL;
+    val.silentClear();
     val.triggers.clear();
-    mpark::visit([&](auto& members) { members.clear(); }, val.members);
 }
 
 void evaluate(MSetValue&) {}
 void startTriggering(MSetValue&) {}
 void stopTriggering(MSetValue&) {}
 
-template <typename InnerValueType>
-void normaliseImpl(MSetValue& val, ValRefVec<InnerValueType>& valMembersImpl) {
-    ignoreUnused(val);
+template <typename InnerViewType>
+void normaliseImpl(MSetValue&, ViewRefVec<InnerViewType>& valMembersImpl) {
     for (auto& v : valMembersImpl) {
-        normalise(*v);
+        normalise(*assumeAsValue(v));
     }
-    sort(valMembersImpl.begin(), valMembersImpl.end(),
-         [](auto& u, auto& v) { return smallerValue(*u, *v); });
+    sort(valMembersImpl.begin(), valMembersImpl.end(), [](auto& u, auto& v) {
+        return smallerValue(*assumeAsValue(u), *assumeAsValue(v));
+    });
 }
 
 template <>
@@ -139,9 +133,11 @@ bool smallerValue<MSetValue>(const MSetValue& u, const MSetValue& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (smallerValue(*uMembersImpl[i], *vMembersImpl[i])) {
+                if (smallerValue(*assumeAsValue(uMembersImpl[i]),
+                                 *assumeAsValue(vMembersImpl[i]))) {
                     return true;
-                } else if (largerValue(*uMembersImpl[i], *vMembersImpl[i])) {
+                } else if (largerValue(*assumeAsValue(uMembersImpl[i]),
+                                       *assumeAsValue(vMembersImpl[i]))) {
                     return false;
                 }
             }
@@ -162,13 +158,81 @@ bool largerValue<MSetValue>(const MSetValue& u, const MSetValue& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (largerValue(*uMembersImpl[i], *vMembersImpl[i])) {
+                if (largerValue(*assumeAsValue(uMembersImpl[i]),
+                                *assumeAsValue(vMembersImpl[i]))) {
                     return true;
-                } else if (smallerValue(*uMembersImpl[i], *vMembersImpl[i])) {
+                } else if (smallerValue(*assumeAsValue(uMembersImpl[i]),
+                                        *assumeAsValue(vMembersImpl[i]))) {
                     return false;
                 }
             }
             return false;
         },
         u.members);
+}
+void MSetView::assertValidState() {
+    mpark::visit(
+        [&](auto& valMembersImpl) {
+            bool success = true;
+            u_int64_t calculatedTotal = 0;
+            for (size_t i = 0; i < valMembersImpl.size(); i++) {
+                auto& member = valMembersImpl[i];
+                u_int64_t memberHash = getValueHash(*member);
+                calculatedTotal += mix(memberHash);
+            }
+            if (success) {
+                success = calculatedTotal == cachedHashTotal;
+                if (!success) {
+                    cerr << "Calculated hash total should be "
+                         << calculatedTotal << " but it was actually "
+                         << cachedHashTotal << endl;
+                }
+            }
+            if (!success) {
+                cerr << "Members: " << valMembersImpl << endl;
+                assert(false);
+                abort();
+            }
+        },
+        members);
+}
+
+void MSetValue::assertValidVarBases() {
+    mpark::visit(
+        [&](auto& valMembersImpl) {
+            if (valMembersImpl.empty()) {
+                return;
+            }
+            bool success = true;
+            for (size_t i = 0; i < valMembersImpl.size(); i++) {
+                if (valBase(*valMembersImpl[i]).container != this) {
+                    success = false;
+                    cerr << "member " << i
+                         << "'s container does not point to this mSet." << endl;
+                }
+            }
+            if (!success) {
+                cerr << "Members: " << valMembersImpl << endl;
+                printVarBases();
+                assert(false);
+            }
+        },
+        members);
+}
+
+void MSetValue::printVarBases() {
+    mpark::visit(
+        [&](auto& valMembersImpl) {
+            cout << "parent is constant: " << (this->container == &constantPool)
+                 << endl;
+            for (auto& member : valMembersImpl) {
+                cout << "val id: " << valBase(*assumeAsValue(member)).id
+                     << endl;
+                cout << "is constant: "
+                     << (valBase(*assumeAsValue(member)).container ==
+                         &constantPool)
+                     << endl;
+            }
+        },
+        members);
 }

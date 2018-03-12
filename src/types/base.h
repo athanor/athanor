@@ -276,11 +276,11 @@ struct TriggerBase {
 struct DelayedTrigger : public virtual TriggerBase {
     virtual void trigger() = 0;
 };
-template <typename UnrollingValue>
+template <typename UnrollingView>
 struct IterAssignedTrigger : public virtual TriggerBase {
-    typedef UnrollingValue ValueType;
-    virtual void iterHasNewValue(const UnrollingValue& oldValue,
-                                 const ValRef<UnrollingValue>& newValue) = 0;
+    typedef UnrollingView ViewType;
+    virtual void iterHasNewValue(const UnrollingView& oldValue,
+                                 const ViewRef<UnrollingView>& newValue) = 0;
 };
 
 template <typename ValueType>

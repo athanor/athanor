@@ -10,13 +10,13 @@
 template <typename T>
 struct Iterator {
     int id;
-    ValRef<T> ref;
+    ViewRef<T> ref;
     std::vector<std::shared_ptr<IterAssignedTrigger<T>>> unrollTriggers;
 
     Iterator(int id, ValRef<T> ref) : id(id), ref(std::move(ref)) {}
     template <typename Func>
-    inline void changeValue(bool triggering, const ValRef<T>& oldVal,
-                            const ValRef<T>& newVal, Func&& callback) {
+    inline void changeValue(bool triggering, const ViewRef<T>& oldVal,
+                            const ViewRef<T>& newVal, Func&& callback) {
         ref = newVal;
         callback();
         if (triggering) {
@@ -48,16 +48,18 @@ class IterRef {
     inline decltype(auto) operator-> () const { return ref->ref.operator->(); }
 };
 
-typedef Variantised<IterRef> AnyIterRef;
+template <typename T>
+using IterRefMaker = IterRef<typename AssociatedViewType<T>::type>;
+typedef Variantised<IterRefMaker> AnyIterRef;
 
 template <typename T>
 u_int64_t getValueHash(const IterRef<T>& iter) {
-    return getValueHash(*getViewPtr(iter.getIterator().ref));
+    return getValueHash(*iter);
 }
 
 template <typename T>
 std::ostream& prettyPrint(std::ostream& os, const IterRef<T>& iter) {
-    return prettyPrint(os, *getViewPtr(iter.getIterator().ref));
+    return prettyPrint(os, *iter);
 }
 
 inline u_int64_t getValueHash(const AnyIterRef& iter) {

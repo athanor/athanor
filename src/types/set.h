@@ -52,7 +52,7 @@ struct SetDomain {
     }
 };
 
-struct SetTrigger : public IterAssignedTrigger<SetValue> {
+struct SetTrigger : public IterAssignedTrigger<SetView> {
     virtual void valueRemoved(u_int64_t indexOfRemovedValue,
                               u_int64_t hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyViewRef& member) = 0;
@@ -370,7 +370,7 @@ struct DefinedTrigger<SetValue> : public SetTrigger {
     }
 
     void setValueChanged(const SetView& newValue) { todoImpl(newValue); }
-    void iterHasNewValue(const SetValue&, const ValRef<SetValue>&) final {
+    void iterHasNewValue(const SetView&, const ViewRef<SetView>&) final {
         assert(false);
         abort();
     }

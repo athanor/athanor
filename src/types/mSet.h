@@ -53,7 +53,7 @@ struct MSetDomain {
     }
 };
 
-struct MSetTrigger : public IterAssignedTrigger<MSetValue> {
+struct MSetTrigger : public IterAssignedTrigger<MSetView> {
     virtual void valueRemoved(u_int64_t indexOfRemovedValue,
                               u_int64_t hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyViewRef& member) = 0;
@@ -331,7 +331,7 @@ struct DefinedTrigger<MSetValue> : public MSetTrigger {
     }
 
     void mSetValueChanged(const MSetView& newValue) { todoImpl(newValue); }
-    void iterHasNewValue(const MSetValue&, const ValRef<MSetValue>&) final {
+    void iterHasNewValue(const MSetView&, const ViewRef<MSetView>&) final {
         assert(false);
         abort();
     }

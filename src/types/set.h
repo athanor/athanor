@@ -55,11 +55,11 @@ struct SetDomain {
 struct SetTrigger : public IterAssignedTrigger<SetValue> {
     virtual void valueRemoved(u_int64_t indexOfRemovedValue,
                               u_int64_t hashOfRemovedValue) = 0;
-    virtual void valueAdded(const AnyValRef& member) = 0;
+    virtual void valueAdded(const AnyViewRef& member) = 0;
     virtual void possibleMemberValueChange(u_int64_t index,
-                                           const AnyValRef& member) = 0;
+                                           const AnyViewRef& member) = 0;
     virtual void memberValueChanged(u_int64_t index,
-                                    const AnyValRef& member) = 0;
+                                    const AnyViewRef& member) = 0;
 
     virtual void setValueChanged(const SetView& newValue) = 0;
 };
@@ -67,19 +67,16 @@ struct SetTrigger : public IterAssignedTrigger<SetValue> {
 struct SetView {
     friend SetValue;
     std::unordered_map<u_int64_t, u_int64_t> hashIndexMap;
-    AnyValVec members;
+    AnyViewVec members;
     u_int64_t cachedHashTotal;
     u_int64_t hashOfPossibleChange;
     std::vector<std::shared_ptr<SetTrigger>> triggers;
 
    private:
-    template <typename InnerValueType>
-    inline bool addMember(const ValRef<InnerValueType>& member) {
-        auto& members = getMembers<InnerValueType>();
-        debug_log("Adding value " << *member << " with hash "
-                                  << getValueHash(*member));
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline bool addMember(const ViewRef<InnerViewType>& member) {
+        auto& members = getMembers<InnerViewType>();
         if (containsMember(member)) {
-            debug_log("rejected");
             return false;
         }
 
@@ -92,22 +89,21 @@ struct SetView {
         return true;
     }
 
-    inline void notifyMemberAdded(const AnyValRef& newMember) {
+    inline void notifyMemberAdded(const AnyViewRef& newMember) {
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
     }
 
-    template <typename InnerValueType>
-    inline ValRef<InnerValueType> removeMember(u_int64_t index) {
-        auto& members = getMembers<InnerValueType>();
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline ViewRef<InnerViewType> removeMember(u_int64_t index) {
+        auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
-        debug_log("Removing value " << *members[index]);
 
         u_int64_t hash = getValueHash(*members[index]);
         debug_code(assert(hashIndexMap.count(hash)));
         hashIndexMap.erase(hash);
         cachedHashTotal -= mix(hash);
-        ValRef<InnerValueType> removedMember = std::move(members[index]);
+        ViewRef<InnerViewType> removedMember = std::move(members[index]);
         members[index] = std::move(members.back());
         members.pop_back();
         if (index < members.size()) {
@@ -126,9 +122,9 @@ struct SetView {
             triggers);
     }
 
-    template <typename InnerValueType>
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline u_int64_t memberChanged(u_int64_t oldHash, u_int64_t index) {
-        auto& members = getMembers<InnerValueType>();
+        auto& members = getMembers<InnerViewType>();
         u_int64_t newHash = getValueHash(*members[index]);
         if (newHash != oldHash) {
             debug_code(assert(!hashIndexMap.count(newHash)));
@@ -142,7 +138,7 @@ struct SetView {
     }
 
     inline void notifyMemberChanged(size_t index,
-                                    const AnyValRef& changedMember) {
+                                    const AnyViewRef& changedMember) {
         debug_code(assertValidState());
         visitTriggers(
             [&](auto& t) { t->memberValueChanged(index, changedMember); },
@@ -161,32 +157,30 @@ struct SetView {
     }
 
    public:
-    template <typename InnerValueType>
-    inline bool addMemberAndNotify(const ValRef<InnerValueType>& member) {
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline bool addMemberAndNotify(const ViewRef<InnerViewType>& member) {
         if (addMember(member)) {
-            notifyMemberAdded(getMembers<InnerValueType>().back());
+            notifyMemberAdded(getMembers<InnerViewType>().back());
             return true;
         } else {
             return false;
         }
     }
 
-    template <typename InnerValueType>
-    inline ValRef<InnerValueType> removeMemberAndNotify(u_int64_t index) {
-        ValRef<InnerValueType> removedValue =
-            removeMember<InnerValueType>(index);
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline ViewRef<InnerViewType> removeMemberAndNotify(u_int64_t index) {
+        ViewRef<InnerViewType> removedValue =
+            removeMember<InnerViewType>(index);
         notifyMemberRemoved(index, getValueHash(*removedValue));
         return removedValue;
     }
 
-    template <typename InnerValueType>
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void notifyPossibleMemberChange(u_int64_t index) {
-        auto& members = getMembers<InnerValueType>();
+        auto& members = getMembers<InnerViewType>();
         debug_code(assertValidState());
         hashOfPossibleChange = getValueHash(*members[index]);
-        AnyValRef triggerMember = members[index];
-        debug_log("Possible value change, member="
-                  << members[index] << " hash = " << hashOfPossibleChange);
+        AnyViewRef triggerMember = members[index];
         visitTriggers(
             [&](auto& t) {
                 t->possibleMemberValueChange(index, triggerMember);
@@ -194,14 +188,14 @@ struct SetView {
             triggers);
     }
 
-    template <typename InnerValueType>
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void memberChangedAndNotify(size_t index) {
         u_int64_t oldHash = hashOfPossibleChange;
-        hashOfPossibleChange = memberChanged<InnerValueType>(oldHash, index);
+        hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
         if (oldHash == hashOfPossibleChange) {
             return;
         }
-        notifyMemberChanged(index, getMembers<InnerValueType>()[index]);
+        notifyMemberChanged(index, getMembers<InnerViewType>()[index]);
     }
 
     inline void notifyEntireSetChange() {
@@ -215,22 +209,22 @@ struct SetView {
         cachedHashTotal = other.cachedHashTotal;
     }
 
-    template <typename InnerValueType>
-    inline ValRefVec<InnerValueType>& getMembers() {
-        return mpark::get<ValRefVec<InnerValueType>>(members);
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline ViewRefVec<InnerViewType>& getMembers() {
+        return mpark::get<ViewRefVec<InnerViewType>>(members);
     }
 
-    template <typename InnerValueType>
-    inline const ValRefVec<InnerValueType>& getMembers() const {
-        return mpark::get<ValRefVec<InnerValueType>>(members);
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline const ViewRefVec<InnerViewType>& getMembers() const {
+        return mpark::get<ViewRefVec<InnerViewType>>(members);
     }
 
-    template <typename ValueType>
-    inline bool containsMember(const ValRef<ValueType>& member) const {
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline bool containsMember(const ViewRef<InnerViewType>& member) const {
         return containsMember(*member);
     }
-    template <typename ValueType>
-    inline bool containsMember(const ValueType& member) const {
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline bool containsMember(const InnerViewType& member) const {
         return hashIndexMap.count(getValueHash(member));
     }
 
@@ -240,9 +234,9 @@ struct SetView {
 
 struct SetValue : public SetView, public ValBase {
     using SetView::silentClear;
-    template <typename InnerValueType>
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline bool addMember(const ValRef<InnerValueType>& member) {
-        if (SetView::addMember(member)) {
+        if (SetView::addMember(getViewPtr(member))) {
             valBase(*member).container = this;
             valBase(*member).id = numberElements() - 1;
             debug_code(assertValidVarBases());
@@ -252,46 +246,53 @@ struct SetValue : public SetView, public ValBase {
         }
     }
 
-    template <typename InnerValueType, typename Func>
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
     inline bool tryAddMember(const ValRef<InnerValueType>& member,
                              Func&& func) {
-        if (SetView::addMember(member)) {
+        if (SetView::addMember(getViewPtr(member))) {
             if (func()) {
                 valBase(*member).container = this;
                 valBase(*member).id = numberElements() - 1;
                 SetView::notifyMemberAdded(member);
                 return true;
             } else {
-                SetView::removeMember<InnerValueType>(numberElements() - 1);
+                typedef typename AssociatedViewType<InnerValueType>::type
+                    InnerViewType;
+                SetView::removeMember<InnerViewType>(numberElements() - 1);
                 valBase(*member).container = NULL;
             }
         }
         return false;
     }
 
-    template <typename InnerValueType>
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline ValRef<InnerValueType> removeMember(u_int64_t index) {
-        auto removedMember = SetView::removeMember<InnerValueType>(index);
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        auto removedMember = SetView::removeMember<InnerViewType>(index);
         valBase(*removedMember).container = NULL;
         if (index < numberElements()) {
-            valBase(*getMembers<InnerValueType>()[index]).id = index;
+            valBase(*getMembers<InnerViewType>()[index]).id = index;
         }
         debug_code(assertValidVarBases());
-        return removedMember;
+        return assumeAsValue(removedMember);
     }
 
-    template <typename InnerValueType, typename Func>
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
     inline std::pair<bool, ValRef<InnerValueType>> tryRemoveMember(
         u_int64_t index, Func&& func) {
-        auto removedMember = SetView::removeMember<InnerValueType>(index);
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        auto removedMember = SetView::removeMember<InnerViewType>(index);
         if (func()) {
             valBase(*removedMember).container = NULL;
             if (index < numberElements()) {
-                valBase(*getMembers<InnerValueType>()[index]).id = index;
+                valBase(*getMembers<InnerViewType>()[index]).id = index;
             }
             debug_code(assertValidVarBases());
             SetView::notifyMemberRemoved(index, getValueHash(*removedMember));
-            return std::make_pair(true, std::move(removedMember));
+            return std::make_pair(true,
+                                  std::move(assumeAsValue(removedMember)));
         } else {
             SetView::addMember(removedMember);
             auto& members = getMembers<InnerValueType>();
@@ -304,13 +305,15 @@ struct SetValue : public SetView, public ValBase {
         }
     }
 
-    template <typename InnerValueType, typename Func>
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
     inline bool tryMemberChange(size_t index, Func&& func) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         u_int64_t oldHash = hashOfPossibleChange;
-        hashOfPossibleChange = memberChanged<InnerValueType>(oldHash, index);
+        hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
         if (func()) {
             SetView::notifyMemberChanged(index,
-                                         getMembers<InnerValueType>()[index]);
+                                         getMembers<InnerViewType>()[index]);
             return true;
         } else {
             if (oldHash != hashOfPossibleChange) {
@@ -338,10 +341,10 @@ struct SetValue : public SetView, public ValBase {
     }
     void assertValidVarBases();
 
-    template <typename InnerValueType>
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     void setInnerType() {
-        if (mpark::get_if<ValRefVec<InnerValueType>>(&(members)) == NULL) {
-            members.emplace<ValRefVec<InnerValueType>>();
+        if (mpark::get_if<ViewRefVec<InnerViewType>>(&(members)) == NULL) {
+            members.emplace<ViewRefVec<InnerViewType>>();
         }
     }
 
@@ -356,12 +359,12 @@ struct DefinedTrigger<SetValue> : public SetTrigger {
                              u_int64_t hashOfRemovedValue) {
         todoImpl(indexOfRemovedValue, hashOfRemovedValue);
     }
-    inline void valueAdded(const AnyValRef& member) { todoImpl(member); }
+    inline void valueAdded(const AnyViewRef& member) { todoImpl(member); }
     virtual inline void possibleMemberValueChange(u_int64_t index,
-                                                  const AnyValRef& member) {
+                                                  const AnyViewRef& member) {
         todoImpl(index, member);
     }
-    virtual void memberValueChanged(u_int64_t index, const AnyValRef& member) {
+    virtual void memberValueChanged(u_int64_t index, const AnyViewRef& member) {
         todoImpl(index, member);
         ;
     }

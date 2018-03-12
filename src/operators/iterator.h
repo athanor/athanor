@@ -52,12 +52,12 @@ typedef Variantised<IterRef> AnyIterRef;
 
 template <typename T>
 u_int64_t getValueHash(const IterRef<T>& iter) {
-    return getValueHash(*iter);
+    return getValueHash(*getViewPtr(iter.getIterator().ref));
 }
 
 template <typename T>
 std::ostream& prettyPrint(std::ostream& os, const IterRef<T>& iter) {
-    return prettyPrint(os, *iter);
+    return prettyPrint(os, *getViewPtr(iter.getIterator().ref));
 }
 
 inline u_int64_t getValueHash(const AnyIterRef& iter) {
@@ -69,7 +69,7 @@ inline std::ostream& prettyPrint(std::ostream& os, const AnyIterRef& iter,
                                  T = 0) {
     return mpark::visit(
         [&](auto& iterImpl) -> std::ostream& {
-            return prettyPrint(os, *iterImpl);
+            return prettyPrint(os, iterImpl);
         },
         iter);
 }

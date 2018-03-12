@@ -56,6 +56,8 @@ template <typename T>
 struct IsDomainType : public std::false_type {};
 template <typename T>
 struct IsValueType : public std::false_type {};
+template <typename T>
+struct IsViewType : public std::false_type {};
 
 template <typename T>
 struct TypeAsString;
@@ -77,6 +79,10 @@ struct TypeAsString;
         typedef name##View type;                                         \
     };                                                                   \
     template <>                                                          \
+    struct AssociatedValueType<name##View> {                             \
+        typedef name##Value type;                                        \
+    };                                                                   \
+    template <>                                                          \
     struct TypeAsString<name##Value> {                                   \
         static const std::string value;                                  \
     };                                                                   \
@@ -92,10 +98,24 @@ struct TypeAsString;
     template <>                                                          \
     struct IsDomainType<name##Domain> : public std::true_type {};        \
     template <>                                                          \
-    struct IsValueType<name##Value> : public std::true_type {};
+    struct IsValueType<name##Value> : public std::true_type {};          \
+    template <>                                                          \
+    struct IsViewType<name##View> : public std::true_type {};
 
 buildForAllTypes(makeAssociations, );
 #undef makeAssociations
+
+template <typename T, typename U>
+using EnableIfValueAndReturn =
+    typename std::enable_if<IsValueType<BaseType<T>>::value, U>::type;
+template <typename T>
+using EnableIfValue = EnableIfValueAndReturn<T, int>;
+
+template <typename T, typename U>
+using EnableIfViewAndReturn =
+    typename std::enable_if<IsViewType<BaseType<T>>::value, U>::type;
+template <typename T>
+using EnableIfView = EnableIfViewAndReturn<T, int>;
 
 template <typename T>
 struct ValRef : public StandardSharedPtr<T> {
@@ -148,8 +168,8 @@ template <typename T>
 using ViewRefMaker = ViewRef<typename AssociatedViewType<T>::type>;
 typedef Variantised<ViewRefMaker> AnyViewRef;
 // variant for vector of views
-template <typename InnerValueType>
-using ViewRefVec = std::vector<ValRef<InnerValueType>>;
+template <typename InnerViewType>
+using ViewRefVec = std::vector<ViewRef<InnerViewType>>;
 template <typename T>
 using ViewRefVecMaker = ViewRefVec<typename AssociatedViewType<T>::type>;
 typedef Variantised<ViewRefVecMaker> AnyViewVec;
@@ -205,6 +225,49 @@ ValRef<ValueType> constructValueOfSameType(const ValueType& other) {
     auto val = make<ValueType>();
     matchInnerType(other, *val);
     return val;
+}
+
+template <typename ViewType,
+          typename ValueType = typename AssociatedValueType<ViewType>::type,
+          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
+inline ValRef<ValueType>& assumeAsValue(ViewRef<ViewType>& viewPtr) {
+    return reinterpret_cast<ValRef<ValueType>&>(viewPtr);
+}
+
+template <typename ViewType,
+          typename ValueType = typename AssociatedValueType<ViewType>::type,
+          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
+inline const ValRef<ValueType>& assumeAsValue(
+    const ViewRef<ViewType>& viewPtr) {
+    return reinterpret_cast<const ValRef<ValueType>&>(viewPtr);
+}
+
+template <typename ViewType,
+          typename ValueType = typename AssociatedValueType<ViewType>::type,
+          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
+inline ValRef<ValueType>&& assumeAsValue(ViewRef<ViewType>&& viewPtr) {
+    return reinterpret_cast<ValRef<ValueType>&&>(std::move(viewPtr));
+}
+
+template <typename ValueType,
+          typename ViewType = typename AssociatedViewType<ValueType>::type,
+          typename std::enable_if<IsValueType<ValueType>::value, int>::type = 0>
+inline ViewRef<ViewType>& getViewPtr(ValRef<ValueType>& value) {
+    return reinterpret_cast<ViewRef<ViewType>&>(value);
+}
+
+template <typename ValueType,
+          typename ViewType = typename AssociatedViewType<ValueType>::type,
+          typename std::enable_if<IsValueType<ValueType>::value, int>::type = 0>
+inline const ViewRef<ViewType>& getViewPtr(const ValRef<ValueType>& value) {
+    return reinterpret_cast<const ViewRef<ViewType>&>(value);
+}
+
+template <typename ValueType,
+          typename ViewType = typename AssociatedViewType<ValueType>::type,
+          typename std::enable_if<IsValueType<ValueType>::value, int>::type = 0>
+inline ViewRef<ViewType>&& getViewPtr(ValRef<ValueType>&& value) {
+    return reinterpret_cast<ViewRef<ViewType>&&>(std::move(value));
 }
 
 struct TriggerBase {

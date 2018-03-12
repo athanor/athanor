@@ -9,23 +9,26 @@
 // That is, every type must provide a specialisation of the following functions.
 
 template <typename Val>
-bool smallerValue(const Val& u, const Val& v);
+EnableIfValueAndReturn<Val, bool> smallerValue(const Val& u, const Val& v);
 template <typename Val>
-bool largerValue(const Val& u, const Val& v);
+EnableIfValueAndReturn<Val, bool> largerValue(const Val& u, const Val& v);
 template <typename Val>
-bool equalValue(const Val& u, const Val& v);
+EnableIfValueAndReturn<Val, bool> equalValue(const Val& u, const Val& v);
+template <typename View>
+EnableIfViewAndReturn<View, u_int64_t> getValueHash(const View&);
 template <typename Val>
-u_int64_t getValueHash(const Val&);
+EnableIfValueAndReturn<Val, void> normalise(Val& v);
 template <typename Val>
-void normalise(Val& v);
-template <typename Val>
-void deepCopy(const Val& src, Val& target);
+EnableIfValueAndReturn<Val, void> deepCopy(const Val& src, Val& target);
 template <typename DomainType>
 u_int64_t getDomainSize(const DomainType&);
-template <typename Val>
-std::ostream& prettyPrint(std::ostream& os, const Val&);
+template <typename View>
+EnableIfViewAndReturn<View, std::ostream&> prettyPrint(std::ostream& os,
+                                                       const View&);
 template <typename DomainType>
-std::ostream& prettyPrint(std::ostream& os, const DomainType&);
+typename std::enable_if<IsDomainType<BaseType<DomainType>>::value,
+                        std::ostream&>::type
+prettyPrint(std::ostream& os, const DomainType&);
 
 // variant dispatches to invoke the above functions on variant types.  They have
 // a unused to template to  delay compilation till invoked.
@@ -71,13 +74,13 @@ inline bool equalValue(const AnyValRef& u, const AnyValRef& v, T = 0) {
 }
 
 template <typename T = int>
-inline u_int64_t getValueHash(const AnyValRef& val, T = 0) {
+inline u_int64_t getValueHash(const AnyViewRef& view, T = 0) {
     return mpark::visit(
-        [&](const auto& valImpl) { return getValueHash(*valImpl); }, val);
+        [&](const auto& viewImpl) { return getValueHash(*viewImpl); }, view);
 }
 
 template <typename Val>
-ValRef<Val> deepCopy(const Val& src) {
+EnableIfValueAndReturn<Val, ValRef<Val>> deepCopy(const Val& src) {
     auto target = constructValueOfSameType(src);
     deepCopy(src, *target);
     return target;
@@ -99,14 +102,25 @@ inline u_int64_t getDomainSize(const AnyDomainRef& domain, T = 0) {
 template <typename T = int>
 inline std::ostream& prettyPrint(std::ostream& os, const AnyDomainRef& d,
                                  T = 0) {
-    mpark::visit([&os](auto& dImpl) { prettyPrint(os, *dImpl); }, d);
-    return os;
+    return mpark::visit(
+        [&os](auto& dImpl) -> std::ostream& { return prettyPrint(os, *dImpl); },
+        d);
 }
 
 template <typename T = int>
 inline std::ostream& prettyPrint(std::ostream& os, const AnyValRef& v, T = 0) {
-    mpark::visit([&os](auto& vImpl) { prettyPrint(os, *vImpl); }, v);
-    return os;
+    return mpark::visit(
+        [&os](auto& vImpl) -> std::ostream& {
+            return prettyPrint(os, *getViewPtr(vImpl));
+        },
+        v);
+}
+
+template <typename T = int>
+inline std::ostream& prettyPrint(std::ostream& os, const AnyViewRef& v, T = 0) {
+    return mpark::visit(
+        [&os](auto& vImpl) -> std::ostream& { return prettyPrint(os, *vImpl); },
+        v);
 }
 
 inline std::ostream& operator<<(std::ostream& os, const AnyValRef& v) {
@@ -116,11 +130,16 @@ inline std::ostream& operator<<(std::ostream& os, const AnyValRef& v) {
 inline std::ostream& operator<<(std::ostream& os, const AnyDomainRef& d) {
     return prettyPrint(os, d);
 }
-template <typename Val>
-inline typename std::enable_if<IsValueType<BaseType<Val>>::value,
-                               std::ostream&>::type
-operator<<(std::ostream& os, const Val& v) {
+template <typename View>
+inline EnableIfViewAndReturn<View, std::ostream&> operator<<(std::ostream& os,
+                                                             const View& v) {
     return prettyPrint(os, v);
+}
+
+template <typename View>
+inline EnableIfViewAndReturn<View, std::ostream&> operator<<(
+    std::ostream& os, const ViewRef<View>& v) {
+    return prettyPrint(os, *v);
 }
 
 template <typename Domain>

@@ -8,12 +8,12 @@
 using namespace std;
 
 template <>
-u_int64_t getValueHash<SetValue>(const SetValue& val) {
+u_int64_t getValueHash<SetView>(const SetView& val) {
     return val.cachedHashTotal;
 }
 
 template <>
-ostream& prettyPrint<SetValue>(ostream& os, const SetValue& v) {
+ostream& prettyPrint<SetView>(ostream& os, const SetView& v) {
     os << "{";
     mpark::visit(
         [&](auto& membersImpl) {
@@ -32,11 +32,11 @@ ostream& prettyPrint<SetValue>(ostream& os, const SetValue& v) {
     return os;
 }
 
-template <typename InnerValueType>
+template <typename InnerViewType>
 void deepCopyImpl(const SetValue& src,
-                  const ValRefVec<InnerValueType>& srcMemnersImpl,
+                  const ViewRefVec<InnerViewType>& srcMemnersImpl,
                   SetValue& target) {
-    auto& targetMembersImpl = target.getMembers<InnerValueType>();
+    auto& targetMembersImpl = target.getMembers<InnerViewType>();
     // to be optimised later
     // cannot just clear vector as other constraints will hold pointers to
     // values that are in this set and assume that they are still in this set
@@ -44,14 +44,15 @@ void deepCopyImpl(const SetValue& src,
     size_t index = 0;
     while (index < targetMembersImpl.size()) {
         if (!src.containsMember(*targetMembersImpl[index])) {
-            target.removeMember<InnerValueType>(index);
+            target.removeMember<
+                typename AssociatedValueType<InnerViewType>::type>(index);
         } else {
             ++index;
         }
     }
     for (auto& member : srcMemnersImpl) {
         if (!target.hashIndexMap.count(getValueHash(*member))) {
-            target.addMember(deepCopy(*member));
+            target.addMember(deepCopy(*assumeAsValue(member)));
         }
     }
     debug_code(target.assertValidState());
@@ -80,7 +81,7 @@ ostream& prettyPrint<SetDomain>(ostream& os, const SetDomain& d) {
 void matchInnerType(const SetValue& src, SetValue& target) {
     mpark::visit(
         [&](auto& srcMembersImpl) {
-            target.setInnerType<valType(srcMembersImpl)>();
+            target.setInnerType<viewType(srcMembersImpl)>();
         },
         src.members);
 }
@@ -88,8 +89,9 @@ void matchInnerType(const SetValue& src, SetValue& target) {
 void matchInnerType(const SetDomain& domain, SetValue& target) {
     mpark::visit(
         [&](auto& innerDomainImpl) {
-            target.setInnerType<typename AssociatedValueType<typename BaseType<
-                decltype(innerDomainImpl)>::element_type>::type>();
+            target.setInnerType<typename AssociatedViewType<
+                typename AssociatedValueType<typename BaseType<decltype(
+                    innerDomainImpl)>::element_type>::type>::type>();
         },
         domain.inner);
 }
@@ -109,13 +111,14 @@ void evaluate(SetValue&) {}
 void startTriggering(SetValue&) {}
 void stopTriggering(SetValue&) {}
 
-template <typename InnerValueType>
-void normaliseImpl(SetValue& val, ValRefVec<InnerValueType>& valMembersImpl) {
+template <typename InnerViewType>
+void normaliseImpl(SetValue& val, ViewRefVec<InnerViewType>& valMembersImpl) {
     for (auto& v : valMembersImpl) {
-        normalise(*v);
+        normalise(*assumeAsValue(v));
     }
-    sort(valMembersImpl.begin(), valMembersImpl.end(),
-         [](auto& u, auto& v) { return smallerValue(*u, *v); });
+    sort(valMembersImpl.begin(), valMembersImpl.end(), [](auto& u, auto& v) {
+        return smallerValue(*assumeAsValue(u), *assumeAsValue(v));
+    });
 
     for (size_t i = 0; i < valMembersImpl.size(); i++) {
         auto& member = valMembersImpl[i];
@@ -147,9 +150,11 @@ bool smallerValue<SetValue>(const SetValue& u, const SetValue& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (smallerValue(*uMembersImpl[i], *vMembersImpl[i])) {
+                if (smallerValue(*assumeAsValue(uMembersImpl[i]),
+                                 *assumeAsValue(vMembersImpl[i]))) {
                     return true;
-                } else if (largerValue(*uMembersImpl[i], *vMembersImpl[i])) {
+                } else if (largerValue(*assumeAsValue(uMembersImpl[i]),
+                                       *assumeAsValue(vMembersImpl[i]))) {
                     return false;
                 }
             }
@@ -170,9 +175,11 @@ bool largerValue<SetValue>(const SetValue& u, const SetValue& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (largerValue(*uMembersImpl[i], *vMembersImpl[i])) {
+                if (largerValue(*assumeAsValue(uMembersImpl[i]),
+                                *assumeAsValue(vMembersImpl[i]))) {
                     return true;
-                } else if (smallerValue(*uMembersImpl[i], *vMembersImpl[i])) {
+                } else if (smallerValue(*assumeAsValue(uMembersImpl[i]),
+                                        *assumeAsValue(vMembersImpl[i]))) {
                     return false;
                 }
             }
@@ -264,9 +271,12 @@ void SetValue::printVarBases() {
             cout << "parent is constant: " << (this->container == &constantPool)
                  << endl;
             for (auto& member : valMembersImpl) {
-                cout << "val id: " << valBase(*member).id << endl;
+                cout << "val id: " << valBase(*assumeAsValue(member)).id
+                     << endl;
                 cout << "is constant: "
-                     << (valBase(*member).container == &constantPool) << endl;
+                     << (valBase(*assumeAsValue(member)).container ==
+                         &constantPool)
+                     << endl;
             }
         },
         members);

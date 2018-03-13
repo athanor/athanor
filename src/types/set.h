@@ -54,11 +54,11 @@ struct SetDomain {
 struct SetTrigger : public IterAssignedTrigger<SetView> {
     virtual void valueRemoved(u_int64_t indexOfRemovedValue,
                               u_int64_t hashOfRemovedValue) = 0;
-    virtual void valueAdded(const AnyViewRef& member) = 0;
+    virtual void valueAdded(const AnyExprRef& member) = 0;
     virtual void possibleMemberValueChange(u_int64_t index,
-                                           const AnyViewRef& member) = 0;
+                                           const AnyExprRef& member) = 0;
     virtual void memberValueChanged(u_int64_t index,
-                                    const AnyViewRef& member) = 0;
+                                    const AnyExprRef& member) = 0;
 
     virtual void setValueChanged(const SetView& newValue) = 0;
 };
@@ -88,7 +88,7 @@ struct SetView {
         return true;
     }
 
-    inline void notifyMemberAdded(const AnyViewRef& newMember) {
+    inline void notifyMemberAdded(const AnyExprRef& newMember) {
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
     }
@@ -137,7 +137,7 @@ struct SetView {
     }
 
     inline void notifyMemberChanged(size_t index,
-                                    const AnyViewRef& changedMember) {
+                                    const AnyExprRef& changedMember) {
         debug_code(assertValidState());
         visitTriggers(
             [&](auto& t) { t->memberValueChanged(index, changedMember); },
@@ -179,7 +179,7 @@ struct SetView {
         auto& members = getMembers<InnerViewType>();
         debug_code(assertValidState());
         hashOfPossibleChange = getValueHash(*members[index]);
-        AnyViewRef triggerMember = members[index];
+        AnyExprRef triggerMember = members[index];
         visitTriggers(
             [&](auto& t) {
                 t->possibleMemberValueChange(index, triggerMember);
@@ -358,12 +358,12 @@ struct DefinedTrigger<SetValue> : public SetTrigger {
                              u_int64_t hashOfRemovedValue) {
         todoImpl(indexOfRemovedValue, hashOfRemovedValue);
     }
-    inline void valueAdded(const AnyViewRef& member) { todoImpl(member); }
+    inline void valueAdded(const AnyExprRef& member) { todoImpl(member); }
     virtual inline void possibleMemberValueChange(u_int64_t index,
-                                                  const AnyViewRef& member) {
+                                                  const AnyExprRef& member) {
         todoImpl(index, member);
     }
-    virtual void memberValueChanged(u_int64_t index, const AnyViewRef& member) {
+    virtual void memberValueChanged(u_int64_t index, const AnyExprRef& member) {
         todoImpl(index, member);
         ;
     }

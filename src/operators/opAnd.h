@@ -2,24 +2,31 @@
 #ifndef SRC_OPERATORS_OPAND_H_
 #define SRC_OPERATORS_OPAND_H_
 #include <vector>
-#include "operators/operatorBase.h"
 #include "operators/quantifierView.h"
 #include "types/bool.h"
 #include "utils/fastIterableIntSet.h"
 class OpAndTrigger;
 struct OpAnd : public BoolView {
     class QuantifierTrigger;
-    std::shared_ptr<QuantifierView<BoolReturning>> quantifier;
+    std::shared_ptr<QuantifierView<ExprRef<BoolView>>> quantifier;
     FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
     std::vector<std::shared_ptr<OpAndTrigger>> operandTriggers;
     std::shared_ptr<QuantifierTrigger> quantifierTrigger;
 
    public:
-    OpAnd(std::shared_ptr<QuantifierView<BoolReturning>> quantifier)
+    OpAnd(std::shared_ptr<QuantifierView<ExprRef<BoolView>>> quantifier)
         : quantifier(std::move(quantifier)) {}
     OpAnd(const OpAnd& other) = delete;
     OpAnd(OpAnd&& other);
-    ~OpAnd() { stopTriggering(*this); }
+    virtual ~OpAnd() { this->stopTriggering(); }
+    void evaluate() final;
+    void startTriggering() final;
+    void stopTriggering() final;
+    void updateViolationDescription(u_int64_t parentViolation,
+                                    ViolationDescription&) final;
+    ExprRef<BoolView> deepCopyForUnroll(const ExprRef<BoolView>& op,
+                                        const AnyIterRef& iterator) const final;
+    std::ostream& dumpState(std::ostream& os) const final;
 };
 
 #endif /* SRC_OPERATORS_OPAND_H_ */

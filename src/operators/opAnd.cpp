@@ -30,22 +30,23 @@ class OpAndTrigger : public BoolTrigger {
         });
     }
 
-    void iterHasNewValue(const BoolValue& oldValue,
-                         const ValRef<BoolValue>& newValue) final {
+    void iterHasNewValue(const BoolView& oldValue,
+                         const ExprRef<BoolView>& newValue) final {
         possibleValueChange(oldValue.violation);
         valueChanged(newValue->violation);
     }
 };
 
-class OpAnd::QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
+class OpAnd::QuantifierTrigger
+    : public QuantifierView<ExprRef<BoolView>>::Trigger {
    public:
     OpAnd* op;
     QuantifierTrigger(OpAnd* op) : op(op) {}
-    void exprUnrolled(const BoolReturning& expr) final {
+    void exprUnrolled(const ExprRef<BoolView>& expr) final {
         op->operandTriggers.emplace_back(
             std::make_shared<OpAndTrigger>(op, op->operandTriggers.size()));
         addTrigger(expr, op->operandTriggers.back());
-        u_int64_t violation = getView(expr).violation;
+        u_int64_t violation = expr->violation;
         if (violation > 0) {
             op->violatingOperands.insert(op->operandTriggers.size() - 1);
             op->changeValue([&]() {
@@ -55,13 +56,13 @@ class OpAnd::QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
         }
     }
 
-    void exprRolled(u_int64_t index, const BoolReturning& expr) final {
+    void exprRolled(u_int64_t index, const ExprRef<BoolView>& expr) final {
         op->operandTriggers[index] = std::move(op->operandTriggers.back());
         op->operandTriggers.pop_back();
         if (index < op->operandTriggers.size()) {
             op->operandTriggers[index]->index = index;
         }
-        u_int64_t violationOfRemovedExpr = getView(expr).violation;
+        u_int64_t violationOfRemovedExpr = expr->violation;
         debug_code(assert((op->violatingOperands.count(index) &&
                            violationOfRemovedExpr > 0) ||
                           (!op->violatingOperands.count(index) &&
@@ -77,23 +78,23 @@ class OpAnd::QuantifierTrigger : public QuantifierView<BoolReturning>::Trigger {
         });
     }
 
-    void iterHasNewValue(const QuantifierView<BoolReturning>&,
-                         const ValRef<QuantifierView<BoolReturning>>&) {
-        assert(false);  // todo
+    void iterHasNewValue(const QuantifierView<ExprRef<BoolView>>&,
+                         const ExprRef<QuantifierView<ExprRef<BoolView>>>&) {
+        todoImpl();
     }
 };
 
-void evaluate(OpAnd& op) {
-    op.quantifier->initialUnroll();
-    op.violation = 0;
-    for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
-        auto& operand = op.quantifier->exprs[i];
-        evaluate(operand);
-        u_int64_t violation = getView(operand).violation;
+void OpAnd::evaluate() {
+    quantifier->initialUnroll();
+    violation = 0;
+    for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
+        auto& operand = quantifier->exprs[i];
+        operand->evaluate();
+        u_int64_t violation = operand->violation;
         if (violation > 0) {
-            op.violatingOperands.insert(i);
+            violatingOperands.insert(i);
         }
-        op.violation += getView(operand).violation;
+        violation += operand->violation;
     }
 }
 
@@ -107,71 +108,71 @@ OpAnd::OpAnd(OpAnd&& other)
     setTriggerParent(this, quantifierTrigger);
 }
 
-void startTriggering(OpAnd& op) {
-    if (!op.quantifierTrigger) {
-        op.quantifierTrigger = std::make_shared<QuantifierTrigger>(&op);
-        addTrigger(op.quantifier, op.quantifierTrigger);
-        op.quantifier->startTriggeringOnContainer();
+void OpAnd::startTriggering() {
+    if (!quantifierTrigger) {
+        quantifierTrigger = std::make_shared<QuantifierTrigger>(this);
+        addTrigger(quantifier, quantifierTrigger);
+        quantifier->startTriggeringOnContainer();
 
-        for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
-            auto& operand = op.quantifier->exprs[i];
-            auto trigger = make_shared<OpAndTrigger>(&op, i);
+        for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
+            auto& operand = quantifier->exprs[i];
+            auto trigger = make_shared<OpAndTrigger>(this, i);
             addTrigger(operand, trigger);
-            op.operandTriggers.emplace_back(move(trigger));
-            startTriggering(operand);
+            operandTriggers.emplace_back(move(trigger));
+            operand->startTriggering();
         }
     }
 }
 
-void stopTriggering(OpAnd& op) {
-    while (!op.operandTriggers.empty()) {
-        deleteTrigger(op.operandTriggers.back());
-        op.operandTriggers.pop_back();
+void OpAnd::stopTriggering() {
+    while (!operandTriggers.empty()) {
+        deleteTrigger(operandTriggers.back());
+        operandTriggers.pop_back();
     }
-    if (op.quantifier) {
-        for (auto& operand : op.quantifier->exprs) {
-            stopTriggering(operand);
+    if (quantifier) {
+        for (auto& operand : quantifier->exprs) {
+            operand->stopTriggering();
         }
     }
-    if (op.quantifierTrigger) {
-        deleteTrigger(op.quantifierTrigger);
-        op.quantifierTrigger = nullptr;
-        op.quantifier->stopTriggeringOnContainer();
+    if (quantifierTrigger) {
+        deleteTrigger(quantifierTrigger);
+        quantifierTrigger = nullptr;
+        quantifier->stopTriggeringOnContainer();
     }
 }
 
-void updateViolationDescription(const OpAnd& op, u_int64_t,
-                                ViolationDescription& vioDesc) {
-    for (size_t violatingOperandIndex : op.violatingOperands) {
-        updateViolationDescription(op.quantifier->exprs[violatingOperandIndex],
-                                   op.violation, vioDesc);
+void OpAnd::updateViolationDescription(const u_int64_t,
+                                       ViolationDescription& vioDesc) {
+    for (size_t violatingOperandIndex : violatingOperands) {
+        quantifier->exprs[violatingOperandIndex]->updateViolationDescription(
+            violation, vioDesc);
     }
 }
 
-shared_ptr<OpAnd> deepCopyForUnroll(const OpAnd& op,
-                                    const AnyIterRef& iterator) {
-    auto newOpAnd = make_shared<OpAnd>(
-        op.quantifier->deepCopyQuantifierForUnroll(iterator));
-    newOpAnd->violation = op.violation;
-    newOpAnd->violatingOperands = op.violatingOperands;
-    return newOpAnd;
+ExprRef<BoolView> OpAnd::deepCopyForUnroll(const ExprRef<BoolView>&,
+                                          const AnyIterRef& iterator) const {
+    auto newOpAnd =
+        make_shared<OpAnd>(quantifier->deepCopyQuantifierForUnroll(iterator));
+    newOpAnd->violation = violation;
+    newOpAnd->violatingOperands = violatingOperands;
+    return ViewRef<BoolView>(newOpAnd);
 }
 
-std::ostream& dumpState(std::ostream& os, const OpAnd& op) {
-    os << "OpAnd: violation=" << op.violation << endl;
-    vector<u_int64_t> sortedViolatingOperands(op.violatingOperands.begin(),
-                                              op.violatingOperands.end());
+std::ostream& OpAnd::dumpState(std::ostream& os) const {
+    os << "OpAnd: violation=" << violation << endl;
+    vector<u_int64_t> sortedViolatingOperands(violatingOperands.begin(),
+                                              violatingOperands.end());
     sort(sortedViolatingOperands.begin(), sortedViolatingOperands.end());
     os << "Violating indices: " << sortedViolatingOperands << endl;
     os << "operands [";
     bool first = true;
-    for (auto& operand : op.quantifier->exprs) {
+    for (auto& operand : quantifier->exprs) {
         if (first) {
             first = false;
         } else {
             os << ",\n";
         }
-        dumpState(os, operand);
+        operand->dumpState(os);
     }
     os << "]";
     return os;

@@ -4,12 +4,11 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-#include "operators/operatorBase.h"
+#include "base/base.h"
 
 template <typename ExprType>
 struct QuantifierView {
     struct Trigger : public IterAssignedTrigger<QuantifierView<ExprType>> {
-        typedef QuantifierView<ExprType> View;
         virtual void exprUnrolled(const ExprType& expr) = 0;
         virtual void exprRolled(u_int64_t index, const ExprType& expr) = 0;
     };

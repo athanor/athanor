@@ -66,7 +66,7 @@ struct SetTrigger : public IterAssignedTrigger<SetView> {
 struct SetView {
     friend SetValue;
     std::unordered_map<u_int64_t, u_int64_t> hashIndexMap;
-    AnyViewVec members;
+    AnyExprVec members;
     u_int64_t cachedHashTotal;
     u_int64_t hashOfPossibleChange;
     std::vector<std::shared_ptr<SetTrigger>> triggers;
@@ -94,7 +94,7 @@ struct SetView {
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline ViewRef<InnerViewType> removeMember(u_int64_t index) {
+    inline ExprRef<InnerViewType> removeMember(u_int64_t index) {
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
 
@@ -102,7 +102,7 @@ struct SetView {
         debug_code(assert(hashIndexMap.count(hash)));
         hashIndexMap.erase(hash);
         cachedHashTotal -= mix(hash);
-        ViewRef<InnerViewType> removedMember = std::move(members[index]);
+        auto removedMember = std::move(members[index]);
         members[index] = std::move(members.back());
         members.pop_back();
         if (index < members.size()) {
@@ -209,8 +209,8 @@ struct SetView {
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline ViewRefVec<InnerViewType>& getMembers() {
-        return mpark::get<ViewRefVec<InnerViewType>>(members);
+    inline ExprRefVec<InnerViewType>& getMembers() {
+        return mpark::get<ExprRefVec<InnerViewType>>(members);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -274,7 +274,7 @@ struct SetValue : public SetView, public ValBase {
             valBase(*getMembers<InnerViewType>()[index]).id = index;
         }
         debug_code(assertValidVarBases());
-        return assumeAsValue(removedMember);
+        return assumeAsValue(removedMember.asViewRef());
     }
 
     template <typename InnerValueType, typename Func,
@@ -290,8 +290,8 @@ struct SetValue : public SetView, public ValBase {
             }
             debug_code(assertValidVarBases());
             SetView::notifyMemberRemoved(index, getValueHash(*removedMember));
-            return std::make_pair(true,
-                                  std::move(assumeAsValue(removedMember)));
+            return std::make_pair(
+                true, std::move(assumeAsValue(removedMember.asViewRef())));
         } else {
             SetView::addMember(removedMember);
             auto& members = getMembers<InnerValueType>();
@@ -342,8 +342,8 @@ struct SetValue : public SetView, public ValBase {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     void setInnerType() {
-        if (mpark::get_if<ViewRefVec<InnerViewType>>(&(members)) == NULL) {
-            members.emplace<ViewRefVec<InnerViewType>>();
+        if (mpark::get_if<ExprRefVec<InnerViewType>>(&(members)) == NULL) {
+            members.emplace<ExprRefVec<InnerViewType>>();
         }
     }
 

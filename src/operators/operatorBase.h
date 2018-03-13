@@ -48,14 +48,6 @@ struct ValRefOrPtr {
     typedef decltype(ValRefOrPtr<T>::test<T>()) type;
 };
 
-// variant to hold any type of constraint
-#define makeOpRef(Op) typename ValRefOrPtr<Op>::type
-#define makeOpRefFromVal(name) IterRef<name##Value>
-using AnyExprRef =
-    mpark::variant<buildForOperators(makeOpRef, MACRO_COMMA),
-                   buildForAllTypes(makeOpRefFromVal, MACRO_COMMA)>;
-#undef makeOpRefFromVal
-#undef makeOpRef
 
 // helper class for template magic, allows to test operators if they have a
 // specific return type by testing if they are convertable to that type
@@ -96,13 +88,6 @@ template <typename ReturnTypeIn, typename Operator>
 using HasReturnType =
     std::is_same<ReturnTypeIn, typename ReturnType<Operator>::type>;
 
-// convert to an AnyExprRef variant
-template <typename Variant>
-inline AnyExprRef toExprRef(Variant&& v) {
-    return mpark::visit(
-        [](auto&& v) -> AnyExprRef { return std::forward<decltype(v)>(v); },
-        std::forward<Variant>(v));
-}
 
 #define operatorFuncs(name)                                                    \
     template <>                                                                \

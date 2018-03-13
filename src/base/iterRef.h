@@ -48,10 +48,10 @@ class IterRef {
     inline Iterator<T>& getIterator() { return *ref; }
     inline decltype(auto) refCount() { return ref.use_count(); }
     inline const Iterator<T>& getIterator() const { return *ref; }
-    inline decltype(auto) operator*() { return ref->ref.operator*(); }
-    inline decltype(auto) operator-> () { return ref->ref.operator->(); }
-    inline decltype(auto) operator*() const { return ref->ref.operator*(); }
-    inline decltype(auto) operator-> () const { return ref->ref.operator->(); }
+    inline T& operator*() { return ref->ref.operator*(); }
+    inline T* operator->() { return ref->ref.operator->(); }
+    inline T& operator*() const { return ref->ref.operator*(); }
+    inline T* operator->() const { return ref->ref.operator->(); }
 };
 
 template <typename T>

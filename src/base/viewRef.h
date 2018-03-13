@@ -63,8 +63,15 @@ struct ValRef;
 template <typename ViewType,
           typename ValueType = typename AssociatedValueType<ViewType>::type,
           typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
-inline ValRef<ValueType>& assumeAsValue(ViewRef<ViewType>& viewPtr) {
-    return reinterpret_cast<ValRef<ValueType>&>(viewPtr);
+inline ValueType& assumeAsValue(ViewType& view) {
+    return reinterpret_cast<ValueType&>(view);
+}
+
+template <typename ViewType,
+          typename ValueType = typename AssociatedValueType<ViewType>::type,
+          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
+inline const ValueType& assumeAsValue(const ViewType& view) {
+    return reinterpret_cast<const ValueType&>(view);
 }
 
 template <typename ViewType,

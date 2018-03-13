@@ -6,16 +6,16 @@ using namespace std;
 
 u_int64_t twoToThe32 = ((u_int64_t)1) << 31;
 using QuantifierTrigger = OpOr::QuantifierTrigger;
-inline u_int64_t findNewMinViolation( u_int64_t minViolation) {
-    for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
-        auto& operand = quantifier->exprs[i];
+inline u_int64_t findNewMinViolation(OpOr& op, u_int64_t minViolation) {
+    for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
+        auto& operand = op.quantifier->exprs[i];
         u_int64_t violation = operand->violation;
         if (violation < minViolation) {
             minViolation = violation;
-            minViolationIndices.clear();
-            minViolationIndices.insert(i);
+            op.minViolationIndices.clear();
+            op.minViolationIndices.insert(i);
         } else if (violation == minViolation) {
-            minViolationIndices.insert(i);
+            op.minViolationIndices.insert(i);
         }
     }
     return minViolation;
@@ -49,14 +49,15 @@ class OpOrTrigger : public BoolTrigger {
         });
     }
 
-    void iterHasNewValue(const BoolValue& oldValue,
-                         const ValRef<BoolValue>& newValue) final {
+    void iterHasNewValue(const BoolView& oldValue,
+                         const ExprRef<BoolView>& newValue) final {
         possibleValueChange(oldValue.violation);
         valueChanged(newValue->violation);
     }
 };
 
-class OpOr::QuantifierTrigger : public QuantifierView<ExprRef<BoolView>>::Trigger {
+class OpOr::QuantifierTrigger
+    : public QuantifierView<ExprRef<BoolView>>::Trigger {
    public:
     OpOr* op;
     QuantifierTrigger(OpOr* op) : op(op) {}
@@ -86,8 +87,7 @@ class OpOr::QuantifierTrigger : public QuantifierView<ExprRef<BoolView>>::Trigge
                 });
                 return;
             } else {
-                u_int64_t minViolation =
-                    getView(op->quantifier->exprs[0]).violation;
+                u_int64_t minViolation = op->quantifier->exprs[0]->violation;
                 op->minViolationIndices.insert(0);
                 minViolation = findNewMinViolation(*op, minViolation);
                 op->changeValue([&]() {
@@ -99,12 +99,12 @@ class OpOr::QuantifierTrigger : public QuantifierView<ExprRef<BoolView>>::Trigge
     }
 
     void iterHasNewValue(const QuantifierView<ExprRef<BoolView>>&,
-                         const ValRef<QuantifierView<ExprRef<BoolView>>>&) {
+                         const ExprRef<QuantifierView<ExprRef<BoolView>>>&) {
         todoImpl();
     }
 };
 
-void evaluate() {
+void OpOr::evaluate() {
     quantifier->initialUnroll();
 
     if (quantifier->exprs.size() == 0) {
@@ -114,9 +114,9 @@ void evaluate() {
     for (auto& operand : quantifier->exprs) {
         operand->evaluate();
     }
-    u_int64_t minViolation = getView(quantifier->exprs[0]).violation;
+    u_int64_t minViolation = quantifier->exprs[0]->violation;
     minViolationIndices.insert(0);
-    minViolation = findNewMinViolation(op, minViolation);
+    minViolation = findNewMinViolation(*this, minViolation);
     violation = minViolation;
 }
 
@@ -130,7 +130,7 @@ OpOr::OpOr(OpOr&& other)
     setTriggerParent(this, quantifierTrigger);
 }
 
-void startTriggering() {
+void OpOr::startTriggering() {
     if (!quantifierTrigger) {
         quantifierTrigger = std::make_shared<QuantifierTrigger>(this);
         addTrigger(quantifier, quantifierTrigger);
@@ -146,7 +146,7 @@ void startTriggering() {
     }
 }
 
-void stopTriggering() {
+void OpOr::stopTriggering() {
     while (!operandTriggers.empty()) {
         deleteTrigger(operandTriggers.back());
         operandTriggers.pop_back();
@@ -163,22 +163,23 @@ void stopTriggering() {
     }
 }
 
-void updateViolationDescription( u_int64_t,
-                                ViolationDescription& vioDesc) {
+void OpOr::updateViolationDescription(u_int64_t,
+                                      ViolationDescription& vioDesc) {
     for (auto& operand : quantifier->exprs) {
-        operand->updateViolationDescription( violation, vioDesc);
+        operand->updateViolationDescription(violation, vioDesc);
     }
 }
 
-shared_ptr<OpOr> deepCopyForUnroll( const AnyIterRef& iterator) {
+ExprRef<BoolView> OpOr::deepCopyForUnroll(const ExprRef<BoolView>&,
+                                          const AnyIterRef& iterator) const {
     auto newOpOr =
         make_shared<OpOr>(quantifier->deepCopyQuantifierForUnroll(iterator));
     newOpOr->violation = violation;
     newOpOr->minViolationIndices = minViolationIndices;
-    return newOpOr;
+    return ViewRef<BoolView>(newOpOr);
 }
 
-std::ostream& dumpState(std::ostream& os, ) {
+std::ostream& OpOr::dumpState(std::ostream& os) const {
     os << "OpOr: violation=" << violation << endl;
     vector<u_int64_t> sortedMinViolationIndices(minViolationIndices.begin(),
                                                 minViolationIndices.end());
@@ -192,7 +193,7 @@ std::ostream& dumpState(std::ostream& os, ) {
         } else {
             os << ",\n";
         }
-        dumpState(os, operand);
+        operand->dumpState(os);
     }
     os << "]";
     return os;

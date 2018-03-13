@@ -2,7 +2,6 @@
 #ifndef SRC_OPERATORS_OPOR_H_
 #define SRC_OPERATORS_OPOR_H_
 #include <vector>
-#include "operators/operatorBase.h"
 #include "operators/quantifierView.h"
 #include "types/bool.h"
 #include "utils/fastIterableIntSet.h"
@@ -20,6 +19,14 @@ struct OpOr : public BoolView {
     OpOr(const OpOr& other) = delete;
     OpOr(OpOr&& other);
     ~OpOr() { this->stopTriggering(); }
+    void evaluate() final;
+    void startTriggering() final;
+    void stopTriggering() final;
+    void updateViolationDescription(u_int64_t parentViolation,
+                                    ViolationDescription&) final;
+    ExprRef<BoolView> deepCopyForUnroll(const ExprRef<BoolView>& op,
+                                        const AnyIterRef& iterator) const final;
+    std::ostream& dumpState(std::ostream& os) const final;
 };
 
 #endif /* SRC_OPERATORS_OPOR_H_ */

@@ -1,20 +1,28 @@
 
 #ifndef SRC_OPERATORS_OPINTEQ_H_
 #define SRC_OPERATORS_OPINTEQ_H_
-#include "operators/operatorBase.h"
 #include "types/bool.h"
+#include "types/int.h"
 struct OpIntEq : public BoolView {
     struct Trigger;
-    IntReturning left;
-    IntReturning right;
+    ExprRef<IntView> left;
+    ExprRef<IntView> right;
     std::shared_ptr<Trigger> operandTrigger = nullptr;
 
    public:
-    OpIntEq(IntReturning left, IntReturning right)
+    OpIntEq(ExprRef<IntView> left, ExprRef<IntView> right)
         : left(std::move(left)), right(std::move(right)) {}
 
     OpIntEq(const OpIntEq& other) = delete;
     OpIntEq(OpIntEq&& other);
-    ~OpIntEq() { stopTriggering(*this); }
+    void evaluate() final;
+    void startTriggering() final;
+    void stopTriggering() final;
+    void updateViolationDescription(u_int64_t parentViolation,
+                                    ViolationDescription&) final;
+    ExprRef<BoolView> deepCopyForUnroll(const ExprRef<BoolView>& op,
+                                        const AnyIterRef& iterator) const final;
+    std::ostream& dumpState(std::ostream& os) const final;
+    virtual ~OpIntEq() { this->stopTriggering(); }
 };
 #endif /* SRC_OPERATORS_OPINTEQ_H_ */

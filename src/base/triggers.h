@@ -71,8 +71,6 @@ void visitTriggers(Visitor&& func,
     }
 }
 
-template <typename View, typename Operator>
-View& getView(const Operator& op);
 template <typename T>
 class IterRef;
 template <typename>
@@ -87,14 +85,13 @@ inline void saveTriggerOverload(
 template <typename Op, typename Trigger>
 inline void saveTriggerOverload(Op& op,
                                 const std::shared_ptr<Trigger>& trigger) {
-    getView(op).triggers.emplace_back(trigger);
+    op->triggers.emplace_back(trigger);
 
-    mpark::visit(overloaded(
-                     [&](IterRef<typename Trigger::ValueType>& ref) {
-                         ref.getIterator().unrollTriggers.emplace_back(trigger);
-                     },
-                     [](auto&) {}),
-                 op);
+    op.visit(overloaded(
+        [&](IterRef<typename Trigger::ViewType>& ref) {
+            ref.getIterator().unrollTriggers.emplace_back(trigger);
+        },
+        [](auto&) {}));
 }
 
 template <typename Op, typename Trigger>

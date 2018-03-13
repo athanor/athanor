@@ -4,11 +4,10 @@
 #include "types/int.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-void evaluate(OpIntEq& op) {
-    evaluate(op.left);
-    evaluate(op.right);
-    op.violation = std::abs(getView(op.left).value -
-                            getView(op.right).value);
+void OpIntEq::evaluate() {
+    left->evaluate();
+    right->evaluate();
+    violation = std::abs(left->value - right->value);
 }
 
 struct OpIntEq::Trigger : public IntTrigger {
@@ -16,22 +15,14 @@ struct OpIntEq::Trigger : public IntTrigger {
     Trigger(OpIntEq* op) : op(op) {}
     inline void possibleValueChange(int64_t) final {}
     inline void valueChanged(int64_t) final {
-        u_int64_t newViolation = std::abs(getView(op->left).value -
-                                          getView(op->right).value);
-        if (newViolation == op->violation) {
-            return;
-        }
-        visitTriggers(
-            [&](auto& trigger) { trigger->possibleValueChange(op->violation); },
-            op->triggers);
-        op->violation = newViolation;
-        visitTriggers(
-            [&](auto& trigger) { trigger->valueChanged(op->violation); },
-            op->triggers);
+        op->changeValue([&]() {
+            op->violation = std::abs(op->left->value - op->right->value);
+            return true;
+        });
     }
 
-    inline void iterHasNewValue(const IntValue& oldValue,
-                                const ValRef<IntValue>& newValue) final {
+    inline void iterHasNewValue(const IntView& oldValue,
+                                const ExprRef<IntView>& newValue) final {
         possibleValueChange(oldValue.value);
         valueChanged(newValue->value);
     }
@@ -45,44 +36,44 @@ OpIntEq::OpIntEq(OpIntEq&& other)
     setTriggerParent(this, operandTrigger);
 }
 
-void startTriggering(OpIntEq& op) {
-    if (!op.operandTrigger) {
-        op.operandTrigger = make_shared<OpIntEq::Trigger>(&op);
-        addTrigger(op.left, op.operandTrigger);
-        addTrigger(op.right, op.operandTrigger);
-        startTriggering(op.left);
-        startTriggering(op.right);
+void OpIntEq::startTriggering() {
+    if (!operandTrigger) {
+        operandTrigger = make_shared<OpIntEq::Trigger>(this);
+        addTrigger(left, operandTrigger);
+        addTrigger(right, operandTrigger);
+        left->startTriggering();
+        right->startTriggering();
     }
 }
 
-void stopTriggering(OpIntEq& op) {
-    if (op.operandTrigger) {
-        deleteTrigger(op.operandTrigger);
-        op.operandTrigger = nullptr;
-        stopTriggering(op.left);
-        stopTriggering(op.right);
+void OpIntEq::stopTriggering() {
+    if (operandTrigger) {
+        deleteTrigger(operandTrigger);
+        operandTrigger = nullptr;
+        left->stopTriggering();
+        right->stopTriggering();
     }
 }
 
-void updateViolationDescription(const OpIntEq& op, u_int64_t,
-                                ViolationDescription& vioDesc) {
-    updateViolationDescription(op.left, op.violation, vioDesc);
-    updateViolationDescription(op.right, op.violation, vioDesc);
+void OpIntEq::updateViolationDescription(u_int64_t,
+                                         ViolationDescription& vioDesc) {
+    left->updateViolationDescription(violation, vioDesc);
+    right->updateViolationDescription(violation, vioDesc);
 }
 
-shared_ptr<OpIntEq> deepCopyForUnroll(const OpIntEq& op,
-                                      const AnyIterRef& iterator) {
+ExprRef<BoolView> OpIntEq::deepCopyForUnroll(const ExprRef<BoolView>&,
+                                             const AnyIterRef& iterator) const {
     auto newOpIntEq =
-        make_shared<OpIntEq>(deepCopyForUnroll(op.left, iterator),
-                             deepCopyForUnroll(op.right, iterator));
-    newOpIntEq->violation = op.violation;
-    return newOpIntEq;
+        make_shared<OpIntEq>(left->deepCopyForUnroll(left, iterator),
+                             right->deepCopyForUnroll(right, iterator));
+    newOpIntEq->violation = violation;
+    return ViewRef<BoolView>(newOpIntEq);
 }
 
-std::ostream& dumpState(std::ostream& os, const OpIntEq& op) {
-    os << "OpIntEq: violation=" << op.violation << "\nleft: ";
-    dumpState(os, op.left);
+std::ostream& OpIntEq::dumpState(std::ostream& os) const {
+    os << "OpIntEq: violation=" << violation << "\nleft: ";
+    left->dumpState(os);
     os << "\nright: ";
-    dumpState(os, op.right);
+    right->dumpState(os);
     return os;
 }

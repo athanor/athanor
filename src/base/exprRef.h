@@ -1,8 +1,10 @@
 
 #ifndef SRC_BASE_EXPRREF_H_
 #define SRC_BASE_EXPRREF_H_
+#include <iostream>
 #include "base/exprRef.h"
 #include "base/iterRef.h"
+
 template <typename T>
 struct ExprRef {
     typedef T element_type;
@@ -102,4 +104,18 @@ template <typename T>
 inline std::ostream& operator<<(std::ostream& os, const ExprRef<T>& ref) {
     return prettyPrint(os, *ref);
 }
+class ViolationDescription;
+template <typename View>
+struct ExprInterface {
+    virtual void evaluate() = 0;
+    virtual void startTriggering() = 0;
+    virtual void stopTriggering() = 0;
+    virtual void updateViolationDescription(u_int64_t parentViolation,
+                                            ViolationDescription&) = 0;
+    virtual ExprRef<View> deepCopyForUnroll(
+        const ExprRef<View>& op, const AnyIterRef& iterator) const = 0;
+
+    virtual std::ostream& dumpState(std::ostream& os) const = 0;
+};
+
 #endif /* SRC_BASE_EXPRREF_H_ */

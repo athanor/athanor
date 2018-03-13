@@ -11,7 +11,7 @@ struct BoolTrigger : public IterAssignedTrigger<BoolView> {
     virtual void valueChanged(u_int64_t newViolation) = 0;
 };
 
-struct BoolView {
+struct BoolView : public ExprInterface<BoolView> {
     u_int64_t violation;
     std::vector<std::shared_ptr<BoolTrigger>> triggers;
 
@@ -34,7 +34,17 @@ struct BoolView {
     }
 };
 
-struct BoolValue : public BoolView, ValBase {};
+struct BoolValue : public BoolView, ValBase {
+    void evaluate() final;
+    void startTriggering() final;
+    void stopTriggering() final;
+    void updateViolationDescription(u_int64_t parentViolation,
+                                    ViolationDescription&) final;
+    ExprRef<BoolView> deepCopyForUnroll(const ExprRef<BoolView>& op,
+                                        const AnyIterRef& iterator) const final;
+
+    std::ostream& dumpState(std::ostream& os) const final;
+};
 
 template <>
 struct DefinedTrigger<BoolValue> : public BoolTrigger {
@@ -47,7 +57,7 @@ struct DefinedTrigger<BoolValue> : public BoolTrigger {
             return true;
         });
     }
-    void iterHasNewValue(const BoolView&, const ViewRef<BoolView>&) final {
+    void iterHasNewValue(const BoolView&, const ExprRef<BoolView>&) final {
         assert(false);
         abort();
     }

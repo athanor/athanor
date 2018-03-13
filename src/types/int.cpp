@@ -1,7 +1,6 @@
 #include "types/int.h"
 #include <cassert>
 #include "common/common.h"
-#include "base/typeOperations.h"
 using namespace std;
 
 template <>

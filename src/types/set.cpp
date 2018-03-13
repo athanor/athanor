@@ -106,10 +106,6 @@ void reset(SetValue& val) {
     val.triggers.clear();
 }
 
-void evaluate(SetValue&) {}
-void startTriggering(SetValue&) {}
-void stopTriggering(SetValue&) {}
-
 template <typename InnerViewType>
 void normaliseImpl(SetValue& val, ExprRefVec<InnerViewType>& valMembersImpl) {
     for (auto& v : valMembersImpl) {

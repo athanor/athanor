@@ -63,7 +63,7 @@ struct SetTrigger : public IterAssignedTrigger<SetView> {
     virtual void setValueChanged(const SetView& newValue) = 0;
 };
 
-struct SetView {
+struct SetView : public ExprInterface<SetView> {
     friend SetValue;
     std::unordered_map<u_int64_t, u_int64_t> hashIndexMap;
     AnyExprVec members;
@@ -350,6 +350,15 @@ struct SetValue : public SetView, public ValBase {
     }
 
     void printVarBases();
+    void evaluate() final;
+    void startTriggering() final;
+    void stopTriggering() final;
+    void updateViolationDescription(u_int64_t parentViolation,
+                                    ViolationDescription&) final;
+    ExprRef<SetView> deepCopyForUnroll(const ExprRef<SetView>& op,
+                                       const AnyIterRef& iterator) const final;
+
+    std::ostream& dumpState(std::ostream& os) const final;
 };
 
 template <>

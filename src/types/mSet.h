@@ -64,7 +64,7 @@ struct MSetTrigger : public IterAssignedTrigger<MSetView> {
     virtual void mSetValueChanged(const MSetView& newValue) = 0;
 };
 
-struct MSetView {
+struct MSetView : public ExprInterface<MSetView> {
     friend MSetValue;
     AnyExprVec members;
     u_int64_t cachedHashTotal;
@@ -311,6 +311,15 @@ struct MSetValue : public MSetView, public ValBase {
     }
 
     void printVarBases();
+    void evaluate() final;
+    void startTriggering() final;
+    void stopTriggering() final;
+    void updateViolationDescription(u_int64_t parentViolation,
+                                    ViolationDescription&) final;
+    ExprRef<MSetView> deepCopyForUnroll(const ExprRef<MSetView>& op,
+                                        const AnyIterRef& iterator) const final;
+
+    std::ostream& dumpState(std::ostream& os) const final;
 };
 
 template <>

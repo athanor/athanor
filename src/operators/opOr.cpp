@@ -170,7 +170,7 @@ void OpOr::updateViolationDescription(u_int64_t,
     }
 }
 
-ExprRef<BoolView> OpOr::deepCopyForUnroll(const ExprRef<BoolView>&,
+ExprRef<BoolView> OpOr::deepCopySelfForUnroll(const ExprRef<BoolView>&,
                                           const AnyIterRef& iterator) const {
     auto newOpOr =
         make_shared<OpOr>(quantifier->deepCopyQuantifierForUnroll(iterator));

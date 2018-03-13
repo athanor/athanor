@@ -17,7 +17,7 @@ struct OpSetNotEq : public BoolView {
     void stopTriggering() final;
     void updateViolationDescription(u_int64_t parentViolation,
                                     ViolationDescription&) final;
-    ExprRef<BoolView> deepCopyForUnroll(const ExprRef<BoolView>& op,
+    ExprRef<BoolView> deepCopySelfForUnroll(const ExprRef<BoolView>& op,
                                         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
 };

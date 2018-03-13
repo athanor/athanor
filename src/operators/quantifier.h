@@ -78,7 +78,7 @@ struct Quantifier : public QuantifierView<ExprType> {
                                           .getValue();
                 unrolledIterVals.emplace_back(iterRef);
 
-                exprs.emplace_back(deepCopyForUnroll(exprToCopy, iterRef));
+                exprs.emplace_back(deepCopySelfForUnroll(exprToCopy, iterRef));
                 iterRef.getIterator().changeValue(
                     triggering() && !evaluateExpr, oldValueOfIter, newValImpl,
                     [&]() {
@@ -112,13 +112,13 @@ struct Quantifier : public QuantifierView<ExprType> {
     deepCopyQuantifierForUnroll(const AnyIterRef& iterator) final {
         auto newQuantifier =
             std::make_shared<Quantifier<ContainerType, ExprType>>(
-                deepCopyForUnroll(container, iterator), quantId);
-        newQuantifier->expr = deepCopyForUnroll(expr, iterator);
+                deepCopySelfForUnroll(container, iterator), quantId);
+        newQuantifier->expr = deepCopySelfForUnroll(expr, iterator);
         for (size_t i = 0; i < exprs.size(); ++i) {
             auto& expr = exprs[i];
             auto& iterVal = unrolledIterVals[i];
             newQuantifier->exprs.emplace_back(
-                deepCopyForUnroll(expr, iterator));
+                deepCopySelfForUnroll(expr, iterator));
             newQuantifier->unrolledIterVals.emplace_back(iterVal);
         }
         return newQuantifier;

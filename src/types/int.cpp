@@ -5,12 +5,12 @@
 using namespace std;
 
 template <>
-u_int64_t getValueHash<IntValue>(const IntValue& val) {
+u_int64_t getValueHash<IntView>(const IntView& val) {
     return val.value;
 }
 
 template <>
-ostream& prettyPrint<IntValue>(ostream& os, const IntValue& v) {
+ostream& prettyPrint<IntView>(ostream& os, const IntView& v) {
     os << v.value;
     return os;
 }

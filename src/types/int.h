@@ -20,7 +20,7 @@ struct IntDomain {
               })) {}
 };
 
-struct IntTrigger : public IterAssignedTrigger<IntValue> {
+struct IntTrigger : public IterAssignedTrigger<IntView> {
     virtual void possibleValueChange(int64_t value) = 0;
     virtual void valueChanged(int64_t value) = 0;
 };
@@ -59,7 +59,7 @@ struct DefinedTrigger<IntValue> : public IntTrigger {
         });
     }
 
-    void iterHasNewValue(const IntValue&, const ValRef<IntValue>&) final {
+    void iterHasNewValue(const IntView&, const ViewRef<IntView>&) final {
         assert(false);
         abort();
     }

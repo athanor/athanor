@@ -4,11 +4,10 @@
 #include "types/int.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-void evaluate() {
+void OpMod::evaluate() {
     left->evaluate();
     right->evaluate();
-    value =
-        left->value % right->value;
+    value = left->value % right->value;
 }
 
 struct OpMod::Trigger : public IntTrigger {
@@ -16,21 +15,14 @@ struct OpMod::Trigger : public IntTrigger {
     Trigger(OpMod* op) : op(op) {}
     inline void possibleValueChange(int64_t) final {}
     inline void valueChanged(int64_t) final {
-        int64_t newValue = op->left->value %
-                           op->right->value;
-        if (newValue == op->value) {
-            return;
-        }
-        visitTriggers(
-            [&](auto& trigger) { trigger->possibleValueChange(op->value); },
-            op->triggers);
-        op->value = newValue;
-        visitTriggers([&](auto& trigger) { trigger->valueChanged(op->value); },
-                      op->triggers);
+        op->changeValue([&]() {
+            op->value = op->left->value % op->right->value;
+            return true;
+        });
     }
 
-    inline void iterHasNewValue(const IntValue& oldValue,
-                                const ValRef<IntValue>& newValue) final {
+    inline void iterHasNewValue(const IntView& oldValue,
+                                const ExprRef<IntView>& newValue) final {
         possibleValueChange(oldValue.value);
         valueChanged(newValue->value);
     }
@@ -44,7 +36,7 @@ OpMod::OpMod(OpMod&& other)
     setTriggerParent(this, operandTrigger);
 }
 
-void startTriggering() {
+void OpMod::startTriggering() {
     if (!operandTrigger) {
         operandTrigger = make_shared<OpMod::Trigger>(this);
         addTrigger(left, operandTrigger);
@@ -63,14 +55,13 @@ void stopTriggering() {
     }
 }
 
-void updateViolationDescription( u_int64_t parentViolation,
-                                ViolationDescription& vioDesc) {
-    updateViolationDescription(left, parentViolation, vioDesc);
+void OpMod::updateViolationDescription(u_int64_t parentViolation,
+                                ViolationDescription& vioDesc) const {
+    left->updateViolationDescription(parentViolation, vioDesc);
     updateViolationDescription(right, parentViolation, vioDesc);
 }
 
-shared_ptr<OpMod> deepCopyForUnroll(
-                                    const AnyIterRef& iterator) {
+shared_ptr<OpMod> deepCopyForUnroll(const AnyIterRef& iterator) {
     auto newOpMod = make_shared<OpMod>(deepCopyForUnroll(left, iterator),
                                        deepCopyForUnroll(right, iterator));
     newOpMod->value = value;

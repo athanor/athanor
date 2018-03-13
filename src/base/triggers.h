@@ -1,7 +1,7 @@
 
 #ifndef SRC_BASE_TRIGGERS_H_
-#include "base/refs.h"
 #define SRC_BASE_TRIGGERS_H_
+#include "base/viewRef.h"
 struct TriggerBase {
     bool active;
 };

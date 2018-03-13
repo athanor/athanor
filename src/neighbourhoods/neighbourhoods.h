@@ -7,7 +7,7 @@
 #include "search/statsContainer.h"
 #include "search/violationDescription.h"
 #include "base/base.h"
-#include "types/typeOperations.h"
+#include "base/typeOperations.h"
 
 #define debug_neighbourhood_action(x) debug_log(x)
 

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <memory>
 #include "types/set.h"
-#include "types/typeOperations.h"
+#include "base/typeOperations.h"
 using namespace std;
 void evaluate(OpSetIntersect& op) {
     evaluate(op.left);

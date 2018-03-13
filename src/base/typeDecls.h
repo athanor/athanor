@@ -87,4 +87,43 @@ using EnableIfViewAndReturn =
 template <typename T>
 using EnableIfView = EnableIfViewAndReturn<T, int>;
 
+// template forward declarations.  Template specialisations are assumed to be
+// implemented in CPP files.
+// That is, every type must provide a specialisation of the following functions.
+
+template <typename Val>
+EnableIfValueAndReturn<Val, bool> smallerValue(const Val& u, const Val& v);
+template <typename Val>
+EnableIfValueAndReturn<Val, bool> largerValue(const Val& u, const Val& v);
+template <typename Val>
+EnableIfValueAndReturn<Val, bool> equalValue(const Val& u, const Val& v);
+template <typename View>
+EnableIfViewAndReturn<View, u_int64_t> getValueHash(const View&);
+template <typename Val>
+EnableIfValueAndReturn<Val, void> normalise(Val& v);
+template <typename Val>
+EnableIfValueAndReturn<Val, void> deepCopy(const Val& src, Val& target);
+template <typename DomainType>
+u_int64_t getDomainSize(const DomainType&);
+template <typename View>
+EnableIfViewAndReturn<View, std::ostream&> prettyPrint(std::ostream& os,
+                                                       const View&);
+template <typename DomainType>
+typename std::enable_if<IsDomainType<BaseType<DomainType>>::value,
+                        std::ostream&>::type
+prettyPrint(std::ostream& os, const DomainType&);
+
+template <typename View>
+inline EnableIfViewAndReturn<View, std::ostream&> operator<<(std::ostream& os,
+                                                             const View& v) {
+    return prettyPrint(os, v);
+}
+
+template <typename Domain>
+inline typename std::enable_if<IsDomainType<BaseType<Domain>>::value,
+                               std::ostream&>::type
+operator<<(std::ostream& os, const Domain& d) {
+    return prettyPrint(os, d);
+}
+
 #endif /* SRC_BASE_TYPEDECLS_H_ */

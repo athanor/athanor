@@ -9,7 +9,7 @@
 #include "search/violationDescription.h"
 #include "base/base.h"
 #include "types/int.h"
-#include "types/typeOperations.h"
+#include "base/typeOperations.h"
 
 class ModelBuilder;
 enum OptimiseMode { NONE, MAXIMISE, MINIMISE };

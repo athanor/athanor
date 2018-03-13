@@ -6,7 +6,7 @@
 #include "search/model.h"
 #include "search/neighbourhoodSelectionStrategies.h"
 #include "search/statsContainer.h"
-#include "types/typeOperations.h"
+#include "base/typeOperations.h"
 
 inline bool alwaysTrue(const AnyValRef&) { return true; }
 

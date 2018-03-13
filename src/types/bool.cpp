@@ -1,7 +1,7 @@
 #include "types/bool.h"
 #include <cassert>
 #include "common/common.h"
-#include "types/typeOperations.h"
+#include "base/typeOperations.h"
 
 using namespace std;
 template <>

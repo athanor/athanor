@@ -1,12 +1,15 @@
+/*
+ * iterRef.h
+ *
+ *  Created on: 13 Mar 2018
+ *      Author: SaadAttieh
+ */
 
-#ifndef SRC_OPERATORS_ITERATOR_H_
-#define SRC_OPERATORS_ITERATOR_H_
-#include <cassert>
-#include <unordered_map>
+#ifndef SRC_BASE_ITERREF_H_
+#define SRC_BASE_ITERREF_H_
 #include <vector>
-#include "base/base.h"
-#include "types/typeOperations.h"
-
+#include "base/triggers.h"
+#include "base/viewRef.h"
 template <typename T>
 struct Iterator {
     int id;
@@ -80,4 +83,4 @@ inline std::ostream& operator<<(std::ostream& os, const AnyIterRef& iter) {
     return prettyPrint(os, iter);
 }
 
-#endif /* SRC_OPERATORS_ITERATOR_H_ */
+#endif /* SRC_BASE_ITERREF_H_ */

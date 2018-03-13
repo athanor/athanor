@@ -3,7 +3,7 @@
 #include "operators/operatorBase.h"
 #include "operators/quantifierView.h"
 #include "types/allTypes.h"
-#include "types/typeOperations.h"
+#include "base/typeOperations.h"
 template <typename Container>
 struct InitialUnroller;
 

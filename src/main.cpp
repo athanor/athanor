@@ -7,7 +7,7 @@
 #include "constructorShortcuts.h"
 #include "jsonModelParser.h"
 #include "search/searchStrategies.h"
-#include "types/typeOperations.h"
+#include "base/typeOperations.h"
 
 using namespace std;
 using namespace AutoArgParse;

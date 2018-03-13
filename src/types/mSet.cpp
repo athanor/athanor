@@ -3,7 +3,7 @@
 #include <cassert>
 #include "common/common.h"
 #include "operators/operatorBase.h"
-#include "types/typeOperations.h"
+#include "base/typeOperations.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 

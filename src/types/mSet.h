@@ -5,7 +5,7 @@
 #include "common/common.h"
 #include "base/base.h"
 #include "types/sizeAttr.h"
-#include "types/typeOperations.h"
+#include "base/typeOperations.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
 

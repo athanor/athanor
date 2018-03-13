@@ -5,7 +5,7 @@
 #include "common/common.h"
 #include "constructorShortcuts.h"
 #include "search/searchStrategies.h"
-#include "types/typeOperations.h"
+#include "base/typeOperations.h"
 
 using namespace std;
 using namespace nlohmann;

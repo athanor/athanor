@@ -2,7 +2,7 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
 #include "types/set.h"
-#include "types/typeOperations.h"
+#include "base/typeOperations.h"
 #include "utils/random.h"
 
 using namespace std;

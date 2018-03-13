@@ -42,6 +42,9 @@ class IterRef {
    public:
     IterRef(int id)
         : ref(std::make_shared<Iterator<T>>(id, ValRef<T>(nullptr))) {}
+
+    IterRef(std::shared_ptr<Iterator<T>> ref) : ref(std::move(ref)) {}
+
     inline Iterator<T>& getIterator() { return *ref; }
     inline decltype(auto) refCount() { return ref.use_count(); }
     inline const Iterator<T>& getIterator() const { return *ref; }

@@ -76,7 +76,7 @@ void stopTriggering() {
 
 void updateViolationDescription( u_int64_t parentViolation,
                                 ViolationDescription& vioDesc) {
-    updateViolationDescription(operand, parentViolation, vioDesc);
+    operand->updateViolationDescription( parentViolation, vioDesc);
 }
 
 std::shared_ptr<OpSetSize> deepCopyForUnroll(

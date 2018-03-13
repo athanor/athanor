@@ -166,7 +166,7 @@ void stopTriggering() {
 void updateViolationDescription( u_int64_t,
                                 ViolationDescription& vioDesc) {
     for (auto& operand : quantifier->exprs) {
-        updateViolationDescription(operand, violation, vioDesc);
+        operand->updateViolationDescription( violation, vioDesc);
     }
 }
 

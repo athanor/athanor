@@ -46,7 +46,7 @@ void OpMod::startTriggering() {
     }
 }
 
-void stopTriggering() {
+void OpMod::stopTriggering() {
     if (operandTrigger) {
         deleteTrigger(operandTrigger);
         operandTrigger = nullptr;
@@ -56,22 +56,24 @@ void stopTriggering() {
 }
 
 void OpMod::updateViolationDescription(u_int64_t parentViolation,
-                                ViolationDescription& vioDesc) const {
+                                       ViolationDescription& vioDesc) {
     left->updateViolationDescription(parentViolation, vioDesc);
-    updateViolationDescription(right, parentViolation, vioDesc);
+    right->updateViolationDescription(parentViolation, vioDesc);
 }
 
-shared_ptr<OpMod> deepCopyForUnroll(const AnyIterRef& iterator) {
-    auto newOpMod = make_shared<OpMod>(deepCopyForUnroll(left, iterator),
-                                       deepCopyForUnroll(right, iterator));
+ExprRef<IntView> OpMod::deepCopyForUnroll(const ExprRef<IntView>&,
+                                          const AnyIterRef& iterator) const {
+    auto newOpMod =
+        make_shared<OpMod>(left->deepCopyForUnroll(left, iterator),
+                           right->deepCopyForUnroll(right, iterator));
     newOpMod->value = value;
-    return newOpMod;
+    return ViewRef<IntView>(newOpMod);
 }
 
-std::ostream& dumpState(std::ostream& os, ) {
+std::ostream& OpMod::dumpState(std::ostream& os) const {
     os << "OpMod: value=" << value << "\nleft: ";
-    dumpState(os, left);
+    left->dumpState(os);
     os << "\nright: ";
-    dumpState(os, right);
+    right->dumpState(os);
     return os;
 }

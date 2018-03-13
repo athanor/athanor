@@ -108,7 +108,7 @@ void updateViolationDescription( u_int64_t parentViolation,
         return;
     }
     for (auto& operand : quantifier->exprs) {
-        updateViolationDescription(operand, parentViolation, vioDesc);
+        operand->updateViolationDescription( parentViolation, vioDesc);
     }
 }
 

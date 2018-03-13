@@ -153,8 +153,8 @@ void stopTriggering() {
 
 void updateViolationDescription( u_int64_t,
                                 ViolationDescription& vioDesc) {
-    updateViolationDescription(left, violation, vioDesc);
-    updateViolationDescription(right, violation, vioDesc);
+    left->updateViolationDescription( violation, vioDesc);
+    right->updateViolationDescription( violation, vioDesc);
 }
 
 std::shared_ptr<OpSubsetEq> deepCopyForUnroll(

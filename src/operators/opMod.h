@@ -1,7 +1,6 @@
 
 #ifndef SRC_OPERATORS_OPMOD_H_
 #define SRC_OPERATORS_OPMOD_H_
-#include "operators/operatorBase.h"
 #include "types/int.h"
 
 struct OpMod : public IntView {
@@ -25,7 +24,6 @@ struct OpMod : public IntView {
     ExprRef<IntView> deepCopyForUnroll(const ExprRef<IntView>& op,
                                        const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-
 };
 
 #endif /* SRC_OPERATORS_OPMOD_H_ */

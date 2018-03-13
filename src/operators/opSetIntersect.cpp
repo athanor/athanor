@@ -176,8 +176,8 @@ void stopTriggering() {
 void updateViolationDescription(
                                 u_int64_t parentViolation,
                                 ViolationDescription& vioDesc) {
-    updateViolationDescription(left, parentViolation, vioDesc);
-    updateViolationDescription(right, parentViolation, vioDesc);
+    left->updateViolationDescription( parentViolation, vioDesc);
+    right->updateViolationDescription( parentViolation, vioDesc);
 }
 
 std::shared_ptr<OpSetIntersect> deepCopyForUnroll(const OpSetIntersect&,

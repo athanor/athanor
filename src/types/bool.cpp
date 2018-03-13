@@ -5,12 +5,12 @@
 
 using namespace std;
 template <>
-u_int64_t getValueHash<BoolValue>(const BoolValue& val) {
+u_int64_t getValueHash<BoolView>(const BoolView& val) {
     return val.violation;
 }
 
 template <>
-ostream& prettyPrint<BoolValue>(ostream& os, const BoolValue& v) {
+ostream& prettyPrint<BoolView>(ostream& os, const BoolView& v) {
     os << (v.violation == 1);
     return os;
 }

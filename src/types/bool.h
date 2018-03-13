@@ -6,7 +6,7 @@
 
 #include "types/base.h"
 struct BoolDomain {};
-struct BoolTrigger : public IterAssignedTrigger<BoolValue> {
+struct BoolTrigger : public IterAssignedTrigger<BoolView> {
     virtual void possibleValueChange(u_int64_t OldViolation) = 0;
     virtual void valueChanged(u_int64_t newViolation) = 0;
 };
@@ -47,7 +47,7 @@ struct DefinedTrigger<BoolValue> : public BoolTrigger {
             return true;
         });
     }
-    void iterHasNewValue(const BoolValue&, const ValRef<BoolValue>&) final {
+    void iterHasNewValue(const BoolView&, const ViewRef<BoolView>&) final {
         assert(false);
         abort();
     }

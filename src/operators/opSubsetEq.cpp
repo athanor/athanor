@@ -30,7 +30,7 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
    public:
     LeftSetTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t hash) final {
-        if (!getView(op->right).hashIndexMap.count(hash)) {
+        if (!op->right->hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 --op->violation;
                 return true;
@@ -40,7 +40,7 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
 
     inline void valueAdded(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
-        if (!getView(op->right).hashIndexMap.count(hash)) {
+        if (!op->right->hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 ++op->violation;
                 return true;
@@ -77,7 +77,7 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
 
     RightSetTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(u_int64_t, u_int64_t hash) final {
-        if (getView(op->left).hashIndexMap.count(hash)) {
+        if (op->left->hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 ++op->violation;
                 return true;
@@ -87,7 +87,7 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
 
     inline void valueAdded(const AnyValRef& member) final {
         u_int64_t hash = getValueHash(member);
-        if (getView(op->left).hashIndexMap.count(hash)) {
+        if (op->left->hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 --op->violation;
                 return true;
@@ -129,8 +129,8 @@ OpSubsetEq::OpSubsetEq(OpSubsetEq&& other)
 
 void startTriggering() {
     if (!leftTrigger) {
-        leftTrigger = make_shared<LeftSetTrigger>(&op);
-        rightTrigger = make_shared<RightSetTrigger>(&op);
+        leftTrigger = make_shared<LeftSetTrigger>(this);
+        rightTrigger = make_shared<RightSetTrigger>(this);
         addTrigger(left, leftTrigger);
         addTrigger(right, rightTrigger);
         left->startTriggering();

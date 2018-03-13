@@ -16,7 +16,7 @@ struct OpSubsetEq : public BoolView {
         : left(std::move(leftIn)), right(std::move(rightIn)) {}
     OpSubsetEq(const OpSubsetEq& other) = delete;
     OpSubsetEq(OpSubsetEq&& other);
-    ~OpSubsetEq() { stopTriggering(*this); }
+    ~OpSubsetEq() { this->stopTriggering(); }
 };
 
 #endif /* SRC_OPERATORS_OPSETINTERSECT_H_ */

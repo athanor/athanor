@@ -16,7 +16,7 @@ struct OpSum : public IntView {
         : quantifier(std::move(quantifier)) {}
     OpSum(const OpSum& other) = delete;
     OpSum(OpSum&& other);
-    ~OpSum() { stopTriggering(*this); }
+    ~OpSum() { this->stopTriggering(); }
 };
 
 #endif /* SRC_OPERATORS_OPSUM_H_ */

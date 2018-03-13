@@ -16,7 +16,7 @@ struct OpSetIntersect : public SetView {
         : left(std::move(leftIn)), right(std::move(rightIn)) {}
     OpSetIntersect(const OpSetIntersect& other) = delete;
     OpSetIntersect(OpSetIntersect&& other);
-    ~OpSetIntersect() { stopTriggering(*this); }
+    ~OpSetIntersect() { this->stopTriggering(); }
 };
 */
 #endif /* SRC_OPERATORS_OPSETINTERSECT_H_ */

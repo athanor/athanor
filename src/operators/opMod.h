@@ -16,7 +16,16 @@ struct OpMod : public IntView {
 
     OpMod(const OpMod& other) = delete;
     OpMod(OpMod&& other);
-    ~OpMod() { stopTriggering(*this); }
+    ~OpMod() { this->stopTriggering(); }
+    void evaluate() final;
+    void startTriggering() final;
+    void stopTriggering() final;
+    void updateViolationDescription(u_int64_t parentViolation,
+                                    ViolationDescription&) final;
+    ExprRef<IntView> deepCopyForUnroll(const ExprRef<IntView>& op,
+                                       const AnyIterRef& iterator) const final;
+    std::ostream& dumpState(std::ostream& os) const final;
+
 };
 
 #endif /* SRC_OPERATORS_OPMOD_H_ */

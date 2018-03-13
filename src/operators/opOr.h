@@ -19,7 +19,7 @@ struct OpOr : public BoolView {
         : quantifier(std::move(quantifier)) {}
     OpOr(const OpOr& other) = delete;
     OpOr(OpOr&& other);
-    ~OpOr() { stopTriggering(*this); }
+    ~OpOr() { this->stopTriggering(); }
 };
 
 #endif /* SRC_OPERATORS_OPOR_H_ */

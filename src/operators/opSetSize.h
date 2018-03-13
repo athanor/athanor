@@ -10,7 +10,7 @@ struct OpSetSize : public IntView {
     OpSetSize(ExprRef<SetView> operandIn) : operand(operandIn) {}
     OpSetSize(const OpSetSize&) = delete;
     OpSetSize(OpSetSize&& other);
-    ~OpSetSize() { stopTriggering(*this); }
+    ~OpSetSize() { this->stopTriggering(); }
 };
 
 #endif /* SRC_OPERATORS_OPSETSIZE_H_ */

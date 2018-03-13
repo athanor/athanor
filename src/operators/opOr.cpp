@@ -132,13 +132,13 @@ OpOr::OpOr(OpOr&& other)
 
 void startTriggering() {
     if (!quantifierTrigger) {
-        quantifierTrigger = std::make_shared<QuantifierTrigger>(&op);
+        quantifierTrigger = std::make_shared<QuantifierTrigger>(this);
         addTrigger(quantifier, quantifierTrigger);
         quantifier->startTriggeringOnContainer();
 
         for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
             auto& operand = quantifier->exprs[i];
-            auto trigger = make_shared<OpOrTrigger>(&op, i);
+            auto trigger = make_shared<OpOrTrigger>(this, i);
             addTrigger(operand, trigger);
             operandTriggers.emplace_back(move(trigger));
             operand->startTriggering();

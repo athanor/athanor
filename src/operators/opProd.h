@@ -16,7 +16,7 @@ struct OpProd : public IntView {
         : quantifier(std::move(quantifier)) {}
     OpProd(const OpProd& other) = delete;
     OpProd(OpProd&& other);
-    ~OpProd() { stopTriggering(*this); }
+    ~OpProd() { this->stopTriggering(); }
 };
 
 #endif /* SRC_OPERATORS_OPPROD_H_ */

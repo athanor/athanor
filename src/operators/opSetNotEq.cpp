@@ -64,7 +64,7 @@ OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
 
 void startTriggering() {
     if (!trigger) {
-        trigger = make_shared<OpSetNotEqTrigger>(&op);
+        trigger = make_shared<OpSetNotEqTrigger>(this);
         addTrigger(left, trigger);
         addTrigger(right, trigger);
         left->startTriggering();

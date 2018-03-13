@@ -12,7 +12,7 @@ struct OpSetNotEq : public BoolView {
         : left(std::move(leftIn)), right(std::move(rightIn)) {}
     OpSetNotEq(const OpSetNotEq& other) = delete;
     OpSetNotEq(OpSetNotEq&& other);
-    ~OpSetNotEq() { stopTriggering(*this); }
+    ~OpSetNotEq() { this->stopTriggering(); }
 };
 
 #endif /* SRC_OPERATORS_OPSETNOTEQ_H_ */

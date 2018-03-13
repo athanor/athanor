@@ -151,8 +151,8 @@ OpSetIntersect::OpSetIntersect(OpSetIntersect&& other)
 
 void startTriggering() {
 if (!leftTrigger {
-    leftTrigger = make_shared<OpSetIntersectTrigger<true>>(&op);
-    rightTrigger = make_shared<OpSetIntersectTrigger<false>>(&op);
+    leftTrigger = make_shared<OpSetIntersectTrigger<true>>(this);
+    rightTrigger = make_shared<OpSetIntersectTrigger<false>>(this);
     addTrigger(left, leftTrigger);
     addTrigger(right, rightTrigger);
     left->startTriggering();

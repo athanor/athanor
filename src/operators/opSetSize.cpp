@@ -60,7 +60,7 @@ OpSetSize::OpSetSize(OpSetSize&& other)
 }
 void startTriggering() {
     if (!operandTrigger) {
-        operandTrigger = make_shared<OpSetSizeTrigger>(&op);
+        operandTrigger = make_shared<OpSetSizeTrigger>(this);
         addTrigger(operand, operandTrigger);
         operand->startTriggering();
     }

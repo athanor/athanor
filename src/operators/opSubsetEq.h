@@ -1,7 +1,6 @@
 
 #ifndef SRC_OPERATORS_OPSETINTERSECT_H_
 #define SRC_OPERATORS_OPSETINTERSECT_H_
-#include "operators/operatorBase.h"
 #include "types/bool.h"
 #include "types/set.h"
 struct OpSubsetEq : public BoolView {
@@ -17,6 +16,14 @@ struct OpSubsetEq : public BoolView {
     OpSubsetEq(const OpSubsetEq& other) = delete;
     OpSubsetEq(OpSubsetEq&& other);
     ~OpSubsetEq() { this->stopTriggering(); }
+    void evaluate() final;
+    void startTriggering() final;
+    void stopTriggering() final;
+    void updateViolationDescription(u_int64_t parentViolation,
+                                    ViolationDescription&) final;
+    ExprRef<BoolView> deepCopyForUnroll(const ExprRef<BoolView>& op,
+                                        const AnyIterRef& iterator) const final;
+    std::ostream& dumpState(std::ostream& os) const final;
 };
 
 #endif /* SRC_OPERATORS_OPSETINTERSECT_H_ */

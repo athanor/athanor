@@ -117,5 +117,7 @@ struct ExprInterface {
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
 };
-
+inline u_int64_t getValueHash(const AnyExprRef& ref) {
+    return mpark::visit([&](auto& ref) { return getValueHash(*ref); }, ref);
+}
 #endif /* SRC_BASE_EXPRREF_H_ */

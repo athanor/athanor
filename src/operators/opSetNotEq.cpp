@@ -5,27 +5,23 @@
 
 using namespace std;
 
-inline void setViolation( bool trigger) {
-    SetView& leftSetView = getView(left);
-    SetView& rightSetView = getView(right);
-    u_int64_t oldViolation = violation;
-    violation =
-        (leftSetView.cachedHashTotal == rightSetView.cachedHashTotal)
-            ? 1
-            : 0;
-    if (trigger && violation != oldViolation) {
-        visitTriggers(
-            [&](auto& trigger) { trigger->possibleValueChange(oldViolation); },
-            triggers);
-        visitTriggers(
-            [&](auto& trigger) { trigger->valueChanged(violation); },
-            triggers);
+inline void setViolation(OpSetNotEq& op, bool trigger) {
+    u_int64_t newViolation =
+        (op.left->cachedHashTotal == op.right->cachedHashTotal) ? 1 : 0;
+    if (trigger) {
+        op.changeValue([&]() {
+            op.violation = newViolation;
+            return true;
+        });
+    } else {
+        op.violation = newViolation;
     }
 }
-void evaluate() {
+
+void OpSetNotEq::evaluate() {
     left->evaluate();
     right->evaluate();
-    setViolation(op, false);
+    setViolation(*this, false);
 }
 
 class OpSetNotEqTrigger : public SetTrigger {
@@ -38,19 +34,18 @@ class OpSetNotEqTrigger : public SetTrigger {
         setViolation(*op, true);
     }
 
-    inline void valueAdded(const AnyValRef&) final { setViolation(*op, true); }
+    inline void valueAdded(const AnyExprRef&) final { setViolation(*op, true); }
     inline void setValueChanged(const SetView&) final {
         setViolation(*op, true);
     }
-    inline void possibleMemberValueChange(u_int64_t, const AnyValRef&) final {}
+    inline void possibleMemberValueChange(u_int64_t, const AnyExprRef&) final {}
 
-    inline void memberValueChanged(u_int64_t, const AnyValRef&) final {
+    inline void memberValueChanged(u_int64_t, const AnyExprRef&) final {
         setViolation(*op, true);
     }
 
-    inline void iterHasNewValue(const SetValue&,
-                                const ValRef<SetValue>&) final {
-        assert(false);
+    inline void iterHasNewValue(const SetView&, const ExprRef<SetView>&) final {
+        setViolation(*op, true);
     }
 };
 
@@ -62,7 +57,7 @@ OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
     setTriggerParent(this, trigger);
 }
 
-void startTriggering() {
+void OpSetNotEq::startTriggering() {
     if (!trigger) {
         trigger = make_shared<OpSetNotEqTrigger>(this);
         addTrigger(left, trigger);
@@ -72,7 +67,7 @@ void startTriggering() {
     }
 }
 
-void stopTriggering() {
+void OpSetNotEq::stopTriggering() {
     if (trigger) {
         deleteTrigger(trigger);
         trigger = nullptr;
@@ -81,19 +76,26 @@ void stopTriggering() {
     }
 }
 
-void updateViolationDescription( u_int64_t,
-                                ViolationDescription& vioDesc) {
-    left->updateViolationDescription( violation, vioDesc);
-    right->updateViolationDescription( violation, vioDesc);
+void OpSetNotEq::updateViolationDescription(u_int64_t,
+                                            ViolationDescription& vioDesc) {
+    left->updateViolationDescription(violation, vioDesc);
+    right->updateViolationDescription(violation, vioDesc);
 }
 
-std::shared_ptr<OpSetNotEq> deepCopyForUnroll(const OpSetNotEq&,
-                                              const AnyIterRef&) {
-    assert(false);
-    abort();
+ExprRef<BoolView> OpSetNotEq::deepCopyForUnroll(
+    const ExprRef<BoolView>&, const AnyIterRef& iterator) const {
+    auto newOpSetNotEq =
+        make_shared<OpSetNotEq>(left->deepCopyForUnroll(left, iterator),
+                                right->deepCopyForUnroll(right, iterator));
+    newOpSetNotEq->violation = violation;
+    return ViewRef<BoolView>(newOpSetNotEq);
 }
 
-std::ostream& dumpState(std::ostream& os, const OpSetNotEq&) {
-    assert(false);
+std::ostream& OpSetNotEq::dumpState(std::ostream& os) const {
+    os << "OpSetNotEq: violation=" << violation << "\nleft: ";
+    left->dumpState(os);
+    os << "\nright: ";
+    right->dumpState(os);
+    return os;
     return os;
 }

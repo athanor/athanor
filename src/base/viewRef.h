@@ -4,6 +4,7 @@
 #include <vector>
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
+#include "base/valRef.h"
 #include "common/common.h"
 #include "utils/variantOperations.h"
 
@@ -55,6 +56,30 @@ inline std::ostream& prettyPrint(std::ostream& os, const AnyViewRef& v, T = 0) {
     return mpark::visit(
         [&os](auto& vImpl) -> std::ostream& { return prettyPrint(os, vImpl); },
         v);
+}
+
+template <typename T>
+struct ValRef;
+template <typename ViewType,
+          typename ValueType = typename AssociatedValueType<ViewType>::type,
+          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
+inline ValRef<ValueType>& assumeAsValue(ViewRef<ViewType>& viewPtr) {
+    return reinterpret_cast<ValRef<ValueType>&>(viewPtr);
+}
+
+template <typename ViewType,
+          typename ValueType = typename AssociatedValueType<ViewType>::type,
+          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
+inline const ValRef<ValueType>& assumeAsValue(
+    const ViewRef<ViewType>& viewPtr) {
+    return reinterpret_cast<const ValRef<ValueType>&>(viewPtr);
+}
+
+template <typename ViewType,
+          typename ValueType = typename AssociatedValueType<ViewType>::type,
+          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
+inline ValRef<ValueType>&& assumeAsValue(ViewRef<ViewType>&& viewPtr) {
+    return reinterpret_cast<ValRef<ValueType>&&>(std::move(viewPtr));
 }
 
 #endif /* SRC_BASE_VIEWREF_H_ */

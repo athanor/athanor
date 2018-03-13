@@ -3,9 +3,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "operators/iterator.h"
-#include "search/violationDescription.h"
 #include "base/base.h"
+#include "search/violationDescription.h"
 #include "utils/cachedSharedPtr.h"
 
 #define buildForOperators(f, sep)                                    \

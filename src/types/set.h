@@ -3,10 +3,9 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "common/common.h"
 #include "base/base.h"
+#include "common/common.h"
 #include "types/sizeAttr.h"
-#include "base/typeOperations.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
 

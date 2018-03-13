@@ -1,7 +1,9 @@
 
 #ifndef SRC_BASE_TYPEDECLS_H_
 #define SRC_BASE_TYPEDECLS_H_
+#include "../utils/variantOperations.h"
 #include "base/typesMacros.h"
+#include "common/common.h"
 // forward declare structs
 #define declDomainsAndValues(name) \
     struct name##Value;            \
@@ -90,6 +92,14 @@ using EnableIfView = EnableIfViewAndReturn<T, int>;
 // template forward declarations.  Template specialisations are assumed to be
 // implemented in CPP files.
 // That is, every type must provide a specialisation of the following functions.
+
+// short cut for building a variant of any other templated class, where the
+// class is templated over a value (SetValue,IntValue, etc.)
+#define variantValues(V) T<V##Value>
+template <template <typename> class T>
+using Variantised =
+    mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
+#undef variantValues
 
 template <typename Val>
 EnableIfValueAndReturn<Val, bool> smallerValue(const Val& u, const Val& v);

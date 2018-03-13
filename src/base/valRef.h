@@ -1,13 +1,14 @@
 
 #ifndef SRC_BASE_VALREF_H_
 #define SRC_BASE_VALREF_H_
+#include "utils/variantOperations.h"
 
 #include <vector>
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
+#include "base/viewRef.h"
 #include "common/common.h"
 #include "utils/variantOperations.h"
-
 template <typename T>
 struct ValRef : public StandardSharedPtr<T> {
     using StandardSharedPtr<T>::StandardSharedPtr;
@@ -21,14 +22,6 @@ template <typename T,
 ValRef<T> make() {
     return ValRef<T>(makeShared<T>());
 }
-
-// short cut for building a variant of any other templated class, where the
-// class is templated over a value (SetValue,IntValue, etc.)
-#define variantValues(V) T<V##Value>
-template <template <typename> class T>
-using Variantised =
-    mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
-#undef variantValues
 
 // variant for values
 typedef Variantised<ValRef> AnyValRef;

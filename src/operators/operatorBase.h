@@ -5,7 +5,7 @@
 
 #include "operators/iterator.h"
 #include "search/violationDescription.h"
-#include "types/base.h"
+#include "base/base.h"
 #include "utils/cachedSharedPtr.h"
 
 #define buildForOperators(f, sep)                                    \

@@ -64,5 +64,9 @@ T fromString(const std::string &str) {
     return obj;
 }
 
+template <typename T>
+using BaseType =
+    typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+
 extern std::recursive_mutex COMMON_LOG_MUTEX;
 #endif  // common_common_h

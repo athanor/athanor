@@ -7,7 +7,7 @@
 #include "operators/opAnd.h"
 #include "operators/operatorBase.h"
 #include "search/violationDescription.h"
-#include "types/base.h"
+#include "base/base.h"
 #include "types/int.h"
 #include "types/typeOperations.h"
 

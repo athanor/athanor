@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "types/base.h"
+#include "base/base.h"
 struct BoolDomain {};
 struct BoolTrigger : public IterAssignedTrigger<BoolView> {
     virtual void possibleValueChange(u_int64_t OldViolation) = 0;

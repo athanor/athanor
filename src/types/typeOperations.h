@@ -2,7 +2,7 @@
 #ifndef SRC_TYPES_TYPEOPERATIONS_H_
 #define SRC_TYPES_TYPEOPERATIONS_H_
 #include <iostream>
-#include "types/base.h"
+#include "base/base.h"
 
 // template forward declarations.  Template specialisations are assumed to be
 // implemented in CPP files.

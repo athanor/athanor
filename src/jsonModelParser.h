@@ -4,7 +4,7 @@
 #include <memory>
 #include <unordered_map>
 #include "operators/operatorBase.h"
-#include "types/base.h"
+#include "base/base.h"
 
 class ModelBuilder;
 struct ParsedModel {

@@ -6,7 +6,7 @@
 #include "common/common.h"
 #include "search/statsContainer.h"
 #include "search/violationDescription.h"
-#include "types/base.h"
+#include "base/base.h"
 #include "types/typeOperations.h"
 
 #define debug_neighbourhood_action(x) debug_log(x)

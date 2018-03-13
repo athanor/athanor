@@ -205,7 +205,8 @@ struct MSetValue : public MSetView, public ValBase {
     using MSetView::silentClear;
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline void addMember(const ValRef<InnerValueType>& member) {
-        MSetView::addMember(getViewPtr(member));
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        MSetView::addMember(ExprRef<InnerViewType>(getViewPtr(member)));
         valBase(*member).container = this;
         valBase(*member).id = numberElements() - 1;
         debug_code(assertValidVarBases());
@@ -215,7 +216,8 @@ struct MSetValue : public MSetView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline bool tryAddMember(const ValRef<InnerValueType>& member,
                              Func&& func) {
-        MSetView::addMember(getViewPtr(member));
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        MSetView::addMember(ExprRef<InnerViewType>(getViewPtr(member)));
         if (func()) {
             valBase(*member).container = this;
             valBase(*member).id = numberElements() - 1;

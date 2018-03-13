@@ -73,7 +73,7 @@ struct SetView {
 
    private:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline bool addMember(const ViewRef<InnerViewType>& member) {
+    inline bool addMember(const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();
         if (containsMember(member)) {
             return false;
@@ -157,7 +157,7 @@ struct SetView {
 
    public:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline bool addMemberAndNotify(const ViewRef<InnerViewType>& member) {
+    inline bool addMemberAndNotify(const ExprRef<InnerViewType>& member) {
         if (addMember(member)) {
             notifyMemberAdded(getMembers<InnerViewType>().back());
             return true;
@@ -167,8 +167,8 @@ struct SetView {
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline ViewRef<InnerViewType> removeMemberAndNotify(u_int64_t index) {
-        ViewRef<InnerViewType> removedValue =
+    inline ExprRef<InnerViewType> removeMemberAndNotify(u_int64_t index) {
+        ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
         notifyMemberRemoved(index, getValueHash(*removedValue));
         return removedValue;
@@ -214,12 +214,12 @@ struct SetView {
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline const ViewRefVec<InnerViewType>& getMembers() const {
-        return mpark::get<ViewRefVec<InnerViewType>>(members);
+    inline const ExprRefVec<InnerViewType>& getMembers() const {
+        return mpark::get<ExprRefVec<InnerViewType>>(members);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline bool containsMember(const ViewRef<InnerViewType>& member) const {
+    inline bool containsMember(const ExprRef<InnerViewType>& member) const {
         return containsMember(*member);
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -235,7 +235,8 @@ struct SetValue : public SetView, public ValBase {
     using SetView::silentClear;
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline bool addMember(const ValRef<InnerValueType>& member) {
-        if (SetView::addMember(getViewPtr(member))) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        if (SetView::addMember(ExprRef<InnerViewType>(getViewPtr(member)))) {
             valBase(*member).container = this;
             valBase(*member).id = numberElements() - 1;
             debug_code(assertValidVarBases());
@@ -249,7 +250,8 @@ struct SetValue : public SetView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline bool tryAddMember(const ValRef<InnerValueType>& member,
                              Func&& func) {
-        if (SetView::addMember(getViewPtr(member))) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        if (SetView::addMember(ExprRef<InnerViewType>(getViewPtr(member)))) {
             if (func()) {
                 valBase(*member).container = this;
                 valBase(*member).id = numberElements() - 1;
@@ -369,7 +371,7 @@ struct DefinedTrigger<SetValue> : public SetTrigger {
     }
 
     void setValueChanged(const SetView& newValue) { todoImpl(newValue); }
-    void iterHasNewValue(const SetView&, const ViewRef<SetView>&) final {
+    void iterHasNewValue(const SetView&, const ExprRef<SetView>&) final {
         assert(false);
         abort();
     }

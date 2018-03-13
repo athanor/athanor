@@ -3,7 +3,6 @@
 #include <cassert>
 #include "common/common.h"
 #include "operators/operatorBase.h"
-#include "base/typeOperations.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 
@@ -34,14 +33,14 @@ ostream& prettyPrint<MSetView>(ostream& os, const MSetView& v) {
 
 template <typename InnerViewType>
 void deepCopyImpl(const MSetValue&,
-                  const ViewRefVec<InnerViewType>& srcMemnersImpl,
+                  const ExprRefVec<InnerViewType>& srcMemnersImpl,
                   MSetValue& target) {
     auto& targetMembersImpl = target.getMembers<InnerViewType>();
     // to be optimised later
     targetMembersImpl.clear();
 
     for (auto& member : srcMemnersImpl) {
-        target.addMember(deepCopy(*assumeAsValue(member)));
+        target.addMember(deepCopy(assumeAsValue(*member)));
     }
     debug_code(target.assertValidState());
     target.notifyEntireMSetChange();
@@ -69,7 +68,7 @@ ostream& prettyPrint<MSetDomain>(ostream& os, const MSetDomain& d) {
 void matchInnerType(const MSetValue& src, MSetValue& target) {
     mpark::visit(
         [&](auto& srcMembersImpl) {
-            target.setInnerType<viewType(srcMembersImpl)>();
+            target.setInnerType<exprType(srcMembersImpl)>();
         },
         src.members);
 }
@@ -100,12 +99,12 @@ void startTriggering(MSetValue&) {}
 void stopTriggering(MSetValue&) {}
 
 template <typename InnerViewType>
-void normaliseImpl(MSetValue&, ViewRefVec<InnerViewType>& valMembersImpl) {
+void normaliseImpl(MSetValue&, ExprRefVec<InnerViewType>& valMembersImpl) {
     for (auto& v : valMembersImpl) {
-        normalise(*assumeAsValue(v));
+        normalise(assumeAsValue(*v));
     }
     sort(valMembersImpl.begin(), valMembersImpl.end(), [](auto& u, auto& v) {
-        return smallerValue(*assumeAsValue(u), *assumeAsValue(v));
+        return smallerValue(assumeAsValue(*u), assumeAsValue(*v));
     });
 }
 
@@ -133,11 +132,11 @@ bool smallerValue<MSetValue>(const MSetValue& u, const MSetValue& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (smallerValue(*assumeAsValue(uMembersImpl[i]),
-                                 *assumeAsValue(vMembersImpl[i]))) {
+                if (smallerValue(assumeAsValue(*uMembersImpl[i]),
+                                 assumeAsValue(*vMembersImpl[i]))) {
                     return true;
-                } else if (largerValue(*assumeAsValue(uMembersImpl[i]),
-                                       *assumeAsValue(vMembersImpl[i]))) {
+                } else if (largerValue(assumeAsValue(*uMembersImpl[i]),
+                                       assumeAsValue(*vMembersImpl[i]))) {
                     return false;
                 }
             }
@@ -158,11 +157,11 @@ bool largerValue<MSetValue>(const MSetValue& u, const MSetValue& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (largerValue(*assumeAsValue(uMembersImpl[i]),
-                                *assumeAsValue(vMembersImpl[i]))) {
+                if (largerValue(assumeAsValue(*uMembersImpl[i]),
+                                assumeAsValue(*vMembersImpl[i]))) {
                     return true;
-                } else if (smallerValue(*assumeAsValue(uMembersImpl[i]),
-                                        *assumeAsValue(vMembersImpl[i]))) {
+                } else if (smallerValue(assumeAsValue(*uMembersImpl[i]),
+                                        assumeAsValue(*vMembersImpl[i]))) {
                     return false;
                 }
             }
@@ -226,10 +225,10 @@ void MSetValue::printVarBases() {
             cout << "parent is constant: " << (this->container == &constantPool)
                  << endl;
             for (auto& member : valMembersImpl) {
-                cout << "val id: " << valBase(*assumeAsValue(member)).id
+                cout << "val id: " << valBase(assumeAsValue(*member)).id
                      << endl;
                 cout << "is constant: "
-                     << (valBase(*assumeAsValue(member)).container ==
+                     << (valBase(assumeAsValue(*member)).container ==
                          &constantPool)
                      << endl;
             }

@@ -2,10 +2,9 @@
 #define SRC_TYPES_MSET_H_
 #include <unordered_map>
 #include <vector>
-#include "common/common.h"
 #include "base/base.h"
+#include "common/common.h"
 #include "types/sizeAttr.h"
-#include "base/typeOperations.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
 
@@ -56,25 +55,25 @@ struct MSetDomain {
 struct MSetTrigger : public IterAssignedTrigger<MSetView> {
     virtual void valueRemoved(u_int64_t indexOfRemovedValue,
                               u_int64_t hashOfRemovedValue) = 0;
-    virtual void valueAdded(const AnyViewRef& member) = 0;
+    virtual void valueAdded(const AnyExprRef& member) = 0;
     virtual void possibleMemberValueChange(u_int64_t index,
-                                           const AnyViewRef& member) = 0;
+                                           const AnyExprRef& member) = 0;
     virtual void memberValueChanged(u_int64_t index,
-                                    const AnyViewRef& member) = 0;
+                                    const AnyExprRef& member) = 0;
 
     virtual void mSetValueChanged(const MSetView& newValue) = 0;
 };
 
 struct MSetView {
     friend MSetValue;
-    AnyViewVec members;
+    AnyExprVec members;
     u_int64_t cachedHashTotal;
     u_int64_t hashOfPossibleChange;
     std::vector<std::shared_ptr<MSetTrigger>> triggers;
 
    private:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void addMember(const ViewRef<InnerViewType>& member) {
+    inline void addMember(const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();
         u_int64_t hash = getValueHash(*member);
         members.emplace_back(member);
@@ -82,19 +81,19 @@ struct MSetView {
         debug_code(assertValidState());
     }
 
-    inline void notifyMemberAdded(const AnyViewRef& newMember) {
+    inline void notifyMemberAdded(const AnyExprRef& newMember) {
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline ViewRef<InnerViewType> removeMember(u_int64_t index) {
+    inline ExprRef<InnerViewType> removeMember(u_int64_t index) {
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
 
         u_int64_t hash = getValueHash(*members[index]);
         cachedHashTotal -= mix(hash);
-        ViewRef<InnerViewType> removedMember = std::move(members[index]);
+        ExprRef<InnerViewType> removedMember = std::move(members[index]);
         members[index] = std::move(members.back());
         members.pop_back();
         return removedMember;
@@ -121,7 +120,7 @@ struct MSetView {
     }
 
     inline void notifyMemberChanged(size_t index,
-                                    const AnyViewRef& changedMember) {
+                                    const AnyExprRef& changedMember) {
         debug_code(assertValidState());
         visitTriggers(
             [&](auto& t) { t->memberValueChanged(index, changedMember); },
@@ -139,14 +138,14 @@ struct MSetView {
 
    public:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void addMemberAndNotify(const ViewRef<InnerViewType>& member) {
+    inline void addMemberAndNotify(const ExprRef<InnerViewType>& member) {
         addMember(member);
         notifyMemberAdded(getMembers<InnerViewType>().back());
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline ViewRef<InnerViewType> removeMemberAndNotify(u_int64_t index) {
-        ViewRef<InnerViewType> removedValue =
+    inline ExprRef<InnerViewType> removeMemberAndNotify(u_int64_t index) {
+        ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
         notifyMemberRemoved(index, getValueHash(*removedValue));
         return removedValue;
@@ -157,7 +156,7 @@ struct MSetView {
         auto& members = getMembers<InnerViewType>();
         debug_code(assertValidState());
         hashOfPossibleChange = getValueHash(*members[index]);
-        AnyViewRef triggerMember = members[index];
+        AnyExprRef triggerMember = members[index];
         visitTriggers(
             [&](auto& t) {
                 t->possibleMemberValueChange(index, triggerMember);
@@ -186,13 +185,13 @@ struct MSetView {
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline ViewRefVec<InnerViewType>& getMembers() {
-        return mpark::get<ViewRefVec<InnerViewType>>(members);
+    inline ExprRefVec<InnerViewType>& getMembers() {
+        return mpark::get<ExprRefVec<InnerViewType>>(members);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline const ViewRefVec<InnerViewType>& getMembers() const {
-        return mpark::get<ViewRefVec<InnerViewType>>(members);
+    inline const ExprRefVec<InnerViewType>& getMembers() const {
+        return mpark::get<ExprRefVec<InnerViewType>>(members);
     }
 
     inline u_int64_t numberElements() const {
@@ -304,8 +303,8 @@ struct MSetValue : public MSetView, public ValBase {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     void setInnerType() {
-        if (mpark::get_if<ViewRefVec<InnerViewType>>(&(members)) == NULL) {
-            members.emplace<ViewRefVec<InnerViewType>>();
+        if (mpark::get_if<ExprRefVec<InnerViewType>>(&(members)) == NULL) {
+            members.emplace<ExprRefVec<InnerViewType>>();
         }
     }
 
@@ -320,18 +319,18 @@ struct DefinedTrigger<MSetValue> : public MSetTrigger {
                              u_int64_t hashOfRemovedValue) {
         todoImpl(indexOfRemovedValue, hashOfRemovedValue);
     }
-    inline void valueAdded(const AnyViewRef& member) { todoImpl(member); }
+    inline void valueAdded(const AnyExprRef& member) { todoImpl(member); }
     virtual inline void possibleMemberValueChange(u_int64_t index,
-                                                  const AnyViewRef& member) {
+                                                  const AnyExprRef& member) {
         todoImpl(index, member);
     }
-    virtual void memberValueChanged(u_int64_t index, const AnyViewRef& member) {
+    virtual void memberValueChanged(u_int64_t index, const AnyExprRef& member) {
         todoImpl(index, member);
         ;
     }
 
     void mSetValueChanged(const MSetView& newValue) { todoImpl(newValue); }
-    void iterHasNewValue(const MSetView&, const ViewRef<MSetView>&) final {
+    void iterHasNewValue(const MSetView&, const ExprRef<MSetView>&) final {
         assert(false);
         abort();
     }

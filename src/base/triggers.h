@@ -1,7 +1,9 @@
 
 #ifndef SRC_BASE_TRIGGERS_H_
 #define SRC_BASE_TRIGGERS_H_
-#include "base/viewRef.h"
+#include "base/exprRef.h"
+template <typename T>
+struct ExprRef;
 struct TriggerBase {
     bool active;
 };
@@ -12,7 +14,7 @@ template <typename UnrollingView>
 struct IterAssignedTrigger : public virtual TriggerBase {
     typedef UnrollingView ViewType;
     virtual void iterHasNewValue(const UnrollingView& oldValue,
-                                 const ViewRef<UnrollingView>& newValue) = 0;
+                                 const ExprRef<UnrollingView>& newValue) = 0;
 };
 
 template <typename ValueType>

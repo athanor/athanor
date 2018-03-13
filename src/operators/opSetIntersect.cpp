@@ -5,12 +5,12 @@
 #include "types/set.h"
 #include "base/typeOperations.h"
 using namespace std;
-void evaluate(OpSetIntersect& op) {
-    evaluate(op.left);
-    evaluate(op.right);
-    op.silentClear();
-    SetView& leftSetView = getView(op.left);
-    SetView& rightSetView = getView(op.right);
+void evaluate() {
+    left->evaluate();
+    right->evaluate();
+    silentClear();
+    SetView& leftSetView = getView(left);
+    SetView& rightSetView = getView(right);
     SetView& smallSetView = (leftSetView.hashIndexMap.size() <
                              rightSetView.hashIndexMap.size())
                                 ? leftSetView
@@ -23,7 +23,7 @@ void evaluate(OpSetIntersect& op) {
         [&](auto& members) {
             for (auto& hashIndexPair : smallSetView.hashIndexMap) {
                 if (largeSetView.hashIndexMap.count(hashIndexPair.first)) {
-                    op.addMember(members[hashIndexPair.second]);
+                    addMember(members[hashIndexPair.second]);
                 }
             }
         },
@@ -52,7 +52,7 @@ class OpSetIntersectTrigger : public SetTrigger {
     }
 
     inline void valueAdded(const AnyValRef& member) final {
-        SetReturning& unchanged = (left) ? op->right : op->left;
+        ExprRef<SetView>& unchanged = (left) ? op->right : op->left;
         u_int64_t hash = getValueHash(member);
         debug_code(assert(!op->hashIndexMap.count(hash)));
         SetView& viewOfUnchangedSet = getView(unchanged);
@@ -110,9 +110,9 @@ class OpSetIntersectTrigger : public SetTrigger {
             newHashOfMember == oldHashIter->first) {
             return;
         }
-        SetReturning& unchanged = (left) ? op->right : op->left;
+        ExprRef<SetView>& unchanged = (left) ? op->right : op->left;
         bool containedInUnchangedSet =
-            getView(unchanged).hashIndexMap.count(
+            unchanged->hashIndexMap.count(
                 newHashOfMember);
         if (oldHashIter != op->hashIndexMap.end()) {
             if (containedInUnchangedSet) {
@@ -149,35 +149,35 @@ OpSetIntersect::OpSetIntersect(OpSetIntersect&& other)
     setTriggerParent(this, leftTrigger, rightTrigger);
 }
 
-void startTriggering(OpSetIntersect& op) {
-if (!op.leftTrigger {
-    op.leftTrigger = make_shared<OpSetIntersectTrigger<true>>(&op);
-    op.rightTrigger = make_shared<OpSetIntersectTrigger<false>>(&op);
-    addTrigger(op.left, op.leftTrigger);
-    addTrigger(op.right, op.rightTrigger);
-    startTriggering(op.left);
-    startTriggering(op.right);
+void startTriggering() {
+if (!leftTrigger {
+    leftTrigger = make_shared<OpSetIntersectTrigger<true>>(&op);
+    rightTrigger = make_shared<OpSetIntersectTrigger<false>>(&op);
+    addTrigger(left, leftTrigger);
+    addTrigger(right, rightTrigger);
+    left->startTriggering();
+    right->startTriggering();
     }
 }
 
-void stopTriggering(OpSetIntersect& op) {
-    if (op.leftTrigger) {
-        deleteTrigger(op.leftTrigger);
-        op.leftTrigger = nullptr;
-        stopTriggering(op.left);
+void stopTriggering() {
+    if (leftTrigger) {
+        deleteTrigger(leftTrigger);
+        leftTrigger = nullptr;
+        left->stopTriggering();
     }
-    if (op.rightTrigger) {
-        deleteTrigger<SetTrigger>(op.rightTrigger);
-        op.rightTrigger = nullptr;
-        stopTriggering(op.right);
+    if (rightTrigger) {
+        deleteTrigger<SetTrigger>(rightTrigger);
+        rightTrigger = nullptr;
+        right->stopTriggering();
     }
 }
 
-void updateViolationDescription(const OpSetIntersect& op,
+void updateViolationDescription(
                                 u_int64_t parentViolation,
                                 ViolationDescription& vioDesc) {
-    updateViolationDescription(op.left, parentViolation, vioDesc);
-    updateViolationDescription(op.right, parentViolation, vioDesc);
+    updateViolationDescription(left, parentViolation, vioDesc);
+    updateViolationDescription(right, parentViolation, vioDesc);
 }
 
 std::shared_ptr<OpSetIntersect> deepCopyForUnroll(const OpSetIntersect&,

@@ -7,12 +7,12 @@
 class OpProdTrigger;
 struct OpProd : public IntView {
     class QuantifierTrigger;
-    std::shared_ptr<QuantifierView<IntReturning>> quantifier;
+    std::shared_ptr<QuantifierView<ExprRef<IntView>>> quantifier;
     std::shared_ptr<OpProdTrigger> operandTrigger;
     std::shared_ptr<QuantifierTrigger> quantifierTrigger;
 
    public:
-    OpProd(std::shared_ptr<QuantifierView<IntReturning>> quantifier)
+    OpProd(std::shared_ptr<QuantifierView<ExprRef<IntView>>> quantifier)
         : quantifier(std::move(quantifier)) {}
     OpProd(const OpProd& other) = delete;
     OpProd(OpProd&& other);

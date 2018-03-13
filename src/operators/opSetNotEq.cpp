@@ -5,26 +5,26 @@
 
 using namespace std;
 
-inline void setViolation(OpSetNotEq& op, bool trigger) {
-    SetView& leftSetView = getView(op.left);
-    SetView& rightSetView = getView(op.right);
-    u_int64_t oldViolation = op.violation;
-    op.violation =
+inline void setViolation( bool trigger) {
+    SetView& leftSetView = getView(left);
+    SetView& rightSetView = getView(right);
+    u_int64_t oldViolation = violation;
+    violation =
         (leftSetView.cachedHashTotal == rightSetView.cachedHashTotal)
             ? 1
             : 0;
-    if (trigger && op.violation != oldViolation) {
+    if (trigger && violation != oldViolation) {
         visitTriggers(
             [&](auto& trigger) { trigger->possibleValueChange(oldViolation); },
-            op.triggers);
+            triggers);
         visitTriggers(
-            [&](auto& trigger) { trigger->valueChanged(op.violation); },
-            op.triggers);
+            [&](auto& trigger) { trigger->valueChanged(violation); },
+            triggers);
     }
 }
-void evaluate(OpSetNotEq& op) {
-    evaluate(op.left);
-    evaluate(op.right);
+void evaluate() {
+    left->evaluate();
+    right->evaluate();
     setViolation(op, false);
 }
 
@@ -62,29 +62,29 @@ OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
     setTriggerParent(this, trigger);
 }
 
-void startTriggering(OpSetNotEq& op) {
-    if (!op.trigger) {
-        op.trigger = make_shared<OpSetNotEqTrigger>(&op);
-        addTrigger(op.left, op.trigger);
-        addTrigger(op.right, op.trigger);
-        startTriggering(op.left);
-        startTriggering(op.right);
+void startTriggering() {
+    if (!trigger) {
+        trigger = make_shared<OpSetNotEqTrigger>(&op);
+        addTrigger(left, trigger);
+        addTrigger(right, trigger);
+        left->startTriggering();
+        right->startTriggering();
     }
 }
 
-void stopTriggering(OpSetNotEq& op) {
-    if (op.trigger) {
-        deleteTrigger(op.trigger);
-        op.trigger = nullptr;
-        stopTriggering(op.left);
-        stopTriggering(op.right);
+void stopTriggering() {
+    if (trigger) {
+        deleteTrigger(trigger);
+        trigger = nullptr;
+        left->stopTriggering();
+        right->stopTriggering();
     }
 }
 
-void updateViolationDescription(const OpSetNotEq& op, u_int64_t,
+void updateViolationDescription( u_int64_t,
                                 ViolationDescription& vioDesc) {
-    updateViolationDescription(op.left, op.violation, vioDesc);
-    updateViolationDescription(op.right, op.violation, vioDesc);
+    updateViolationDescription(left, violation, vioDesc);
+    updateViolationDescription(right, violation, vioDesc);
 }
 
 std::shared_ptr<OpSetNotEq> deepCopyForUnroll(const OpSetNotEq&,

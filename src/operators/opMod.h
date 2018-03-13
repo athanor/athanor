@@ -6,12 +6,12 @@
 
 struct OpMod : public IntView {
     struct Trigger;
-    IntReturning left;
-    IntReturning right;
+    ExprRef<IntView> left;
+    ExprRef<IntView> right;
     std::shared_ptr<Trigger> operandTrigger = nullptr;
 
    public:
-    OpMod(IntReturning left, IntReturning right)
+    OpMod(ExprRef<IntView> left, ExprRef<IntView> right)
         : left(std::move(left)), right(std::move(right)) {}
 
     OpMod(const OpMod& other) = delete;

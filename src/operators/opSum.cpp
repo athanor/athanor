@@ -26,12 +26,12 @@ class OpSumTrigger : public IntTrigger {
     }
 };
 
-class OpSum::QuantifierTrigger : public QuantifierView<IntReturning>::Trigger {
+class OpSum::QuantifierTrigger : public QuantifierView<ExprRef<IntView>>::Trigger {
    public:
     OpSum* op;
     QuantifierTrigger(OpSum* op) : op(op) {}
-    void exprUnrolled(const IntReturning& expr) final {
-        u_int64_t value = getView(expr).value;
+    void exprUnrolled(const ExprRef<IntView>& expr) final {
+        u_int64_t value = expr->value;
         addTrigger(expr, op->operandTrigger);
         op->changeValue([&]() {
             op->value += value;
@@ -39,27 +39,27 @@ class OpSum::QuantifierTrigger : public QuantifierView<IntReturning>::Trigger {
         });
     }
 
-    void exprRolled(u_int64_t, const IntReturning& expr) final {
-        int64_t valueOfRemovedExpr = getView(expr).value;
+    void exprRolled(u_int64_t, const ExprRef<IntView>& expr) final {
+        int64_t valueOfRemovedExpr = expr->value;
         op->changeValue([&]() {
             op->value -= valueOfRemovedExpr;
             return true;
         });
     }
 
-    void iterHasNewValue(const QuantifierView<IntReturning>&,
-                         const ValRef<QuantifierView<IntReturning>>&) {
+    void iterHasNewValue(const QuantifierView<ExprRef<IntView>>&,
+                         const ValRef<QuantifierView<ExprRef<IntView>>>&) {
         todoImpl();
     }
 };
 
-void evaluate(OpSum& op) {
-    op.quantifier->initialUnroll();
-    op.value = 0;
-    for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
-        auto& operand = op.quantifier->exprs[i];
-        evaluate(operand);
-        op.value += getView(operand).value;
+void evaluate() {
+    quantifier->initialUnroll();
+    value = 0;
+    for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
+        auto& operand = quantifier->exprs[i];
+        operand->evaluate();
+        value += operand->value;
     }
 }
 
@@ -71,60 +71,60 @@ OpSum::OpSum(OpSum&& other)
     setTriggerParent(this, operandTrigger, quantifierTrigger);
 }
 
-void startTriggering(OpSum& op) {
-    if (!op.quantifierTrigger) {
-        op.quantifierTrigger = std::make_shared<QuantifierTrigger>(&op);
-        addTrigger(op.quantifier, op.quantifierTrigger);
-        op.quantifier->startTriggeringOnContainer();
-        op.operandTrigger = make_shared<OpSumTrigger>(&op);
-        for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
-            auto& operand = op.quantifier->exprs[i];
-            addTrigger(operand, op.operandTrigger);
-            startTriggering(operand);
+void startTriggering() {
+    if (!quantifierTrigger) {
+        quantifierTrigger = std::make_shared<QuantifierTrigger>(&op);
+        addTrigger(quantifier, quantifierTrigger);
+        quantifier->startTriggeringOnContainer();
+        operandTrigger = make_shared<OpSumTrigger>(&op);
+        for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
+            auto& operand = quantifier->exprs[i];
+            addTrigger(operand, operandTrigger);
+            operand->startTriggering();
         }
     }
 }
 
-void stopTriggering(OpSum& op) {
-    if (op.operandTrigger) {
-        deleteTrigger(op.operandTrigger);
-        op.operandTrigger = nullptr;
+void stopTriggering() {
+    if (operandTrigger) {
+        deleteTrigger(operandTrigger);
+        operandTrigger = nullptr;
     }
-    if (op.quantifier) {
-        for (auto& operand : op.quantifier->exprs) {
-            stopTriggering(operand);
+    if (quantifier) {
+        for (auto& operand : quantifier->exprs) {
+            operand->stopTriggering();
         }
     }
-    if (op.quantifierTrigger) {
-        deleteTrigger(op.quantifierTrigger);
-        op.quantifierTrigger = nullptr;
-        op.quantifier->stopTriggeringOnContainer();
+    if (quantifierTrigger) {
+        deleteTrigger(quantifierTrigger);
+        quantifierTrigger = nullptr;
+        quantifier->stopTriggeringOnContainer();
     }
 }
 
-void updateViolationDescription(const OpSum& op, u_int64_t parentViolation,
+void updateViolationDescription( u_int64_t parentViolation,
                                 ViolationDescription& vioDesc) {
-    if (!op.quantifier) {
+    if (!quantifier) {
         return;
     }
-    for (auto& operand : op.quantifier->exprs) {
+    for (auto& operand : quantifier->exprs) {
         updateViolationDescription(operand, parentViolation, vioDesc);
     }
 }
 
-shared_ptr<OpSum> deepCopyForUnroll(const OpSum& op,
+shared_ptr<OpSum> deepCopyForUnroll(
                                     const AnyIterRef& iterator) {
     auto newOpSum = make_shared<OpSum>(
-        op.quantifier->deepCopyQuantifierForUnroll(iterator));
-    newOpSum->value = op.value;
+        quantifier->deepCopyQuantifierForUnroll(iterator));
+    newOpSum->value = value;
     return newOpSum;
 }
 
-std::ostream& dumpState(std::ostream& os, const OpSum& op) {
-    os << "OpSum: value=" << op.value << endl;
+std::ostream& dumpState(std::ostream& os, ) {
+    os << "OpSum: value=" << value << endl;
     os << "operands [";
     bool first = true;
-    for (auto& operand : op.quantifier->exprs) {
+    for (auto& operand : quantifier->exprs) {
         if (first) {
             first = false;
         } else {

@@ -7,12 +7,12 @@
 template <bool isLeft>
 class OpSetIntersectTrigger;
 struct OpSetIntersect : public SetView {
-    SetReturning left;
-    SetReturning right;
+    ExprRef<SetView> left;
+    ExprRef<SetView> right;
     std::shared_ptr<OpSetIntersectTrigger<true>> leftTrigger;
     std::shared_ptr<OpSetIntersectTrigger<false>> rightTrigger;
 
-    OpSetIntersect(SetReturning leftIn, SetReturning rightIn)
+    OpSetIntersect(ExprRef<SetView> leftIn, ExprRef<SetView> rightIn)
         : left(std::move(leftIn)), right(std::move(rightIn)) {}
     OpSetIntersect(const OpSetIntersect& other) = delete;
     OpSetIntersect(OpSetIntersect&& other);

@@ -5,9 +5,9 @@
 #include "types/int.h"
 class OpSetSizeTrigger;
 struct OpSetSize : public IntView {
-    SetReturning operand;
+    ExprRef<SetView> operand;
     std::shared_ptr<OpSetSizeTrigger> operandTrigger;
-    OpSetSize(SetReturning operandIn) : operand(operandIn) {}
+    OpSetSize(ExprRef<SetView> operandIn) : operand(operandIn) {}
     OpSetSize(const OpSetSize&) = delete;
     OpSetSize(OpSetSize&& other);
     ~OpSetSize() { stopTriggering(*this); }

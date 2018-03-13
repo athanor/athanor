@@ -131,30 +131,30 @@ struct Quantifier : public QuantifierView<ExprType> {
         containerTrigger =
             std::make_shared<ContainerTrigger<ContainerType, ExprType>>(this);
         addTrigger(container, containerTrigger);
-        startTriggering(container);
+        container->startTriggering();
     }
     inline void stopTriggeringOnContainer() final {
         if (containerTrigger) {
             deleteTrigger(containerTrigger);
             containerTrigger = nullptr;
-            stopTriggering(container);
+            container->stopTriggering();
         }
     }
     inline void initialUnroll() final {
         unrolledIterVals.clear();
         exprs.clear();
-        evaluate(container);
+        container->evaluate();
         InitialUnroller<ContainerType>::initialUnroll(*this);
     }
 };
 
 template <typename ExprType>
-struct ContainerTrigger<SetReturning, ExprType> : public SetTrigger,
+struct ContainerTrigger<ExprRef<SetView>, ExprType> : public SetTrigger,
                                                   public DelayedTrigger {
-    Quantifier<SetReturning, ExprType>* op;
+    Quantifier<ExprRef<SetView>, ExprType>* op;
     std::vector<AnyValRef> valuesToUnroll;
 
-    ContainerTrigger(Quantifier<SetReturning, ExprType>* op) : op(op) {}
+    ContainerTrigger(Quantifier<ExprRef<SetView>, ExprType>* op) : op(op) {}
     inline void valueRemoved(u_int64_t indexOfRemovedValue, u_int64_t) final {
         op->roll(indexOfRemovedValue);
     }
@@ -193,7 +193,7 @@ struct ContainerTrigger<SetReturning, ExprType> : public SetTrigger,
 };
 
 template <>
-struct InitialUnroller<SetReturning> {
+struct InitialUnroller<ExprRef<SetView>> {
     template <typename Quant>
     static void initialUnroll(Quant& quantifier) {
         mpark::visit(
@@ -207,12 +207,12 @@ struct InitialUnroller<SetReturning> {
 };
 
 template <typename ExprType>
-struct ContainerTrigger<MSetReturning, ExprType> : public MSetTrigger,
+struct ContainerTrigger<MExprRef<SetView>, ExprType> : public MSetTrigger,
                                                    public DelayedTrigger {
-    Quantifier<MSetReturning, ExprType>* op;
+    Quantifier<MExprRef<SetView>, ExprType>* op;
     std::vector<AnyValRef> valuesToUnroll;
 
-    ContainerTrigger(Quantifier<MSetReturning, ExprType>* op) : op(op) {}
+    ContainerTrigger(Quantifier<MExprRef<SetView>, ExprType>* op) : op(op) {}
     inline void valueRemoved(u_int64_t indexOfRemovedValue, u_int64_t) final {
         op->roll(indexOfRemovedValue);
     }
@@ -251,7 +251,7 @@ struct ContainerTrigger<MSetReturning, ExprType> : public MSetTrigger,
 };
 
 template <>
-struct InitialUnroller<MSetReturning> {
+struct InitialUnroller<MExprRef<SetView>> {
     template <typename Quant>
     static void initialUnroll(Quant& quantifier) {
         mpark::visit(

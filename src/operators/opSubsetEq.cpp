@@ -8,18 +8,18 @@ using namespace std;
 using LeftSetTrigger = OpSubsetEq::LeftSetTrigger;
 using RightSetTrigger = OpSubsetEq::RightSetTrigger;
 
-inline void evaluate(OpSubsetEq& op, const SetView& leftSetView,
+inline void evaluate( const SetView& leftSetView,
                      const SetView& rightSetView) {
-    op.violation = 0;
+    violation = 0;
     for (auto& hashIndexPair : leftSetView.hashIndexMap) {
-        op.violation +=
+        violation +=
             !rightSetView.hashIndexMap.count(hashIndexPair.first);
     }
 }
-void evaluate(OpSubsetEq& op) {
-    evaluate(op.left);
-    evaluate(op.right);
-    evaluate(op, getView(op.left), getView(op.right));
+void evaluate() {
+    left->evaluate();
+    right->evaluate();
+    evaluate(op, getView(left), getView(right));
 }
 
 struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
@@ -127,49 +127,49 @@ OpSubsetEq::OpSubsetEq(OpSubsetEq&& other)
     setTriggerParent(this, leftTrigger, rightTrigger);
 }
 
-void startTriggering(OpSubsetEq& op) {
-    if (!op.leftTrigger) {
-        op.leftTrigger = make_shared<LeftSetTrigger>(&op);
-        op.rightTrigger = make_shared<RightSetTrigger>(&op);
-        addTrigger(op.left, op.leftTrigger);
-        addTrigger(op.right, op.rightTrigger);
-        startTriggering(op.left);
-        startTriggering(op.right);
+void startTriggering() {
+    if (!leftTrigger) {
+        leftTrigger = make_shared<LeftSetTrigger>(&op);
+        rightTrigger = make_shared<RightSetTrigger>(&op);
+        addTrigger(left, leftTrigger);
+        addTrigger(right, rightTrigger);
+        left->startTriggering();
+        right->startTriggering();
     }
 }
 
-void stopTriggering(OpSubsetEq& op) {
-    if (op.leftTrigger) {
-        deleteTrigger(op.leftTrigger);
-        op.leftTrigger = nullptr;
-        stopTriggering(op.left);
+void stopTriggering() {
+    if (leftTrigger) {
+        deleteTrigger(leftTrigger);
+        leftTrigger = nullptr;
+        left->stopTriggering();
     }
-    if (op.rightTrigger) {
-        deleteTrigger<SetTrigger>(op.rightTrigger);
-        op.rightTrigger = nullptr;
-        stopTriggering(op.right);
+    if (rightTrigger) {
+        deleteTrigger<SetTrigger>(rightTrigger);
+        rightTrigger = nullptr;
+        right->stopTriggering();
     }
 }
 
-void updateViolationDescription(const OpSubsetEq& op, u_int64_t,
+void updateViolationDescription( u_int64_t,
                                 ViolationDescription& vioDesc) {
-    updateViolationDescription(op.left, op.violation, vioDesc);
-    updateViolationDescription(op.right, op.violation, vioDesc);
+    updateViolationDescription(left, violation, vioDesc);
+    updateViolationDescription(right, violation, vioDesc);
 }
 
-std::shared_ptr<OpSubsetEq> deepCopyForUnroll(const OpSubsetEq& op,
+std::shared_ptr<OpSubsetEq> deepCopyForUnroll(
                                               const AnyIterRef& iterator) {
     auto newOpSubsetEq =
-        make_shared<OpSubsetEq>(deepCopyForUnroll(op.left, iterator),
-                                deepCopyForUnroll(op.right, iterator));
-    newOpSubsetEq->violation = op.violation;
+        make_shared<OpSubsetEq>(deepCopyForUnroll(left, iterator),
+                                deepCopyForUnroll(right, iterator));
+    newOpSubsetEq->violation = violation;
     return newOpSubsetEq;
 }
 
-std::ostream& dumpState(std::ostream& os, const OpSubsetEq& op) {
-    os << "OpSubsetEq: violation=" << op.violation << "\nLeft: ";
-    dumpState(os, op.left);
+std::ostream& dumpState(std::ostream& os, ) {
+    os << "OpSubsetEq: violation=" << violation << "\nLeft: ";
+    dumpState(os, left);
     os << "\nRight: ";
-    dumpState(os, op.right);
+    dumpState(os, right);
     return os;
 }

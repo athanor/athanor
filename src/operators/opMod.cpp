@@ -4,11 +4,11 @@
 #include "types/int.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-void evaluate(OpMod& op) {
-    evaluate(op.left);
-    evaluate(op.right);
-    op.value =
-        getView(op.left).value % getView(op.right).value;
+void evaluate() {
+    left->evaluate();
+    right->evaluate();
+    value =
+        left->value % right->value;
 }
 
 struct OpMod::Trigger : public IntTrigger {
@@ -44,43 +44,43 @@ OpMod::OpMod(OpMod&& other)
     setTriggerParent(this, operandTrigger);
 }
 
-void startTriggering(OpMod& op) {
-    if (!op.operandTrigger) {
-        op.operandTrigger = make_shared<OpMod::Trigger>(&op);
-        addTrigger(op.left, op.operandTrigger);
-        addTrigger(op.right, op.operandTrigger);
-        startTriggering(op.left);
-        startTriggering(op.right);
+void startTriggering() {
+    if (!operandTrigger) {
+        operandTrigger = make_shared<OpMod::Trigger>(&op);
+        addTrigger(left, operandTrigger);
+        addTrigger(right, operandTrigger);
+        left->startTriggering();
+        right->startTriggering();
     }
 }
 
-void stopTriggering(OpMod& op) {
-    if (op.operandTrigger) {
-        deleteTrigger(op.operandTrigger);
-        op.operandTrigger = nullptr;
-        stopTriggering(op.left);
-        stopTriggering(op.right);
+void stopTriggering() {
+    if (operandTrigger) {
+        deleteTrigger(operandTrigger);
+        operandTrigger = nullptr;
+        left->stopTriggering();
+        right->stopTriggering();
     }
 }
 
-void updateViolationDescription(const OpMod& op, u_int64_t parentViolation,
+void updateViolationDescription( u_int64_t parentViolation,
                                 ViolationDescription& vioDesc) {
-    updateViolationDescription(op.left, parentViolation, vioDesc);
-    updateViolationDescription(op.right, parentViolation, vioDesc);
+    updateViolationDescription(left, parentViolation, vioDesc);
+    updateViolationDescription(right, parentViolation, vioDesc);
 }
 
-shared_ptr<OpMod> deepCopyForUnroll(const OpMod& op,
+shared_ptr<OpMod> deepCopyForUnroll(
                                     const AnyIterRef& iterator) {
-    auto newOpMod = make_shared<OpMod>(deepCopyForUnroll(op.left, iterator),
-                                       deepCopyForUnroll(op.right, iterator));
-    newOpMod->value = op.value;
+    auto newOpMod = make_shared<OpMod>(deepCopyForUnroll(left, iterator),
+                                       deepCopyForUnroll(right, iterator));
+    newOpMod->value = value;
     return newOpMod;
 }
 
-std::ostream& dumpState(std::ostream& os, const OpMod& op) {
-    os << "OpMod: value=" << op.value << "\nleft: ";
-    dumpState(os, op.left);
+std::ostream& dumpState(std::ostream& os, ) {
+    os << "OpMod: value=" << value << "\nleft: ";
+    dumpState(os, left);
     os << "\nright: ";
-    dumpState(os, op.right);
+    dumpState(os, right);
     return os;
 }

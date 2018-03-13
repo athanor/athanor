@@ -5,9 +5,9 @@
 
 using namespace std;
 
-void evaluate(OpSetSize& op) {
-    evaluate(op.operand);
-    op.value = getView(op.operand).numberElements();
+void evaluate() {
+    operand->evaluate();
+    value = operand->numberElements();
 }
 
 class OpSetSizeTrigger : public SetTrigger {
@@ -58,37 +58,37 @@ OpSetSize::OpSetSize(OpSetSize&& other)
       operandTrigger(std::move(other.operandTrigger)) {
     setTriggerParent(this, operandTrigger);
 }
-void startTriggering(OpSetSize& op) {
-    if (!op.operandTrigger) {
-        op.operandTrigger = make_shared<OpSetSizeTrigger>(&op);
-        addTrigger(op.operand, op.operandTrigger);
-        startTriggering(op.operand);
+void startTriggering() {
+    if (!operandTrigger) {
+        operandTrigger = make_shared<OpSetSizeTrigger>(&op);
+        addTrigger(operand, operandTrigger);
+        operand->startTriggering();
     }
 }
 
-void stopTriggering(OpSetSize& op) {
-    if (op.operandTrigger) {
-        deleteTrigger(op.operandTrigger);
-        op.operandTrigger = nullptr;
-        stopTriggering(op.operand);
+void stopTriggering() {
+    if (operandTrigger) {
+        deleteTrigger(operandTrigger);
+        operandTrigger = nullptr;
+        operand->stopTriggering();
     }
 }
 
-void updateViolationDescription(const OpSetSize& op, u_int64_t parentViolation,
+void updateViolationDescription( u_int64_t parentViolation,
                                 ViolationDescription& vioDesc) {
-    updateViolationDescription(op.operand, parentViolation, vioDesc);
+    updateViolationDescription(operand, parentViolation, vioDesc);
 }
 
-std::shared_ptr<OpSetSize> deepCopyForUnroll(const OpSetSize& op,
+std::shared_ptr<OpSetSize> deepCopyForUnroll(
                                              const AnyIterRef& iterator) {
     auto newOpSetSize =
-        make_shared<OpSetSize>(deepCopyForUnroll(op.operand, iterator));
-    newOpSetSize->value = op.value;
+        make_shared<OpSetSize>(deepCopyForUnroll(operand, iterator));
+    newOpSetSize->value = value;
     return newOpSetSize;
 }
 
-std::ostream& dumpState(std::ostream& os, const OpSetSize& op) {
-    os << "OpSetSize: value=" << op.value << "\noperand: ";
-    dumpState(os, op.operand);
+std::ostream& dumpState(std::ostream& os, ) {
+    os << "OpSetSize: value=" << value << "\noperand: ";
+    dumpState(os, operand);
     return os;
 }

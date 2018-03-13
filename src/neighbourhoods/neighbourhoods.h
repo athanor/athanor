@@ -3,11 +3,10 @@
 #define SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_
 #include <functional>
 #include <vector>
+#include "base/base.h"
 #include "common/common.h"
 #include "search/statsContainer.h"
 #include "search/violationDescription.h"
-#include "base/base.h"
-#include "base/typeOperations.h"
 
 #define debug_neighbourhood_action(x) debug_log(x)
 

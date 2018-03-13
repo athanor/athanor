@@ -7,12 +7,12 @@
 class OpSumTrigger;
 struct OpSum : public IntView {
     class QuantifierTrigger;
-    std::shared_ptr<QuantifierView<IntReturning>> quantifier;
+    std::shared_ptr<QuantifierView<ExprRef<IntView>>> quantifier;
     std::shared_ptr<OpSumTrigger> operandTrigger;
     std::shared_ptr<QuantifierTrigger> quantifierTrigger;
 
    public:
-    OpSum(std::shared_ptr<QuantifierView<IntReturning>> quantifier)
+    OpSum(std::shared_ptr<QuantifierView<ExprRef<IntView>>> quantifier)
         : quantifier(std::move(quantifier)) {}
     OpSum(const OpSum& other) = delete;
     OpSum(OpSum&& other);

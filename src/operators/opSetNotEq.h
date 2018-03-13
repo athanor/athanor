@@ -5,10 +5,10 @@
 #include "types/bool.h"
 class OpSetNotEqTrigger;
 struct OpSetNotEq : public BoolView {
-    SetReturning left;
-    SetReturning right;
+    ExprRef<SetView> left;
+    ExprRef<SetView> right;
     std::shared_ptr<OpSetNotEqTrigger> trigger;
-    OpSetNotEq(SetReturning leftIn, SetReturning rightIn)
+    OpSetNotEq(ExprRef<SetView> leftIn, ExprRef<SetView> rightIn)
         : left(std::move(leftIn)), right(std::move(rightIn)) {}
     OpSetNotEq(const OpSetNotEq& other) = delete;
     OpSetNotEq(OpSetNotEq&& other);

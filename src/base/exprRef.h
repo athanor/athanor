@@ -16,6 +16,20 @@ struct ExprRef {
     ~ExprRef() {
         visit([&](auto& ref) { ref = BaseType<decltype(ref)>(nullptr); });
     }
+    inline ExprRef<T>& operator=(const IterRef<T>& ref) {
+        iterRef = ref;
+        setIterRef();
+        return *this;
+    }
+    inline ExprRef<T>& operator=(const ViewRef<T>& ref) {
+        viewRef = ref;
+        setViewRef();
+        return *this;
+    }
+    inline ExprRef<T> operator=(const ExprRef<T>& ref) {
+        ref->visit([&](auto& ref) { this->operator=(ref); });
+        return *this;
+    }
 
    private:
     inline void setViewRef() { this->bits &= ~(((u_int64_t)1) << 63); }
@@ -29,11 +43,24 @@ struct ExprRef {
 
    public:
     template <typename Func>
-    inline decltype(auto) visit(Func&& func) {
+    inline decltype(auto) visit(Func&& func) const {
         if (isViewRef()) {
             return func(this->viewRef);
         } else
             return func(this->iterRef);
+    }
+
+    inline decltype(auto) operator*() {
+        return visit([&](auto& ref) { return ref.operator*(); });
+    }
+    inline decltype(auto) operator-> () {
+        return visit([&](auto& ref) { return ref.operator->(); });
+    }
+    inline decltype(auto) operator*() const {
+        return visit([&](auto& ref) { return ref.operator*(); });
+    }
+    inline decltype(auto) operator-> () const {
+        return visit([&](auto& ref) { return ref.operator->(); });
     }
 };
 #endif /* SRC_BASE_EXPRREF_H_ */

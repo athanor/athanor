@@ -32,14 +32,20 @@ inline pair<bool, ViolationDescription&> registerViolations(
     const ValBase& valBase<name##Value>(const name##Value& v) {           \
         return v;                                                         \
     }                                                                     \
-    void updateViolationDescription(const name##Value& val,               \
-                                    u_int64_t parentViolation,            \
-                                    ViolationDescription& vioDesc) {      \
-        registerViolations(&val, parentViolation, vioDesc);               \
-    }                                                                     \
                                                                           \
-    ostream& dumpState(ostream& os, const name##Value& val) {             \
-        return prettyPrint(os, val);                                      \
+    void name##Value::evaluate() {}                                       \
+    void name##Value::startTriggering() {}                                \
+    void name##Value::stopTriggering() {}                                 \
+    void name##Value::updateViolationDescription(                         \
+        u_int64_t parentViolation, ViolationDescription& vioDesc) {       \
+        registerViolations(this, parentViolation, vioDesc);               \
+    }                                                                     \
+    ExprRef<name##View> name##Value::deepCopyForUnroll(                   \
+        const ExprRef<name##View>& val, const AnyIterRef&) const {        \
+        return val;                                                       \
+    }                                                                     \
+    std::ostream& name##Value::dumpState(std::ostream& os) const {        \
+        return prettyPrint(os, *static_cast<const name##View*>(this));    \
     }
 
 buildForAllTypes(specialised, )
@@ -51,11 +57,11 @@ inline pair<bool, ViolationDescription&> registerViolations(
     const ValBase* val, const u_int64_t violation,
     ViolationDescription& vioDesc) {
     if (val->container == &constantPool) {
-        return pair<bool,ViolationDescription&>(false, vioDesc);
+        return pair<bool, ViolationDescription&>(false, vioDesc);
     }
     if (val->container == NULL) {
         vioDesc.addViolation(val->id, violation);
-        return pair<bool,ViolationDescription&>(true, vioDesc);
+        return pair<bool, ViolationDescription&>(true, vioDesc);
     } else {
         auto boolVioDescPair =
             registerViolations(val->container, violation, vioDesc);

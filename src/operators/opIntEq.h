@@ -20,8 +20,8 @@ struct OpIntEq : public BoolView {
     void stopTriggering() final;
     void updateViolationDescription(u_int64_t parentViolation,
                                     ViolationDescription&) final;
-    ExprRef<BoolView> deepCopySelfForUnroll(const ExprRef<BoolView>& op,
-                                        const AnyIterRef& iterator) const final;
+    ExprRef<BoolView> deepCopySelfForUnroll(
+        const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     virtual ~OpIntEq() { this->stopTriggering(); }
 };

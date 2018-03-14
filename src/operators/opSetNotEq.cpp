@@ -83,10 +83,9 @@ void OpSetNotEq::updateViolationDescription(u_int64_t,
 }
 
 ExprRef<BoolView> OpSetNotEq::deepCopySelfForUnroll(
-    const ExprRef<BoolView>&, const AnyIterRef& iterator) const {
-    auto newOpSetNotEq =
-        make_shared<OpSetNotEq>(deepCopyForUnroll(left, iterator),
-                                deepCopyForUnroll(right, iterator));
+    const AnyIterRef& iterator) const {
+    auto newOpSetNotEq = make_shared<OpSetNotEq>(
+        deepCopyForUnroll(left, iterator), deepCopyForUnroll(right, iterator));
     newOpSetNotEq->violation = violation;
     return ViewRef<BoolView>(newOpSetNotEq);
 }

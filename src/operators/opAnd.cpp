@@ -149,8 +149,8 @@ void OpAnd::updateViolationDescription(const u_int64_t,
     }
 }
 
-ExprRef<BoolView> OpAnd::deepCopySelfForUnroll(const ExprRef<BoolView>&,
-                                          const AnyIterRef& iterator) const {
+ExprRef<BoolView> OpAnd::deepCopySelfForUnroll(
+    const AnyIterRef& iterator) const {
     auto newOpAnd =
         make_shared<OpAnd>(quantifier->deepCopyQuantifierForUnroll(iterator));
     newOpAnd->violation = violation;

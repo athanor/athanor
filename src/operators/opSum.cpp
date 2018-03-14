@@ -113,8 +113,8 @@ void OpSum::updateViolationDescription(u_int64_t parentViolation,
     }
 }
 
-ExprRef<IntView> OpSum::deepCopySelfForUnroll(const ExprRef<IntView>&,
-                                          const AnyIterRef& iterator) const {
+ExprRef<IntView> OpSum::deepCopySelfForUnroll(
+    const AnyIterRef& iterator) const {
     auto newOpSum =
         make_shared<OpSum>(quantifier->deepCopyQuantifierForUnroll(iterator));
     newOpSum->value = value;

@@ -112,8 +112,8 @@ struct ExprInterface {
     virtual void stopTriggering() = 0;
     virtual void updateViolationDescription(u_int64_t parentViolation,
                                             ViolationDescription&) = 0;
-    virtual ExprRef<View> deepCopyForUnroll(
-        const ExprRef<View>& op, const AnyIterRef& iterator) const = 0;
+    virtual ExprRef<View> deepCopySelfForUnroll(
+        const AnyIterRef& iterator) const = 0;
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
 };
@@ -121,4 +121,30 @@ inline u_int64_t getValueHash(const AnyExprRef& ref) {
     return mpark::visit([&](auto& ref) { return getValueHash(*ref); }, ref);
 }
 
+template <typename T>
+inline ExprRef<T> deepCopyForUnrollOverload(const IterRef<T>& iterVal,
+                                            const AnyIterRef& iterator) {
+    const IterRef<T>* iteratorPtr = mpark::get_if<IterRef<T>>(&iterator);
+    if (iteratorPtr != NULL &&
+        iteratorPtr->getIterator().id == iterVal.getIterator().id) {
+        return *iteratorPtr;
+    } else {
+        return iterVal;
+    }
+}
+template <typename T>
+ExprRef<T> deepCopyForUnrollOverload(const ViewRef<T>& view,
+                                     const AnyIterRef& iterator) {
+    if (dynamic_cast<typename AssociatedValueType<T>::type*>(&(*view))) {
+        return view;
+    } else {
+        return view->deepCopySelfForUnroll(iterator);
+    }
+}
+template <typename T>
+ExprRef<T> deepCopyForUnroll(const ExprRef<T> expr,
+                             const AnyIterRef& iterator) {
+    return expr.visit(
+        [&](auto& expr) { return deepCopyForUnrollOverload(expr, iterator); });
+}
 #endif /* SRC_BASE_EXPRREF_H_ */

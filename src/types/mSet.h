@@ -316,8 +316,8 @@ struct MSetValue : public MSetView, public ValBase {
     void stopTriggering() final;
     void updateViolationDescription(u_int64_t parentViolation,
                                     ViolationDescription&) final;
-    ExprRef<MSetView> deepCopyForUnroll(const ExprRef<MSetView>& op,
-                                        const AnyIterRef& iterator) const final;
+    ExprRef<MSetView> deepCopySelfForUnroll(
+        const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
 };

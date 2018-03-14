@@ -355,8 +355,8 @@ struct SetValue : public SetView, public ValBase {
     void stopTriggering() final;
     void updateViolationDescription(u_int64_t parentViolation,
                                     ViolationDescription&) final;
-    ExprRef<SetView> deepCopyForUnroll(const ExprRef<SetView>& op,
-                                       const AnyIterRef& iterator) const final;
+    ExprRef<SetView> deepCopySelfForUnroll(
+        const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
 };

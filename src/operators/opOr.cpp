@@ -57,7 +57,7 @@ class OpOrTrigger : public BoolTrigger {
 };
 
 class OpOr::QuantifierTrigger
-    : public QuantifierView<ExprRef<BoolView>>::Trigger {
+    : public QuantifierView<BoolView>::Trigger {
    public:
     OpOr* op;
     QuantifierTrigger(OpOr* op) : op(op) {}
@@ -98,8 +98,8 @@ class OpOr::QuantifierTrigger
         }
     }
 
-    void iterHasNewValue(const QuantifierView<ExprRef<BoolView>>&,
-                         const ExprRef<QuantifierView<ExprRef<BoolView>>>&) {
+    void iterHasNewValue(const QuantifierView<BoolView>&,
+                         const ExprRef<QuantifierView<BoolView>>&) {
         todoImpl();
     }
 };

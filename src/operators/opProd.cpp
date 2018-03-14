@@ -27,7 +27,7 @@ class OpProdTrigger : public IntTrigger {
 };
 
 class OpProd::QuantifierTrigger
-    : public QuantifierView<ExprRef<IntView>>::Trigger {
+    : public QuantifierView<IntView>::Trigger {
    public:
     OpProd* op;
     QuantifierTrigger(OpProd* op) : op(op) {}
@@ -48,8 +48,8 @@ class OpProd::QuantifierTrigger
         });
     }
 
-    void iterHasNewValue(const QuantifierView<ExprRef<IntView>>&,
-                         const ExprRef<QuantifierView<ExprRef<IntView>>>&) {
+    void iterHasNewValue(const QuantifierView<IntView>&,
+                         const ExprRef<QuantifierView<IntView>>&) {
         todoImpl();
     }
 };

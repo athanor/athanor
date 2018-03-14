@@ -8,13 +8,13 @@
 class OpOrTrigger;
 struct OpOr : public BoolView {
     class QuantifierTrigger;
-    std::shared_ptr<QuantifierView<ExprRef<BoolView>>> quantifier;
+    std::shared_ptr<QuantifierView<BoolView>> quantifier;
     FastIterableIntSet minViolationIndices = FastIterableIntSet(0, 0);
     std::vector<std::shared_ptr<OpOrTrigger>> operandTriggers;
     std::shared_ptr<QuantifierTrigger> quantifierTrigger;
 
    public:
-    OpOr(std::shared_ptr<QuantifierView<ExprRef<BoolView>>> quantifier)
+    OpOr(std::shared_ptr<QuantifierView<BoolView>> quantifier)
         : quantifier(std::move(quantifier)) {}
     OpOr(const OpOr& other) = delete;
     OpOr(OpOr&& other);

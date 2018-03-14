@@ -27,7 +27,7 @@ class OpSumTrigger : public IntTrigger {
 };
 
 class OpSum::QuantifierTrigger
-    : public QuantifierView<ExprRef<IntView>>::Trigger {
+    : public QuantifierView<IntView>::Trigger {
    public:
     OpSum* op;
     QuantifierTrigger(OpSum* op) : op(op) {}
@@ -48,8 +48,8 @@ class OpSum::QuantifierTrigger
         });
     }
 
-    void iterHasNewValue(const QuantifierView<ExprRef<IntView>>&,
-                         const ExprRef<QuantifierView<ExprRef<IntView>>>&) {
+    void iterHasNewValue(const QuantifierView<IntView>&,
+                         const ExprRef<QuantifierView<IntView>>&) {
         todoImpl();
     }
 };

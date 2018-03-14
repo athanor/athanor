@@ -8,13 +8,13 @@
 class OpAndTrigger;
 struct OpAnd : public BoolView {
     class QuantifierTrigger;
-    std::shared_ptr<QuantifierView<ExprRef<BoolView>>> quantifier;
+    std::shared_ptr<QuantifierView<BoolView>> quantifier;
     FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
     std::vector<std::shared_ptr<OpAndTrigger>> operandTriggers;
     std::shared_ptr<QuantifierTrigger> quantifierTrigger;
 
    public:
-    OpAnd(std::shared_ptr<QuantifierView<ExprRef<BoolView>>> quantifier)
+    OpAnd(std::shared_ptr<QuantifierView<BoolView>> quantifier)
         : quantifier(std::move(quantifier)) {}
     OpAnd(const OpAnd& other) = delete;
     OpAnd(OpAnd&& other);

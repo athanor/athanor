@@ -5,18 +5,21 @@
 #include <utility>
 #include <vector>
 #include "base/base.h"
+#include "base/exprRef.h"
 
 template <typename ExprType>
 struct QuantifierView {
     struct Trigger : public IterAssignedTrigger<QuantifierView<ExprType>> {
-        virtual void exprUnrolled(const ExprType& expr) = 0;
-        virtual void exprRolled(u_int64_t index, const ExprType& expr) = 0;
+        virtual void exprUnrolled(const ExprRef<ExprType>& expr) = 0;
+        virtual void exprRolled(u_int64_t index,
+                                const ExprRef<ExprType>& expr) = 0;
     };
-    std::vector<ExprType> exprs;
+    std::vector<ExprRef<ExprType>> exprs;
     std::vector<std::shared_ptr<Trigger>> triggers;
     QuantifierView() {}
-    QuantifierView(std::vector<ExprType>& exprs) : exprs(exprs) {}
-    QuantifierView(std::vector<ExprType>&& exprs) : exprs(std::move(exprs)) {}
+    QuantifierView(std::vector<ExprRef<ExprType>>& exprs) : exprs(exprs) {}
+    QuantifierView(std::vector<ExprRef<ExprType>>&& exprs)
+        : exprs(std::move(exprs)) {}
 
     virtual void initialUnroll() = 0;
     virtual void startTriggeringOnContainer() = 0;
@@ -28,21 +31,21 @@ struct QuantifierView {
 template <typename ExprType>
 struct FixedArray : public QuantifierView<ExprType> {
     using QuantifierView<ExprType>::exprs;
-    FixedArray(std::vector<ExprType>&& exprs)
+    FixedArray(std::vector<ExprRef<ExprType>>&& exprs)
         : QuantifierView<ExprType>(std::move(exprs)) {}
-    FixedArray(std::vector<ExprType>& exprs)
+    FixedArray(std::vector<ExprRef<ExprType>>& exprs)
         : QuantifierView<ExprType>(exprs) {}
     inline void initialUnroll() final {}
     inline void startTriggeringOnContainer() final {}
     inline void stopTriggeringOnContainer() final {}
     std::shared_ptr<QuantifierView<ExprType>> deepCopyQuantifierForUnroll(
         const AnyIterRef& iterator) final {
-        auto newFixedArray =
-            std::make_shared<FixedArray<ExprType>>(std::vector<ExprType>());
+        auto newFixedArray = std::make_shared<FixedArray<ExprRef<ExprType>>>(
+            std::vector<ExprRef<ExprType>>());
         newFixedArray->exprs.reserve(exprs.size());
         for (auto& expr : exprs) {
             newFixedArray->exprs.emplace_back(
-                deepCopySelfForUnroll(expr, iterator));
+                deepCopyForUnroll(expr, iterator));
         }
         return newFixedArray;
     }

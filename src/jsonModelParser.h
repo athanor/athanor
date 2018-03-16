@@ -3,7 +3,6 @@
 #include <iostream>
 #include <memory>
 #include <unordered_map>
-#include "operators/operatorBase.h"
 #include "base/base.h"
 
 class ModelBuilder;

@@ -1,14 +1,21 @@
 #ifndef SRC_OPERATORS_QUANTIFIER_H_
 #define SRC_OPERATORS_QUANTIFIER_H_
-#include "base/typeOperations.h"
-#include "operators/operatorBase.h"
+#include "base/base.h"
 #include "operators/quantifierView.h"
 #include "types/allTypes.h"
 template <typename Container>
 struct InitialUnroller;
 
+template <>
+struct InitialUnroller<SetView>;
+template <>
+struct InitialUnroller<MSetView>;
 template <typename Container, typename ExprType>
 struct ContainerTrigger;
+template <typename ExprType>
+struct ContainerTrigger<SetView, ExprType>;
+template <typename ExprType>
+struct ContainerTrigger<MSetView, ExprType>;
 
 inline static u_int64_t nextQuantId() {
     static u_int64_t quantId = 0;
@@ -140,25 +147,27 @@ struct Quantifier : public QuantifierView<ExprType> {
     }
 };
 
-template <typename ExprType>
-struct ContainerTrigger<SetView, ExprType> : public SetTrigger,
-                                             public DelayedTrigger {
-    Quantifier<SetView, ExprType>* op;
-    AnyViewVec valuesToUnroll;
+template <typename ReturnExprType>
+struct ContainerTrigger<SetView, ReturnExprType> : public SetTrigger,
+                                                   public DelayedTrigger {
+    Quantifier<SetView, ReturnExprType>* op;
+    AnyExprVec valuesToUnroll;
 
-    ContainerTrigger(Quantifier<SetView, ExprType>* op) : op(op) {
-        mpark::visit([&](auto& members) {
-            valuesToUnroll.emplace<ViewVec<viewType(members)>>();
-        } op->container.members);
+    ContainerTrigger(Quantifier<SetView, ReturnExprType>* op) : op(op) {
+        mpark::visit(
+            [&](auto& members) {
+                valuesToUnroll.emplace<BaseType<decltype(members)>>();
+            },
+            op->container.members);
     }
     inline void valueRemoved(u_int64_t indexOfRemovedValue, u_int64_t) final {
         op->roll(indexOfRemovedValue);
     }
-    inline void valueAdded(const AnyViewRef& member) final {
+    inline void valueAdded(const AnyExprRef& member) final {
         mpark::visit(
             [&](auto& vToUnroll) {
                 vToUnroll.emplace_back(
-                    mpark::get<ViewRef<viewType(vToUnroll)>>(member));
+                    mpark::get<ExprRef<exprType(vToUnroll)>>(member));
                 if (vToUnroll.size() == 1) {
                     addDelayedTrigger(op->containerTrigger);
                 }
@@ -166,8 +175,8 @@ struct ContainerTrigger<SetView, ExprType> : public SetTrigger,
             valuesToUnroll);
     }
 
-    inline void possibleMemberValueChange(u_int64_t, const AnyViewRef&) final {}
-    inline void memberValueChanged(u_int64_t, const AnyViewRef&) final{};
+    inline void possibleMemberValueChange(u_int64_t, const AnyExprRef&) final {}
+    inline void memberValueChanged(u_int64_t, const AnyExprRef&) final{};
 
     inline void setValueChanged(const SetView& newValue) {
         while (!op->exprs.empty()) {
@@ -183,7 +192,7 @@ struct ContainerTrigger<SetView, ExprType> : public SetTrigger,
     }
 
     inline void iterHasNewValue(const SetView&,
-                                const ViewRef<SetView>& newValue) final {
+                                const ExprRef<SetView>& newValue) final {
         this->setValueChanged(*newValue);
     }
     void trigger() final {
@@ -192,7 +201,7 @@ struct ContainerTrigger<SetView, ExprType> : public SetTrigger,
                 for (auto& value : vToUnroll) {
                     op->unroll(value);
                 }
-                valuesToUnroll.clear();
+                vToUnroll.clear();
             },
             valuesToUnroll);
     }
@@ -212,25 +221,27 @@ struct InitialUnroller<SetView> {
     }
 };
 
-template <typename ExprType>
-struct ContainerTrigger<MSetView, ExprType> : public MSetTrigger,
-                                              public DelayedTrigger {
-    Quantifier<MSetView, ExprType>* op;
-    AnyViewVec valuesToUnroll;
+template <typename ReturnExprType>
+struct ContainerTrigger<MSetView, ReturnExprType> : public MSetTrigger,
+                                                    public DelayedTrigger {
+    Quantifier<MSetView, ReturnExprType>* op;
+    AnyExprVec valuesToUnroll;
 
-    ContainerTrigger(Quantifier<MSetView, ExprType>* op) : op(op) {
-        mpark::visit([&](auto& members) {
-            valuesToUnroll.emplace<ViewVec<viewType(members)>>();
-        } op->container.members);
+    ContainerTrigger(Quantifier<MSetView, ReturnExprType>* op) : op(op) {
+        mpark::visit(
+            [&](auto& members) {
+                valuesToUnroll.emplace<ExprRefVec<exprType(members)>>();
+            },
+            op->container.members);
     }
     inline void valueRemoved(u_int64_t indexOfRemovedValue, u_int64_t) final {
         op->roll(indexOfRemovedValue);
     }
-    inline void valueAdded(const AnyViewRef& member) final {
+    inline void valueAdded(const AnyExprRef& member) final {
         mpark::visit(
             [&](auto& vToUnroll) {
                 vToUnroll.emplace_back(
-                    mpark::get<ViewRef<viewType(vToUnroll)>>(member));
+                    mpark::get<ExprRef<exprType(vToUnroll)>>(member));
                 if (vToUnroll.size() == 1) {
                     addDelayedTrigger(op->containerTrigger);
                 }
@@ -238,8 +249,8 @@ struct ContainerTrigger<MSetView, ExprType> : public MSetTrigger,
             valuesToUnroll);
     }
 
-    inline void possibleMemberValueChange(u_int64_t, const AnyViewRef&) final {}
-    inline void memberValueChanged(u_int64_t, const AnyViewRef&) final{};
+    inline void possibleMemberValueChange(u_int64_t, const AnyExprRef&) final {}
+    inline void memberValueChanged(u_int64_t, const AnyExprRef&) final{};
 
     inline void mSetValueChanged(const MSetView& newValue) {
         while (!op->exprs.empty()) {
@@ -255,7 +266,7 @@ struct ContainerTrigger<MSetView, ExprType> : public MSetTrigger,
     }
 
     inline void iterHasNewValue(const MSetView&,
-                                const ViewRef<MSetView>& newValue) final {
+                                const ExprRef<MSetView>& newValue) final {
         this->mSetValueChanged(*newValue);
     }
     void trigger() final {
@@ -264,7 +275,7 @@ struct ContainerTrigger<MSetView, ExprType> : public MSetTrigger,
                 for (auto& value : vToUnroll) {
                     op->unroll(value);
                 }
-                valuesToUnroll.clear();
+                vToUnroll.clear();
             },
             valuesToUnroll);
     }

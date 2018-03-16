@@ -2,14 +2,12 @@
 #define SRC_SEARCH_MODEL_H_
 #include <algorithm>
 #include <cassert>
+#include "base/base.h"
 #include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/opAnd.h"
-#include "operators/operatorBase.h"
 #include "search/violationDescription.h"
-#include "base/base.h"
 #include "types/int.h"
-#include "base/typeOperations.h"
 
 class ModelBuilder;
 enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
@@ -20,9 +18,9 @@ struct Model {
     std::vector<Neighbourhood> neighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
-    OpAnd csp = OpAnd(std::make_shared<FixedArray<BoolReturning>>(
-        std::vector<BoolReturning>()));
-    IntReturning objective = make<IntValue>();
+    OpAnd csp = OpAnd(std::make_shared<FixedArray<BoolView>>(
+        std::vector<ExprRef<BoolView>>()));
+    ExprRef<IntView> objective = getViewPtr(make<IntValue>());
     OptimiseMode optimiseMode = OptimiseMode::NONE;
     ;
     ViolationDescription vioDesc;
@@ -38,9 +36,10 @@ class ModelBuilder {
    public:
     ModelBuilder() {}
 
-    inline void addConstraint(BoolReturning constraint) {
-        if (constraintHandledByDefine(constraint)) {
-            return;
+    inline void addConstraint(ExprRef<BoolView> constraint) {
+        auto result = constraint->tryReplaceConstraintWithDefine();
+        if (result.first) {
+            model.definedMappings.emplace_back(std::move(result.second));
         } else {
             model.csp.quantifier->exprs.emplace_back(std::move(constraint));
         }
@@ -61,15 +60,13 @@ class ModelBuilder {
         return val;
     }
 
-    inline void setObjective(OptimiseMode mode, IntReturning obj) {
+    inline void setObjective(OptimiseMode mode, ExprRef<IntView> obj) {
         model.objective = std::move(obj);
         model.optimiseMode = mode;
     }
     Model build() {
         for (size_t i = 0; i < model.variables.size(); ++i) {
-            if (mpark::visit(
-                    [](auto& val) { return val->container == &constantPool; },
-                    model.variables[i].second)) {
+            if (valBase(model.variables[i].second).container == &constantPool) {
                 continue;
             }
             auto& domain = model.variables[i].first;
@@ -86,37 +83,6 @@ class ModelBuilder {
         }
         assert(model.neighbourhoods.size() > 0);
         return std::move(model);
-    }
-    template <typename T, typename Variant>
-    inline ValRef<T>* asValRef(Variant& v) {
-        return mpark::get_if<ValRef<T>>(&v);
-    }
-
-    inline bool constraintHandledByDefine(BoolReturning& constraint) {
-        return mpark::visit(
-            overloaded(
-                [&](std::shared_ptr<OpIntEq>& op) {
-                    auto l = asValRef<IntValue>(op->left);
-                    auto r = asValRef<IntValue>(op->right);
-                    if (l && (*l)->container != &constantPool) {
-                        define(*l, op->right);
-                        return true;
-                    } else if (r && (*r)->container != &constantPool) {
-                        define(*r, op->left);
-                        return true;
-                    }
-                    return false;
-                },
-                [&](auto&) { return false; }),
-            constraint);
-    }
-
-    template <typename ValueType, typename ReturningType = typename ReturnType<
-                                      ValRef<ValueType>>::type>
-    void define(ValRef<ValueType> val, ReturningType expr) {
-        addTrigger(expr, std::make_shared<DefinedTrigger<ValueType>>(val));
-        val->container = &constantPool;
-        model.definedMappings.emplace_back(AnyValRef(val), toExprRef(expr));
     }
 };
 #endif /* SRC_SEARCH_MODEL_H_ */

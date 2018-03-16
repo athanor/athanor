@@ -43,9 +43,12 @@ struct ExprRef {
    private:
     inline void setViewRef() { this->bits &= ~(((u_int64_t)1) << 63); }
     inline void setIterRef() { this->bits |= (((u_int64_t)1) << 63); }
+
+   public:
     inline bool isViewRef() const {
         return (this->bits & (((u_int64_t)1) << 63)) == 0;
     }
+
     inline bool isIterRef() const {
         return (this->bits & (((u_int64_t)1) << 63)) != 0;
     }
@@ -116,6 +119,12 @@ struct ExprInterface {
         const AnyIterRef& iterator) const = 0;
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
+    virtual inline std::pair<bool, std::pair<AnyValRef, AnyExprRef>>
+    tryReplaceConstraintWithDefine() {
+        return std::make_pair(false,
+                              std::make_pair(ValRef<BoolValue>(nullptr),
+                                             ViewRef<BoolView>(nullptr)));
+    }
 };
 inline u_int64_t getValueHash(const AnyExprRef& ref) {
     return mpark::visit([&](auto& ref) { return getValueHash(*ref); }, ref);

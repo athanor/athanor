@@ -61,10 +61,10 @@ void OpIntEq::updateViolationDescription(u_int64_t,
     right->updateViolationDescription(violation, vioDesc);
 }
 
-ExprRef<BoolView> OpIntEq::deepCopySelfForUnroll(                                             const AnyIterRef& iterator) const {
-    auto newOpIntEq =
-        make_shared<OpIntEq>(deepCopyForUnroll(left, iterator),
-                             deepCopyForUnroll(right, iterator));
+ExprRef<BoolView> OpIntEq::deepCopySelfForUnroll(
+    const AnyIterRef& iterator) const {
+    auto newOpIntEq = make_shared<OpIntEq>(deepCopyForUnroll(left, iterator),
+                                           deepCopyForUnroll(right, iterator));
     newOpIntEq->violation = violation;
     return ViewRef<BoolView>(newOpIntEq);
 }
@@ -75,4 +75,31 @@ std::ostream& OpIntEq::dumpState(std::ostream& os) const {
     os << "\nright: ";
     right->dumpState(os);
     return os;
+}
+
+bool OpIntEq::tryReplaceConstraintWithDefine() {
+    auto l = asIntValue(left);
+    auto r = asIntValue(right);
+    if (l && l->container != &constantPool) {
+        return make_pair(true, define(*l, right));
+    } else if (r && r->container != &constantPool) {
+        return make_pair(true, define(*r, left));
+    }
+    return make_pair(false, make_pair(ValRef<BoolValue>(nullptr),
+                                      ViewRef<BoolView>(nullptr)));
+}
+
+inline ValRef<IntValue> asIntValue(ExprRef<IntView>& expr) {
+    if (!expr.isViewRef()) {
+        return nullptr;
+    }
+    if (dynamic_cast<IntValue*>(&(*expr))) {
+        return assumeAsValue(expr.asViewRef());
+    }
+}
+
+void define(ValRef<IntValue>& val, ExprRef<IntView>& expr) {
+    addTrigger(expr, std::make_shared<DefinedTrigger<IntValue>>(val));
+    val->container = &constantPool;
+    return make_pair(AnyValRef(val), AnyExprRef(expr));
 }

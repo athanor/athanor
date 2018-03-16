@@ -24,5 +24,8 @@ struct OpIntEq : public BoolView {
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     virtual ~OpIntEq() { this->stopTriggering(); }
+
+    std::pair<bool, std::pair<AnyValRef, AnyExprRef>>
+    tryReplaceConstraintWithDefine() final;
 };
 #endif /* SRC_OPERATORS_OPINTEQ_H_ */

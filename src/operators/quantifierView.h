@@ -40,7 +40,7 @@ struct FixedArray : public QuantifierView<ExprType> {
     inline void stopTriggeringOnContainer() final {}
     std::shared_ptr<QuantifierView<ExprType>> deepCopyQuantifierForUnroll(
         const AnyIterRef& iterator) final {
-        auto newFixedArray = std::make_shared<FixedArray<ExprRef<ExprType>>>(
+        auto newFixedArray = std::make_shared<FixedArray<ExprType>>(
             std::vector<ExprRef<ExprType>>());
         newFixedArray->exprs.reserve(exprs.size());
         for (auto& expr : exprs) {

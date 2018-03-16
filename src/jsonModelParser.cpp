@@ -80,7 +80,7 @@ pair<AnyDomainRef, AnyExprRef> parseValue(json& essenceExpr,
 AnyValRef toValRef(const AnyExprRef& op) {
     return mpark::visit(
         [&](auto& ref) -> AnyValRef {
-            typedef typename AssociatedValueType<exprType(ref)>::type ValType;
+            typedef typename AssociatedValueType<viewType(ref)>::type ValType;
             auto val = make<ValType>();
             val->initFrom(*ref);
             return val;
@@ -274,7 +274,7 @@ ExprRef<RetType> expect(Constraint&& constraint, Func&& func) {
             [&](auto&& constraint) -> ExprRef<RetType> {
                 func(forward<decltype(constraint)>(constraint));
                 cerr << "\nType found was instead "
-                     << TypeAsString<typename AssociatedValueType<exprType(
+                     << TypeAsString<typename AssociatedValueType<viewType(
                             constraint)>::type>::value
                      << endl;
                 abort();
@@ -340,7 +340,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
             auto errorHandler = [&](auto&&) {
                 cerr << "Expected right operand to be of same type as left, "
                         "i.e. "
-                     << TypeAsString<typename AssociatedValueType<exprType(
+                     << TypeAsString<typename AssociatedValueType<viewType(
                             left)>::type>::value
                      << endl;
             };
@@ -356,7 +356,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
                     -> pair<shared_ptr<BoolDomain>, ViewRef<BoolView>> {
                     cerr
                         << "Error, not yet handling OpEq with operands of type "
-                        << TypeAsString<typename AssociatedValueType<exprType(
+                        << TypeAsString<typename AssociatedValueType<viewType(
                                left)>::type>::value
                         << ": " << operandsExpr << endl;
                     abort();
@@ -392,10 +392,11 @@ void addExprToQuantifier(json& comprExpr,
         [&](auto& innerDomain) {
             typedef typename BaseType<decltype(innerDomain)>::element_type
                 InnerDomainType;
-            typedef typename AssociatedValueType<InnerDomainType>::type
-                InnerValueType;
+            typedef typename AssociatedViewType<
+                typename AssociatedValueType<InnerDomainType>::type>::type
+                InnerViewType;
             name = generatorExpr[0]["Single"]["Name"];
-            auto iter = quantifier->template newIterRef<InnerValueType>();
+            auto iter = quantifier->template newIterRef<InnerViewType>();
             parsedModel.namedExprs.emplace(name, make_pair(innerDomain, iter));
         },
         (containerDomain->inner));
@@ -409,7 +410,7 @@ template <typename ExprType, typename ContainerReturnType,
 auto buildQuant(json& comprExpr, ContainerReturnType& container,
                 ContainerDomainPtrType&& domain, ParsedModel& parsedModel) {
     auto quantifier =
-        make_shared<Quantifier<exprType(container), ExprType>>(container);
+        make_shared<Quantifier<viewType(container), ExprType>>(container);
     addExprToQuantifier<ExprType>(comprExpr, domain, quantifier, parsedModel);
     return quantifier;
 };

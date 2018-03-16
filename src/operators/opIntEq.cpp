@@ -61,10 +61,18 @@ void OpIntEq::updateViolationDescription(u_int64_t,
     right->updateViolationDescription(violation, vioDesc);
 }
 
+<<<<<<< Updated upstream
 ExprRef<BoolView> OpIntEq::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
     auto newOpIntEq = make_shared<OpIntEq>(deepCopyForUnroll(left, iterator),
                                            deepCopyForUnroll(right, iterator));
+=======
+ExprRef<BoolView> OpIntEq::deepCopySelfForUnroll(const ExprRef<BoolView>&,
+                                             const AnyIterRef& iterator) const {
+    auto newOpIntEq =
+        make_shared<OpIntEq>(lefdeepCopyForUnroll(left, iterator),
+                             righdeepCopyForUnroll(right, iterator));
+>>>>>>> Stashed changes
     newOpIntEq->violation = violation;
     return ViewRef<BoolView>(newOpIntEq);
 }

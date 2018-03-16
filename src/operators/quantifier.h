@@ -57,7 +57,7 @@ struct Quantifier : public QuantifierView<ExprType> {
 
     inline bool triggering() { return static_cast<bool>(containerTrigger); }
     template <typename ViewType>
-    inline void unroll(const ViewRef<ViewType>& newView) {
+    inline void unroll(const ExprRef<ViewType>& newView) {
         debug_log("unrolling " << newView);
         auto iterRef = this->newIterRef<ViewType>();
         // choose which expr to copy from
@@ -72,7 +72,7 @@ struct Quantifier : public QuantifierView<ExprType> {
         // copying from an already unrolled expr, it  need not be
         // evaluated, simply copy it and trigger the change in value.
         bool evaluateExpr = exprs.empty() && triggering();
-        const auto& oldValueOfIter =
+        const ExprRef<ViewType>& oldValueOfIter =
             (exprs.empty())
                 ? ViewRef<ViewType>(nullptr)
                 : mpark::get<IterRef<ViewType>>(unrolledIterVals.back())
@@ -81,15 +81,15 @@ struct Quantifier : public QuantifierView<ExprType> {
         unrolledIterVals.emplace_back(iterRef);
 
         exprs.emplace_back(deepCopyForUnroll(exprToCopy, iterRef));
-        iterRef.getIterator().changeValue(triggering() && !evaluateExpr,
-                                          oldValueOfIter, newView, [&]() {
-                                              if (evaluateExpr) {
-                                                  evaluate(exprs.back());
-                                              }
-                                              if (triggering()) {
-                                                  startTriggering(exprs.back());
-                                              }
-                                          });
+        iterRef.getIterator().changeValue(
+            triggering() && !evaluateExpr, oldValueOfIter, newView, [&]() {
+                if (evaluateExpr) {
+                    exprs.back()->evaluate();
+                }
+                if (triggering()) {
+                    exprs.back()->startTriggering();
+                }
+            });
         auto& triggerMember = exprs.back();
         visitTriggers([&](auto& t) { t->exprUnrolled(triggerMember); },
                       triggers);
@@ -158,7 +158,7 @@ struct ContainerTrigger<SetView, ReturnExprType> : public SetTrigger,
             [&](auto& members) {
                 valuesToUnroll.emplace<BaseType<decltype(members)>>();
             },
-            op->container.members);
+            op->container->members);
     }
     inline void valueRemoved(u_int64_t indexOfRemovedValue, u_int64_t) final {
         op->roll(indexOfRemovedValue);
@@ -167,7 +167,7 @@ struct ContainerTrigger<SetView, ReturnExprType> : public SetTrigger,
         mpark::visit(
             [&](auto& vToUnroll) {
                 vToUnroll.emplace_back(
-                    mpark::get<ExprRef<exprType(vToUnroll)>>(member));
+                    mpark::get<ExprRef<viewType(vToUnroll)>>(member));
                 if (vToUnroll.size() == 1) {
                     addDelayedTrigger(op->containerTrigger);
                 }
@@ -230,9 +230,9 @@ struct ContainerTrigger<MSetView, ReturnExprType> : public MSetTrigger,
     ContainerTrigger(Quantifier<MSetView, ReturnExprType>* op) : op(op) {
         mpark::visit(
             [&](auto& members) {
-                valuesToUnroll.emplace<ExprRefVec<exprType(members)>>();
+                valuesToUnroll.emplace<ExprRefVec<viewType(members)>>();
             },
-            op->container.members);
+            op->container->members);
     }
     inline void valueRemoved(u_int64_t indexOfRemovedValue, u_int64_t) final {
         op->roll(indexOfRemovedValue);
@@ -241,7 +241,7 @@ struct ContainerTrigger<MSetView, ReturnExprType> : public MSetTrigger,
         mpark::visit(
             [&](auto& vToUnroll) {
                 vToUnroll.emplace_back(
-                    mpark::get<ExprRef<exprType(vToUnroll)>>(member));
+                    mpark::get<ExprRef<viewType(vToUnroll)>>(member));
                 if (vToUnroll.size() == 1) {
                     addDelayedTrigger(op->containerTrigger);
                 }

@@ -90,19 +90,17 @@ using ExprRefVecMaker = ExprRefVec<typename AssociatedViewType<T>::type>;
 typedef Variantised<ExprRefVecMaker> AnyExprVec;
 
 template <typename T>
-struct ExprType;
-
+struct ViewType;
 template <typename T>
-struct ExprType<ExprRef<T>> {
+struct ViewType<ExprRef<T>> {
     typedef T type;
 };
 
 template <typename T>
-struct ExprType<std::vector<ExprRef<T>>> {
+struct ViewType<std::vector<ExprRef<T>>> {
     typedef T type;
 };
 
-#define exprType(t) typename ExprType<BaseType<decltype(t)>>::type
 template <typename T>
 inline std::ostream& operator<<(std::ostream& os, const ExprRef<T>& ref) {
     return prettyPrint(os, *ref);

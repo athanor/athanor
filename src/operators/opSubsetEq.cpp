@@ -157,9 +157,16 @@ void OpSubsetEq::updateViolationDescription(u_int64_t,
 }
 
 ExprRef<BoolView> OpSubsetEq::deepCopySelfForUnroll(
+<<<<<<< Updated upstream
     const AnyIterRef& iterator) const {
     auto newOpSubsetEq = make_shared<OpSubsetEq>(
         deepCopyForUnroll(left, iterator), deepCopyForUnroll(right, iterator));
+=======
+    const ExprRef<BoolView>&, const AnyIterRef& iterator) const {
+    auto newOpSubsetEq =
+        make_shared<OpSubsetEq>(lefdeepCopyForUnroll(left, iterator),
+                                righdeepCopyForUnroll(right, iterator));
+>>>>>>> Stashed changes
     newOpSubsetEq->violation = violation;
     return ViewRef<BoolView>(newOpSubsetEq);
 }

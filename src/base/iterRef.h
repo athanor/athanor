@@ -8,18 +8,18 @@
 #ifndef SRC_BASE_ITERREF_H_
 #define SRC_BASE_ITERREF_H_
 #include <vector>
+#include "base/exprRef.h"
 #include "base/triggers.h"
-#include "base/viewRef.h"
 template <typename T>
 struct Iterator {
     int id;
-    ViewRef<T> ref;
+    ExprRef<T> ref;
     std::vector<std::shared_ptr<IterAssignedTrigger<T>>> unrollTriggers;
 
-    Iterator(int id, ValRef<T> ref) : id(id), ref(std::move(ref)) {}
+    Iterator(int id, ExprRef<T> ref) : id(id), ref(std::move(ref)) {}
     template <typename Func>
-    inline void changeValue(bool triggering, const ViewRef<T>& oldVal,
-                            const ViewRef<T>& newVal, Func&& callback) {
+    inline void changeValue(bool triggering, const ExprRef<T>& oldVal,
+                            const ExprRef<T>& newVal, Func&& callback) {
         ref = newVal;
         callback();
         if (triggering) {
@@ -28,7 +28,7 @@ struct Iterator {
             }
         }
     }
-    inline ValRef<T>& getValue() { return ref; }
+    inline ExprRef<T>& getValue() { return ref; }
 };
 
 template <typename T>
@@ -41,9 +41,7 @@ class IterRef {
 
    public:
     IterRef(int id)
-        : ref(std::make_shared<Iterator<T>>(id, ValRef<T>(nullptr))) {}
-
-    IterRef(std::shared_ptr<Iterator<T>> ref) : ref(std::move(ref)) {}
+        : ref(std::make_shared<Iterator<T>>(id, ViewRef<T>(nullptr))) {}
 
     inline Iterator<T>& getIterator() { return *ref; }
     inline decltype(auto) refCount() { return ref.use_count(); }
@@ -57,6 +55,19 @@ class IterRef {
 template <typename T>
 using IterRefMaker = IterRef<typename AssociatedViewType<T>::type>;
 typedef Variantised<IterRefMaker> AnyIterRef;
+
+template <typename T>
+struct ViewType;
+template <typename T>
+struct ViewType<IterRef<T>> {
+    typedef T type;
+};
+
+template <typename T>
+struct ViewType<std::vector<IterRef<T>>> {
+    typedef T type;
+};
+
 
 template <typename T>
 u_int64_t getValueHash(const IterRef<T>& iter) {
@@ -85,5 +96,6 @@ inline std::ostream& prettyPrint(std::ostream& os, const AnyIterRef& iter,
 inline std::ostream& operator<<(std::ostream& os, const AnyIterRef& iter) {
     return prettyPrint(os, iter);
 }
+
 
 #endif /* SRC_BASE_ITERREF_H_ */

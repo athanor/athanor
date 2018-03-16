@@ -80,7 +80,7 @@ ostream& prettyPrint<SetDomain>(ostream& os, const SetDomain& d) {
 void matchInnerType(const SetValue& src, SetValue& target) {
     mpark::visit(
         [&](auto& srcMembersImpl) {
-            target.setInnerType<exprType(srcMembersImpl)>();
+            target.setInnerType<viewType(srcMembersImpl)>();
         },
         src.members);
 }

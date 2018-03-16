@@ -37,7 +37,7 @@ struct ViewType<std::vector<ViewRef<T>>> {
     typedef T type;
 };
 
-#define viewType(t) typename ViewType<BaseType<decltype(t)>>::type
+#define viewType(t) typename ::ViewType<BaseType<decltype(t)>>::type
 
 template <typename T = int>
 inline u_int64_t getValueHash(const AnyViewRef& view, T = 0) {

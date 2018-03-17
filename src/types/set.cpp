@@ -243,7 +243,8 @@ void SetValue::assertValidVarBases() {
             }
             bool success = true;
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
-                if (valBase(*valMembersImpl[i]).container != this) {
+                if (valBase(*assumeAsValue(valMembersImpl[i].asViewRef()))
+                        .container != this) {
                     success = false;
                     cerr << "member " << i
                          << "'s container does not point to this set." << endl;

@@ -243,13 +243,14 @@ struct MSetValue : public MSetView, public ValBase {
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline ValRef<InnerValueType> removeMember(u_int64_t index) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        auto removedMember = MSetView::removeMember<InnerViewType>(index);
+        auto removedMember = assumeAsValue(
+            MSetView::removeMember<InnerViewType>(index).asViewRef());
         valBase(*removedMember).container = NULL;
         if (index < numberElements()) {
-            valBase(*getMembers<InnerViewType>()[index]).id = index;
+            valBase(*member<InnerValueType>(index)).id = index;
         }
         debug_code(assertValidVarBases());
-        return assumeAsValue(removedMember.asViewRef());
+        return removedMember;
     }
 
     template <typename InnerValueType, typename Func,
@@ -257,18 +258,19 @@ struct MSetValue : public MSetView, public ValBase {
     inline std::pair<bool, ValRef<InnerValueType>> tryRemoveMember(
         u_int64_t index, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        auto removedMember = MSetView::removeMember<InnerViewType>(index);
+        auto removedMember = assumeAsValue(
+            MSetView::removeMember<InnerViewType>(index).asViewRef());
         if (func()) {
             valBase(*removedMember).container = NULL;
             if (index < numberElements()) {
-                valBase(*getMembers<InnerViewType>()[index]).id = index;
+                valBase(*member<InnerValueType>(index)).id = index;
             }
             debug_code(assertValidVarBases());
-            MSetView::notifyMemberRemoved(index, getValueHash(*removedMember));
-            return std::make_pair(true,
-                                  std::move(assumeAsValue(removedMember)));
+            MSetView::notifyMemberRemoved(
+                index, getValueHash(*getViewPtr(removedMember)));
+            return std::make_pair(true, std::move(removedMember));
         } else {
-            MSetView::addMember(removedMember);
+            MSetView::addMember<InnerViewType>(getViewPtr(removedMember));
             auto& members = getMembers<InnerValueType>();
             std::swap(members[index], members.back());
             debug_code(assertValidState());

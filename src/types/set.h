@@ -277,13 +277,14 @@ struct SetValue : public SetView, public ValBase {
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline ValRef<InnerValueType> removeMember(u_int64_t index) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        auto removedMember = SetView::removeMember<InnerViewType>(index);
+        auto removedMember = assumeAsValue(
+            SetView::removeMember<InnerViewType>(index).asViewRef());
         valBase(*removedMember).container = NULL;
         if (index < numberElements()) {
-            valBase(*getMembers<InnerViewType>()[index]).id = index;
+            valBase(*member<InnerValueType>(index)).id = index;
         }
         debug_code(assertValidVarBases());
-        return assumeAsValue(removedMember.asViewRef());
+        return removedMember;
     }
 
     template <typename InnerValueType, typename Func,
@@ -291,18 +292,19 @@ struct SetValue : public SetView, public ValBase {
     inline std::pair<bool, ValRef<InnerValueType>> tryRemoveMember(
         u_int64_t index, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        auto removedMember = SetView::removeMember<InnerViewType>(index);
+        auto removedMember = assumeAsValue(
+            SetView::removeMember<InnerViewType>(index).asViewRef());
         if (func()) {
             valBase(*removedMember).container = NULL;
             if (index < numberElements()) {
-                valBase(*getMembers<InnerViewType>()[index]).id = index;
+                valBase(*member<InnerValueType>(index)).id = index;
             }
             debug_code(assertValidVarBases());
-            SetView::notifyMemberRemoved(index, getValueHash(*removedMember));
-            return std::make_pair(
-                true, std::move(assumeAsValue(removedMember.asViewRef())));
+            SetView::notifyMemberRemoved(index,
+                                         getValueHash(asView(*removedMember)));
+            return std::make_pair(true, std::move(removedMember));
         } else {
-            SetView::addMember(removedMember);
+            SetView::addMember<InnerViewType>(getViewPtr(removedMember));
             auto& members = getMembers<InnerViewType>();
             std::swap(members[index], members.back());
             hashIndexMap[getValueHash(*members[index])] = index;

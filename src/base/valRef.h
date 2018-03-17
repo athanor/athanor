@@ -143,6 +143,7 @@ template <typename Val>
 EnableIfValueAndReturn<Val, ValBase&> valBase(Val& val);
 template <typename Val>
 EnableIfValueAndReturn<Val, const ValBase&> valBase(const Val& val);
-ValBase& valBase(const AnyValRef& ref);
+const ValBase& valBase(const AnyValRef& ref);
+ValBase& valBase(AnyValRef& ref);
 
 #endif /* SRC_BASE_VALREF_H_ */

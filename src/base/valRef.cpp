@@ -45,6 +45,11 @@ std::ostream& operator<<(std::ostream& os, const AnyValRef& v) {
     return prettyPrint(os, v);
 }
 
-ValBase& valBase(const AnyValRef& ref) {
-    return mpark::visit([](auto& val) { return valBase(val); }, ref);
+const ValBase& valBase(const AnyValRef& ref) {
+    return mpark::visit(
+        [](auto& val) -> const ValBase& { return valBase(*val); }, ref);
+}
+ValBase& valBase(AnyValRef& ref) {
+    return mpark::visit([](auto& val) -> ValBase& { return valBase(*val); },
+                        ref);
 }

@@ -105,8 +105,6 @@ template <typename Val>
 EnableIfValueAndReturn<Val, bool> smallerValue(const Val& u, const Val& v);
 template <typename Val>
 EnableIfValueAndReturn<Val, bool> largerValue(const Val& u, const Val& v);
-template <typename Val>
-EnableIfValueAndReturn<Val, bool> equalValue(const Val& u, const Val& v);
 template <typename View>
 EnableIfViewAndReturn<View, u_int64_t> getValueHash(const View&);
 template <typename Val>

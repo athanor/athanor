@@ -131,4 +131,18 @@ inline ValRef<ValueType>&& assumeAsValue(ViewRef<ViewType>&& viewPtr) {
     return reinterpret_cast<ValRef<ValueType>&&>(std::move(viewPtr));
 }
 
+struct ValBase;
+extern ValBase constantPool;
+
+struct ValBase {
+    u_int64_t id = 0;
+    ValBase* container = &constantPool;
+};
+
+template <typename Val>
+EnableIfValueAndReturn(Val, ValBase&> valBase(Val& val);
+template <typename Val>
+EnableIfValueAndReturn(Val, const ValBase&> valBase(const Val& val);
+ValBase& valBase(const AnyValRef& ref);
+
 #endif /* SRC_BASE_VALREF_H_ */

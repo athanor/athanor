@@ -7,5 +7,4 @@
 #include "base/standardSharedPtr.h"
 #include "base/triggers.h"
 #include "base/typeDecls.h"
-#include "base/valBase.h"
 #endif

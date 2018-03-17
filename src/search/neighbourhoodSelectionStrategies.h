@@ -49,7 +49,7 @@ class RandomNeighbourhoodWithViolation {
         if (model.csp.violation == 0) {
             return;
         }
-        updateViolationDescription(model.csp, 0, model.vioDesc);
+        model.csp.updateViolationDescription(0, model.vioDesc);
     }
     inline void reportResult(NeighbourhoodResult&& result) {
         initialise(result.model);
@@ -126,7 +126,7 @@ class InteractiveNeighbourhoodSelector {
         if (model.csp.violation == 0) {
             return;
         }
-        updateViolationDescription(model.csp, 0, model.vioDesc);
+        model.csp.updateViolationDescription(0, model.vioDesc);
     }
     inline void reportResult(NeighbourhoodResult&& result) {
         initialise(result.model);

@@ -4,10 +4,9 @@
 #include <iostream>
 #include <unordered_map>
 #include "common/common.h"
-#include "constructorShortcuts.h"
 #include "jsonModelParser.h"
 #include "search/searchStrategies.h"
-#include "base/typeOperations.h"
+#include "utils/hashUtils.h"
 
 using namespace std;
 using namespace AutoArgParse;

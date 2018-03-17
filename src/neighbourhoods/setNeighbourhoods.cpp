@@ -2,7 +2,6 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
 #include "types/set.h"
-#include "base/typeOperations.h"
 #include "utils/random.h"
 
 using namespace std;
@@ -77,7 +76,7 @@ void setAddGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
                     "Couldn't find value, number tries=" << tryLimit);
                 return;
             }
-            debug_neighbourhood_action("Added value: " << *newMember);
+            debug_neighbourhood_action("Added value: " << newMember);
             if (!params.changeAccepted()) {
                 debug_neighbourhood_action("Change rejected");
                 val.tryRemoveMember<InnerValueType>(val.numberElements() - 1,
@@ -123,7 +122,7 @@ void setRemoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
             success = removeStatus.first;
             if (success) {
                 removedMember = std::move(removeStatus.second);
-                debug_neighbourhood_action("Removed " << *removedMember);
+                debug_neighbourhood_action("Removed " << removedMember);
             }
         } while (!success && ++numberTries < params.parentCheckTryLimit);
         if (!success) {
@@ -190,7 +189,7 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                     };
                 bool requiresRevert = false;
                 AnyValRef changingMember =
-                    val.getMembers<InnerValueType>()[indexToChange];
+                    val.member<InnerValueType>(indexToChange);
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
                     if (requiresRevert) {
@@ -229,7 +228,7 @@ void setAssignRandomGen(const SetDomain& domain,
             int numberTries = 0;
             const int tryLimit = params.parentCheckTryLimit;
             debug_neighbourhood_action(
-                "Assigning random value: original value is " << val);
+                "Assigning random value: original value is " << asView(val));
             auto backup = deepCopy(val);
             backup->container = val.container;
             auto newValue = constructValueFromDomain(domain);
@@ -242,7 +241,7 @@ void setAssignRandomGen(const SetDomain& domain,
                     return params.parentCheck(params.primary);
                 });
                 if (success) {
-                    debug_neighbourhood_action("New value is " << val);
+                    debug_neighbourhood_action("New value is " << asView(val));
                 }
             } while (!success && ++numberTries < tryLimit);
             if (!success) {

@@ -204,6 +204,14 @@ struct MSetView : public ExprInterface<MSetView> {
 struct MSetValue : public MSetView, public ValBase {
     using MSetView::silentClear;
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
+    inline ValRef<InnerValueType> member(u_int64_t index) {
+        return assumeAsValue(
+            getMembers<
+                typename AssociatedViewType<InnerValueType>::type>()[index]
+                .asViewRef());
+    }
+
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline void addMember(const ValRef<InnerValueType>& member) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         MSetView::addMember(ExprRef<InnerViewType>(getViewPtr(member)));
@@ -241,7 +249,7 @@ struct MSetValue : public MSetView, public ValBase {
             valBase(*getMembers<InnerViewType>()[index]).id = index;
         }
         debug_code(assertValidVarBases());
-        return assumeAsValue(removedMember);
+        return assumeAsValue(removedMember.asViewRef());
     }
 
     template <typename InnerValueType, typename Func,
@@ -267,6 +275,12 @@ struct MSetValue : public MSetView, public ValBase {
             debug_code(assertValidVarBases());
             return std::make_pair(false, ValRef<InnerValueType>(nullptr));
         }
+    }
+
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
+    inline void notifyPossibleMemberChange(u_int64_t index) {
+        return MSetView::notifyPossibleMemberChange<
+            typename AssociatedViewType<InnerValueType>::type>(index);
     }
 
     template <typename InnerValueType, typename Func,

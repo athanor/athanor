@@ -2,7 +2,6 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
 #include "types/mSet.h"
-#include "base/typeOperations.h"
 #include "utils/random.h"
 
 using namespace std;
@@ -74,7 +73,7 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
                 };
                 bool requiresRevert = false;
                 AnyValRef changingMember =
-                    val.getMembers<InnerValueType>()[indexToChange];
+                    val.member<InnerValueType>(indexToChange);
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
                     if (requiresRevert) {

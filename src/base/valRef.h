@@ -62,46 +62,6 @@ inline ViewRef<ViewType>&& getViewPtr(ValRef<ValueType>&& value) {
     return reinterpret_cast<ViewRef<ViewType>&&>(std::move(value));
 }
 
-template <typename T = int>
-inline bool smallerValue(const AnyValRef& u, const AnyValRef& v, T = 0) {
-    return u.index() < v.index() ||
-           (u.index() == v.index() &&
-            mpark::visit(
-                [&v](auto& uImpl) {
-                    auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v);
-                    return smallerValue(*uImpl, *vImpl);
-                },
-                u));
-}
-
-template <typename T = int>
-inline void normalise(AnyValRef& v, T = 0) {
-    mpark::visit([](auto& vImpl) { normalise(*vImpl); }, v);
-}
-
-template <typename T = int>
-inline bool largerValue(const AnyValRef& u, const AnyValRef& v, T = 0) {
-    return u.index() > v.index() ||
-           (u.index() == v.index() &&
-            mpark::visit(
-                [&v](auto& uImpl) {
-                    auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v);
-                    return largerValue(*uImpl, *vImpl);
-                },
-                u));
-}
-
-template <typename T = int>
-inline bool equalValue(const AnyValRef& u, const AnyValRef& v, T = 0) {
-    return (u.index() == v.index() &&
-            mpark::visit(
-                [&v](auto& uImpl) {
-                    auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v);
-                    return equalValue(*uImpl, *vImpl);
-                },
-                u));
-}
-
 template <typename Val>
 EnableIfValueAndReturn<Val, ValRef<Val>> deepCopy(const Val& src) {
     auto target = constructValueOfSameType(src);
@@ -109,25 +69,66 @@ EnableIfValueAndReturn<Val, ValRef<Val>> deepCopy(const Val& src) {
     return target;
 }
 
-template <typename T = int>
-inline AnyValRef deepCopy(const AnyValRef& val, T = 0) {
-    return mpark::visit(
-        [](const auto& valImpl) { return AnyValRef(deepCopy(*valImpl)); }, val);
+template <typename InnerValueType>
+inline std::ostream& prettyPrint(std::ostream& os,
+                                 const ValRef<InnerValueType>& val) {
+    return prettyPrint(os, *getViewPtr(val));
 }
 
-template <typename T = int>
-inline std::ostream& prettyPrint(std::ostream& os, const AnyValRef& v, T = 0) {
-    return mpark::visit(
-        [&os](auto& vImpl) -> std::ostream& {
-            return prettyPrint(os, *getViewPtr(vImpl));
-        },
-        v);
+template <typename InnerValueType>
+inline u_int64_t getValueHash(const ValRef<InnerValueType>& val) {
+    return getValueHash(*getViewPtr(val));
 }
+
+template <typename InnerValueType>
+inline std::ostream& operator<<(std::ostream& os,
+                                const ValRef<InnerValueType>& val) {
+    return prettyPrint(os, val);
+}
+
 template <typename ValueType>
 ValRef<ValueType> constructValueOfSameType(const ValueType& other) {
     auto val = make<ValueType>();
     matchInnerType(other, *val);
     return val;
+}
+
+void normalise(AnyValRef& v);
+bool smallerValue(const AnyValRef& u, const AnyValRef& v);
+bool largerValue(const AnyValRef& u, const AnyValRef& v);
+bool equalValue(const AnyValRef& u, const AnyValRef& v);
+AnyValRef deepCopy(const AnyValRef& val);
+std::ostream& operator<<(std::ostream& os, const AnyValRef& v);
+u_int64_t getValueHash(const AnyValRef& v);
+std::ostream& prettyPrint(std::ostream& os, const AnyValRef& v);
+
+template <typename ViewType,
+          typename ValueType = typename AssociatedValueType<ViewType>::type,
+          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
+inline ValueType& assumeAsValue(ViewType& view) {
+    return reinterpret_cast<ValueType&>(view);
+}
+
+template <typename ViewType,
+          typename ValueType = typename AssociatedValueType<ViewType>::type,
+          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
+inline const ValueType& assumeAsValue(const ViewType& view) {
+    return reinterpret_cast<const ValueType&>(view);
+}
+
+template <typename ViewType,
+          typename ValueType = typename AssociatedValueType<ViewType>::type,
+          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
+inline const ValRef<ValueType>& assumeAsValue(
+    const ViewRef<ViewType>& viewPtr) {
+    return reinterpret_cast<const ValRef<ValueType>&>(viewPtr);
+}
+
+template <typename ViewType,
+          typename ValueType = typename AssociatedValueType<ViewType>::type,
+          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
+inline ValRef<ValueType>&& assumeAsValue(ViewRef<ViewType>&& viewPtr) {
+    return reinterpret_cast<ValRef<ValueType>&&>(std::move(viewPtr));
 }
 
 #endif /* SRC_BASE_VALREF_H_ */

@@ -2,11 +2,10 @@
 #ifndef SRC_SEARCH_SEARCHSTRATEGIES_H_
 #define SRC_SEARCH_SEARCHSTRATEGIES_H_
 #include <cassert>
-#include "operators/operatorBase.h"
 #include "search/model.h"
 #include "search/neighbourhoodSelectionStrategies.h"
 #include "search/statsContainer.h"
-#include "base/typeOperations.h"
+#include "types/allTypes.h"
 
 inline bool alwaysTrue(const AnyValRef&) { return true; }
 
@@ -38,7 +37,7 @@ class HillClimber {
         }
     }
     inline bool acceptValue() {
-        u_int64_t newObjValue = getView(model.objective).value;
+        u_int64_t newObjValue = model.objective->value;
         int64_t deltaObj = getDeltaObj(lastObjValue, newObjValue);
         int64_t deltaViolation = lastViolation - model.csp.violation;
         bool solutionAllowed;
@@ -94,17 +93,17 @@ class HillClimber {
         stats.startTimer();
         assignRandomValueToVariables();
         evaluateDefinedVariables();
-        evaluate(model.csp);
+        model.csp.evaluate();
         lastViolation = model.csp.violation;
         bestViolation = lastViolation;
         startTriggeringOnDefinedVariables();
-        startTriggering(model.csp);
+        model.csp.startTriggering();
 
         if (model.optimiseMode != OptimiseMode::NONE) {
-            evaluate(model.objective);
-            lastObjValue = getView(model.objective).value;
+            model.objective->evaluate();
+            lastObjValue = model.objective->value;
             bestObjValue = lastObjValue;
-            startTriggering(model.objective);
+            model.objective->startTriggering();
         }
         newBestSolution();
         selectionStrategy.initialise(model);
@@ -149,10 +148,10 @@ class HillClimber {
                 << std::endl;
         }
         debug_code(debug_log("CSP state:");
-                   dumpState(std::cout, model.csp) << std::endl;
+                   model.csp.dumpState(std::cout) << std::endl;
                    if (model.optimiseMode != OptimiseMode::NONE) {
                        debug_log("Objective state:");
-                       dumpState(std::cout, model.objective) << std::endl;
+                       model.objective->dumpState(std::cout) << std::endl;
                    });
     }
 
@@ -172,9 +171,7 @@ class HillClimber {
 
     inline void assignRandomValueToVariables() {
         for (auto& var : model.variables) {
-            if (mpark::visit(
-                    [](auto& val) { return val->container == &constantPool; },
-                    var.second)) {
+            if (valBase(var.second).container == &constantPool) {
                 continue;
             }
             assignRandomValueInDomain(var.first, var.second);
@@ -184,14 +181,11 @@ class HillClimber {
         for (auto& varExprPair : model.definedMappings) {
             mpark::visit(
                 [&](auto& expr) {
-                    typedef typename ReturnType<BaseType<decltype(expr)>>::type
-                        ReturningType;
-                    typedef typename AssociatedValueType<ReturningType>::type
+                    typedef typename AssociatedValueType<viewType(expr)>::type
                         ValueType;
-                    ValRef<ValueType>& val =
+                    auto& val =
                         mpark::get<ValRef<ValueType>>(varExprPair.first);
-                    evaluate(*expr);
-                    dumpState(std::cout << "evaluated ", *expr) << std::endl;
+                    expr->evaluate();
                     val->initFrom(*expr);
                 },
                 varExprPair.second);
@@ -199,7 +193,7 @@ class HillClimber {
     }
     inline void startTriggeringOnDefinedVariables() {
         for (auto& varExprPair : model.definedMappings) {
-            mpark::visit([&](auto& expr) { startTriggering(*expr); },
+            mpark::visit([&](auto& expr) { expr->startTriggering(); },
                          varExprPair.second);
         }
     }

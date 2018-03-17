@@ -36,7 +36,7 @@ void intAssignRandomGen(const IntDomain& domain,
             int numberTries = 0;
             const int tryLimit = params.parentCheckTryLimit;
             debug_neighbourhood_action(
-                "Assigning random value: original value is " << val);
+                "Assigning random value: original value is " << asView(val));
             auto backup = val.value;
             bool success;
             do {
@@ -51,7 +51,7 @@ void intAssignRandomGen(const IntDomain& domain,
                     }
                 });
                 if (success) {
-                    debug_neighbourhood_action("New value is " << val);
+                    debug_neighbourhood_action("New value is " << asView(val));
                 }
             } while (!success && ++numberTries < tryLimit);
             if (!success) {

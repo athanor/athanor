@@ -136,4 +136,15 @@ operator<<(std::ostream& os, const Domain& d) {
     return prettyPrint(os, d);
 }
 
+template <typename Val, typename View = typename AssociatedViewType<Val>::type,
+          EnableIfValue<Val> = 0>
+View& asView(Val& val) {
+    return reinterpret_cast<View&>(val);
+}
+
+template <typename Val, typename View = typename AssociatedViewType<Val>::type,
+          EnableIfValue<Val> = 0>
+const View& asView(const Val& val) {
+    return reinterpret_cast<const View&>(val);
+}
 #endif /* SRC_BASE_TYPEDECLS_H_ */

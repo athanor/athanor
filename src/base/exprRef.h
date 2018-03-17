@@ -2,19 +2,29 @@
 #ifndef SRC_BASE_EXPRREF_H_
 #define SRC_BASE_EXPRREF_H_
 #include <iostream>
-#include "base/exprRef.h"
 #include "base/iterRef.h"
+#include "base/viewRef.h"
 
 template <typename T>
+struct VisitorIterRefInvoker;
+template <>
+struct VisitorIterRefInvoker<void>;
+template <typename T>
 struct ExprRef {
+    template <typename>
+    friend struct VisitorIterRefInvoker;
     typedef T element_type;
+
+   private:
     union {
         ViewRef<T> viewRef;
         IterRef<T> iterRef;
         u_int64_t bits;
     };
-    ExprRef(ViewRef<T> ref) : viewRef(std::move(ref)) { setViewRef(); }
-    ExprRef(IterRef<T> ref) : iterRef(std::move(ref)) { setIterRef(); }
+
+   public:
+    ExprRef(ViewRef<T> ref) : viewRef(std::move(ref)) { clearIterRefMark(); }
+    ExprRef(IterRef<T> ref) : iterRef(std::move(ref)) { setIterRefMark(); }
     ExprRef(const ExprRef<T>& other) { operator=(other); }
     ExprRef(ExprRef<T>&& other) {
         other.visit([&](auto& ref) { this->operator=(std::move(ref)); });
@@ -27,12 +37,12 @@ struct ExprRef {
     }
     inline ExprRef<T>& operator=(const IterRef<T>& ref) {
         iterRef = ref;
-        setIterRef();
+        setIterRefMark();
         return *this;
     }
     inline ExprRef<T>& operator=(const ViewRef<T>& ref) {
         viewRef = ref;
-        setViewRef();
+        clearIterRefMark();
         return *this;
     }
     inline ExprRef<T> operator=(const ExprRef<T>& ref) {
@@ -41,25 +51,45 @@ struct ExprRef {
     }
 
    private:
-    inline void setViewRef() { this->bits &= ~(((u_int64_t)1) << 63); }
-    inline void setIterRef() { this->bits |= (((u_int64_t)1) << 63); }
+    inline void clearIterRefMark() { this->bits &= ~(((u_int64_t)1) << 63); }
+    inline void setIterRefMark() { this->bits |= (((u_int64_t)1) << 63); }
 
    public:
     inline bool isViewRef() const {
         return (this->bits & (((u_int64_t)1) << 63)) == 0;
     }
-
     inline bool isIterRef() const {
         return (this->bits & (((u_int64_t)1) << 63)) != 0;
     }
+    inline auto& asViewRef() {
+        debug_code(assert(isViewRef()));
+        return viewRef;
+    }
 
-   public:
     template <typename Func>
     inline decltype(auto) visit(Func&& func) const {
         if (isViewRef()) {
             return func(viewRef);
-        } else
-            return func(iterRef);
+        } else {
+            const_cast<ExprRef<T>*>(this)
+                ->clearIterRefMark();  // pretend, simply  cleans set bits
+            typedef decltype(func(iterRef)) ReturnType;
+            return VisitorIterRefInvoker<ReturnType>::invokeAndClean(func,
+                                                                     *this);
+        }
+    }
+
+    template <typename Func>
+    inline decltype(auto) visit(Func&& func) {
+        if (isViewRef()) {
+            return func(viewRef);
+        } else {
+            const_cast<ExprRef<T>*>(this)
+                ->clearIterRefMark();  // pretend, simply  cleans set bits
+            typedef decltype(func(iterRef)) ReturnType;
+            return VisitorIterRefInvoker<ReturnType>::invokeAndClean(func,
+                                                                     *this);
+        }
     }
 
     inline T& operator*() {
@@ -74,8 +104,25 @@ struct ExprRef {
     inline T* operator->() const {
         return visit([&](auto& ref) { return ref.operator->(); });
     }
-    inline auto& asViewRef() { return viewRef; }
-    inline auto& asIterRef() { return iterRef; }
+};
+
+template <typename VisitorReturnType>
+struct VisitorIterRefInvoker {
+    template <typename Func, typename ExprRefType>
+    inline static VisitorReturnType invokeAndClean(Func&& func,
+                                                   ExprRefType& ref) {
+        VisitorReturnType returnV = func(ref.iterRef);
+        const_cast<BaseType<ExprRefType>&>(ref).setIterRefMark();
+        return returnV;
+    }
+};
+template <>
+struct VisitorIterRefInvoker<void> {
+    template <typename Func, typename ExprRefType>
+    inline static void invokeAndClean(Func&& func, ExprRefType& ref) {
+        func(ref.iterRef);
+        const_cast<BaseType<ExprRefType>&>(ref).setIterRefMark();
+    }
 };
 
 // variant for exprs

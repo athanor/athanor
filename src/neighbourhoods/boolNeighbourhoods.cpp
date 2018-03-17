@@ -24,7 +24,7 @@ void boolAssignRandomGen(const BoolDomain& domain,
             auto backup = val.violation;
 
             debug_neighbourhood_action(
-                "Assigning random value: original value is " << val);
+                "Assigning random value: original value is " << asView(val));
             bool success;
             do {
                 ++params.stats.minorNodeCount;
@@ -33,7 +33,7 @@ void boolAssignRandomGen(const BoolDomain& domain,
                     return params.parentCheck(params.primary);
                 });
                 if (success) {
-                    debug_neighbourhood_action("New value is " << val);
+                    debug_neighbourhood_action("New value is " << asView(val));
                 }
             } while (!success && ++numberTries < tryLimit);
             if (!success) {

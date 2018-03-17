@@ -62,7 +62,6 @@ struct SetTrigger : public IterAssignedTrigger<SetView> {
 
     virtual void setValueChanged(const SetView& newValue) = 0;
 };
-
 struct SetView : public ExprInterface<SetView> {
     friend SetValue;
     std::unordered_map<u_int64_t, u_int64_t> hashIndexMap;
@@ -234,6 +233,14 @@ struct SetView : public ExprInterface<SetView> {
 struct SetValue : public SetView, public ValBase {
     using SetView::silentClear;
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
+    inline ValRef<InnerValueType> member(u_int64_t index) {
+        return assumeAsValue(
+            getMembers<
+                typename AssociatedViewType<InnerValueType>::type>()[index]
+                .asViewRef());
+    }
+
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline bool addMember(const ValRef<InnerValueType>& member) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         if (SetView::addMember(ExprRef<InnerViewType>(getViewPtr(member)))) {
@@ -255,7 +262,7 @@ struct SetValue : public SetView, public ValBase {
             if (func()) {
                 valBase(*member).container = this;
                 valBase(*member).id = numberElements() - 1;
-                SetView::notifyMemberAdded(member);
+                SetView::notifyMemberAdded(getViewPtr(member));
                 return true;
             } else {
                 typedef typename AssociatedViewType<InnerValueType>::type
@@ -304,6 +311,12 @@ struct SetValue : public SetView, public ValBase {
             debug_code(assertValidVarBases());
             return std::make_pair(false, ValRef<InnerValueType>(nullptr));
         }
+    }
+
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
+    inline void notifyPossibleMemberChange(u_int64_t index) {
+        return SetView::notifyPossibleMemberChange<
+            typename AssociatedViewType<InnerValueType>::type>(index);
     }
 
     template <typename InnerValueType, typename Func,

@@ -70,9 +70,4 @@ bool largerValue<IntValue>(const IntValue& u, const IntValue& v) {
 }
 
 template <>
-bool equalValue<IntValue>(const IntValue& u, const IntValue& v) {
-    return u.value == v.value;
-}
-
-template <>
 void normalise<IntValue>(IntValue&) {}

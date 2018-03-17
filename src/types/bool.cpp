@@ -60,8 +60,3 @@ template <>
 bool largerValue<BoolValue>(const BoolValue& u, const BoolValue& v) {
     return u.violation > v.violation;
 }
-
-template <>
-bool equalValue<BoolValue>(const BoolValue& u, const BoolValue& v) {
-    return u.violation == v.violation;
-}

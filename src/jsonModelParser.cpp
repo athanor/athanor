@@ -558,7 +558,8 @@ inline void parseObjective(json& objExpr, ParsedModel& parsedModel) {
         });
     parsedModel.builder->setObjective(mode, objConstraint);
 }
-ParsedModel parsedModelFromJson(istream& is) {
+
+ParsedModel parseModelFromJson(istream& is) {
     json j;
     is >> j;
     ParsedModel parsedModel;

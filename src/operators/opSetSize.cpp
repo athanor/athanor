@@ -73,11 +73,7 @@ void OpSetSize::updateViolationDescription(u_int64_t parentViolation,
 ExprRef<IntView> OpSetSize::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
     auto newOpSetSize =
-<<<<<<< Updated upstream
         make_shared<OpSetSize>(deepCopyForUnroll(operand, iterator));
-=======
-        make_shared<OpSetSize>(operandeepCopyForUnroll(operand, iterator));
->>>>>>> Stashed changes
     newOpSetSize->value = value;
     return ViewRef<IntView>(newOpSetSize);
 }

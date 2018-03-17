@@ -61,18 +61,10 @@ void OpMod::updateViolationDescription(u_int64_t parentViolation,
     right->updateViolationDescription(parentViolation, vioDesc);
 }
 
-<<<<<<< Updated upstream
 ExprRef<IntView> OpMod::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
     auto newOpMod = make_shared<OpMod>(deepCopyForUnroll(left, iterator),
                                        deepCopyForUnroll(right, iterator));
-=======
-ExprRef<IntView> OpMod::deepCopySelfForUnroll(const ExprRef<IntView>&,
-                                          const AnyIterRef& iterator) const {
-    auto newOpMod =
-        make_shared<OpMod>(lefdeepCopyForUnroll(left, iterator),
-                           righdeepCopyForUnroll(right, iterator));
->>>>>>> Stashed changes
     newOpMod->value = value;
     return ViewRef<IntView>(newOpMod);
 }

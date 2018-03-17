@@ -303,7 +303,7 @@ struct SetValue : public SetView, public ValBase {
                 true, std::move(assumeAsValue(removedMember.asViewRef())));
         } else {
             SetView::addMember(removedMember);
-            auto& members = getMembers<InnerValueType>();
+            auto& members = getMembers<InnerViewType>();
             std::swap(members[index], members.back());
             hashIndexMap[getValueHash(*members[index])] = index;
             hashIndexMap[getValueHash(*members.back())] = members.size() - 1;

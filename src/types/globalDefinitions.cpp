@@ -3,7 +3,6 @@
  * using macros to do the specialisation to avoid having to include this file,
  * which includes all the types */
 #include <utility>
-#include "operators/operatorBase.h"
 #include "search/violationDescription.h"
 #include "types/allTypes.h"
 #define quote(x) #x
@@ -22,8 +21,6 @@ inline pair<bool, ViolationDescription&> registerViolations(
     }                                                                          \
     const string TypeAsString<name##Value>::value = quote(name##Value);        \
     const string TypeAsString<name##Domain>::value = quote(name##Domain);      \
-    const string TypeAsString<name##Returning>::value =                        \
-        quote(name##Returning);                                                \
     template <>                                                                \
     ValBase& valBase<name##Value>(name##Value & v) {                           \
         return v;                                                              \
@@ -40,9 +37,9 @@ inline pair<bool, ViolationDescription&> registerViolations(
         u_int64_t parentViolation, ViolationDescription& vioDesc) {            \
         registerViolations(this, parentViolation, vioDesc);                    \
     }                                                                          \
-    ExprRef<name##View> name##Value::deepCopyForUnroll(                        \
-        const ExprRef<name##View>&, const AnyIterRef&) const {                 \
-        cerr << "This function should never be called: " << __FUNC__ << " in " \
+    ExprRef<name##View> name##Value::deepCopySelfForUnroll(const AnyIterRef&)  \
+        const {                                                                \
+        cerr << "This function should never be called: " << __func__ << " in " \
              << __FILE__ << endl;                                              \
         abort();                                                               \
     }                                                                          \

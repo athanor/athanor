@@ -10,6 +10,7 @@
 #include <vector>
 #include "base/exprRef.h"
 #include "base/triggers.h"
+#include "base/viewRef.h"
 template <typename T>
 struct Iterator {
     int id;
@@ -68,7 +69,6 @@ struct ViewType<std::vector<IterRef<T>>> {
     typedef T type;
 };
 
-
 template <typename T>
 u_int64_t getValueHash(const IterRef<T>& iter) {
     return getValueHash(*iter);
@@ -96,6 +96,5 @@ inline std::ostream& prettyPrint(std::ostream& os, const AnyIterRef& iter,
 inline std::ostream& operator<<(std::ostream& os, const AnyIterRef& iter) {
     return prettyPrint(os, iter);
 }
-
 
 #endif /* SRC_BASE_ITERREF_H_ */

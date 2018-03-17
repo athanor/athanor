@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <cassert>
 #include "common/common.h"
-#include "operators/operatorBase.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 

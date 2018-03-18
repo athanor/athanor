@@ -38,7 +38,9 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> stringMatch(
     const vector<pair<string, ParseFunction>>& match, json& essenceExpr,
     ParsedModel& parsedModel) {
     for (auto& matchCase : match) {
+        cout << "Trying " << matchCase.first << endl;
         if (essenceExpr.count(matchCase.first)) {
+            cout << "found\n";
             return make_pair(
                 true,
                 matchCase.second(essenceExpr[matchCase.first], parsedModel));

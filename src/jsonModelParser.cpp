@@ -38,9 +38,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> stringMatch(
     const vector<pair<string, ParseFunction>>& match, json& essenceExpr,
     ParsedModel& parsedModel) {
     for (auto& matchCase : match) {
-        cout << "Trying " << matchCase.first << endl;
         if (essenceExpr.count(matchCase.first)) {
-            cout << "found\n";
             return make_pair(
                 true,
                 matchCase.second(essenceExpr[matchCase.first], parsedModel));
@@ -270,7 +268,7 @@ template <typename RetType, typename Constraint, typename Func>
 ExprRef<RetType> expect(Constraint&& constraint, Func&& func) {
     return mpark::visit(
         overloaded(
-            [&](ExprRef<RetType>&& constraint) -> ExprRef<RetType> {
+            [&](ExprRef<RetType>& constraint) -> ExprRef<RetType> {
                 return move(constraint);
             },
             [&](auto&& constraint) -> ExprRef<RetType> {
@@ -281,7 +279,7 @@ ExprRef<RetType> expect(Constraint&& constraint, Func&& func) {
                      << endl;
                 abort();
             }),
-        forward<Constraint>(constraint));
+        constraint);
 }
 
 pair<AnyDomainRef, AnyExprRef> parseOpMod(json& modExpr,
@@ -316,7 +314,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
     AnyExprRef operand = parseExpr(operandExpr, parsedModel).second;
     return mpark::visit(
         overloaded(
-            [&](ExprRef<SetView>&& set)
+            [&](ExprRef<SetView>& set)
                 -> pair<shared_ptr<IntDomain>, AnyExprRef> {
                 return make_pair(fakeIntDomain,
                                  ViewRef<IntView>(make_shared<OpSetSize>(set)));
@@ -347,7 +345,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
                      << endl;
             };
             return overloaded(
-                [&](ExprRef<IntView>&& left)
+                [&](ExprRef<IntView>& left)
                     -> pair<shared_ptr<BoolDomain>, ViewRef<BoolView>> {
                     return make_pair(
                         fakeBoolDomain,
@@ -430,15 +428,14 @@ shared_ptr<QuantifierView<ExprType>> parseComprehension(
     auto domainContainerPair = parseExpr(generatorExpr[1], parsedModel);
     return mpark::visit(
         overloaded(
-            [&](ExprRef<SetView>&& set)
-                -> shared_ptr<QuantifierView<ExprType>> {
+            [&](ExprRef<SetView>& set) -> shared_ptr<QuantifierView<ExprType>> {
                 auto& domain = mpark::get<shared_ptr<SetDomain>>(
                     domainContainerPair.first);
 
                 return buildQuant<ExprType>(comprExpr, set, domain,
                                             parsedModel);
             },
-            [&](ExprRef<MSetView>&& mSet)
+            [&](ExprRef<MSetView>& mSet)
                 -> shared_ptr<QuantifierView<ExprType>> {
                 auto& domain = mpark::get<shared_ptr<MSetDomain>>(
                     domainContainerPair.first);

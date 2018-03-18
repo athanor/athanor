@@ -5,7 +5,7 @@
 #include <memory>
 #include "base/iterRef.h"
 #include "base/viewRef.h"
-
+/*
 template <typename T>
 struct VisitorIterRefInvoker;
 template <>
@@ -125,7 +125,45 @@ struct VisitorIterRefInvoker<void> {
         const_cast<BaseType<ExprRefType>&>(ref).setIterRefMark();
     }
 };
+*/
 
+template <typename T>
+struct ExprRef {
+    typedef T element_type;
+    mpark::variant<ViewRef<T>, IterRef<T>> ref;
+    ExprRef(ViewRef<T> ref) : ref(std::move(ref)) {}
+    ExprRef(IterRef<T> ref) : ref(std::move(ref)) {}
+    inline bool isViewRef() const {
+        return mpark::get_if<ViewRef<T>>(&ref) != NULL;
+    }
+    inline bool isIterRef() const {
+        return mpark::get_if<IterRef<T>>(&ref) != NULL;
+    }
+    inline auto& asViewRef() { return mpark::get<ViewRef<T>>(ref); }
+
+    template <typename Func>
+    inline decltype(auto) visit(Func&& func) const {
+        return mpark::visit(std::forward<Func>(func), ref);
+    }
+
+    template <typename Func>
+    inline decltype(auto) visit(Func&& func) {
+        return mpark::visit(std::forward<Func>(func), ref);
+    }
+
+    inline T& operator*() {
+        return visit([&](auto& ref) -> T& { return ref.operator*(); });
+    }
+    inline T* operator->() {
+        return visit([&](auto& ref) { return ref.operator->(); });
+    }
+    inline T& operator*() const {
+        return visit([&](auto& ref) -> T& { return ref.operator*(); });
+    }
+    inline T* operator->() const {
+        return visit([&](auto& ref) { return ref.operator->(); });
+    }
+};
 // variant for exprs
 template <typename T>
 using ExprRefMaker = ExprRef<typename AssociatedViewType<T>::type>;

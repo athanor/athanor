@@ -6,5 +6,5 @@ file=mktemp
 trap "rm -f $file" EXIT
 
 cat $2 >> $file
-cat $1 | grep -v 'language Essence' > $file
+cat $1 | grep -v 'language Essence' >> $file
 conjure pretty $file --output-format json

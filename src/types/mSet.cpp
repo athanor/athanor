@@ -12,7 +12,7 @@ u_int64_t getValueHash<MSetView>(const MSetView& val) {
 
 template <>
 ostream& prettyPrint<MSetView>(ostream& os, const MSetView& v) {
-    os << "{";
+    os << "MSet(";
     mpark::visit(
         [&](auto& membersImpl) {
             bool first = true;
@@ -26,7 +26,7 @@ ostream& prettyPrint<MSetView>(ostream& os, const MSetView& v) {
             }
         },
         v.members);
-    os << "}";
+    os << ")";
     return os;
 }
 

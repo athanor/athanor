@@ -11,7 +11,7 @@ inline void evaluate(OpSubsetEq& op, const SetView& left,
                      const SetView& right) {
     op.violation = 0;
     for (auto& hashIndexPair : left.hashIndexMap) {
-        op.violation += right.hashIndexMap.count(hashIndexPair.first);
+        op.violation += !right.hashIndexMap.count(hashIndexPair.first);
     }
 }
 

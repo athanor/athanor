@@ -37,8 +37,7 @@ class OpAndTrigger : public BoolTrigger {
     }
 };
 
-class OpAnd::QuantifierTrigger
-    : public QuantifierView<BoolView>::Trigger {
+class OpAnd::QuantifierTrigger : public QuantifierView<BoolView>::Trigger {
    public:
     OpAnd* op;
     QuantifierTrigger(OpAnd* op) : op(op) {}
@@ -90,8 +89,7 @@ void OpAnd::evaluate() {
     for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
         auto& operand = quantifier->exprs[i];
         operand->evaluate();
-        u_int64_t violation = operand->violation;
-        if (violation > 0) {
+        if (operand->violation > 0) {
             violatingOperands.insert(i);
         }
         violation += operand->violation;

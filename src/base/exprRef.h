@@ -2,6 +2,7 @@
 #ifndef SRC_BASE_EXPRREF_H_
 #define SRC_BASE_EXPRREF_H_
 #include <iostream>
+#include <memory>
 #include "base/iterRef.h"
 #include "base/viewRef.h"
 

@@ -1,6 +1,6 @@
 #ifndef SRC_BASE_VIEWREF_H_
 #define SRC_BASE_VIEWREF_H_
-
+#include <memory>
 #include <vector>
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"

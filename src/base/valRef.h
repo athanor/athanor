@@ -59,7 +59,7 @@ template <typename ValueType,
           typename ViewType = typename AssociatedViewType<ValueType>::type,
           typename std::enable_if<IsValueType<ValueType>::value, int>::type = 0>
 inline ViewRef<ViewType>&& getViewPtr(ValRef<ValueType>&& value) {
-    return reinterpret_cast<ViewRef<ViewType>&&>(std::move(value));
+    return std::move(reinterpret_cast<ViewRef<ViewType>&&>(value));
 }
 
 template <typename Val>

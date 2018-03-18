@@ -1,6 +1,7 @@
 
 #ifndef SRC_BASE_TRIGGERS_H_
 #define SRC_BASE_TRIGGERS_H_
+#include <memory>
 #include "base/exprRef.h"
 template <typename T>
 struct ExprRef;

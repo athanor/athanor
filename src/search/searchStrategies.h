@@ -134,6 +134,10 @@ class HillClimber {
     inline void newBestSolution() {
         violationBackOff = 1;
         numberNodesAtLastEvent = stats.majorNodeCount;
+        if (model.optimiseMode != OptimiseMode::NONE && lastViolation == 0) {
+            std::cout << "Best solution: " << lastObjValue << " "
+                      << stats.getCpuTime() << std::endl;
+        }
         std::cout << "Violation " << lastViolation;
         if (model.optimiseMode != OptimiseMode::NONE) {
             std::cout << ", objective " << lastObjValue;

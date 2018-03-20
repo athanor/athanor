@@ -34,6 +34,11 @@ struct StatsContainer {
         os << "CPU time: " << cpuTime << std::endl;
         return os;
     }
+
+    double getCpuTime() {
+        endTimer();
+        return (double)(endCpuTime - startCpuTime) / CLOCKS_PER_SEC;
+    }
 };
 
 #endif /* SRC_SEARCH_STATSCONTAINER_H_ */

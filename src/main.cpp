@@ -58,15 +58,13 @@ void testHashes() {
 
 auto& exclusiveTimeLimitGroup = argParser.makeExclusiveGroup(Policy::OPTIONAL);
 auto& cpuTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
-    "--cpuTimeLimit",
-    "Specify the CPU time limit in seconds.  A reminder that ");
+    "--cpuTimeLimit", "Specify the CPU time limit in seconds.");
 
 auto& cpuTimeLimitArg =
     cpuTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
 
 auto& realTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
-    "--realTimeLimit",
-    "Specify the CPU time limit in seconds.  A reminder that ");
+    "--realTimeLimit", "Specify the CPU time limit in seconds.");
 
 auto& realTimeLimitArg =
     realTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
@@ -85,9 +83,9 @@ int main(const int argc, const char** argv) {
     signal(SIGALRM, sigAlarmHandler);
 
     if (cpuTimeLimitFlag) {
-        setTimeout(cpuTimeLimitArg, true);
+        setTimeout(cpuTimeLimitArg.get(), true);
     } else if (realTimeLimitFlag) {
-        setTimeout(realTimeLimitArg, false);
+        setTimeout(realTimeLimitArg.get(), false);
     }
     search.search();
 }

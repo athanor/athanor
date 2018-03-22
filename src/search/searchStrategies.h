@@ -122,7 +122,8 @@ class HillClimber {
             auto& var =
                 model.variables
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
-            NeighbourhoodParams params(callback, alwaysTrue, 1, var.second,
+            ParentCheckCallBack alwaysTrueFunc(alwaysTrue);
+            NeighbourhoodParams params(callback, alwaysTrueFunc, 1, var.second,
                                        stats, model.vioDesc);
             neighbourhood.apply(params);
             selectionStrategy.reportResult(

@@ -1,5 +1,6 @@
-
 #include <autoArgParse/argParser.h>
+#include <sys/time.h>
+#include <csignal>
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
@@ -55,10 +56,57 @@ void testHashes() {
     }
 }
 
+auto& exclusiveTimeLimitGroup = argParser.makeExclusiveGroup(Policy::OPTIONAL);
+auto& cpuTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
+    "--cpuTimeLimit",
+    "Specify the CPU time limit in seconds.  A reminder that ");
+
+auto& cpuTimeLimitArg =
+    cpuTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
+
+auto& realTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
+    "--realTimeLimit",
+    "Specify the CPU time limit in seconds.  A reminder that ");
+
+auto& realTimeLimitArg =
+    realTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
+
+void setTimeout(int numberSeconds, bool virtualTimer);
+void sigIntHandler(int);
+void sigAlarmHandler(int);
+
 int main(const int argc, const char** argv) {
     argParser.validateArgs(argc, argv);
     ParsedModel parsedModel = parseModelFromJson(fileArg.get());
     Model model = parsedModel.builder->build();
     auto search = HillClimber<RandomNeighbourhoodWithViolation>(move(model));
+    signal(SIGINT, sigIntHandler);
+    signal(SIGVTALRM, sigAlarmHandler);
+    signal(SIGALRM, sigAlarmHandler);
+
+    if (cpuTimeLimitFlag) {
+        setTimeout(cpuTimeLimitArg, true);
+    } else if (realTimeLimitFlag) {
+        setTimeout(realTimeLimitArg, false);
+    }
     search.search();
 }
+
+void setTimeout(int numberSeconds, bool virtualTimer) {
+    struct itimerval timer;
+    // numberSeconds
+    timer.it_value.tv_sec = numberSeconds;
+    // remaining micro seconds
+    timer.it_value.tv_usec = 0;
+    // prevent intervals
+    timer.it_interval.tv_sec = 0;
+    timer.it_interval.tv_usec = 0;
+    if (virtualTimer) {
+        setitimer(ITIMER_VIRTUAL, &timer, NULL);
+    } else {
+        setitimer(ITIMER_REAL, &timer, NULL);
+    }
+}
+bool sigIntActivated = false, sigAlarmActivated = false;
+void sigIntHandler(int) { sigIntActivated = true; }
+void sigAlarmHandler(int) { sigAlarmActivated = true; }

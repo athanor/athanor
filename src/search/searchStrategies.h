@@ -7,6 +7,7 @@
 #include "search/statsContainer.h"
 #include "types/allTypes.h"
 
+extern bool sigIntActivated, sigAlarmActivated;
 inline bool alwaysTrue(const AnyValRef&) { return true; }
 
 template <typename NeighbourhoodSelectionStrategy>
@@ -160,6 +161,14 @@ class HillClimber {
     }
 
     inline bool finished() {
+        if (sigIntActivated) {
+            std::cout << "control-c pressed\n";
+            return true;
+        }
+        if (sigAlarmActivated) {
+            std::cout << "timeout\n";
+            return true;
+        }
         if (stats.majorNodeCount - numberNodesAtLastEvent > 40000) {
             lastViolation = bestViolation + violationBackOff;
             std::cout << "Setting last violation to " << lastViolation

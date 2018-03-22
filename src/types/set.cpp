@@ -253,7 +253,7 @@ void SetValue::assertValidVarBases() {
             if (!success) {
                 cerr << "Members: " << valMembersImpl << endl;
                 cerr << "memberHashes: " << hashIndexMap << endl;
-                printVarBases();
+                this->printVarBases();
                 assert(false);
             }
         },

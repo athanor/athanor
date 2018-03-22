@@ -212,7 +212,7 @@ void MSetValue::assertValidVarBases() {
             }
             if (!success) {
                 cerr << "Members: " << valMembersImpl << endl;
-                printVarBases();
+                this->printVarBases();
                 assert(false);
             }
         },

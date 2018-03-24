@@ -53,7 +53,7 @@ struct SetDomain {
 
 struct SetTrigger : public IterAssignedTrigger<SetView> {
     virtual void valueRemoved(u_int64_t indexOfRemovedValue,
-                              u_int64_t hashOfRemovedValue) = 0;
+                              HashType hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyExprRef& member) = 0;
     virtual void possibleMemberValueChange(u_int64_t index,
                                            const AnyExprRef& member) = 0;
@@ -66,8 +66,8 @@ struct SetView : public ExprInterface<SetView> {
     friend SetValue;
     std::unordered_map<u_int64_t, u_int64_t> hashIndexMap;
     AnyExprVec members;
-    u_int64_t cachedHashTotal;
-    u_int64_t hashOfPossibleChange;
+    HashType cachedHashTotal;
+    HashType hashOfPossibleChange;
     std::vector<std::shared_ptr<SetTrigger>> triggers;
 
    private:
@@ -78,7 +78,7 @@ struct SetView : public ExprInterface<SetView> {
             return false;
         }
 
-        u_int64_t hash = getValueHash(*member);
+        HashType hash = getValueHash(*member);
         debug_code(assert(!hashIndexMap.count(hash)));
         members.emplace_back(member);
         hashIndexMap.emplace(hash, members.size() - 1);
@@ -97,7 +97,7 @@ struct SetView : public ExprInterface<SetView> {
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
 
-        u_int64_t hash = getValueHash(*members[index]);
+        HashType hash = getValueHash(*members[index]);
         debug_code(assert(hashIndexMap.count(hash)));
         hashIndexMap.erase(hash);
         cachedHashTotal -= mix(hash);
@@ -113,7 +113,7 @@ struct SetView : public ExprInterface<SetView> {
     }
 
     inline void notifyMemberRemoved(u_int64_t index,
-                                    u_int64_t hashOfRemovedMember) {
+                                    HashType hashOfRemovedMember) {
         debug_code(assertValidState());
         visitTriggers(
             [&](auto& t) { t->valueRemoved(index, hashOfRemovedMember); },
@@ -121,9 +121,9 @@ struct SetView : public ExprInterface<SetView> {
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline u_int64_t memberChanged(u_int64_t oldHash, u_int64_t index) {
+    inline u_int64_t memberChanged(HashType oldHash, u_int64_t index) {
         auto& members = getMembers<InnerViewType>();
-        u_int64_t newHash = getValueHash(*members[index]);
+        HashType newHash = getValueHash(*members[index]);
         if (newHash != oldHash) {
             debug_code(assert(!hashIndexMap.count(newHash)));
             hashIndexMap[newHash] = hashIndexMap[oldHash];
@@ -188,7 +188,7 @@ struct SetView : public ExprInterface<SetView> {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void memberChangedAndNotify(size_t index) {
-        u_int64_t oldHash = hashOfPossibleChange;
+        HashType oldHash = hashOfPossibleChange;
         hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
         if (oldHash == hashOfPossibleChange) {
             return;
@@ -325,7 +325,7 @@ struct SetValue : public SetView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline bool tryMemberChange(size_t index, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        u_int64_t oldHash = hashOfPossibleChange;
+        HashType oldHash = hashOfPossibleChange;
         hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
         if (func()) {
             SetView::notifyMemberChanged(index,
@@ -381,7 +381,7 @@ struct DefinedTrigger<SetValue> : public SetTrigger {
     ValRef<SetValue> val;
     DefinedTrigger(const ValRef<SetValue>& val) : val(val) {}
     inline void valueRemoved(u_int64_t indexOfRemovedValue,
-                             u_int64_t hashOfRemovedValue) {
+                             HashType hashOfRemovedValue) {
         todoImpl(indexOfRemovedValue, hashOfRemovedValue);
     }
     inline void valueAdded(const AnyExprRef& member) { todoImpl(member); }

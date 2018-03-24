@@ -4,7 +4,7 @@
 using namespace std;
 
 template <>
-u_int64_t getValueHash<IntView>(const IntView& val) {
+HashType getValueHash<IntView>(const IntView& val) {
     return val.value;
 }
 

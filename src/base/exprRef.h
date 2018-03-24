@@ -210,7 +210,7 @@ struct ExprInterface {
                                              ViewRef<BoolView>(nullptr)));
     }
 };
-u_int64_t getValueHash(const AnyExprRef& ref);
+HashType getValueHash(const AnyExprRef& ref);
 template <typename T>
 inline ExprRef<T> deepCopyForUnrollOverload(const IterRef<T>& iterVal,
                                             const AnyIterRef& iterator) {

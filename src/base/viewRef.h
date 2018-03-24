@@ -2,6 +2,7 @@
 #define SRC_BASE_VIEWREF_H_
 #include <memory>
 #include <vector>
+#include "base/intSize.h"
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
 #include "base/valRef.h"
@@ -40,7 +41,7 @@ struct ViewType<std::vector<ViewRef<T>>> {
 #define viewType(t) typename ::ViewType<BaseType<decltype(t)>>::type
 
 template <typename T = int>
-inline u_int64_t getValueHash(const AnyViewRef& view, T = 0) {
+inline HashType getValueHash(const AnyViewRef& view, T = 0) {
     return mpark::visit(
         [&](const auto& viewImpl) { return getValueHash(*viewImpl); }, view);
 }

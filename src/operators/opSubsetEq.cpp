@@ -24,11 +24,11 @@ void OpSubsetEq::evaluate() {
 struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
    public:
     OpSubsetEq* op;
-    u_int64_t oldHash;
+    HashType oldHash;
 
    public:
     LeftSetTrigger(OpSubsetEq* op) : op(op) {}
-    inline void valueRemoved(u_int64_t, u_int64_t hash) final {
+    inline void valueRemoved(u_int64_t, HashType hash) final {
         if (!op->right->hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 --op->violation;
@@ -38,7 +38,7 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
     }
 
     inline void valueAdded(const AnyExprRef& member) final {
-        u_int64_t hash = getValueHash(member);
+        HashType hash = getValueHash(member);
         if (!op->right->hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 ++op->violation;
@@ -72,10 +72,10 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
 
 struct OpSubsetEq::RightSetTrigger : public SetTrigger {
     OpSubsetEq* op;
-    u_int64_t oldHash;
+    HashType oldHash;
 
     RightSetTrigger(OpSubsetEq* op) : op(op) {}
-    inline void valueRemoved(u_int64_t, u_int64_t hash) final {
+    inline void valueRemoved(u_int64_t, HashType hash) final {
         if (op->left->hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 ++op->violation;
@@ -85,7 +85,7 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
     }
 
     inline void valueAdded(const AnyExprRef& member) final {
-        u_int64_t hash = getValueHash(member);
+        HashType hash = getValueHash(member);
         if (op->left->hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 --op->violation;

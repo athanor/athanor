@@ -76,7 +76,7 @@ inline std::ostream& prettyPrint(std::ostream& os,
 }
 
 template <typename InnerValueType>
-inline u_int64_t getValueHash(const ValRef<InnerValueType>& val) {
+inline HashType getValueHash(const ValRef<InnerValueType>& val) {
     return getValueHash(*getViewPtr(val));
 }
 
@@ -99,7 +99,7 @@ bool largerValue(const AnyValRef& u, const AnyValRef& v);
 
 AnyValRef deepCopy(const AnyValRef& val);
 std::ostream& operator<<(std::ostream& os, const AnyValRef& v);
-u_int64_t getValueHash(const AnyValRef& v);
+HashType getValueHash(const AnyValRef& v);
 std::ostream& prettyPrint(std::ostream& os, const AnyValRef& v);
 
 template <typename ViewType,

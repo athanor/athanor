@@ -43,7 +43,7 @@ void testHashes() {
     unordered_map<u_int64_t, pair<u_int64_t, u_int64_t>> seenHashes;
     for (u_int64_t i = 0; i < max; ++i) {
         for (u_int64_t j = i; j < max; ++j) {
-            u_int64_t hashSum = mix(i) + mix(j);
+            HashType hashSum = mix(i) + mix(j);
             if (seenHashes.count(hashSum)) {
                 cerr << "Error, found collision:\n";
                 cerr << "mix(" << i << ") + mix(" << j << ") collides with ";

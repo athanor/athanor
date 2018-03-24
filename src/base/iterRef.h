@@ -70,7 +70,7 @@ struct ViewType<std::vector<IterRef<T>>> {
 };
 
 template <typename T>
-u_int64_t getValueHash(const IterRef<T>& iter) {
+HashType getValueHash(const IterRef<T>& iter) {
     return getValueHash(*iter);
 }
 
@@ -79,7 +79,7 @@ std::ostream& prettyPrint(std::ostream& os, const IterRef<T>& iter) {
     return prettyPrint(os, *iter);
 }
 
-inline u_int64_t getValueHash(const AnyIterRef& iter) {
+inline HashType getValueHash(const AnyIterRef& iter) {
     return mpark::visit([](auto& iterImpl) { return getValueHash(iterImpl); },
                         iter);
 }

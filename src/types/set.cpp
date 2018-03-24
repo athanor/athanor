@@ -6,7 +6,7 @@
 using namespace std;
 
 template <>
-u_int64_t getValueHash<SetView>(const SetView& val) {
+HashType getValueHash<SetView>(const SetView& val) {
     return val.cachedHashTotal;
 }
 
@@ -193,7 +193,7 @@ void SetView::assertValidState() {
             } else {
                 for (size_t i = 0; i < valMembersImpl.size(); i++) {
                     auto& member = valMembersImpl[i];
-                    u_int64_t memberHash = getValueHash(*member);
+                    HashType memberHash = getValueHash(*member);
                     if (!seenHashes.insert(memberHash).second) {
                         cerr << "Error: possible duplicate member: " << *member
                              << endl;

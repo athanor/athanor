@@ -6,7 +6,7 @@
 using namespace std;
 
 template <>
-u_int64_t getValueHash<MSetView>(const MSetView& val) {
+HashType getValueHash<MSetView>(const MSetView& val) {
     return val.cachedHashTotal;
 }
 
@@ -175,7 +175,7 @@ void MSetView::assertValidState() {
             u_int64_t calculatedTotal = 0;
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 auto& member = valMembersImpl[i];
-                u_int64_t memberHash = getValueHash(*member);
+                HashType memberHash = getValueHash(*member);
                 calculatedTotal += mix(memberHash);
             }
             if (success) {

@@ -37,7 +37,7 @@ std::ostream& prettyPrint(std::ostream& os, const AnyValRef& v) {
         v);
 }
 
-u_int64_t getValueHash(const AnyValRef& v) {
+HashType getValueHash(const AnyValRef& v) {
     return mpark::visit([](auto& vImpl) { return getValueHash(vImpl); }, v);
 }
 

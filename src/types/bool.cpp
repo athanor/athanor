@@ -4,7 +4,7 @@
 
 using namespace std;
 template <>
-u_int64_t getValueHash<BoolView>(const BoolView& val) {
+HashType getValueHash<BoolView>(const BoolView& val) {
     return val.violation;
 }
 

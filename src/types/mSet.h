@@ -54,7 +54,7 @@ struct MSetDomain {
 
 struct MSetTrigger : public IterAssignedTrigger<MSetView> {
     virtual void valueRemoved(u_int64_t indexOfRemovedValue,
-                              u_int64_t hashOfRemovedValue) = 0;
+                              HashType hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyExprRef& member) = 0;
     virtual void possibleMemberValueChange(u_int64_t index,
                                            const AnyExprRef& member) = 0;
@@ -67,15 +67,15 @@ struct MSetTrigger : public IterAssignedTrigger<MSetView> {
 struct MSetView : public ExprInterface<MSetView> {
     friend MSetValue;
     AnyExprVec members;
-    u_int64_t cachedHashTotal;
-    u_int64_t hashOfPossibleChange;
+    HashType cachedHashTotal;
+    HashType hashOfPossibleChange;
     std::vector<std::shared_ptr<MSetTrigger>> triggers;
 
    private:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void addMember(const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();
-        u_int64_t hash = getValueHash(*member);
+        HashType hash = getValueHash(*member);
         members.emplace_back(member);
         cachedHashTotal += mix(hash);
         debug_code(assertValidState());
@@ -91,7 +91,7 @@ struct MSetView : public ExprInterface<MSetView> {
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
 
-        u_int64_t hash = getValueHash(*members[index]);
+        HashType hash = getValueHash(*members[index]);
         cachedHashTotal -= mix(hash);
         ExprRef<InnerViewType> removedMember = std::move(members[index]);
         members[index] = std::move(members.back());
@@ -100,7 +100,7 @@ struct MSetView : public ExprInterface<MSetView> {
     }
 
     inline void notifyMemberRemoved(u_int64_t index,
-                                    u_int64_t hashOfRemovedMember) {
+                                    HashType hashOfRemovedMember) {
         debug_code(assertValidState());
         visitTriggers(
             [&](auto& t) { t->valueRemoved(index, hashOfRemovedMember); },
@@ -108,9 +108,9 @@ struct MSetView : public ExprInterface<MSetView> {
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline u_int64_t memberChanged(u_int64_t oldHash, u_int64_t index) {
+    inline u_int64_t memberChanged(HashType oldHash, u_int64_t index) {
         auto& members = getMembers<InnerViewType>();
-        u_int64_t newHash = getValueHash(*members[index]);
+        HashType newHash = getValueHash(*members[index]);
         if (newHash != oldHash) {
             cachedHashTotal -= mix(oldHash);
             cachedHashTotal += mix(newHash);
@@ -166,7 +166,7 @@ struct MSetView : public ExprInterface<MSetView> {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void memberChangedAndNotify(size_t index) {
-        u_int64_t oldHash = hashOfPossibleChange;
+        HashType oldHash = hashOfPossibleChange;
         hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
         if (oldHash == hashOfPossibleChange) {
             return;
@@ -289,7 +289,7 @@ struct MSetValue : public MSetView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline bool tryMemberChange(size_t index, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        u_int64_t oldHash = hashOfPossibleChange;
+        HashType oldHash = hashOfPossibleChange;
         hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
         if (func()) {
             MSetView::notifyMemberChanged(index,
@@ -343,7 +343,7 @@ struct DefinedTrigger<MSetValue> : public MSetTrigger {
     ValRef<MSetValue> val;
     DefinedTrigger(const ValRef<MSetValue>& val) : val(val) {}
     inline void valueRemoved(u_int64_t indexOfRemovedValue,
-                             u_int64_t hashOfRemovedValue) {
+                             HashType hashOfRemovedValue) {
         todoImpl(indexOfRemovedValue, hashOfRemovedValue);
     }
     inline void valueAdded(const AnyExprRef& member) { todoImpl(member); }

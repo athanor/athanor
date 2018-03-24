@@ -30,9 +30,7 @@ class OpSetNotEqTrigger : public SetTrigger {
 
    public:
     OpSetNotEqTrigger(OpSetNotEq* op) : op(op) {}
-    inline void valueRemoved(UInt, UInt) final {
-        setViolation(*op, true);
-    }
+    inline void valueRemoved(UInt, HashType) final { setViolation(*op, true); }
 
     inline void valueAdded(const AnyExprRef&) final { setViolation(*op, true); }
     inline void setValueChanged(const SetView&) final {

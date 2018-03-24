@@ -160,7 +160,7 @@ struct ContainerTrigger<SetView, ReturnExprType> : public SetTrigger,
             },
             op->container->members);
     }
-    inline void valueRemoved(UInt indexOfRemovedValue, UInt) final {
+    inline void valueRemoved(UInt indexOfRemovedValue, HashType) final {
         op->roll(indexOfRemovedValue);
     }
     inline void valueAdded(const AnyExprRef& member) final {
@@ -234,7 +234,7 @@ struct ContainerTrigger<MSetView, ReturnExprType> : public MSetTrigger,
             },
             op->container->members);
     }
-    inline void valueRemoved(UInt indexOfRemovedValue, UInt) final {
+    inline void valueRemoved(UInt indexOfRemovedValue, HashType) final {
         op->roll(indexOfRemovedValue);
     }
     inline void valueAdded(const AnyExprRef& member) final {

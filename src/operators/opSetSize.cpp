@@ -16,7 +16,7 @@ class OpSetSizeTrigger : public SetTrigger {
 
    public:
     OpSetSizeTrigger(OpSetSize* op) : op(op) {}
-    inline void valueRemoved(UInt, UInt) final {
+    inline void valueRemoved(UInt, HashType) final {
         op->changeValue([&]() {
             --op->value;
             return true;

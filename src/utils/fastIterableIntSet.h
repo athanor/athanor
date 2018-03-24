@@ -1,17 +1,17 @@
-
 #ifndef SRC_UTILS_FASTITERABLEINTSET_H_
 #define SRC_UTILS_FASTITERABLEINTSET_H_
 #include <iostream>
 #include <vector>
+#include "base/intSize.h"
 #include "common/common.h"
 class FastIterableIntSet {
     static const int NOT_PRESENT = 0;
-    int64_t minElement;
-    std::vector<int64_t> contents;
+    Int minElement;
+    std::vector<Int> contents;
     std::vector<size_t> elementIndexes;
 
    public:
-    FastIterableIntSet(const int64_t minElement, const int64_t maxElement)
+    FastIterableIntSet(const Int minElement, const Int maxElement)
         : minElement(minElement),
           elementIndexes((maxElement + 1) - minElement, NOT_PRESENT) {}
 
@@ -22,13 +22,13 @@ class FastIterableIntSet {
         elementIndexes.resize((maxElement + 1) - minElement, NOT_PRESENT);
     }
 
-    inline int count(int64_t element) {
+    inline int count(Int element) {
         size_t index = translate(element);
         return index < elementIndexes.size() &&
                elementIndexes[index] != NOT_PRESENT;
     }
 
-    inline auto insert(int64_t element) {
+    inline auto insert(Int element) {
         increaseMaxElement(element);
         if (count(element)) {
             return std::make_pair(contents.begin() + getIndexOf(element),
@@ -42,7 +42,7 @@ class FastIterableIntSet {
         }
     }
 
-    inline int erase(int64_t element) {
+    inline int erase(Int element) {
         if (!count(element)) {
             return 0;
         } else {
@@ -67,12 +67,12 @@ class FastIterableIntSet {
     }
 
    private:
-    inline size_t translate(int64_t element) { return element - minElement; }
+    inline size_t translate(Int element) { return element - minElement; }
 
-    inline size_t getIndexOf(int64_t element) {
+    inline size_t getIndexOf(Int element) {
         return elementIndexes[translate(element)] - 1;
     }
-    inline void setIndexOf(int64_t element, size_t index) {
+    inline void setIndexOf(Int element, size_t index) {
         elementIndexes[translate(element)] = index + 1;
     }
 };

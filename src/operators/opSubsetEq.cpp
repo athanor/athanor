@@ -28,7 +28,7 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
 
    public:
     LeftSetTrigger(OpSubsetEq* op) : op(op) {}
-    inline void valueRemoved(u_int64_t, HashType hash) final {
+    inline void valueRemoved(UInt, HashType hash) final {
         if (!op->right->hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 --op->violation;
@@ -54,12 +54,12 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
         });
     }
 
-    inline void possibleMemberValueChange(u_int64_t,
+    inline void possibleMemberValueChange(UInt,
                                           const AnyExprRef& member) final {
         oldHash = getValueHash(member);
     }
 
-    inline void memberValueChanged(u_int64_t, const AnyExprRef& member) final {
+    inline void memberValueChanged(UInt, const AnyExprRef& member) final {
         valueRemoved(0, oldHash);
         valueAdded(member);
     }
@@ -75,7 +75,7 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
     HashType oldHash;
 
     RightSetTrigger(OpSubsetEq* op) : op(op) {}
-    inline void valueRemoved(u_int64_t, HashType hash) final {
+    inline void valueRemoved(UInt, HashType hash) final {
         if (op->left->hashIndexMap.count(hash)) {
             op->changeValue([&]() {
                 ++op->violation;
@@ -101,12 +101,12 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
         });
     }
 
-    inline void possibleMemberValueChange(u_int64_t,
+    inline void possibleMemberValueChange(UInt,
                                           const AnyExprRef& member) final {
         oldHash = getValueHash(member);
     }
 
-    inline void memberValueChanged(u_int64_t, const AnyExprRef& member) final {
+    inline void memberValueChanged(UInt, const AnyExprRef& member) final {
         valueRemoved(0, oldHash);
         valueAdded(member);
     }
@@ -150,7 +150,7 @@ void OpSubsetEq::stopTriggering() {
     }
 }
 
-void OpSubsetEq::updateViolationDescription(u_int64_t,
+void OpSubsetEq::updateViolationDescription(UInt,
                                             ViolationDescription& vioDesc) {
     left->updateViolationDescription(violation, vioDesc);
     right->updateViolationDescription(violation, vioDesc);

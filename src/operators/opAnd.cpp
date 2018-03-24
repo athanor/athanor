@@ -7,14 +7,14 @@ using QuantifierTrigger = OpAnd::QuantifierTrigger;
 class OpAndTrigger : public BoolTrigger {
    public:
     OpAnd* op;
-    u_int64_t lastViolation;
+    UInt lastViolation;
     size_t index;
 
     OpAndTrigger(OpAnd* op, size_t index) : op(op), index(index) {}
-    void possibleValueChange(u_int64_t oldVilation) {
+    void possibleValueChange(UInt oldVilation) {
         lastViolation = oldVilation;
     }
-    void valueChanged(u_int64_t newViolation) {
+    void valueChanged(UInt newViolation) {
         if (newViolation == lastViolation) {
             return;
         }
@@ -45,7 +45,7 @@ class OpAnd::QuantifierTrigger : public QuantifierView<BoolView>::Trigger {
         op->operandTriggers.emplace_back(
             std::make_shared<OpAndTrigger>(op, op->operandTriggers.size()));
         addTrigger(expr, op->operandTriggers.back());
-        u_int64_t violation = expr->violation;
+        UInt violation = expr->violation;
         if (violation > 0) {
             op->violatingOperands.insert(op->operandTriggers.size() - 1);
             op->changeValue([&]() {
@@ -55,13 +55,13 @@ class OpAnd::QuantifierTrigger : public QuantifierView<BoolView>::Trigger {
         }
     }
 
-    void exprRolled(u_int64_t index, const ExprRef<BoolView>& expr) final {
+    void exprRolled(UInt index, const ExprRef<BoolView>& expr) final {
         op->operandTriggers[index] = std::move(op->operandTriggers.back());
         op->operandTriggers.pop_back();
         if (index < op->operandTriggers.size()) {
             op->operandTriggers[index]->index = index;
         }
-        u_int64_t violationOfRemovedExpr = expr->violation;
+        UInt violationOfRemovedExpr = expr->violation;
         debug_code(assert((op->violatingOperands.count(index) &&
                            violationOfRemovedExpr > 0) ||
                           (!op->violatingOperands.count(index) &&
@@ -139,7 +139,7 @@ void OpAnd::stopTriggering() {
     }
 }
 
-void OpAnd::updateViolationDescription(const u_int64_t,
+void OpAnd::updateViolationDescription(const UInt,
                                        ViolationDescription& vioDesc) {
     for (size_t violatingOperandIndex : violatingOperands) {
         quantifier->exprs[violatingOperandIndex]->updateViolationDescription(
@@ -158,7 +158,7 @@ ExprRef<BoolView> OpAnd::deepCopySelfForUnroll(
 
 std::ostream& OpAnd::dumpState(std::ostream& os) const {
     os << "OpAnd: violation=" << violation << endl;
-    vector<u_int64_t> sortedViolatingOperands(violatingOperands.begin(),
+    vector<UInt> sortedViolatingOperands(violatingOperands.begin(),
                                               violatingOperands.end());
     sort(sortedViolatingOperands.begin(), sortedViolatingOperands.end());
     os << "Violating indices: " << sortedViolatingOperands << endl;

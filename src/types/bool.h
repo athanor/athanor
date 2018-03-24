@@ -7,18 +7,18 @@
 #include "base/base.h"
 struct BoolDomain {};
 struct BoolTrigger : public IterAssignedTrigger<BoolView> {
-    virtual void possibleValueChange(u_int64_t OldViolation) = 0;
-    virtual void valueChanged(u_int64_t newViolation) = 0;
+    virtual void possibleValueChange(UInt OldViolation) = 0;
+    virtual void valueChanged(UInt newViolation) = 0;
 };
 
 struct BoolView : public ExprInterface<BoolView> {
-    u_int64_t violation;
+    UInt violation;
     std::vector<std::shared_ptr<BoolTrigger>> triggers;
 
     inline void initFrom(BoolView& other) { violation = other.violation; }
     template <typename Func>
     inline bool changeValue(Func&& func) {
-        u_int64_t oldViolation = violation;
+        UInt oldViolation = violation;
         if (func() && violation != oldViolation) {
             visitTriggers(
                 [&](auto& trigger) {
@@ -38,7 +38,7 @@ struct BoolValue : public BoolView, ValBase {
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
-    void updateViolationDescription(u_int64_t parentViolation,
+    void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<BoolView> deepCopySelfForUnroll(
         const AnyIterRef& iterator) const final;
@@ -50,8 +50,8 @@ template <>
 struct DefinedTrigger<BoolValue> : public BoolTrigger {
     ValRef<BoolValue> val;
     DefinedTrigger(const ValRef<BoolValue>& val) : val(val) {}
-    inline void possibleValueChange(u_int64_t) final {}
-    inline void valueChanged(u_int64_t violation) {
+    inline void possibleValueChange(UInt) final {}
+    inline void valueChanged(UInt violation) {
         val->changeValue([&]() {
             val->violation = violation;
             return true;

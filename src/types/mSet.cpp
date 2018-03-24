@@ -83,7 +83,7 @@ void matchInnerType(const MSetDomain& domain, MSetValue& target) {
 }
 
 template <>
-u_int64_t getDomainSize<MSetDomain>(const MSetDomain& domain) {
+UInt getDomainSize<MSetDomain>(const MSetDomain& domain) {
     todoImpl(domain);
 }
 
@@ -172,7 +172,7 @@ void MSetView::assertValidState() {
     mpark::visit(
         [&](auto& valMembersImpl) {
             bool success = true;
-            u_int64_t calculatedTotal = 0;
+            UInt calculatedTotal = 0;
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 auto& member = valMembersImpl[i];
                 HashType memberHash = getValueHash(*member);

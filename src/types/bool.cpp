@@ -28,14 +28,14 @@ ostream& prettyPrint<BoolDomain>(ostream& os, const BoolDomain&) {
     return os;
 }
 
-u_int64_t VIOLATION_1 = 1;
-u_int64_t VIOLATION_0 = 0;
+UInt VIOLATION_1 = 1;
+UInt VIOLATION_0 = 0;
 
 void matchInnerType(const BoolValue&, BoolValue&) {}
 void matchInnerType(const BoolDomain&, BoolValue&) {}
 
 template <>
-u_int64_t getDomainSize<BoolDomain>(const BoolDomain&) {
+UInt getDomainSize<BoolDomain>(const BoolDomain&) {
     return 2;
 }
 

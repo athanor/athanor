@@ -16,7 +16,7 @@ class OpSetSizeTrigger : public SetTrigger {
 
    public:
     OpSetSizeTrigger(OpSetSize* op) : op(op) {}
-    inline void valueRemoved(u_int64_t, u_int64_t) final {
+    inline void valueRemoved(UInt, UInt) final {
         op->changeValue([&]() {
             --op->value;
             return true;
@@ -35,8 +35,8 @@ class OpSetSizeTrigger : public SetTrigger {
             return true;
         });
     }
-    inline void possibleMemberValueChange(u_int64_t, const AnyExprRef&) final {}
-    inline void memberValueChanged(u_int64_t, const AnyExprRef&) final {}
+    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
+    inline void memberValueChanged(UInt, const AnyExprRef&) final {}
     inline void iterHasNewValue(const SetView&,
                                 const ExprRef<SetView>& newValue) {
         setValueChanged(*newValue);
@@ -65,7 +65,7 @@ void OpSetSize::stopTriggering() {
     }
 }
 
-void OpSetSize::updateViolationDescription(u_int64_t parentViolation,
+void OpSetSize::updateViolationDescription(UInt parentViolation,
                                            ViolationDescription& vioDesc) {
     operand->updateViolationDescription(parentViolation, vioDesc);
 }

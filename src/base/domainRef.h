@@ -20,7 +20,7 @@ ValRef<typename AssociatedValueType<DomainType>::type> constructValueFromDomain(
 }
 
 template <typename T = int>
-inline u_int64_t getDomainSize(const AnyDomainRef& domain, T = 0) {
+inline UInt getDomainSize(const AnyDomainRef& domain, T = 0) {
     return mpark::visit(
         [&](const auto& domainImpl) { return getDomainSize(*domainImpl); },
         domain);

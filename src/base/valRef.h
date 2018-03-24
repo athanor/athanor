@@ -135,7 +135,7 @@ struct ValBase;
 extern ValBase constantPool;
 
 struct ValBase {
-    u_int64_t id = 0;
+    UInt id = 0;
     ValBase* container = &constantPool;
 };
 

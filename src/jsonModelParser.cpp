@@ -21,7 +21,7 @@
 using namespace std;
 using namespace nlohmann;
 auto fakeIntDomain =
-    make_shared<IntDomain>(vector<pair<int64_t, int64_t>>({intBound(0, 0)}));
+    make_shared<IntDomain>(vector<pair<Int, Int>>({intBound(0, 0)}));
 auto fakeBoolDomain = make_shared<BoolDomain>();
 shared_ptr<SetDomain> fakeSetDomain(const AnyDomainRef& ref) {
     return make_shared<SetDomain>(exactSize(0), ref);
@@ -88,7 +88,7 @@ AnyValRef toValRef(const AnyExprRef& op) {
         op);
 }
 
-int64_t parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel) {
+Int parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel) {
     return mpark::get<ValRef<IntValue>>(
                toValRef(parseExpr(essenceExpr, parsedModel).second))
         ->value;
@@ -168,9 +168,9 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
 
 shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
                                      ParsedModel& parsedModel) {
-    vector<pair<int64_t, int64_t>> ranges;
+    vector<pair<Int, Int>> ranges;
     for (auto& rangeExpr : intDomainExpr) {
-        int64_t from, to;
+        Int from, to;
 
         if (rangeExpr.count("RangeBounded")) {
             from = parseValueAsInt(rangeExpr["RangeBounded"][0], parsedModel);

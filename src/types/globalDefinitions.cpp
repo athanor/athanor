@@ -12,7 +12,7 @@ bool currentlyProcessingDelayedTriggerStack = false;
 vector<shared_ptr<DelayedTrigger>> delayedTriggerStack;
 
 inline pair<bool, ViolationDescription&> registerViolations(
-    const ValBase* val, const u_int64_t violation,
+    const ValBase* val, const UInt violation,
     ViolationDescription& vioDesc);
 #define specialised(name)                                                      \
     template <>                                                                \
@@ -34,7 +34,7 @@ inline pair<bool, ViolationDescription&> registerViolations(
     void name##Value::startTriggering() {}                                     \
     void name##Value::stopTriggering() {}                                      \
     void name##Value::updateViolationDescription(                              \
-        u_int64_t parentViolation, ViolationDescription& vioDesc) {            \
+        UInt parentViolation, ViolationDescription& vioDesc) {            \
         registerViolations(this, parentViolation, vioDesc);                    \
     }                                                                          \
     ExprRef<name##View> name##Value::deepCopySelfForUnroll(const AnyIterRef&)  \
@@ -53,7 +53,7 @@ buildForAllTypes(specialised, )
     vector<shared_ptr<DelayedTrigger>> emptyEndOfTriggerQueue;
 
 inline pair<bool, ViolationDescription&> registerViolations(
-    const ValBase* val, const u_int64_t violation,
+    const ValBase* val, const UInt violation,
     ViolationDescription& vioDesc) {
     if (val->container == &constantPool) {
         return pair<bool, ViolationDescription&>(false, vioDesc);

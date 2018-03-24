@@ -2,6 +2,7 @@
 #ifndef SRC_BASE_TYPEDECLS_H_
 #define SRC_BASE_TYPEDECLS_H_
 #include "../utils/variantOperations.h"
+#include "base/intSize.h"
 #include "base/typesMacros.h"
 #include "common/common.h"
 // forward declare structs
@@ -106,13 +107,13 @@ EnableIfValueAndReturn<Val, bool> smallerValue(const Val& u, const Val& v);
 template <typename Val>
 EnableIfValueAndReturn<Val, bool> largerValue(const Val& u, const Val& v);
 template <typename View>
-EnableIfViewAndReturn<View, u_int64_t> getValueHash(const View&);
+EnableIfViewAndReturn<View, HashType> getValueHash(const View&);
 template <typename Val>
 EnableIfValueAndReturn<Val, void> normalise(Val& v);
 template <typename Val>
 EnableIfValueAndReturn<Val, void> deepCopy(const Val& src, Val& target);
 template <typename DomainType>
-u_int64_t getDomainSize(const DomainType&);
+UInt getDomainSize(const DomainType&);
 template <typename View>
 EnableIfViewAndReturn<View, std::ostream&> prettyPrint(std::ostream& os,
                                                        const View&);

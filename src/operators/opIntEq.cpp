@@ -13,8 +13,8 @@ void OpIntEq::evaluate() {
 struct OpIntEq::Trigger : public IntTrigger {
     OpIntEq* op;
     Trigger(OpIntEq* op) : op(op) {}
-    inline void possibleValueChange(int64_t) final {}
-    inline void valueChanged(int64_t) final {
+    inline void possibleValueChange(Int) final {}
+    inline void valueChanged(Int) final {
         op->changeValue([&]() {
             op->violation = std::abs(op->left->value - op->right->value);
             return true;
@@ -55,7 +55,7 @@ void OpIntEq::stopTriggering() {
     }
 }
 
-void OpIntEq::updateViolationDescription(u_int64_t,
+void OpIntEq::updateViolationDescription(UInt,
                                          ViolationDescription& vioDesc) {
     left->updateViolationDescription(violation, vioDesc);
     right->updateViolationDescription(violation, vioDesc);

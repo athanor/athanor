@@ -34,15 +34,15 @@ auto& seedArg = randomSeedFlag.add<Arg<int>>(
         if (value < 0) {
             throw ErrorMessage("Seed must be greater or equal to 0.");
         } else {
-            seedForRandom = (u_int64_t)(value);
+            seedForRandom = (UInt)(value);
             return value;
         }
     }));
 void testHashes() {
     const size_t max = 10000;
-    unordered_map<u_int64_t, pair<u_int64_t, u_int64_t>> seenHashes;
-    for (u_int64_t i = 0; i < max; ++i) {
-        for (u_int64_t j = i; j < max; ++j) {
+    unordered_map<UInt, pair<UInt, UInt>> seenHashes;
+    for (UInt i = 0; i < max; ++i) {
+        for (UInt j = i; j < max; ++j) {
             HashType hashSum = mix(i) + mix(j);
             if (seenHashes.count(hashSum)) {
                 cerr << "Error, found collision:\n";

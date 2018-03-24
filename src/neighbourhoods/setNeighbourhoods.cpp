@@ -38,7 +38,7 @@ void assignRandomValueInDomain<SetDomain>(const SetDomain& domain,
 }
 
 const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
-inline int getTryLimit(u_int64_t numberMembers, u_int64_t domainSize) {
+inline int getTryLimit(UInt numberMembers, UInt domainSize) {
     double successChance = (domainSize - numberMembers) / (double)domainSize;
     return (int)(ceil(NUMBER_TRIES_CONSTANT_MULTIPLIER / successChance));
 }
@@ -47,7 +47,7 @@ void setAddGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
                    std::vector<Neighbourhood>& neighbourhoods) {
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
-    u_int64_t innerDomainSize = getDomainSize(domain.inner);
+    UInt innerDomainSize = getDomainSize(domain.inner);
 
     neighbourhoods.emplace_back(
         "setAdd", [innerDomainSize, &domain,
@@ -155,7 +155,7 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                           std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(domain.inner, innerDomainNeighbourhoods);
-    u_int64_t innerDomainSize = getDomainSize(domain.inner);
+    UInt innerDomainSize = getDomainSize(domain.inner);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
@@ -172,10 +172,10 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                     params.vioDesc.hasChildViolation(val.id)
                         ? params.vioDesc.childViolations(val.id)
                         : emptyViolations;
-                u_int64_t indexToChange =
+                UInt indexToChange =
                     (vioDescAtThisLevel.getTotalViolation() != 0)
                         ? vioDescAtThisLevel.selectRandomVar()
-                        : globalRandom<u_int64_t>(0, val.numberElements() - 1);
+                        : globalRandom<UInt>(0, val.numberElements() - 1);
                 val.notifyPossibleMemberChange<InnerValueType>(indexToChange);
                 ParentCheckCallBack parentCheck =
                     [&](const AnyValRef& newValue) {

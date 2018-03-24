@@ -7,11 +7,11 @@ using QuantifierTrigger = OpSum::QuantifierTrigger;
 class OpSumTrigger : public IntTrigger {
    public:
     OpSum* op;
-    int64_t lastValue;
+    Int lastValue;
 
     OpSumTrigger(OpSum* op) : op(op) {}
-    void possibleValueChange(int64_t oldValue) { lastValue = oldValue; }
-    void valueChanged(int64_t newValue) {
+    void possibleValueChange(Int oldValue) { lastValue = oldValue; }
+    void valueChanged(Int newValue) {
         op->changeValue([&]() {
             op->value -= lastValue;
             op->value += newValue;
@@ -32,7 +32,7 @@ class OpSum::QuantifierTrigger
     OpSum* op;
     QuantifierTrigger(OpSum* op) : op(op) {}
     void exprUnrolled(const ExprRef<IntView>& expr) final {
-        u_int64_t value = expr->value;
+        UInt value = expr->value;
         addTrigger(expr, op->operandTrigger);
         op->changeValue([&]() {
             op->value += value;
@@ -40,8 +40,8 @@ class OpSum::QuantifierTrigger
         });
     }
 
-    void exprRolled(u_int64_t, const ExprRef<IntView>& expr) final {
-        int64_t valueOfRemovedExpr = expr->value;
+    void exprRolled(UInt, const ExprRef<IntView>& expr) final {
+        Int valueOfRemovedExpr = expr->value;
         op->changeValue([&]() {
             op->value -= valueOfRemovedExpr;
             return true;
@@ -103,7 +103,7 @@ void OpSum::stopTriggering() {
     }
 }
 
-void OpSum::updateViolationDescription(u_int64_t parentViolation,
+void OpSum::updateViolationDescription(UInt parentViolation,
                                        ViolationDescription& vioDesc) {
     if (!quantifier) {
         return;

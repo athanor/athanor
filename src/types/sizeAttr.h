@@ -1,6 +1,7 @@
 
 #ifndef SRC_TYPES_SIZEATTR_H_
 #define SRC_TYPES_SIZEATTR_H_
+#include "base/intSize.h"
 struct SizeAttr {
     enum class SizeAttrType {
         NO_SIZE,
@@ -19,14 +20,14 @@ struct SizeAttr {
    public:
     friend inline SizeAttr noSize() {
         return SizeAttr(SizeAttrType::NO_SIZE, 0,
-                        std::numeric_limits<uint64_t>::max());
+                        std::numeric_limits<UInt>::max());
     }
     friend inline SizeAttr exactSize(size_t size) {
         return SizeAttr(SizeAttrType::EXACT_SIZE, size, size);
     }
     friend inline SizeAttr minSize(size_t minSize) {
         return SizeAttr(SizeAttrType::MIN_SIZE, minSize,
-                        std::numeric_limits<uint64_t>::max());
+                        std::numeric_limits<UInt>::max());
     }
     friend inline SizeAttr maxSize(size_t maxSize) {
         return SizeAttr(SizeAttrType::MAX_SIZE, 0, maxSize);

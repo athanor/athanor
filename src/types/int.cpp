@@ -46,7 +46,7 @@ void matchInnerType(const IntValue&, IntValue&) {}
 void matchInnerType(const IntDomain&, IntValue&) {}
 
 template <>
-u_int64_t getDomainSize<IntDomain>(const IntDomain& domain) {
+UInt getDomainSize<IntDomain>(const IntDomain& domain) {
     return domain.domainSize;
 }
 

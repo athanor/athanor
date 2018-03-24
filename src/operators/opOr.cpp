@@ -4,12 +4,12 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 
-u_int64_t twoToThe32 = ((u_int64_t)1) << 31;
+UInt LARGE_VIOLATION = ((UInt)1) << ((sizeof(UInt) * 4) - 1);
 using QuantifierTrigger = OpOr::QuantifierTrigger;
-inline u_int64_t findNewMinViolation(OpOr& op, u_int64_t minViolation) {
+inline UInt findNewMinViolation(OpOr& op, UInt minViolation) {
     for (size_t i = 0; i < op.quantifier->exprs.size(); ++i) {
         auto& operand = op.quantifier->exprs[i];
-        u_int64_t violation = operand->violation;
+        UInt violation = operand->violation;
         if (violation < minViolation) {
             minViolation = violation;
             op.minViolationIndices.clear();
@@ -27,9 +27,9 @@ class OpOrTrigger : public BoolTrigger {
     size_t index;
 
     OpOrTrigger(OpOr* op, size_t index) : op(op), index(index) {}
-    void possibleValueChange(u_int64_t) final {}
-    void valueChanged(u_int64_t newViolation) final {
-        u_int64_t minViolation = op->violation;
+    void possibleValueChange(UInt) final {}
+    void valueChanged(UInt newViolation) final {
+        UInt minViolation = op->violation;
         if (newViolation < minViolation) {
             minViolation = newViolation;
             op->minViolationIndices.clear();
@@ -56,8 +56,7 @@ class OpOrTrigger : public BoolTrigger {
     }
 };
 
-class OpOr::QuantifierTrigger
-    : public QuantifierView<BoolView>::Trigger {
+class OpOr::QuantifierTrigger : public QuantifierView<BoolView>::Trigger {
    public:
     OpOr* op;
     QuantifierTrigger(OpOr* op) : op(op) {}
@@ -65,11 +64,11 @@ class OpOr::QuantifierTrigger
         op->operandTriggers.emplace_back(
             std::make_shared<OpOrTrigger>(op, op->operandTriggers.size()));
         addTrigger(expr, op->operandTriggers.back());
-        u_int64_t violation = expr->violation;
+        UInt violation = expr->violation;
         op->operandTriggers.back()->valueChanged(violation);
     }
 
-    void exprRolled(u_int64_t index, const ExprRef<BoolView>&) final {
+    void exprRolled(UInt index, const ExprRef<BoolView>&) final {
         op->operandTriggers[index] = std::move(op->operandTriggers.back());
         op->operandTriggers.pop_back();
         op->minViolationIndices.erase(index);
@@ -82,12 +81,12 @@ class OpOr::QuantifierTrigger
         if (op->minViolationIndices.size() == 0) {
             if (op->operandTriggers.size() == 0) {
                 op->changeValue([&]() {
-                    op->violation = twoToThe32;
+                    op->violation = LARGE_VIOLATION;
                     return true;
                 });
                 return;
             } else {
-                u_int64_t minViolation = op->quantifier->exprs[0]->violation;
+                UInt minViolation = op->quantifier->exprs[0]->violation;
                 op->minViolationIndices.insert(0);
                 minViolation = findNewMinViolation(*op, minViolation);
                 op->changeValue([&]() {
@@ -108,13 +107,13 @@ void OpOr::evaluate() {
     quantifier->initialUnroll();
 
     if (quantifier->exprs.size() == 0) {
-        violation = twoToThe32;
+        violation = LARGE_VIOLATION;
         return;
     }
     for (auto& operand : quantifier->exprs) {
         operand->evaluate();
     }
-    u_int64_t minViolation = quantifier->exprs[0]->violation;
+    UInt minViolation = quantifier->exprs[0]->violation;
     minViolationIndices.insert(0);
     minViolation = findNewMinViolation(*this, minViolation);
     violation = minViolation;
@@ -163,8 +162,7 @@ void OpOr::stopTriggering() {
     }
 }
 
-void OpOr::updateViolationDescription(u_int64_t,
-                                      ViolationDescription& vioDesc) {
+void OpOr::updateViolationDescription(UInt, ViolationDescription& vioDesc) {
     for (auto& operand : quantifier->exprs) {
         operand->updateViolationDescription(violation, vioDesc);
     }
@@ -181,8 +179,8 @@ ExprRef<BoolView> OpOr::deepCopySelfForUnroll(
 
 std::ostream& OpOr::dumpState(std::ostream& os) const {
     os << "OpOr: violation=" << violation << endl;
-    vector<u_int64_t> sortedMinViolationIndices(minViolationIndices.begin(),
-                                                minViolationIndices.end());
+    vector<UInt> sortedMinViolationIndices(minViolationIndices.begin(),
+                                           minViolationIndices.end());
     sort(sortedMinViolationIndices.begin(), sortedMinViolationIndices.end());
     os << "Min violating indicies: " << sortedMinViolationIndices << endl;
     os << "operands [";

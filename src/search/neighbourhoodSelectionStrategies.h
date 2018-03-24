@@ -9,8 +9,8 @@
 #include "utils/random.h"
 struct NeighbourhoodResult {
     Model& model;
-    u_int64_t bestViolation;
-    NeighbourhoodResult(Model& model, u_int64_t bestViolation)
+    UInt bestViolation;
+    NeighbourhoodResult(Model& model, UInt bestViolation)
         : model(model), bestViolation(bestViolation) {}
 };
 class RandomNeighbourhoodSelection {
@@ -55,7 +55,7 @@ class RandomNeighbourhoodWithViolation {
         initialise(result.model);
     }
     inline int selectNeighbourhoodFromVarId(const Model& model,
-                                            u_int64_t varId) {
+                                            UInt varId) {
         return model.varNeighbourhoodMapping[varId][globalRandom<size_t>(
             0, model.varNeighbourhoodMapping[varId].size() - 1)];
     }

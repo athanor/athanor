@@ -19,7 +19,7 @@ struct OpProd : public IntView {
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
-    void updateViolationDescription(u_int64_t parentViolation,
+    void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<IntView> deepCopySelfForUnroll(
         const AnyIterRef& iterator) const final;

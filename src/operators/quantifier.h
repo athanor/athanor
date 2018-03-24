@@ -17,8 +17,8 @@ struct ContainerTrigger<SetView, ExprType>;
 template <typename ExprType>
 struct ContainerTrigger<MSetView, ExprType>;
 
-inline static u_int64_t nextQuantId() {
-    static u_int64_t quantId = 0;
+inline static UInt nextQuantId() {
+    static UInt quantId = 0;
     return quantId++;
 }
 
@@ -95,7 +95,7 @@ struct Quantifier : public QuantifierView<ExprType> {
                       triggers);
     }
 
-    inline void roll(u_int64_t index) {
+    inline void roll(UInt index) {
         debug_log("Rolling  index " << index << " with value "
                                     << unrolledIterVals[index]);
         ExprRef<ExprType> removedExpr = std::move(exprs[index]);
@@ -160,7 +160,7 @@ struct ContainerTrigger<SetView, ReturnExprType> : public SetTrigger,
             },
             op->container->members);
     }
-    inline void valueRemoved(u_int64_t indexOfRemovedValue, u_int64_t) final {
+    inline void valueRemoved(UInt indexOfRemovedValue, UInt) final {
         op->roll(indexOfRemovedValue);
     }
     inline void valueAdded(const AnyExprRef& member) final {
@@ -175,8 +175,8 @@ struct ContainerTrigger<SetView, ReturnExprType> : public SetTrigger,
             valuesToUnroll);
     }
 
-    inline void possibleMemberValueChange(u_int64_t, const AnyExprRef&) final {}
-    inline void memberValueChanged(u_int64_t, const AnyExprRef&) final{};
+    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
+    inline void memberValueChanged(UInt, const AnyExprRef&) final{};
 
     inline void setValueChanged(const SetView& newValue) {
         while (!op->exprs.empty()) {
@@ -234,7 +234,7 @@ struct ContainerTrigger<MSetView, ReturnExprType> : public MSetTrigger,
             },
             op->container->members);
     }
-    inline void valueRemoved(u_int64_t indexOfRemovedValue, u_int64_t) final {
+    inline void valueRemoved(UInt indexOfRemovedValue, UInt) final {
         op->roll(indexOfRemovedValue);
     }
     inline void valueAdded(const AnyExprRef& member) final {
@@ -249,8 +249,8 @@ struct ContainerTrigger<MSetView, ReturnExprType> : public MSetTrigger,
             valuesToUnroll);
     }
 
-    inline void possibleMemberValueChange(u_int64_t, const AnyExprRef&) final {}
-    inline void memberValueChanged(u_int64_t, const AnyExprRef&) final{};
+    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
+    inline void memberValueChanged(UInt, const AnyExprRef&) final{};
 
     inline void mSetValueChanged(const MSetView& newValue) {
         while (!op->exprs.empty()) {

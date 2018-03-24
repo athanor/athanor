@@ -4,11 +4,11 @@
 #include "types/int.h"
 #include "utils/random.h"
 
-int64_t getRandomValueInDomain(const IntDomain& domain) {
-    u_int64_t randomDomainIndex =
+Int getRandomValueInDomain(const IntDomain& domain) {
+    UInt randomDomainIndex =
         globalRandom<decltype(domain.domainSize)>(0, domain.domainSize - 1);
     for (auto& bound : domain.bounds) {
-        u_int64_t boundSize = (bound.second - bound.first) + 1;
+        UInt boundSize = (bound.second - bound.first) + 1;
         if (boundSize > randomDomainIndex) {
             return bound.first + randomDomainIndex;
         } else {

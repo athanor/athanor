@@ -6,7 +6,7 @@
 using namespace std;
 
 inline void setViolation(OpSetNotEq& op, bool trigger) {
-    u_int64_t newViolation =
+    UInt newViolation =
         (op.left->cachedHashTotal == op.right->cachedHashTotal) ? 1 : 0;
     if (trigger) {
         op.changeValue([&]() {
@@ -30,7 +30,7 @@ class OpSetNotEqTrigger : public SetTrigger {
 
    public:
     OpSetNotEqTrigger(OpSetNotEq* op) : op(op) {}
-    inline void valueRemoved(u_int64_t, u_int64_t) final {
+    inline void valueRemoved(UInt, UInt) final {
         setViolation(*op, true);
     }
 
@@ -38,9 +38,9 @@ class OpSetNotEqTrigger : public SetTrigger {
     inline void setValueChanged(const SetView&) final {
         setViolation(*op, true);
     }
-    inline void possibleMemberValueChange(u_int64_t, const AnyExprRef&) final {}
+    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
 
-    inline void memberValueChanged(u_int64_t, const AnyExprRef&) final {
+    inline void memberValueChanged(UInt, const AnyExprRef&) final {
         setViolation(*op, true);
     }
 
@@ -76,7 +76,7 @@ void OpSetNotEq::stopTriggering() {
     }
 }
 
-void OpSetNotEq::updateViolationDescription(u_int64_t,
+void OpSetNotEq::updateViolationDescription(UInt,
                                             ViolationDescription& vioDesc) {
     left->updateViolationDescription(violation, vioDesc);
     right->updateViolationDescription(violation, vioDesc);

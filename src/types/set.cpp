@@ -95,7 +95,7 @@ void matchInnerType(const SetDomain& domain, SetValue& target) {
 }
 
 template <>
-u_int64_t getDomainSize<SetDomain>(const SetDomain& domain) {
+UInt getDomainSize<SetDomain>(const SetDomain& domain) {
     return 1 << getDomainSize(domain.inner);
 }
 
@@ -184,9 +184,9 @@ bool largerValue<SetValue>(const SetValue& u, const SetValue& v) {
 void SetView::assertValidState() {
     mpark::visit(
         [&](auto& valMembersImpl) {
-            std::unordered_set<u_int64_t> seenHashes;
+            std::unordered_set<UInt> seenHashes;
             bool success = true;
-            u_int64_t calculatedTotal = 0;
+            UInt calculatedTotal = 0;
             if (hashIndexMap.size() != valMembersImpl.size()) {
                 cerr << "hashIndexMap and members differ in size.\n";
                 success = false;

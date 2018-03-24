@@ -19,7 +19,7 @@ struct OpSubsetEq : public BoolView {
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
-    void updateViolationDescription(u_int64_t parentViolation,
+    void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<BoolView> deepCopySelfForUnroll(
         const AnyIterRef& iterator) const final;

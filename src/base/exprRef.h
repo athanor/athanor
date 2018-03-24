@@ -20,7 +20,7 @@ struct ExprRef {
     union {
         ViewRef<T> viewRef;
         IterRef<T> iterRef;
-        u_int64_t bits;
+        UInt bits;
     };
 
    public:
@@ -52,15 +52,15 @@ struct ExprRef {
     }
 
    private:
-    inline void clearIterRefMark() { this->bits &= ~(((u_int64_t)1) << 63); }
-    inline void setIterRefMark() { this->bits |= (((u_int64_t)1) << 63); }
+    inline void clearIterRefMark() { this->bits &= ~(((UInt)1) << 63); }
+    inline void setIterRefMark() { this->bits |= (((UInt)1) << 63); }
 
    public:
     inline bool isViewRef() const {
-        return (this->bits & (((u_int64_t)1) << 63)) == 0;
+        return (this->bits & (((UInt)1) << 63)) == 0;
     }
     inline bool isIterRef() const {
-        return (this->bits & (((u_int64_t)1) << 63)) != 0;
+        return (this->bits & (((UInt)1) << 63)) != 0;
     }
     inline auto& asViewRef() {
         debug_code(assert(isViewRef()));
@@ -197,7 +197,7 @@ struct ExprInterface {
     virtual void evaluate() = 0;
     virtual void startTriggering() = 0;
     virtual void stopTriggering() = 0;
-    virtual void updateViolationDescription(u_int64_t parentViolation,
+    virtual void updateViolationDescription(UInt parentViolation,
                                             ViolationDescription&) = 0;
     virtual ExprRef<View> deepCopySelfForUnroll(
         const AnyIterRef& iterator) const = 0;

@@ -11,7 +11,7 @@ template <typename ExprType>
 struct QuantifierView {
     struct Trigger : public IterAssignedTrigger<QuantifierView<ExprType>> {
         virtual void exprUnrolled(const ExprRef<ExprType>& expr) = 0;
-        virtual void exprRolled(u_int64_t index,
+        virtual void exprRolled(UInt index,
                                 const ExprRef<ExprType>& expr) = 0;
     };
     std::vector<ExprRef<ExprType>> exprs;

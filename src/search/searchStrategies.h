@@ -14,17 +14,17 @@ template <typename NeighbourhoodSelectionStrategy>
 class HillClimber {
     Model model;
     NeighbourhoodSelectionStrategy selectionStrategy;
-    u_int64_t lastViolation;
-    u_int64_t violationBackOff = 1;
+    UInt lastViolation;
+    UInt violationBackOff = 1;
     bool otherPhase = false;
-    u_int64_t bestViolation;
-    int64_t lastObjValue;
-    int64_t bestObjValue;
+    UInt bestViolation;
+    Int lastObjValue;
+    Int bestObjValue;
     bool newBestValueFound = false;
     StatsContainer stats;
-    u_int64_t numberNodesAtLastEvent;
+    UInt numberNodesAtLastEvent;
 
-    int64_t getDeltaObj(int64_t oldObj, int64_t newObj) {
+    Int getDeltaObj(Int oldObj, Int newObj) {
         switch (model.optimiseMode) {
             case OptimiseMode::MAXIMISE:
                 return newObj - oldObj;
@@ -38,9 +38,9 @@ class HillClimber {
         }
     }
     inline bool acceptValue() {
-        u_int64_t newObjValue = model.objective->value;
-        int64_t deltaObj = getDeltaObj(lastObjValue, newObjValue);
-        int64_t deltaViolation = lastViolation - model.csp.violation;
+        UInt newObjValue = model.objective->value;
+        Int deltaObj = getDeltaObj(lastObjValue, newObjValue);
+        Int deltaViolation = lastViolation - model.csp.violation;
         bool solutionAllowed;
         if (!otherPhase) {
             solutionAllowed =
@@ -64,8 +64,8 @@ class HillClimber {
             if (model.optimiseMode != OptimiseMode::NONE) {
                 lastObjValue = newObjValue;
             }
-            int64_t deltaBestViolation = bestViolation - lastViolation;
-            int64_t deltaBestObj = getDeltaObj(bestObjValue, lastObjValue);
+            Int deltaBestViolation = bestViolation - lastViolation;
+            Int deltaBestObj = getDeltaObj(bestObjValue, lastObjValue);
             bool strictlyBetter = deltaBestViolation > 0 ||
                                   (model.optimiseMode != OptimiseMode::NONE &&
                                    deltaBestViolation == 0 && deltaBestObj > 0);

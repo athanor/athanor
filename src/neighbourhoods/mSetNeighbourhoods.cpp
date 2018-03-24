@@ -36,7 +36,7 @@ void assignRandomValueInDomain<MSetDomain>(const MSetDomain& domain,
         domain.inner);
 }
 
-inline int getTryLimit(u_int64_t, u_int64_t) { return 1; }
+inline int getTryLimit(UInt, UInt) { return 1; }
 
 template <typename InnerDomainPtrType>
 void mSetLiftSingleGenImpl(const MSetDomain& domain,
@@ -44,7 +44,7 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
                            std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(domain.inner, innerDomainNeighbourhoods);
-    u_int64_t innerDomainSize = getDomainSize(domain.inner);
+    UInt innerDomainSize = getDomainSize(domain.inner);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
@@ -61,10 +61,10 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
                     params.vioDesc.hasChildViolation(val.id)
                         ? params.vioDesc.childViolations(val.id)
                         : emptyViolations;
-                u_int64_t indexToChange =
+                UInt indexToChange =
                     (vioDescAtThisLevel.getTotalViolation() != 0)
                         ? vioDescAtThisLevel.selectRandomVar()
-                        : globalRandom<u_int64_t>(0, val.numberElements() - 1);
+                        : globalRandom<UInt>(0, val.numberElements() - 1);
                 val.notifyPossibleMemberChange<InnerValueType>(indexToChange);
                 ParentCheckCallBack parentCheck = [&](const AnyValRef&) {
                     return val.tryMemberChange<InnerValueType>(

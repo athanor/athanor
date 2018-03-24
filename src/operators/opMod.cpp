@@ -13,8 +13,8 @@ void OpMod::evaluate() {
 struct OpMod::Trigger : public IntTrigger {
     OpMod* op;
     Trigger(OpMod* op) : op(op) {}
-    inline void possibleValueChange(int64_t) final {}
-    inline void valueChanged(int64_t) final {
+    inline void possibleValueChange(Int) final {}
+    inline void valueChanged(Int) final {
         op->changeValue([&]() {
             op->value = op->left->value % op->right->value;
             return true;
@@ -55,7 +55,7 @@ void OpMod::stopTriggering() {
     }
 }
 
-void OpMod::updateViolationDescription(u_int64_t parentViolation,
+void OpMod::updateViolationDescription(UInt parentViolation,
                                        ViolationDescription& vioDesc) {
     left->updateViolationDescription(parentViolation, vioDesc);
     right->updateViolationDescription(parentViolation, vioDesc);

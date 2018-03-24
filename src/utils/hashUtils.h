@@ -2,9 +2,9 @@
 #define SRC_UTILS_HASHUTILS_H_
 #include <iostream>
 #include <utility>
+#include "MurmurHash3.h"
 #include "picosha2.h"
 #include "utils/fnv/fnv.h"
-#include "utils/murmurHash/MurmurHash3.h"
 // default values recommended by http://isthe.com/chongo/tech/comp/fnv/
 
 static const uint32_t FNV1A_PRIME = 0x01000193;  //   16777619

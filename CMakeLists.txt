@@ -5,6 +5,7 @@ project(sns)
 #auto arg parse
 
 add_subdirectory (include/auto-arg-parse)
+add_subdirectory (include/murmurHash)
 add_subdirectory (include/variant)
 include_directories( include/PicoSHA2)
 include_directories( include/json)
@@ -77,3 +78,4 @@ endif()
 message("")
 target_link_libraries(sns mpark_variant)
 target_link_libraries (sns autoArgParse-header-only)
+target_link_libraries (sns murmurHash)

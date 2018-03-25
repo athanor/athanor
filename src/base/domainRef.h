@@ -37,5 +37,29 @@ inline std::ostream& prettyPrint(std::ostream& os, const AnyDomainRef& d,
 inline std::ostream& operator<<(std::ostream& os, const AnyDomainRef& d) {
     return prettyPrint(os, d);
 }
+// template hack to accept only domains
+template <typename DomainType,
+          typename std::enable_if<IsDomainType<BaseType<DomainType>>::value,
+                                  int>::type = 0>
+AnyDomainRef makeAnyDomainRef(DomainType&& d) {
+    return std::make_shared<typename std::remove_reference<DomainType>::type>(
+        std::forward<DomainType>(d));
+}
+
+// template hack to accept only pointers to domains
+template <typename DomainPtrType,
+          typename std::enable_if<
+              IsDomainPtrType<BaseType<DomainPtrType>>::value, int>::type = 0>
+AnyDomainRef makeAnyDomainRef(DomainPtrType&& d) {
+    return std::forward<DomainPtrType>(d);
+}
+
+template <typename AnyDomainRefType,
+          typename std::enable_if<
+              std::is_same<BaseType<AnyDomainRefType>, AnyDomainRef>::value,
+              int>::type = 0>
+decltype(auto) makeAnyDomainRef(AnyDomainRefType&& d) {
+    return std::forward<AnyDomainRefType>(d);
+}
 
 #endif /* SRC_BASE_DOMAINREF_H_ */

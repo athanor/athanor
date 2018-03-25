@@ -12,33 +12,10 @@
 struct SetDomain {
     SizeAttr sizeAttr;
     AnyDomainRef inner;
-    // template hack to accept only domains
-    template <typename DomainType,
-              typename std::enable_if<IsDomainType<BaseType<DomainType>>::value,
-                                      int>::type = 0>
+    template <typename DomainType>
     SetDomain(SizeAttr sizeAttr, DomainType&& inner)
         : sizeAttr(sizeAttr),
-          inner(std::make_shared<
-                typename std::remove_reference<DomainType>::type>(
-              std::forward<DomainType>(inner))) {
-        trimMaxSize();
-    }
-
-    // template hack to accept only pointers to domains
-    template <
-        typename DomainPtrType,
-        typename std::enable_if<IsDomainPtrType<BaseType<DomainPtrType>>::value,
-                                int>::type = 0>
-    SetDomain(SizeAttr sizeAttr, DomainPtrType&& inner)
-        : sizeAttr(sizeAttr), inner(std::forward<DomainPtrType>(inner)) {
-        trimMaxSize();
-    }
-    template <typename AnyDomainRefType,
-              typename std::enable_if<
-                  std::is_same<BaseType<AnyDomainRefType>, AnyDomainRef>::value,
-                  int>::type = 0>
-    SetDomain(SizeAttr sizeAttr, AnyDomainRefType&& inner)
-        : sizeAttr(sizeAttr), inner(std::forward<AnyDomainRefType>(inner)) {
+          inner(makeAnyDomainRef(std::forward<DomainType>(inner))) {
         trimMaxSize();
     }
 
@@ -57,8 +34,7 @@ struct SetTrigger : public IterAssignedTrigger<SetView> {
     virtual void valueAdded(const AnyExprRef& member) = 0;
     virtual void possibleMemberValueChange(UInt index,
                                            const AnyExprRef& member) = 0;
-    virtual void memberValueChanged(UInt index,
-                                    const AnyExprRef& member) = 0;
+    virtual void memberValueChanged(UInt index, const AnyExprRef& member) = 0;
 
     virtual void setValueChanged(const SetView& newValue) = 0;
 };
@@ -112,8 +88,7 @@ struct SetView : public ExprInterface<SetView> {
         return removedMember;
     }
 
-    inline void notifyMemberRemoved(UInt index,
-                                    HashType hashOfRemovedMember) {
+    inline void notifyMemberRemoved(UInt index, HashType hashOfRemovedMember) {
         debug_code(assertValidState());
         visitTriggers(
             [&](auto& t) { t->valueRemoved(index, hashOfRemovedMember); },

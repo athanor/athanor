@@ -13,11 +13,11 @@
 #include "base/viewRef.h"
 template <typename T>
 struct Iterator {
-    int id;
+    u_int64_t id;
     ExprRef<T> ref;
     std::vector<std::shared_ptr<IterAssignedTrigger<T>>> unrollTriggers;
 
-    Iterator(int id, ExprRef<T> ref) : id(id), ref(std::move(ref)) {}
+    Iterator(u_int64_t id, ExprRef<T> ref) : id(id), ref(std::move(ref)) {}
     template <typename Func>
     inline void changeValue(bool triggering, const ExprRef<T>& oldVal,
                             const ExprRef<T>& newVal, Func&& callback) {
@@ -41,7 +41,7 @@ class IterRef {
     std::shared_ptr<Iterator<T>> ref;
 
    public:
-    IterRef(int id)
+    IterRef(u_int64_t id)
         : ref(std::make_shared<Iterator<T>>(id, ViewRef<T>(nullptr))) {}
 
     inline Iterator<T>& getIterator() { return *ref; }

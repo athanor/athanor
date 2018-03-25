@@ -17,8 +17,8 @@ struct ContainerTrigger<SetView, ExprType>;
 template <typename ExprType>
 struct ContainerTrigger<MSetView, ExprType>;
 
-inline static UInt nextQuantId() {
-    static UInt quantId = 0;
+inline static u_int64_t nextQuantId() {
+    static u_int64_t quantId = 0;
     return quantId++;
 }
 

@@ -140,6 +140,7 @@ struct ExprRef {
         return mpark::get_if<IterRef<T>>(&ref) != NULL;
     }
     inline auto& asViewRef() { return mpark::get<ViewRef<T>>(ref); }
+    inline const auto& asViewRef() const { return mpark::get<ViewRef<T>>(ref); }
 
     template <typename Func>
     inline decltype(auto) visit(Func&& func) const {

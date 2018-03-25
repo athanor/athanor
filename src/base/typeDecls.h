@@ -37,7 +37,6 @@ struct TypeAsString;
 #define makeAssociations(name)                                           \
     void matchInnerType(const name##Domain& domain, name##Value& value); \
     void matchInnerType(const name##Value& other, name##Value& value);   \
-    void reset(name##Value& value);                                      \
     template <>                                                          \
     struct AssociatedDomain<name##Value> {                               \
         typedef name##Domain type;                                       \

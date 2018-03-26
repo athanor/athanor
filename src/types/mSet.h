@@ -205,6 +205,7 @@ struct MSetValue : public MSetView, public ValBase {
             valBase(*member).container = this;
             valBase(*member).id = numberElements() - 1;
             MSetView::notifyMemberAdded(member);
+            debug_code(assertValidVarBases());
             return true;
         } else {
             typedef

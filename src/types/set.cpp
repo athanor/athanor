@@ -243,11 +243,16 @@ void SetValue::assertValidVarBases() {
             }
             bool success = true;
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
-                if (valBase(*assumeAsValue(valMembersImpl[i].asViewRef()))
-                        .container != this) {
+                const ValBase& base =
+                    valBase(*assumeAsValue(valMembersImpl[i].asViewRef()));
+                if (base.container != this) {
                     success = false;
                     cerr << "member " << i
                          << "'s container does not point to this set." << endl;
+                } else if (base.id != i) {
+                    success = false;
+                    cerr << "member " << i << "has id " << base.id
+                         << " but it should be " << i << endl;
                 }
             }
             if (!success) {

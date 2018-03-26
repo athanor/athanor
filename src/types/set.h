@@ -238,6 +238,7 @@ struct SetValue : public SetView, public ValBase {
                 valBase(*member).container = this;
                 valBase(*member).id = numberElements() - 1;
                 SetView::notifyMemberAdded(getViewPtr(member));
+                debug_code(assertValidVarBases());
                 return true;
             } else {
                 typedef typename AssociatedViewType<InnerValueType>::type

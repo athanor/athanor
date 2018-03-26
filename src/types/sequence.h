@@ -6,7 +6,6 @@
 #include "types/sizeAttr.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
-#include "utils/oneOrMany.h"
 #include "utils/simpleCache.h"
 
 struct SequenceDomain {
@@ -45,13 +44,40 @@ struct SequenceView : public ExprInterface<SequenceView> {
     friend SequenceValue;
     AnyExprVec members;
     std::vector<std::shared_ptr<SequenceTrigger>> triggers;
-SimpleCache
+    SimpleCache<HashType> cachedHashTotal;
+    HashType hashOfPossibleChange;
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline HashType calcMemberHash(UInt index,
+                                   const ExprRef<InnerViewType>& expr) const {
+        HashType input[2];
+        HashType result[2];
+        input[0] = index;
+        input[1] = getValueHash(*expr);
+        MurmurHash3_x64_128(((void*)input), sizeof(input), 0, result);
+        return result[0] ^ result[1];
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline HashType calcSubsequenceHash(UInt start, UInt end) const {
+        HashType total = 0;
+        for (size_t i = start; i < end; ++i) {
+            total += calcMemberHash(i, getMembers<InnerViewType>()[i]);
+        }
+        return total;
+    }
+
    private:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void addMember(size_t index, const ExprRef<InnerViewType>& member) {
-        cacheValid = false;
         auto& members = getMembers<InnerViewType>();
         members.insert(members.begin() + index, member);
+        if (index == members.size() - 1) {
+            cachedHashTotal.applyIfValid(
+                [&](auto& value) { value += calcMemberHash(index, member); });
+        } else {
+            cachedHashTotal.invalidate();
+        }
         debug_code(assertValidState());
     }
 
@@ -63,11 +89,18 @@ SimpleCache
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRef<InnerViewType> removeMember(UInt index) {
-        cacheValid = false;
+        cachedHashTotal.invalidate();
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
         ExprRef<InnerViewType> removedMember = std::move(members[index]);
         members.erase(members.begin() + index);
+        if (index == members.size()) {
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                value -= calcMemberHash(index, removedMember);
+            });
+        } else {
+            cachedHashTotal.invalidate();
+        }
         return removedMember;
     }
 
@@ -77,29 +110,50 @@ SimpleCache
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void changeMembers(UInt startIndex, UInt endIndex) {
-        auto& members = getMembers<InnerViewType>();
-        HashType newHash = getValueHash(*members[index]);
-        if (newHash != oldHash) {
-            cachedHashTotal -= mix(oldHash);
-            cachedHashTotal += mix(newHash);
-        }
+    inline HashType changeSubsequence(UInt startIndex, UInt endIndex) {
+        HashType newHash = 0;
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            newHash = calcSubsequenceHash<InnerViewType>(startIndex, endIndex);
+            value -= hashOfPossibleChange;
+            value += newHash;
+        });
         debug_code(assertValidState());
         return newHash;
     }
 
-    inline void notifyMemberChanged(size_t index,
-                                    const AnyExprRef& changedMember) {
+    inline void notifySubsequenceChanged(UInt startIndex, UInt endIndex) {
         debug_code(assertValidState());
         visitTriggers(
-            [&](auto& t) { t->memberValueChanged(index, changedMember); },
+            [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
             triggers);
+    }
+
+    inline void notifyBeginSwaps() {
+        visitTriggers([&](auto& t) { t->beginSwaps(); }, triggers);
+    }
+    inline void notifyEndSwaps() {
+        visitTriggers([&](auto& t) { t->endSwaps(); }, triggers);
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void swapAndNotify(UInt index1, UInt index2) {
+        auto& members = getMembers<InnerViewType>();
+        std::swap(members[index1], members[index2]);
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            value -= calcMemberHash(index1, members[index2]);
+            value -= calcMemberHash(index2, members[index1]);
+            value += calcMemberHash(index1, members[index1]);
+            value += calcMemberHash(index2, members[index2]);
+        });
+        debug_code(assertValidState());
+        visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
+                      triggers);
     }
 
     void silentClear() {
         mpark::visit(
             [&](auto& membersImpl) {
-                cachedHashTotal = 0;
+                cachedHashTotal.invalidate();
                 membersImpl.clear();
             },
             members);
@@ -107,9 +161,10 @@ SimpleCache
 
    public:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void addMemberAndNotify(const ExprRef<InnerViewType>& member) {
-        addMember(member);
-        notifyMemberAdded(getMembers<InnerViewType>().back());
+    inline void addMemberAndNotify(UInt index,
+                                   const ExprRef<InnerViewType>& member) {
+        addMember(index, member);
+        notifyMemberAdded(index, getMembers<InnerViewType>().back());
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -121,37 +176,36 @@ SimpleCache
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void notifyPossibleMemberChange(UInt index) {
-        auto& members = getMembers<InnerViewType>();
+    inline void notifyPossibleSubsequenceChange(UInt startIndex,
+                                                UInt endIndex) {
         debug_code(assertValidState());
-        hashOfPossibleChange = getValueHash(*members[index]);
-        AnyExprRef triggerMember = members[index];
+        if (cachedHashTotal.isValid()) {
+            hashOfPossibleChange =
+                calcSubsequenceHash<InnerViewType>(startIndex, endIndex);
+            ;
+        }
         visitTriggers(
             [&](auto& t) {
-                t->possibleMemberValueChange(index, triggerMember);
+                t->possibleSubsequenceChange(startIndex, endIndex);
             },
             triggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void memberChangedAndNotify(size_t index) {
+    inline void changeSubsequenceAndNotify(UInt startIndex, UInt endIndex) {
         HashType oldHash = hashOfPossibleChange;
-        hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
-        if (oldHash == hashOfPossibleChange) {
+        hashOfPossibleChange =
+            changeSubsequence<InnerViewType>(startIndex, endIndex);
+        if (cachedHashTotal.isValid() && oldHash == hashOfPossibleChange) {
             return;
         }
-        notifyMemberChanged(index, getMembers<InnerViewType>()[index]);
+        notifySubsequenceChanged(startIndex, endIndex);
     }
 
-    inline void notifyEntireSequenceChange() {
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->sequenceValueChanged(*this); },
-                      triggers);
-    }
-
-    inline void initFrom(SequenceView& other) {
-        members = other.members;
-        cachedHashTotal = other.cachedHashTotal;
+    inline void initFrom(SequenceView&) {
+        std::cerr << "Deprecated, Should never be called\n"
+                  << __func__ << std::endl;
+        abort();
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -182,30 +236,41 @@ struct SequenceValue : public SequenceView, public ValBase {
     }
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline void addMember(const ValRef<InnerValueType>& member) {
+    void reassignIndicesToEnd(UInt start) {
+        auto& members =
+            getMembers<typename AssociatedViewType<InnerValueType>::type>();
+        for (size_t i = start; i < members.size(); i++) {
+            valBase(assumeAsValue(*members[i])).id = i;
+        }
+    }
+
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
+    inline void addMember(UInt index, const ValRef<InnerValueType>& member) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        SequenceView::addMember(ExprRef<InnerViewType>(getViewPtr(member)));
+        SequenceView::addMember(index,
+                                ExprRef<InnerViewType>(getViewPtr(member)));
         valBase(*member).container = this;
-        valBase(*member).id = numberElements() - 1;
+        reassignIndicesToEnd<InnerValueType>(index);
         debug_code(assertValidVarBases());
     }
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline bool tryAddMember(const ValRef<InnerValueType>& member,
+    inline bool tryAddMember(UInt index, const ValRef<InnerValueType>& member,
                              Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        SequenceView::addMember(ExprRef<InnerViewType>(getViewPtr(member)));
+        SequenceView::addMember(index,
+                                ExprRef<InnerViewType>(getViewPtr(member)));
         if (func()) {
             valBase(*member).container = this;
-            valBase(*member).id = numberElements() - 1;
-            SequenceView::notifyMemberAdded(member);
+            reassignIndicesToEnd<InnerValueType>(index);
+            SequenceView::notifyMemberAdded(index, member);
+            debug_code(assertValidVarBases());
             return true;
         } else {
             typedef
                 typename AssociatedViewType<InnerValueType>::type InnerViewType;
-            SequenceView::removeMember<InnerViewType>(numberElements() - 1);
-            valBase(*member).container = NULL;
+            SequenceView::removeMember<InnerViewType>(index);
             return false;
         }
     }
@@ -216,9 +281,7 @@ struct SequenceValue : public SequenceView, public ValBase {
         auto removedMember = assumeAsValue(
             SequenceView::removeMember<InnerViewType>(index).asViewRef());
         valBase(*removedMember).container = NULL;
-        if (index < numberElements()) {
-            valBase(*member<InnerValueType>(index)).id = index;
-        }
+        reassignIndicesToEnd<InnerValueType>(index);
         debug_code(assertValidVarBases());
         return removedMember;
     }
@@ -232,17 +295,14 @@ struct SequenceValue : public SequenceView, public ValBase {
             SequenceView::removeMember<InnerViewType>(index).asViewRef());
         if (func()) {
             valBase(*removedMember).container = NULL;
-            if (index < numberElements()) {
-                valBase(*member<InnerValueType>(index)).id = index;
-            }
+            reassignIndicesToEnd<InnerValueType>(index);
             debug_code(assertValidVarBases());
             SequenceView::notifyMemberRemoved(
                 index, getValueHash(*getViewPtr(removedMember)));
             return std::make_pair(true, std::move(removedMember));
         } else {
-            SequenceView::addMember<InnerViewType>(getViewPtr(removedMember));
-            auto& members = getMembers<InnerValueType>();
-            std::swap(members[index], members.back());
+            SequenceView::addMember<InnerViewType>(index,
+                                                   getViewPtr(removedMember));
             debug_code(assertValidState());
             debug_code(assertValidVarBases());
             return std::make_pair(false, ValRef<InnerValueType>(nullptr));
@@ -250,27 +310,28 @@ struct SequenceValue : public SequenceView, public ValBase {
     }
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline void notifyPossibleMemberChange(UInt index) {
-        return SequenceView::notifyPossibleMemberChange<
-            typename AssociatedViewType<InnerValueType>::type>(index);
+    inline void notifyPossibleSubsequenceChange(UInt start, UInt end) {
+        return SequenceView::notifyPossibleSubsequenceChange<
+            typename AssociatedViewType<InnerValueType>::type>(start, end);
+    }
+
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
+    inline void swapAndNotify(UInt index1, UInt index2) {
+        return SequenceView::swapAndNotify<
+            typename AssociatedViewType<InnerValueType>::type>(index1, index2);
     }
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline bool tryMemberChange(size_t index, Func&& func) {
+    inline bool trySubsequenceChange(UInt start, UInt end, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        HashType oldHash = hashOfPossibleChange;
-        hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
+        hashOfPossibleChange =
+            SequenceView::changeSubsequence<InnerViewType>(start, end);
         if (func()) {
-            SequenceView::notifyMemberChanged(
-                index, getMembers<InnerViewType>()[index]);
+            SequenceView::notifySubsequenceChanged(start, end);
             return true;
         } else {
-            if (oldHash != hashOfPossibleChange) {
-                cachedHashTotal -= mix(hashOfPossibleChange);
-                cachedHashTotal += mix(oldHash);
-                hashOfPossibleChange = oldHash;
-            }
+            SequenceView::changeSubsequence<InnerViewType>(start, end);
             return false;
         }
     }
@@ -312,23 +373,20 @@ template <>
 struct DefinedTrigger<SequenceValue> : public SequenceTrigger {
     ValRef<SequenceValue> val;
     DefinedTrigger(const ValRef<SequenceValue>& val) : val(val) {}
-    inline void valueRemoved(UInt indexOfRemovedValue,
-                             HashType hashOfRemovedValue) {
-        todoImpl(indexOfRemovedValue, hashOfRemovedValue);
+    inline void valueRemoved(UInt indexOfRemovedValue) {
+        todoImpl(indexOfRemovedValue);
     }
-    inline void valueAdded(const AnyExprRef& member) { todoImpl(member); }
-    virtual inline void possibleMemberValueChange(UInt index,
-                                                  const AnyExprRef& member) {
+    inline void valueAdded(UInt index, const AnyExprRef& member) {
         todoImpl(index, member);
     }
-    virtual void memberValueChanged(UInt index, const AnyExprRef& member) {
-        todoImpl(index, member);
-        ;
+    virtual inline void possibleSubsequenceChange(UInt startIndex,
+                                                  UInt endIndex) {
+        todoImpl(startIndex, endIndex);
+    }
+    virtual void subsequenceChanged(UInt startIndex, UInt endIndex) {
+        todoImpl(startIndex, endIndex);
     }
 
-    void sequenceValueChanged(const SequenceView& newValue) {
-        todoImpl(newValue);
-    }
     void iterHasNewValue(const SequenceView&,
                          const ExprRef<SequenceView>&) final {
         assert(false);

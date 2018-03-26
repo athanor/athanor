@@ -71,6 +71,7 @@ struct TupleValue : public TupleView, public ValBase {
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline void addMember(const ValRef<InnerValueType>& member) {
+        cachedHashTotal.invalidate();
         members.emplace_back(getViewPtr(member));
         valBase(*member).container = this;
         valBase(*member).id = members.size() - 1;

@@ -1,4 +1,4 @@
-#include "types/mSet.h"
+#include "types/sequence.h"
 #include <algorithm>
 #include <cassert>
 #include "common/common.h"
@@ -6,13 +6,20 @@
 using namespace std;
 
 template <>
-HashType getValueHash<MSetView>(const MSetView& val) {
-    return val.cachedHashTotal;
+HashType getValueHash<SequenceView>(const SequenceView& val) {
+    return val.cachedHashTotal.getOrSet([&]() {
+        return mpark::visit(
+            [&](auto& members) {
+                return val.calcSubsequenceHash<viewType(members)>(
+                    0, members.size());
+            },
+            val.members);
+    });
 }
 
 template <>
-ostream& prettyPrint<MSetView>(ostream& os, const MSetView& v) {
-    os << "MSet(";
+ostream& prettyPrint<SequenceView>(ostream& os, const SequenceView& v) {
+    os << "Sequence(";
     mpark::visit(
         [&](auto& membersImpl) {
             bool first = true;
@@ -31,22 +38,27 @@ ostream& prettyPrint<MSetView>(ostream& os, const MSetView& v) {
 }
 
 template <typename InnerViewType>
-void deepCopyImpl(const MSetValue&,
+void deepCopyImpl(const SequenceValue&,
                   const ExprRefVec<InnerViewType>& srcMemnersImpl,
-                  MSetValue& target) {
+                  SequenceValue& target) {
+    typedef typename AssociatedValueType<InnerViewType>::type InnerValueType;
+    target.notifyPossibleSubsequenceChange<InnerValueType>(
+        0, target.numberElements());
     auto& targetMembersImpl = target.getMembers<InnerViewType>();
     // to be optimised later
     targetMembersImpl.clear();
-
+    target.cachedHashTotal.invalidate();
     for (auto& member : srcMemnersImpl) {
-        target.addMember(deepCopy(assumeAsValue(*member)));
+        target.addMember(target.numberElements(),
+                         deepCopy(assumeAsValue(*member)));
     }
     debug_code(target.assertValidState());
-    target.notifyEntireMSetChange();
+    target.changeSubsequenceAndNotify<InnerViewType>(0,
+                                                     target.numberElements());
 }
 
 template <>
-void deepCopy<MSetValue>(const MSetValue& src, MSetValue& target) {
+void deepCopy<SequenceValue>(const SequenceValue& src, SequenceValue& target) {
     assert(src.members.index() == target.members.index());
     return visit(
         [&](auto& srcMembersImpl) {
@@ -56,15 +68,15 @@ void deepCopy<MSetValue>(const MSetValue& src, MSetValue& target) {
 }
 
 template <>
-ostream& prettyPrint<MSetDomain>(ostream& os, const MSetDomain& d) {
-    os << "mSet(";
+ostream& prettyPrint<SequenceDomain>(ostream& os, const SequenceDomain& d) {
+    os << "sequence(";
     os << d.sizeAttr << ",";
     prettyPrint(os, d.inner);
     os << ")";
     return os;
 }
 
-void matchInnerType(const MSetValue& src, MSetValue& target) {
+void matchInnerType(const SequenceValue& src, SequenceValue& target) {
     mpark::visit(
         [&](auto& srcMembersImpl) {
             target.setInnerType<viewType(srcMembersImpl)>();
@@ -72,7 +84,7 @@ void matchInnerType(const MSetValue& src, MSetValue& target) {
         src.members);
 }
 
-void matchInnerType(const MSetDomain& domain, MSetValue& target) {
+void matchInnerType(const SequenceDomain& domain, SequenceValue& target) {
     mpark::visit(
         [&](auto& innerDomainImpl) {
             target.setInnerType<typename AssociatedViewType<
@@ -83,44 +95,37 @@ void matchInnerType(const MSetDomain& domain, MSetValue& target) {
 }
 
 template <>
-UInt getDomainSize<MSetDomain>(const MSetDomain& domain) {
+UInt getDomainSize<SequenceDomain>(const SequenceDomain& domain) {
     todoImpl(domain);
 }
 
-void reset(MSetValue& val) {
-    val.container = NULL;
-    val.silentClear();
-    val.triggers.clear();
-}
-
-void evaluate(MSetValue&) {}
-void startTriggering(MSetValue&) {}
-void stopTriggering(MSetValue&) {}
+void evaluate(SequenceValue&) {}
+void startTriggering(SequenceValue&) {}
+void stopTriggering(SequenceValue&) {}
 
 template <typename InnerViewType>
-void normaliseImpl(MSetValue&, ExprRefVec<InnerViewType>& valMembersImpl) {
+void normaliseImpl(SequenceValue&, ExprRefVec<InnerViewType>& valMembersImpl) {
     for (auto& v : valMembersImpl) {
         normalise(assumeAsValue(*v));
     }
-    sort(valMembersImpl.begin(), valMembersImpl.end(), [](auto& u, auto& v) {
-        return smallerValue(assumeAsValue(*u), assumeAsValue(*v));
-    });
 }
 
 template <>
-void normalise<MSetValue>(MSetValue& val) {
+void normalise<SequenceValue>(SequenceValue& val) {
     mpark::visit(
         [&](auto& valMembersImpl) { normaliseImpl(val, valMembersImpl); },
         val.members);
 }
 
 template <>
-bool smallerValue<MSetValue>(const MSetValue& u, const MSetValue& v);
+bool smallerValue<SequenceValue>(const SequenceValue& u,
+                                 const SequenceValue& v);
 template <>
-bool largerValue<MSetValue>(const MSetValue& u, const MSetValue& v);
+bool largerValue<SequenceValue>(const SequenceValue& u, const SequenceValue& v);
 
 template <>
-bool smallerValue<MSetValue>(const MSetValue& u, const MSetValue& v) {
+bool smallerValue<SequenceValue>(const SequenceValue& u,
+                                 const SequenceValue& v) {
     return mpark::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
@@ -145,7 +150,8 @@ bool smallerValue<MSetValue>(const MSetValue& u, const MSetValue& v) {
 }
 
 template <>
-bool largerValue<MSetValue>(const MSetValue& u, const MSetValue& v) {
+bool largerValue<SequenceValue>(const SequenceValue& u,
+                                const SequenceValue& v) {
     return mpark::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
@@ -168,26 +174,31 @@ bool largerValue<MSetValue>(const MSetValue& u, const MSetValue& v) {
         },
         u.members);
 }
-void MSetView::assertValidState() {
+void SequenceView::assertValidState() {
     mpark::visit(
         [&](auto& valMembersImpl) {
             bool success = true;
             UInt calculatedTotal = 0;
+
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 auto& member = valMembersImpl[i];
-                HashType memberHash = getValueHash(*member);
-                calculatedTotal += mix(memberHash);
-            }
-            if (success) {
-                success = calculatedTotal == cachedHashTotal;
-                if (!success) {
-                    cerr << "Calculated hash total should be "
-                         << calculatedTotal << " but it was actually "
-                         << cachedHashTotal << endl;
+                if (cachedHashTotal.isValid()) {
+                    calculatedTotal += calcMemberHash(i, member);
                 }
             }
+            if (success) {
+                cachedHashTotal.applyIfValid([&](const auto& value) {
+                    success = (value == calculatedTotal);
+                    if (!success) {
+                        cerr << "Calculated hash total should be "
+                             << calculatedTotal << " but it was actually "
+                             << value << endl;
+                        ;
+                    }
+                });
+            }
             if (!success) {
-                cerr << "Members: " << valMembersImpl << endl;
+                cerr << "sequence Members: " << valMembersImpl << endl;
                 assert(false);
                 abort();
             }
@@ -195,7 +206,7 @@ void MSetView::assertValidState() {
         members);
 }
 
-void MSetValue::assertValidVarBases() {
+void SequenceValue::assertValidVarBases() {
     mpark::visit(
         [&](auto& valMembersImpl) {
             if (valMembersImpl.empty()) {
@@ -208,10 +219,11 @@ void MSetValue::assertValidVarBases() {
                 if (base.container != this) {
                     success = false;
                     cerr << "member " << i
-                         << "'s container does not point to this mSet." << endl;
+                         << "'s container does not point to this sequence."
+                         << endl;
                 } else if (base.id != i) {
                     success = false;
-                    cerr << "MSet member " << i << "has id " << base.id
+                    cerr << "sequence member " << i << "has id " << base.id
                          << " but it should be " << i << endl;
                 }
             }
@@ -224,7 +236,7 @@ void MSetValue::assertValidVarBases() {
         members);
 }
 
-void MSetValue::printVarBases() {
+void SequenceValue::printVarBases() {
     mpark::visit(
         [&](auto& valMembersImpl) {
             cout << "parent is constant: " << (this->container == &constantPool)

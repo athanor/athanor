@@ -30,7 +30,8 @@ struct SequenceDomain {
 };
 struct SequenceView;
 struct SequenceTrigger : public IterAssignedTrigger<SequenceView> {
-    virtual void valueRemoved(UInt indexOfRemovedValue) = 0;
+    virtual void valueRemoved(
+        UInt index, const AnyExprRef& removedValueindexOfRemovedValue) = 0;
     virtual void valueAdded(UInt indexOfRemovedValue,
                             const AnyExprRef& member) = 0;
     virtual void sequenceValueChange() = 0;
@@ -102,9 +103,11 @@ struct SequenceView : public ExprInterface<SequenceView> {
         return removedMember;
     }
 
-    inline void notifyMemberRemoved(UInt index) {
+    inline void notifyMemberRemoved(UInt index,
+                                    const AnyExprRef& removedMember) {
         debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->valueRemoved(index); }, triggers);
+        visitTriggers([&](auto& t) { t->valueRemoved(index, removedMember); },
+                      triggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -168,7 +171,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
     inline ExprRef<InnerViewType> removeMemberAndNotify(UInt index) {
         ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
-        notifyMemberRemoved(index);
+        notifyMemberRemoved(index, removedValue);
         return removedValue;
     }
 
@@ -292,8 +295,7 @@ struct SequenceValue : public SequenceView, public ValBase {
             valBase(*removedMember).container = NULL;
             reassignIndicesToEnd<InnerValueType>(index);
             debug_code(assertValidVarBases());
-            SequenceView::notifyMemberRemoved(
-                index, getValueHash(*getViewPtr(removedMember)));
+            SequenceView::notifyMemberRemoved(index, removedMember);
             return std::make_pair(true, std::move(removedMember));
         } else {
             SequenceView::addMember<InnerViewType>(index,
@@ -368,8 +370,8 @@ template <>
 struct DefinedTrigger<SequenceValue> : public SequenceTrigger {
     ValRef<SequenceValue> val;
     DefinedTrigger(const ValRef<SequenceValue>& val) : val(val) {}
-    inline void valueRemoved(UInt indexOfRemovedValue) {
-        todoImpl(indexOfRemovedValue);
+    inline void valueRemoved(UInt indexOfRemovedValue, const AnyExprRef& expr) {
+        todoImpl(indexOfRemovedValue, expr);
     }
     inline void valueAdded(UInt index, const AnyExprRef& member) {
         todoImpl(index, member);
@@ -387,7 +389,7 @@ struct DefinedTrigger<SequenceValue> : public SequenceTrigger {
 template <typename Child>
 struct ChangeTriggerAdapter<SequenceTrigger, Child>
     : public SequenceTrigger, public ChangeTriggerAdapterBase<Child> {
-    inline void valueRemoved(UInt) { this->notifyChange(); }
+    inline void valueRemoved(UInt, const AnyExprRef&) { this->notifyChange(); }
     inline void valueAdded(UInt, const AnyExprRef&) final {
         this->notifyChange();
     }

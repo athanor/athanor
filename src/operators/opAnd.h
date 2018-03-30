@@ -2,16 +2,17 @@
 #ifndef SRC_OPERATORS_OPAND_H_
 #define SRC_OPERATORS_OPAND_H_
 #include <vector>
-#include "operators/quantifierView.h"
 #include "types/bool.h"
 #include "utils/fastIterableIntSet.h"
-class OpAndTrigger;
 struct OpAnd : public BoolView {
-    class QuantifierTrigger;
-    std::shared_ptr<QuantifierView<BoolView>> quantifier;
+    class OperandTrigger;
+
+    class OperandsSequenceTrigger;
+    ExprRef<SequenceView> operands;
+    ;
     FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
-    std::vector<std::shared_ptr<OpAndTrigger>> operandTriggers;
-    std::shared_ptr<QuantifierTrigger> quantifierTrigger;
+    std::vector<std::shared_ptr<OperandTrigger>> operandTriggers;
+    std::shared_ptr<OperandsSequenceTrigger> operandsSequenceTrigger;
 
    public:
     OpAnd(std::shared_ptr<QuantifierView<BoolView>> quantifier)

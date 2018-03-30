@@ -3,17 +3,16 @@
 #include <cassert>
 #include "utils/ignoreUnused.h"
 using namespace std;
-using QuantifierTrigger = OpAnd::QuantifierTrigger;
-class OpAndTrigger : public BoolTrigger {
+using OperandsSequenceTrigger = OpAnd::OperandsSequenceTrigger;
+using OperandTrigger = OpAnd::OperandTrigger;
+class OpAnd::OperandTrigger : public BoolTrigger {
    public:
     OpAnd* op;
     UInt lastViolation;
     size_t index;
 
-    OpAndTrigger(OpAnd* op, size_t index) : op(op), index(index) {}
-    void possibleValueChange(UInt oldVilation) {
-        lastViolation = oldVilation;
-    }
+    OperandTrigger(OpAnd* op, size_t index) : op(op), index(index) {}
+    void possibleValueChange(UInt oldVilation) { lastViolation = oldVilation; }
     void valueChanged(UInt newViolation) {
         if (newViolation == lastViolation) {
             return;
@@ -37,17 +36,26 @@ class OpAndTrigger : public BoolTrigger {
     }
 };
 
-class OpAnd::QuantifierTrigger : public QuantifierView<BoolView>::Trigger {
+class OpAnd::OperandsSequenceTrigger : public SequenceTrigger {
    public:
     OpAnd* op;
-    QuantifierTrigger(OpAnd* op) : op(op) {}
-    void exprUnrolled(const ExprRef<BoolView>& expr) final {
-        op->operandTriggers.emplace_back(
-            std::make_shared<OpAndTrigger>(op, op->operandTriggers.size()));
-        addTrigger(expr, op->operandTriggers.back());
+    OperandsSequenceTrigger(OpAnd* op) : op(op) {}
+    void valueAdded(UInt index, const AnyExprRef& exprIn) final {
+        auto& expr = mpark::get<ExprRef<BoolView>>(exprIn);
+        op->operandTriggers.insert(op->operandTriggers.begin() + index,
+                                   std::make_shared<OperandTrigger>(op, index));
+        addTrigger(expr, op->operandTriggers[index]);
+        for (size_t i = index + 1; i < op->operandTriggers.size(); i++) {
+            op->operandTriggers[i]->index = i;
+        }
+        for (size_t i = op->operandTriggers.size(); i > index + 1; i--) {
+            if (op->violatingOperands.erase(i - 1)) {
+                op->violatingOperands.insert(i);
+            }
+        }
         UInt violation = expr->violation;
         if (violation > 0) {
-            op->violatingOperands.insert(op->operandTriggers.size() - 1);
+            op->violatingOperands.insert(index);
             op->changeValue([&]() {
                 op->violation += violation;
                 return true;
@@ -55,11 +63,12 @@ class OpAnd::QuantifierTrigger : public QuantifierView<BoolView>::Trigger {
         }
     }
 
-    void exprRolled(UInt index, const ExprRef<BoolView>& expr) final {
-        op->operandTriggers[index] = std::move(op->operandTriggers.back());
-        op->operandTriggers.pop_back();
-        if (index < op->operandTriggers.size()) {
-            op->operandTriggers[index]->index = index;
+    void valueRemoved(UInt index, const AnyExprRef& exprIn) final {
+        const auto& expr = mpark::get<ExprRef<BoolView>>(exprIn);
+        auto trigger = move(op->operandTriggers[index]);
+        op->operandTriggers.erase(op->operandTriggers.begin() + index);
+        for (size_t i = index; i < op->operandTriggers.size(); i++) {
+            op->operandTriggers[i]->index = i;
         }
         UInt violationOfRemovedExpr = expr->violation;
         debug_code(assert((op->violatingOperands.count(index) &&
@@ -67,9 +76,10 @@ class OpAnd::QuantifierTrigger : public QuantifierView<BoolView>::Trigger {
                           (!op->violatingOperands.count(index) &&
                            violationOfRemovedExpr == 0)));
         op->violatingOperands.erase(index);
-        if (index < op->operandTriggers.size() &&
-            op->violatingOperands.erase(op->operandTriggers.size())) {
-            op->violatingOperands.insert(index);
+        for (size_t i = index; i < op->operandTriggers.size(); i++) {
+            if (op->violatingOperands.erase(index + 1)) {
+                op->violatingOperands.insert(index);
+            }
         }
         op->changeValue([&]() {
             op->violation -= violationOfRemovedExpr;
@@ -77,6 +87,12 @@ class OpAnd::QuantifierTrigger : public QuantifierView<BoolView>::Trigger {
         });
     }
 
+    inline void beginSwaps() final {}
+    inline void endSwaps() final {}
+    inline void positionsSwapped(UInt index1, UInt index2) {
+        std::swap(op->operandTriggers[index1], op->operandTriggers[index2]);
+        op->operand
+    }
     void iterHasNewValue(const QuantifierView<BoolView>&,
                          const ExprRef<QuantifierView<BoolView>>&) {
         todoImpl();
@@ -101,20 +117,21 @@ OpAnd::OpAnd(OpAnd&& other)
       quantifier(move(other.quantifier)),
       violatingOperands(move(other.violatingOperands)),
       operandTriggers(move(other.operandTriggers)),
-      quantifierTrigger(move(other.quantifierTrigger)) {
+      operandSequenceTrigger(move(other.operandSequenceTrigger)) {
     setTriggerParent(this, operandTriggers);
-    setTriggerParent(this, quantifierTrigger);
+    setTriggerParent(this, operandSequenceTrigger);
 }
 
 void OpAnd::startTriggering() {
-    if (!quantifierTrigger) {
-        quantifierTrigger = std::make_shared<QuantifierTrigger>(this);
-        addTrigger(quantifier, quantifierTrigger);
+    if (!operandSequenceTrigger) {
+        operandSequenceTrigger =
+            std::make_shared<OperandsSequenceTrigger>(this);
+        addTrigger(quantifier, operandSequenceTrigger);
         quantifier->startTriggeringOnContainer();
 
         for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
             auto& operand = quantifier->exprs[i];
-            auto trigger = make_shared<OpAndTrigger>(this, i);
+            auto trigger = make_shared<OperandTrigger>(this, i);
             addTrigger(operand, trigger);
             operandTriggers.emplace_back(move(trigger));
             operand->startTriggering();
@@ -132,9 +149,9 @@ void OpAnd::stopTriggering() {
             operand->stopTriggering();
         }
     }
-    if (quantifierTrigger) {
-        deleteTrigger(quantifierTrigger);
-        quantifierTrigger = nullptr;
+    if (operandSequenceTrigger) {
+        deleteTrigger(operandSequenceTrigger);
+        operandSequenceTrigger = nullptr;
         quantifier->stopTriggeringOnContainer();
     }
 }
@@ -159,7 +176,7 @@ ExprRef<BoolView> OpAnd::deepCopySelfForUnroll(
 std::ostream& OpAnd::dumpState(std::ostream& os) const {
     os << "OpAnd: violation=" << violation << endl;
     vector<UInt> sortedViolatingOperands(violatingOperands.begin(),
-                                              violatingOperands.end());
+                                         violatingOperands.end());
     sort(sortedViolatingOperands.begin(), sortedViolatingOperands.end());
     os << "Violating indices: " << sortedViolatingOperands << endl;
     os << "operands [";

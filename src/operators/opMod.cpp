@@ -10,21 +10,16 @@ void OpMod::evaluate() {
     value = left->value % right->value;
 }
 
-struct OpMod::Trigger : public IntTrigger {
+struct OpMod::Trigger
+    : public ChangeTriggerAdapter<IntTrigger, OpMod::Trigger> {
     OpMod* op;
     Trigger(OpMod* op) : op(op) {}
-    inline void possibleValueChange(Int) final {}
-    inline void valueChanged(Int) final {
+    inline void adapterPossibleValueChange() {}
+    inline void adapterValueChanged() {
         op->changeValue([&]() {
             op->value = op->left->value % op->right->value;
             return true;
         });
-    }
-
-    inline void iterHasNewValue(const IntView& oldValue,
-                                const ExprRef<IntView>& newValue) final {
-        possibleValueChange(oldValue.value);
-        valueChanged(newValue->value);
     }
 };
 

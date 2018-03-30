@@ -46,7 +46,7 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
             });
         }
     }
-
+    void possibleSetValueChange() final {}
     inline void setValueChanged(const SetView& newValue) final {
         op->changeValue([&]() {
             ::evaluate(*op, newValue, *(op->right));
@@ -63,9 +63,8 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
         valueRemoved(0, oldHash);
         valueAdded(member);
     }
-
-    inline void iterHasNewValue(const SetView&,
-                                const ExprRef<SetView>& newValue) {
+    inline void preIterValueChange(const ExprRef<SetView>&) final {}
+    inline void postIterValueChange(const ExprRef<SetView>& newValue) {
         setValueChanged(*newValue);
     }
 };
@@ -93,7 +92,7 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
             });
         }
     }
-
+    void possibleSetValueChange() final {}
     inline void setValueChanged(const SetView& newValue) final {
         op->changeValue([&]() {
             ::evaluate(*op, *(op->left), newValue);
@@ -111,8 +110,8 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
         valueAdded(member);
     }
 
-    inline void iterHasNewValue(const SetView&,
-                                const ExprRef<SetView>& newValue) {
+    inline void preIterValueChange(const ExprRef<SetView>&) final {}
+    inline void postIterValueChange(const ExprRef<SetView>& newValue) {
         setValueChanged(*newValue);
     }
 };

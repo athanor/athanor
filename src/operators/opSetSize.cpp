@@ -10,36 +10,17 @@ void OpSetSize::evaluate() {
     value = operand->numberElements();
 }
 
-class OpSetSizeTrigger : public SetTrigger {
+class OpSetSizeTrigger
+    : public ChangeTriggerAdapter<SetTrigger, OpSetSizeTrigger> {
    public:
     OpSetSize* op;
-
-   public:
     OpSetSizeTrigger(OpSetSize* op) : op(op) {}
-    inline void valueRemoved(UInt, HashType) final {
+    inline void adapterPossibleValueChange() {}
+    inline void adapterValueChanged() {
         op->changeValue([&]() {
-            --op->value;
+            op->value = op->operand->numberElements();
             return true;
         });
-    }
-
-    inline void valueAdded(const AnyExprRef&) final {
-        op->changeValue([&]() {
-            ++op->value;
-            return true;
-        });
-    }
-    inline void setValueChanged(const SetView& newValue) final {
-        op->changeValue([&]() {
-            op->value = newValue.numberElements();
-            return true;
-        });
-    }
-    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
-    inline void memberValueChanged(UInt, const AnyExprRef&) final {}
-    inline void iterHasNewValue(const SetView&,
-                                const ExprRef<SetView>& newValue) {
-        setValueChanged(*newValue);
     }
 };
 

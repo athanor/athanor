@@ -10,21 +10,16 @@ void OpIntEq::evaluate() {
     violation = std::abs(left->value - right->value);
 }
 
-struct OpIntEq::Trigger : public IntTrigger {
+struct OpIntEq::Trigger
+    : public ChangeTriggerAdapter<IntTrigger, OpIntEq::Trigger> {
     OpIntEq* op;
     Trigger(OpIntEq* op) : op(op) {}
-    inline void possibleValueChange(Int) final {}
-    inline void valueChanged(Int) final {
+    inline void adapterPossibleValueChange() {}
+    inline void adapterValueChanged() {
         op->changeValue([&]() {
             op->violation = std::abs(op->left->value - op->right->value);
             return true;
         });
-    }
-
-    inline void iterHasNewValue(const IntView& oldValue,
-                                const ExprRef<IntView>& newValue) final {
-        possibleValueChange(oldValue.value);
-        valueChanged(newValue->value);
     }
 };
 
@@ -55,8 +50,7 @@ void OpIntEq::stopTriggering() {
     }
 }
 
-void OpIntEq::updateViolationDescription(UInt,
-                                         ViolationDescription& vioDesc) {
+void OpIntEq::updateViolationDescription(UInt, ViolationDescription& vioDesc) {
     left->updateViolationDescription(violation, vioDesc);
     right->updateViolationDescription(violation, vioDesc);
 }

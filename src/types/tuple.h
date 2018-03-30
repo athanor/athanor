@@ -128,7 +128,10 @@ struct DefinedTrigger<TupleValue> : public TupleTrigger {
 
     void possibleTupleValueChanged() { todoImpl(); }
     void tupleValueChanged() { todoImpl(); }
-    void iterHasNewValue(const TupleView&, const ExprRef<TupleView>&) final {
+    inline void preIterValueChange(const ExprRef<TupleView>&) final {
+        todoImpl();
+    }
+    inline void postIterValueChange(const ExprRef<TupleView>&) final {
         assert(false);
         abort();
     }
@@ -137,13 +140,19 @@ struct DefinedTrigger<TupleValue> : public TupleTrigger {
 template <typename Child>
 struct ChangeTriggerAdapter<TupleTrigger, Child>
     : public TupleTrigger, public ChangeTriggerAdapterBase<Child> {
-    inline void possibleMemberValueChange(UInt) final {}
-    inline void memberValueChanged(UInt) final { this->notifyChange(); }
-    inline void possibleTupleValueChange() final {}
-    inline void tupleValueChanged() final { this->notifyChange(); }
-    inline void iterHasNewValue(const TupleView&,
-                                const ExprRef<TupleView>&) final {
-        this->notifyChange();
+    inline void possibleMemberValueChange(UInt) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
+    inline void possibleTupleValueChange() final {
+        this->forwardPossibleValueChange();
+    }
+    inline void tupleValueChanged() final { this->forwardValueChanged(); }
+    inline void preIterValueChange(const ExprRef<TupleView>&) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void postIterValueChange(const ExprRef<TupleView>&) final {
+        this->forwardValueChange();
     }
 };
 

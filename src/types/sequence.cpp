@@ -41,9 +41,7 @@ template <typename InnerViewType>
 void deepCopyImpl(const SequenceValue&,
                   const ExprRefVec<InnerViewType>& srcMemnersImpl,
                   SequenceValue& target) {
-    typedef typename AssociatedValueType<InnerViewType>::type InnerValueType;
-    target.notifyPossibleSubsequenceChange<InnerValueType>(
-        0, target.numberElements());
+    target.notifyPossibleSequenceValueChange();
     auto& targetMembersImpl = target.getMembers<InnerViewType>();
     // to be optimised later
     targetMembersImpl.clear();
@@ -53,8 +51,7 @@ void deepCopyImpl(const SequenceValue&,
                          deepCopy(assumeAsValue(*member)));
     }
     debug_code(target.assertValidState());
-    target.changeSubsequenceAndNotify<InnerViewType>(0,
-                                                     target.numberElements());
+    target.notifyEntireSequenceChange();
 }
 
 template <>

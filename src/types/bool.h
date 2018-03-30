@@ -3,6 +3,7 @@
 #define SRC_TYPES_BOOL_H_
 #include <utility>
 #include <vector>
+#include "utils/ignoreUnused.h"
 
 #include "base/base.h"
 struct BoolDomain {};
@@ -57,7 +58,10 @@ struct DefinedTrigger<BoolValue> : public BoolTrigger {
             return true;
         });
     }
-    void iterHasNewValue(const BoolView&, const ExprRef<BoolView>&) final {
+    inline void preIterValueChange(const ExprRef<BoolView>&) final {
+        todoImpl();
+    }
+    inline void postIterValueChange(const ExprRef<BoolView>&) final {
         assert(false);
         abort();
     }
@@ -65,11 +69,15 @@ struct DefinedTrigger<BoolValue> : public BoolTrigger {
 template <typename Child>
 struct ChangeTriggerAdapter<BoolTrigger, Child>
     : public BoolTrigger, public ChangeTriggerAdapterBase<Child> {
-    inline void possibleValueChange(UInt) final {}
-    inline void valueChanged(UInt) final { this->notifyChange(); }
-    inline void iterHasNewValue(const BoolView&,
-                                const ExprRef<BoolView>&) final {
-        this->notifyChange();
+    inline void possibleValueChange(UInt) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void valueChanged(UInt) final { this->forwardValueChanged(); }
+    inline void preIterValueChange(const ExprRef<BoolView>&) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void postIterValueChange(const ExprRef<BoolView>&) final {
+        this->forwardValueChanged();
     }
 };
 

@@ -35,7 +35,7 @@ struct SetTrigger : public IterAssignedTrigger<SetView> {
     virtual void possibleMemberValueChange(UInt index,
                                            const AnyExprRef& member) = 0;
     virtual void memberValueChanged(UInt index, const AnyExprRef& member) = 0;
-
+    virtual void possibleSetValueChange() = 0;
     virtual void setValueChanged(const SetView& newValue) = 0;
 };
 struct SetView : public ExprInterface<SetView> {
@@ -45,6 +45,7 @@ struct SetView : public ExprInterface<SetView> {
     HashType cachedHashTotal;
     HashType hashOfPossibleChange;
     std::vector<std::shared_ptr<SetTrigger>> triggers;
+    debug_code(bool posSetValueChangeCalled = false);
 
    private:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -64,6 +65,8 @@ struct SetView : public ExprInterface<SetView> {
     }
 
     inline void notifyMemberAdded(const AnyExprRef& newMember) {
+        debug_code(assert(posSetValueChangeCalled);
+                   posSetValueChangeCalled = false);
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
     }
@@ -89,6 +92,8 @@ struct SetView : public ExprInterface<SetView> {
     }
 
     inline void notifyMemberRemoved(UInt index, HashType hashOfRemovedMember) {
+        debug_code(assert(posSetValueChangeCalled);
+                   posSetValueChangeCalled = false);
         debug_code(assertValidState());
         visitTriggers(
             [&](auto& t) { t->valueRemoved(index, hashOfRemovedMember); },
@@ -130,8 +135,13 @@ struct SetView : public ExprInterface<SetView> {
     }
 
    public:
+    inline void notifyPossibleSetValueChange() {
+        visitTriggers([](auto& t) { t->possibleSetValueChange(); }, triggers);
+        debug_code(posSetValueChangeCalled = true);
+    }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool addMemberAndNotify(const ExprRef<InnerViewType>& member) {
+        notifyPossibleSetValueChange();
         if (addMember(member)) {
             notifyMemberAdded(getMembers<InnerViewType>().back());
             return true;
@@ -142,6 +152,7 @@ struct SetView : public ExprInterface<SetView> {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRef<InnerViewType> removeMemberAndNotify(UInt index) {
+        notifyPossibleSetValueChange();
         ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
         notifyMemberRemoved(index, getValueHash(*removedValue));
@@ -172,6 +183,9 @@ struct SetView : public ExprInterface<SetView> {
     }
 
     inline void notifyEntireSetChange() {
+        debug_code(assert(posSetValueChangeCalled);
+                   posSetValueChangeCalled = false);
+
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->setValueChanged(*this); }, triggers);
     }
@@ -232,6 +246,7 @@ struct SetValue : public SetView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline bool tryAddMember(const ValRef<InnerValueType>& member,
                              Func&& func) {
+        notifyPossibleSetValueChange();
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         if (SetView::addMember(ExprRef<InnerViewType>(getViewPtr(member)))) {
             if (func()) {
@@ -267,6 +282,7 @@ struct SetValue : public SetView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline std::pair<bool, ValRef<InnerValueType>> tryRemoveMember(
         UInt index, Func&& func) {
+        notifyPossibleSetValueChange();
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         auto removedMember = assumeAsValue(
             SetView::removeMember<InnerViewType>(index).asViewRef());
@@ -369,9 +385,13 @@ struct DefinedTrigger<SetValue> : public SetTrigger {
         todoImpl(index, member);
         ;
     }
-
+    inline void possibleSetValueChange() { todoImpl(); }
     void setValueChanged(const SetView& newValue) { todoImpl(newValue); }
-    void iterHasNewValue(const SetView&, const ExprRef<SetView>&) final {
+    inline void preIterValueChange(const ExprRef<SetView>&) final {
+        todoImpl();
+    }
+
+    void postIterValueChange(const ExprRef<SetView>&) final {
         assert(false);
         abort();
     }
@@ -380,16 +400,25 @@ struct DefinedTrigger<SetValue> : public SetTrigger {
 template <typename Child>
 struct ChangeTriggerAdapter<SetTrigger, Child>
     : public SetTrigger, public ChangeTriggerAdapterBase<Child> {
-    inline void valueRemoved(UInt, HashType) { this->notifyChange(); }
-    inline void valueAdded(const AnyExprRef&) final { this->notifyChange(); }
-    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
-    inline void memberValueChanged(UInt, const AnyExprRef&) final {
-        this->notifyChange();
+    inline void valueRemoved(UInt, HashType) { this->forwardValueChanged(); }
+    inline void valueAdded(const AnyExprRef&) final {
+        this->forwardValueChanged();
     }
-
-    inline void setValueChanged(const SetView&) final { this->notifyChange(); }
-    inline void iterHasNewValue(const SetView&, const ExprRef<SetView>&) final {
-        this->notifyChange();
+    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void memberValueChanged(UInt, const AnyExprRef&) final {
+        this->forwardValueChanged();
+    }
+    inline void possibleSetValueChange() { this->forwardPossibleValueChange(); }
+    inline void setValueChanged(const SetView&) final {
+        this->forwardValueChange();
+    }
+    inline void preIterValueChange(const ExprRef<SetView>&) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void postIterValueChange(const ExprRef<SetView>&) final {
+        this->forwardValueChanged();
     }
 };
 #endif /* SRC_TYPES_SET_H_ */

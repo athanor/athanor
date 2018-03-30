@@ -27,8 +27,9 @@ struct DelayedTrigger : public virtual TriggerBase {
 template <typename UnrollingView>
 struct IterAssignedTrigger : public virtual TriggerBase {
     typedef UnrollingView ViewType;
-    virtual void iterHasNewValue(const UnrollingView& oldValue,
-                                 const ExprRef<UnrollingView>& newValue) = 0;
+    virtual void preIterValueChange(const ExprRef<UnrollingView>& newValue) = 0;
+    virtual void postIterValueChange(
+        const ExprRef<UnrollingView>& newValue) = 0;
 };
 
 template <typename ValueType>
@@ -147,7 +148,11 @@ void setTriggerParent(Op* op, Triggers&... triggers) {
 
 template <typename Child>
 struct ChangeTriggerAdapterBase {
-    inline void notifyChange() {
+    inline void forwardPossibleChange() {
+        static_cast<Child*>(this)->adapterPossibleValueChange();
+    }
+
+    inline void forwardValueChanged() {
         static_cast<Child*>(this)->adapterValueChanged();
     }
 };

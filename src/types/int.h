@@ -4,6 +4,7 @@
 #include <numeric>
 #include <utility>
 #include <vector>
+#include "utils/ignoreUnused.h"
 
 #include "base/base.h"
 
@@ -69,7 +70,10 @@ struct DefinedTrigger<IntValue> : public IntTrigger {
         });
     }
 
-    void iterHasNewValue(const IntView&, const ExprRef<IntView>&) final {
+    inline void preIterValueChange(const ExprRef<IntView>&) final {
+        todoImpl();
+    }
+    inline void postIterValueChange(const ExprRef<IntView>&) final {
         assert(false);
         abort();
     }
@@ -78,10 +82,15 @@ struct DefinedTrigger<IntValue> : public IntTrigger {
 template <typename Child>
 struct ChangeTriggerAdapter<IntTrigger, Child>
     : public IntTrigger, public ChangeTriggerAdapterBase<Child> {
-    inline void possibleValueChange(Int) final {}
-    inline void valueChanged(Int) final { this->notifyChange(); }
-    inline void iterHasNewValue(const IntView&, const ExprRef<IntView>&) final {
-        this->notifyChange();
+    inline void possibleValueChange(Int) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void valueChanged(Int) final { this->forwardValueChanged(); }
+    inline void preIterValueChange(const ExprRef<IntView>&) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void postIterValueChange(const ExprRef<IntView>&) final {
+        this->forwardValueChanged();
     }
 };
 

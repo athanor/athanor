@@ -75,4 +75,14 @@ struct DefinedTrigger<IntValue> : public IntTrigger {
     }
 };
 
+template <typename Child>
+struct ChangeTriggerAdapter<IntTrigger, Child>
+    : public IntTrigger, public ChangeTriggerAdapterBase<Child> {
+    inline void possibleValueChange(Int) final {}
+    inline void valueChanged(Int) final { this->notifyChange(); }
+    inline void iterHasNewValue(const IntView&, const ExprRef<IntView>&) final {
+        this->notifyChange();
+    }
+};
+
 #endif /* SRC_TYPES_INT_H_ */

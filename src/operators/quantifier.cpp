@@ -1,185 +1,245 @@
-#ifndef SRC_OPERATORS_QUANTIFIER_H_
-#include "operators/quantifierView.h"
-#define SRC_OPERATORS_QUANTIFIER_H_
-#include "base/base.h"
+#include "operators/quantifier.h"
 #include "types/allTypes.h"
-template <typename Container>
+using namespace std;
+template <typename ContainerType>
 struct InitialUnroller;
+
+template <>
+struct InitialUnroller<MSetView>;
 
 template <>
 struct InitialUnroller<SetView>;
 template <>
 struct InitialUnroller<MSetView>;
-template <typename Container, typename ExprType>
+template <typename Container>
 struct ContainerTrigger;
-template <typename ExprType>
-struct ContainerTrigger<SetView, ExprType>;
-template <typename ExprType>
-struct ContainerTrigger<MSetView, ExprType>;
+template <>
+struct ContainerTrigger<SetView>;
+template <>
+struct ContainerTrigger<MSetView>;
 
-inline static u_int64_t nextQuantId() {
-    static u_int64_t quantId = 0;
-    return quantId++;
+template <typename ContainerType>
+Quantifier<ContainerType>::Quantifier(ExprRef<ContainerType> container,
+                                      const int id)
+    : quantId(id), container(move(container)) {}
+
+template <typename ContainerType>
+Quantifier<ContainerType>::Quantifier(const Quantifier<ContainerType>&& other)
+    : SequenceView(move(other)),
+      quantId(other.quantId),
+      container(move(other.container)),
+      expr(move(other.expr)),
+      unrolledIterVals(move(other.unrolledIterVals)),
+      containerTrigger(move(other.containerTrigger)),
+      exprTrigger(move(other.exprTrigger)) {
+    setTriggerParent(this, containerTrigger, exprTrigger);
 }
 
 template <typename ContainerType>
-struct Quantifier : public SequenceView {
-    const int quantId;
-    ExprRef<ContainerType> container;
-    AnyExprRef expr;
-    std::vector<AnyIterRef> unrolledIterVals;
-    std::shared_ptr<ContainerTrigger<ContainerType, ExprType>> containerTrigger;
+void Quantifier<ContainerType>::setExpression(AnyExprRef exprIn) {
+    expr = move(exprIn);
+    mpark::visit(
+        [&](auto& expr) { members.emplace<ExprRefVec<viewType(expr)>>(); },
+        expr);
+}
 
-    Quantifier(ExprRef<ContainerType> container, const int id = nextQuantId())
-        : quantId(id), container(std::move(container)) {}
-    ~Quantifier() { stopTriggeringOnContainer(); }
-    Quantifier(const Quantifier<ContainerType, ExprRef<ExprType>>&& other)
-        : SequenceView(std::move(other)),
-          quantId(other.quantId),
-          container(std::move(other.container)),
-          expr(std::move(other.expr)),
-          unrolledIterVals(std::move(other.unrolledIterVals)),
-          containerTrigger(std::move(other.containerTrigger)) {
-        setTriggerParent(this, containerTrigger);
-    }
+template <typename ContainerType>
+bool Quantifier<ContainerType>::triggering() {
+    return static_cast<bool>(containerTrigger);
+}
 
-    inline void setExpression(AnyExprRef exprIn) {
-        expr = std::move(exprIn);
-        mpark::visit(
-            [&](auto& expr) { members.emplace<ExprRefVec<viewType(expr)>>(); },
-            expr);
+template <typename ContainerType>
+template <typename ViewType>
+void Quantifier<ContainerType>::unroll(const ExprRef<ViewType>& newView) {
+    auto& members = getMembers<ViewType>();
+    debug_log("unrolling " << newView);
+    auto iterRef = this->newIterRef<ViewType>();
+    // choose which expr to copy from
+    // use previously unrolled expr if available as  can be most
+    // efficiently updated to new unrolled value  otherwise use expr
+    // template
+    auto exprToCopy = (members.empty())
+                          ? mpark::get<ExprRef<viewType(members)>>(expr)
+                          : members.back();
+    // decide if expr that is going to be unrolled needs evaluating.
+    // It needs evaluating if we are in triggering() mode and if the
+    // expr being unrolled is taken from the expr template, because the
+    // expr will not have been evaluated before.  If we are instead
+    // copying from an already unrolled expr, it  need not be
+    // evaluated, simply copy it and trigger the change in value.
+    bool evaluateExpr = members.empty() && triggering();
+    const ExprRef<ViewType>& oldValueOfIter =
+        (members.empty())
+            ? ViewRef<ViewType>(nullptr)
+            : mpark::get<IterRef<ViewType>>(unrolledIterVals.back())
+                  .getIterator()
+                  .getValue();
+    unrolledIterVals.emplace_back(iterRef);
+    ExprRef<ViewType> newMember =
+        deepCopyForUnroll<viewType(members)>(exprToCopy, iterRef);
+    iterRef.getIterator().changeValue(triggering() && !evaluateExpr,
+                                      oldValueOfIter, newView, [&]() {
+                                          if (evaluateExpr) {
+                                              members.back()->evaluate();
+                                          }
+                                          if (triggering()) {
+                                              members.back()->startTriggering();
+                                          }
+                                      });
+    addMemberAndNotify(members.size(), newMember);
+    if (triggering()) {
+        startTriggeringOnExpr(newMember);
     }
+}
 
-    template <typename T>
-    inline IterRef<T> newIterRef() {
-        return IterRef<T>(quantId);
-    }
+template <typename ContainerType>
+void Quantifier<ContainerType>::roll(UInt index) {
+    debug_log("Rolling  index " << index << " with value "
+                                << unrolledIterVals[index]);
+    mpark::visit(
+        [&](auto& members) {
+            notifyBeginSwaps();
+            swapAndNotify<viewType(members)>(index, members.size() - 1);
+            notifyEndSwaps();
+            removeMemberAndNotify<viewType(members)>(members.size() - 1);
+        },
+        members);
+    unrolledIterVals[index] = move(unrolledIterVals.back());
+    unrolledIterVals.pop_back();
+}
 
-    inline bool triggering() { return static_cast<bool>(containerTrigger); }
-    template <typename ViewType>
-    inline void unroll(const ExprRef<ViewType>& newView) {
-        auto& members = getMembers<ViewType>();
-        debug_log("unrolling " << newView);
-        auto iterRef = this->newIterRef<ViewType>();
-        // choose which expr to copy from
-        // use previously unrolled expr if available as  can be most
-        // efficiently updated to new unrolled value  otherwise use expr
-        // template
-        auto& exprToCopy = (members.empty()) ? expr : members.back();
-        // decide if expr that is going to be unrolled needs evaluating.
-        // It needs evaluating if we are in triggering() mode and if the
-        // expr being unrolled is taken from the expr template, because the
-        // expr will not have been evaluated before.  If we are instead
-        // copying from an already unrolled expr, it  need not be
-        // evaluated, simply copy it and trigger the change in value.
-        bool evaluateExpr = members.empty() && triggering();
-        const ExprRef<ViewType>& oldValueOfIter =
-            (members.empty())
-                ? ViewRef<ViewType>(nullptr)
-                : mpark::get<IterRef<ViewType>>(unrolledIterVals.back())
-                      .getIterator()
-                      .getValue();
-        unrolledIterVals.emplace_back(iterRef);
-        ExprRef<ViewType> newMember = deepCopyForUnroll(exprToCopy, iterRef);
-        iterRef.getIterator().changeValue(
-            triggering() && !evaluateExpr, oldValueOfIter, newView, [&]() {
-                if (evaluateExpr) {
-                    members.back()->evaluate();
-                }
-                if (triggering()) {
-                    members.back()->startTriggering();
-                }
-            });
-        addMemberAndNotify(members.size(), newMember);
-    }
+template <typename ContainerType>
+ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnroll(
+    const AnyIterRef& iterator) const {
+    auto newQuantifier = make_shared<Quantifier<ContainerType>>(
+        deepCopyForUnroll(container, iterator), quantId);
+    newQuantifier->setExpression(deepCopyForUnroll(expr, iterator));
 
-    inline void roll(UInt index) {
-        debug_log("Rolling  index " << index << " with value "
-                                    << unrolledIterVals[index]);
-        notifyBeginSwaps();
-        mpark::visit(
-            [&](auto& members) {
-                swapAndNotify<viewType(members)>(index, members.size() - 1);
-                notifyEndSwaps();
-                removedMemberAndNotify(members.size() - 1);
-            },
-            members);
-        unrolledIterVals[index] = std::move(unrolledIterVals.back());
-        unrolledIterVals.pop_back();
-    }
+    mpark::visit(
+        [&](auto& members) {
+            for (size_t i = 0; i < members.size(); ++i) {
+                auto& expr = members[i];
+                auto& iterVal = unrolledIterVals[i];
+                newQuantifier->template addMember<viewType(members)>(
+                    newQuantifier->numberElements(),
+                    deepCopyForUnroll(expr, iterator));
+                newQuantifier->unrolledIterVals.emplace_back(iterVal);
+            }
+        },
+        members);
+    return ViewRef<SequenceView>(newQuantifier);
+}
 
-    inline ExprRef<SequenceView> deepCopyForUnroll(
-        const AnyIterRef& iterator) final final {
-        auto newQuantifier =
-            std::make_shared<Quantifier<ContainerType, ExprType>>(
-                deepCopyForUnroll(container, iterator), quantId);
-        newQuantifier->expr = deepCopyForUnroll(expr, iterator);
-
-        mpark::visit(
-            [&](auto& members) {
-                newQuantifier->members.emplace<viewType(members)>();
-                for (size_t i = 0; i < members.size(); ++i) {
-                    auto& expr = members[i];
-                    auto& iterVal = unrolledIterVals[i];
-                    newQuantifier.addMember<viewType(members)>(
-                        deepCopyForUnroll(expr, iterator));
-                    newQuantifier->unrolledIterVals.emplace_back(iterVal);
-                }
-            },
-            members);
-        return newQuantifier;
+template <typename ContainerType, typename ViewType>
+struct ExprChangeTrigger
+    : Quantifier<ContainerType>::ExprTriggerBase,
+      ChangeTriggerAdapter<typename AssociatedTriggerType<ViewType>::type,
+                           ExprChangeTrigger<ContainerType, ViewType>> {
+    using Quantifier<ContainerType>::ExprTriggerBase ::ExprTriggerBase;
+    void adapterValueChanged() {
+        this->op->notifyUnknownSubsequenceChange();
+        ;
     }
-
-    inline void startTriggering() final {
-        if (triggering()) {
-            return;
-        }
-        containerTrigger =
-            std::make_shared<ContainerTrigger<ContainerType, ExprType>>(this);
-        addTrigger(container, containerTrigger);
-        container->startTriggering();
-    }
-    inline void stopTriggering() final {
-        if (containerTrigger) {
-            deleteTrigger(containerTrigger);
-            containerTrigger = nullptr;
-            container->stopTriggering();
-        }
-    }
-    inline void evaluate() final {
-        unrolledIterVals.clear();
-        silentClear();
-        container->evaluate();
-        InitialUnroller<ContainerType>::initialUnroll(*this);
-    }
-    std::ostream& dumpState(std::ostream& os) const final {
-        mpark::visit([&] (auto& members) {
-
-        })
-    }
-    void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription& vioDesc) final {
-        container->updateViolationDescription(parentViolation, vioDesc);
-    }
+    ExprChangeTrigger() {}
 };
 
-template <typename ReturnExprType>
-struct ContainerTrigger<SetView, ReturnExprType> : public SetTrigger,
-                                                   public DelayedTrigger {
-    Quantifier<SetView, ReturnExprType>* op;
+ExprChangeTrigger<BoolView, BoolView> b();
+template <typename ContainerType>
+template <typename ViewType>
+void Quantifier<ContainerType>::startTriggeringOnExpr(ExprRef<ViewType>& expr) {
+    addTrigger(expr,
+               static_pointer_cast<ExprChangeTrigger<ContainerType, ViewType>>(
+                   exprTrigger));
+}
+
+template <typename ContainerType>
+void Quantifier<ContainerType>::startTriggering() {
+    if (triggering()) {
+        return;
+    }
+    containerTrigger = make_shared<ContainerTrigger<ContainerType>>(this);
+    addTrigger(container, containerTrigger);
+    container->startTriggering();
+    mpark::visit(
+        [&](auto& expr) {
+            auto trigger =
+                make_shared<ExprChangeTrigger<ContainerType, viewType(expr)>>(
+                    this);
+            exprTrigger = trigger;
+            for (auto& unrolledExpr :
+                 this->template getMembers<viewType(expr)>()) {
+                addTrigger(unrolledExpr, trigger);
+            }
+        },
+        expr);
+}
+
+template <typename ContainerType>
+void Quantifier<ContainerType>::stopTriggering() {
+    if (containerTrigger) {
+        deleteTrigger(containerTrigger);
+        containerTrigger = nullptr;
+        container->stopTriggering();
+        mpark::visit(
+            [&](auto& expr) {
+                deleteTrigger(static_pointer_cast<
+                              ExprChangeTrigger<ContainerType, viewType(expr)>>(
+                    exprTrigger));
+            },
+            expr);
+        exprTrigger = nullptr;
+    }
+}
+
+template <typename ContainerType>
+void Quantifier<ContainerType>::evaluate() {
+    unrolledIterVals.clear();
+    silentClear();
+    container->evaluate();
+    InitialUnroller<ContainerType>::initialUnroll(*this);
+}
+template <typename ContainerType>
+ostream& Quantifier<ContainerType>::dumpState(ostream& os) const {
+    mpark::visit(
+        [&](auto& members) {
+            os << "quantifier(container=";
+            container->dumpState(os) << ",\n";
+            os << "unrolledExprs=[";
+            bool first = true;
+            for (auto& unrolledExpr : members) {
+                if (first) {
+                    first = false;
+                } else {
+                    os << ",\n";
+                }
+                unrolledExpr->dumpState(os);
+            }
+            os << "]";
+        },
+        this->members);
+    return os;
+}
+
+template <typename ContainerType>
+void Quantifier<ContainerType>::updateViolationDescription(
+    UInt, ViolationDescription&) {}
+
+template <>
+struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
+    Quantifier<SetView>* op;
     AnyExprVec valuesToUnroll;
 
-    ContainerTrigger(Quantifier<SetView, ReturnExprType>* op) : op(op) {
+    ContainerTrigger(Quantifier<SetView>* op) : op(op) {
         mpark::visit(
             [&](auto& members) {
                 valuesToUnroll.emplace<BaseType<decltype(members)>>();
             },
             op->container->members);
     }
-    inline void valueRemoved(UInt indexOfRemovedValue, HashType) final {
+    void valueRemoved(UInt indexOfRemovedValue, HashType) final {
         op->roll(indexOfRemovedValue);
     }
-    inline void valueAdded(const AnyExprRef& member) final {
+    void valueAdded(const AnyExprRef& member) final {
         mpark::visit(
             [&](auto& vToUnroll) {
                 vToUnroll.emplace_back(
@@ -191,12 +251,12 @@ struct ContainerTrigger<SetView, ReturnExprType> : public SetTrigger,
             valuesToUnroll);
     }
 
-    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
-    inline void memberValueChanged(UInt, const AnyExprRef&) final{};
+    void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
+    void memberValueChanged(UInt, const AnyExprRef&) final{};
 
-    inline void setValueChanged(const SetView& newValue) {
-        while (!op->exprs.empty()) {
-            this->valueRemoved(op->exprs.size() - 1, 0);
+    void setValueChanged(const SetView& newValue) {
+        while (op->numberElements() != 0) {
+            this->valueRemoved(op->numberElements() - 1, 0);
         }
         mpark::visit(
             [&](auto& membersImpl) {
@@ -207,8 +267,8 @@ struct ContainerTrigger<SetView, ReturnExprType> : public SetTrigger,
             newValue.members);
     }
 
-    inline void iterHasNewValue(const SetView&,
-                                const ExprRef<SetView>& newValue) final {
+    void iterHasNewValue(const SetView&,
+                         const ExprRef<SetView>& newValue) final {
         this->setValueChanged(*newValue);
     }
     void trigger() final {
@@ -237,23 +297,22 @@ struct InitialUnroller<SetView> {
     }
 };
 
-template <typename ReturnExprType>
-struct ContainerTrigger<MSetView, ReturnExprType> : public MSetTrigger,
-                                                    public DelayedTrigger {
-    Quantifier<MSetView, ReturnExprType>* op;
+template <>
+struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
+    Quantifier<MSetView>* op;
     AnyExprVec valuesToUnroll;
 
-    ContainerTrigger(Quantifier<MSetView, ReturnExprType>* op) : op(op) {
+    ContainerTrigger(Quantifier<MSetView>* op) : op(op) {
         mpark::visit(
             [&](auto& members) {
                 valuesToUnroll.emplace<ExprRefVec<viewType(members)>>();
             },
             op->container->members);
     }
-    inline void valueRemoved(UInt indexOfRemovedValue, HashType) final {
+    void valueRemoved(UInt indexOfRemovedValue, HashType) final {
         op->roll(indexOfRemovedValue);
     }
-    inline void valueAdded(const AnyExprRef& member) final {
+    void valueAdded(const AnyExprRef& member) final {
         mpark::visit(
             [&](auto& vToUnroll) {
                 vToUnroll.emplace_back(
@@ -265,12 +324,12 @@ struct ContainerTrigger<MSetView, ReturnExprType> : public MSetTrigger,
             valuesToUnroll);
     }
 
-    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
-    inline void memberValueChanged(UInt, const AnyExprRef&) final{};
+    void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
+    void memberValueChanged(UInt, const AnyExprRef&) final{};
 
-    inline void mSetValueChanged(const MSetView& newValue) {
-        while (!op->exprs.empty()) {
-            this->valueRemoved(op->exprs.size() - 1, 0);
+    void mSetValueChanged(const MSetView& newValue) {
+        while (op->numberElements() != 0) {
+            this->valueRemoved(op->numberElements() - 1, 0);
         }
         mpark::visit(
             [&](auto& membersImpl) {
@@ -281,8 +340,8 @@ struct ContainerTrigger<MSetView, ReturnExprType> : public MSetTrigger,
             newValue.members);
     }
 
-    inline void iterHasNewValue(const MSetView&,
-                                const ExprRef<MSetView>& newValue) final {
+    void iterHasNewValue(const MSetView&,
+                         const ExprRef<MSetView>& newValue) final {
         this->mSetValueChanged(*newValue);
     }
     void trigger() final {
@@ -311,4 +370,8 @@ struct InitialUnroller<MSetView> {
     }
 };
 
-#endif /* SRC_OPERATORS_QUANTIFIER_H_ */
+void instantiateQuantifierTypes() {
+    Quantifier<SetView> q1(ViewRef<SetView>(nullptr));
+    Quantifier<MSetView> q2(ViewRef<MSetView>(nullptr));
+    ignoreUnused(q1, q2);
+}

@@ -3,6 +3,19 @@
 #define SRC_BASE_TRIGGERS_H_
 #include <memory>
 #include "base/exprRef.h"
+#include "base/typesMacros.h"
+template <typename ViewType>
+struct AssociatedTriggerType;
+#define buildTriggerAssociations(name)         \
+    struct name##Trigger;                      \
+    template <>                                \
+    struct AssociatedTriggerType<name##View> { \
+        typedef name##Trigger type;            \
+    };
+
+buildForAllTypes(buildTriggerAssociations, );
+#undef buildTriggerAssociations
+
 template <typename T>
 struct ExprRef;
 struct TriggerBase {
@@ -131,5 +144,15 @@ void setTriggerParent(Op* op, Triggers&... triggers) {
     int unpack[] = {0, (setTriggerParentImpl(op, triggers), 0)...};
     static_cast<void>(unpack);
 }
+
+template <typename Child>
+struct ChangeTriggerAdapterBase {
+    inline void notifyChange() {
+        static_cast<Child*>(this)->adapterValueChanged();
+    }
+};
+
+template <typename TriggerType, typename Child>
+struct ChangeTriggerAdapter;
 
 #endif /* SRC_BASE_TRIGGERS_H_ */

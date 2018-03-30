@@ -134,4 +134,17 @@ struct DefinedTrigger<TupleValue> : public TupleTrigger {
     }
 };
 
+template <typename Child>
+struct ChangeTriggerAdapter<TupleTrigger, Child>
+    : public TupleTrigger, public ChangeTriggerAdapterBase<Child> {
+    inline void possibleMemberValueChange(UInt) final {}
+    inline void memberValueChanged(UInt) final { this->notifyChange(); }
+    inline void possibleTupleValueChange() final {}
+    inline void tupleValueChanged() final { this->notifyChange(); }
+    inline void iterHasNewValue(const TupleView&,
+                                const ExprRef<TupleView>&) final {
+        this->notifyChange();
+    }
+};
+
 #endif /* SRC_TYPES_TUPLE_H_ */

@@ -377,4 +377,19 @@ struct DefinedTrigger<SetValue> : public SetTrigger {
     }
 };
 
+template <typename Child>
+struct ChangeTriggerAdapter<SetTrigger, Child>
+    : public SetTrigger, public ChangeTriggerAdapterBase<Child> {
+    inline void valueRemoved(UInt, HashType) { this->notifyChange(); }
+    inline void valueAdded(const AnyExprRef&) final { this->notifyChange(); }
+    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
+    inline void memberValueChanged(UInt, const AnyExprRef&) final {
+        this->notifyChange();
+    }
+
+    inline void setValueChanged(const SetView&) final { this->notifyChange(); }
+    inline void iterHasNewValue(const SetView&, const ExprRef<SetView>&) final {
+        this->notifyChange();
+    }
+};
 #endif /* SRC_TYPES_SET_H_ */

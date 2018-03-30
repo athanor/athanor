@@ -233,9 +233,12 @@ ExprRef<T> deepCopyForUnrollOverload(const ViewRef<T>& view,
     }
 }
 template <typename T>
-ExprRef<T> deepCopyForUnroll(const ExprRef<T> expr,
+ExprRef<T> deepCopyForUnroll(const ExprRef<T>& expr,
                              const AnyIterRef& iterator) {
     return expr.visit(
         [&](auto& expr) { return deepCopyForUnrollOverload(expr, iterator); });
 }
+
+AnyExprRef deepCopyForUnroll(const AnyExprRef& expr,
+                             const AnyIterRef& iterator);
 #endif /* SRC_BASE_EXPRREF_H_ */

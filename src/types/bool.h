@@ -62,5 +62,15 @@ struct DefinedTrigger<BoolValue> : public BoolTrigger {
         abort();
     }
 };
+template <typename Child>
+struct ChangeTriggerAdapter<BoolTrigger, Child>
+    : public BoolTrigger, public ChangeTriggerAdapterBase<Child> {
+    inline void possibleValueChange(UInt) final {}
+    inline void valueChanged(UInt) final { this->notifyChange(); }
+    inline void iterHasNewValue(const BoolView&,
+                                const ExprRef<BoolView>&) final {
+        this->notifyChange();
+    }
+};
 
 #endif /* SRC_TYPES_BOOL_H_ */

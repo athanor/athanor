@@ -33,8 +33,7 @@ struct SequenceTrigger : public IterAssignedTrigger<SequenceView> {
     virtual void valueRemoved(UInt indexOfRemovedValue) = 0;
     virtual void valueAdded(UInt indexOfRemovedValue,
                             const AnyExprRef& member) = 0;
-    virtual void possibleSubsequenceChange(UInt indexStart, UInt indexEnd) = 0;
-    virtual void subsequenceChanged(UInt indexStart, UInt indexEnd) = 0;
+    virtual void sequenceValueChange() = 0;
     virtual void beginSwaps() = 0;
     virtual void positionsSwapped(UInt index1, UInt index2) = 0;
     virtual void endSwaps() = 0;
@@ -67,7 +66,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
         return total;
     }
 
-   private:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void addMember(size_t index, const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();
@@ -122,10 +120,9 @@ struct SequenceView : public ExprInterface<SequenceView> {
     }
 
     inline void notifySubsequenceChanged(UInt startIndex, UInt endIndex) {
+        ignoreUnused(startIndex, endIndex);
         debug_code(assertValidState());
-        visitTriggers(
-            [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
-            triggers);
+        visitTriggers([&](auto& t) { t->sequenceValueChange(); }, triggers);
     }
 
     inline void notifyBeginSwaps() {
@@ -171,7 +168,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
     inline ExprRef<InnerViewType> removeMemberAndNotify(UInt index) {
         ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
-        notifyMemberRemoved(index, getValueHash(*removedValue));
+        notifyMemberRemoved(index);
         return removedValue;
     }
 
@@ -184,11 +181,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
                 calcSubsequenceHash<InnerViewType>(startIndex, endIndex);
             ;
         }
-        visitTriggers(
-            [&](auto& t) {
-                t->possibleSubsequenceChange(startIndex, endIndex);
-            },
-            triggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -201,7 +193,10 @@ struct SequenceView : public ExprInterface<SequenceView> {
         }
         notifySubsequenceChanged(startIndex, endIndex);
     }
-
+    inline void notifyUnknownSubsequenceChange() {
+        cachedHashTotal.invalidate();
+        visitTriggers([&](auto& t) { t->sequenceValueChange(); }, triggers);
+    }
     inline void initFrom(SequenceView&) {
         std::cerr << "Deprecated, Should never be called\n"
                   << __func__ << std::endl;
@@ -379,18 +374,30 @@ struct DefinedTrigger<SequenceValue> : public SequenceTrigger {
     inline void valueAdded(UInt index, const AnyExprRef& member) {
         todoImpl(index, member);
     }
-    virtual inline void possibleSubsequenceChange(UInt startIndex,
-                                                  UInt endIndex) {
-        todoImpl(startIndex, endIndex);
-    }
-    virtual void subsequenceChanged(UInt startIndex, UInt endIndex) {
-        todoImpl(startIndex, endIndex);
-    }
+
+    virtual void sequenceValueChanged() { todoImpl(); }
 
     void iterHasNewValue(const SequenceView&,
                          const ExprRef<SequenceView>&) final {
         assert(false);
         abort();
+    }
+};
+
+template <typename Child>
+struct ChangeTriggerAdapter<SequenceTrigger, Child>
+    : public SequenceTrigger, public ChangeTriggerAdapterBase<Child> {
+    inline void valueRemoved(UInt) { this->notifyChange(); }
+    inline void valueAdded(UInt, const AnyExprRef&) final {
+        this->notifyChange();
+    }
+    inline void sequenceValueChange() final { this->notifyChange(); }
+    inline void beginSwaps() final{};
+    inline void positionsSwapped(UInt, UInt) final {}
+    inline void endSwaps() final { this->notifyChange(); }
+    inline void iterHasNewValue(const SequenceView&,
+                                const ExprRef<SequenceView>&) final {
+        this->notifyChange();
     }
 };
 

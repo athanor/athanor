@@ -339,4 +339,23 @@ struct DefinedTrigger<MSetValue> : public MSetTrigger {
     }
 };
 
+template <typename Child>
+struct ChangeTriggerAdapter<MSetTrigger, Child>
+    : public MSetTrigger, public ChangeTriggerAdapterBase<Child> {
+    inline void valueRemoved(UInt, HashType) { this->notifyChange(); }
+    inline void valueAdded(const AnyExprRef&) final { this->notifyChange(); }
+    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
+    inline void memberValueChanged(UInt, const AnyExprRef&) final {
+        this->notifyChange();
+    }
+
+    inline void mSetValueChanged(const MSetView&) final {
+        this->notifyChange();
+    }
+    inline void iterHasNewValue(const MSetView&,
+                                const ExprRef<MSetView>&) final {
+        this->notifyChange();
+    }
+};
+
 #endif /* SRC_TYPES_MSET_H_ */

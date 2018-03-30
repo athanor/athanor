@@ -24,27 +24,13 @@ void OpSetNotEq::evaluate() {
     setViolation(*this, false);
 }
 
-class OpSetNotEqTrigger : public SetTrigger {
+class OpSetNotEqTrigger
+    : public ChangeTriggerAdapter<SetTrigger, OpSetNotEqTrigger> {
    public:
     OpSetNotEq* op;
-
-   public:
     OpSetNotEqTrigger(OpSetNotEq* op) : op(op) {}
-    inline void valueRemoved(UInt, HashType) final { setViolation(*op, true); }
-
-    inline void valueAdded(const AnyExprRef&) final { setViolation(*op, true); }
-    inline void setValueChanged(const SetView&) final {
-        setViolation(*op, true);
-    }
-    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
-
-    inline void memberValueChanged(UInt, const AnyExprRef&) final {
-        setViolation(*op, true);
-    }
-
-    inline void iterHasNewValue(const SetView&, const ExprRef<SetView>&) final {
-        setViolation(*op, true);
-    }
+    inline void adapterPossibleValueChange() {}
+    inline void adapterValueChanged() { setViolation(*op, true); }
 };
 
 OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)

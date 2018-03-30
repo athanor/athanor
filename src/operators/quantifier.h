@@ -13,14 +13,16 @@ template <typename ContainerType>
 struct Quantifier : public SequenceView {
     struct ExprTriggerBase {
         Quantifier<ContainerType>* op;
-        ExprTriggerBase(Quantifier<ContainerType>* op) : op(op) {}
+        UInt index;
+        ExprTriggerBase(Quantifier<ContainerType>* op, UInt index)
+            : op(op), index(index) {}
     };
     const int quantId;
     ExprRef<ContainerType> container;
     AnyExprRef expr = ViewRef<BoolView>(nullptr);
     std::vector<AnyIterRef> unrolledIterVals;
     std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
-    std::shared_ptr<ExprTriggerBase> exprTrigger;
+    std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
 
     Quantifier(ExprRef<ContainerType> container, const int id = nextQuantId());
     Quantifier(const Quantifier<ContainerType>&& other);
@@ -43,10 +45,13 @@ struct Quantifier : public SequenceView {
 
     bool triggering();
     template <typename ViewType>
-    void unroll(const ExprRef<ViewType>& newView);
+    void unroll(UInt index, const ExprRef<ViewType>& newView);
     void roll(UInt index);
+    void swap(UInt index1, UInt index2);
     template <typename ViewType>
-    void startTriggeringOnExpr(ExprRef<ViewType>& expr);
+    void startTriggeringOnExpr(UInt index, ExprRef<ViewType>& expr);
+    template <typename ViewType>
+    void stopTriggeringOnExpr(UInt oldIndex);
 };
 
 #endif /* SRC_OPERATORS_QUANTIFIER_H_ */

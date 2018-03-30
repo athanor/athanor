@@ -148,7 +148,7 @@ void setTriggerParent(Op* op, Triggers&... triggers) {
 
 template <typename Child>
 struct ChangeTriggerAdapterBase {
-    inline void forwardPossibleChange() {
+    inline void forwardPossibleValueChange() {
         static_cast<Child*>(this)->adapterPossibleValueChange();
     }
 

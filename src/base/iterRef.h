@@ -21,11 +21,16 @@ struct Iterator {
     template <typename Func>
     inline void changeValue(bool triggering, const ExprRef<T>& oldVal,
                             const ExprRef<T>& newVal, Func&& callback) {
+        if (triggering) {
+            for (auto& trigger : unrollTriggers) {
+                trigger->preIterValueChange(oldVal);
+            }
+        }
         ref = newVal;
         callback();
         if (triggering) {
             for (auto& trigger : unrollTriggers) {
-                trigger->iterHasNewValue(*oldVal, newVal);
+                trigger->postIterValueChange(newVal);
             }
         }
     }

@@ -413,6 +413,8 @@ struct DefinedTrigger<SequenceValue> : public SequenceTrigger {
         assert(false);
         abort();
     }
+    inline void possibleSubsequenceChange(UInt, UInt) final { todoImpl(); }
+    inline void subsequenceChanged(UInt, UInt) final { todoImpl(); }
 };
 
 template <typename Child>
@@ -425,9 +427,16 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
         this->forwardValueChanged();
     }
     inline void possibleSequenceValueChange() final {
-        this->forwardpossibleValueChange();
+        this->forwardPossibleValueChange();
     }
     inline void sequenceValueChanged() final { this->forwardValueChanged(); }
+    inline void possibleSubsequenceChange(UInt, UInt) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void subsequenceChanged(UInt, UInt) final {
+        this->forwardValueChanged();
+        ;
+    }
     inline void beginSwaps() final { this->forwardPossibleValueChange(); }
     inline void positionsSwapped(UInt, UInt) final {}
     inline void endSwaps() final { this->forwardValueChanged(); }

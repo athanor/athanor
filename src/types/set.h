@@ -412,7 +412,7 @@ struct ChangeTriggerAdapter<SetTrigger, Child>
     }
     inline void possibleSetValueChange() { this->forwardPossibleValueChange(); }
     inline void setValueChanged(const SetView&) final {
-        this->forwardValueChange();
+        this->forwardValueChanged();
     }
     inline void preIterValueChange(const ExprRef<SetView>&) final {
         this->forwardPossibleValueChange();

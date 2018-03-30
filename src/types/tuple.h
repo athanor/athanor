@@ -152,7 +152,7 @@ struct ChangeTriggerAdapter<TupleTrigger, Child>
         this->forwardPossibleValueChange();
     }
     inline void postIterValueChange(const ExprRef<TupleView>&) final {
-        this->forwardValueChange();
+        this->forwardValueChanged();
     }
 };
 

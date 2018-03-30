@@ -149,14 +149,26 @@ struct ExprChangeTrigger
       ChangeTriggerAdapter<typename AssociatedTriggerType<ViewType>::type,
                            ExprChangeTrigger<ContainerType, ViewType>> {
     using Quantifier<ContainerType>::ExprTriggerBase ::ExprTriggerBase;
+    void adapterPossibleValueChange() {
+        mpark::visit(
+            [&](auto& members) {
+                this->op->template notifyPossibleSubsequenceChange<viewType(
+                    members)>(this->index, this->index + 1);
+            },
+            this->op->members);
+    }
     void adapterValueChanged() {
-        this->op->notifyUnknownSubsequenceChange();
-        ;
+        mpark::visit(
+            [&](auto& members) {
+                this->op
+                    ->template changeSubsequenceAndNotify<viewType(members)>(
+                        this->index, this->index + 1);
+            },
+            this->op->members);
     }
     ExprChangeTrigger() {}
 };
 
-ExprChangeTrigger<BoolView, BoolView> b();
 template <typename ContainerType>
 template <typename ViewType>
 void Quantifier<ContainerType>::startTriggeringOnExpr(UInt index,
@@ -263,6 +275,7 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
             },
             op->container->members);
     }
+    void possibleSetValueChange() final {}
     void valueRemoved(UInt indexOfRemovedValue, HashType) final {
         if (indexOfRemovedValue < op->numberElements() - 1) {
             op->swap(indexOfRemovedValue, op->numberElements() - 1);
@@ -296,9 +309,10 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
             },
             newValue.members);
     }
-
-    void iterHasNewValue(const SetView&,
-                         const ExprRef<SetView>& newValue) final {
+    void preIterValueChange(const ExprRef<SetView>&) final {
+        this->possibleSetValueChange();
+    }
+    void postIterValueChange(const ExprRef<SetView>& newValue) final {
         this->setValueChanged(*newValue);
     }
     void trigger() final {
@@ -359,7 +373,7 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
 
     void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
     void memberValueChanged(UInt, const AnyExprRef&) final{};
-
+    void possibleMSetValueChange() final {}
     void mSetValueChanged(const MSetView& newValue) {
         while (op->numberElements() != 0) {
             this->valueRemoved(op->numberElements() - 1, 0);
@@ -373,8 +387,10 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
             newValue.members);
     }
 
-    void iterHasNewValue(const MSetView&,
-                         const ExprRef<MSetView>& newValue) final {
+    void preIterValueChange(const ExprRef<MSetView>&) final {
+        this->possibleMSetValueChange();
+    }
+    void postIterValueChange(const ExprRef<MSetView>& newValue) final {
         this->mSetValueChanged(*newValue);
     }
     void trigger() final {

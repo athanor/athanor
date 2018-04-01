@@ -3,20 +3,16 @@
 #define SRC_OPERATORS_OPAND_H_
 #include <vector>
 #include "types/bool.h"
+#include "types/sequence.h"
 #include "utils/fastIterableIntSet.h"
 struct OpAnd : public BoolView {
-    class OperandTrigger;
-
     class OperandsSequenceTrigger;
     ExprRef<SequenceView> operands;
-    ;
     FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
-    std::vector<std::shared_ptr<OperandTrigger>> operandTriggers;
     std::shared_ptr<OperandsSequenceTrigger> operandsSequenceTrigger;
 
    public:
-    OpAnd(std::shared_ptr<QuantifierView<BoolView>> quantifier)
-        : quantifier(std::move(quantifier)) {}
+    OpAnd(ExprRef<SequenceView> operands) : operands(std::move(operands)) {}
     OpAnd(const OpAnd& other) = delete;
     OpAnd(OpAnd&& other);
     virtual ~OpAnd() { this->stopTriggering(); }

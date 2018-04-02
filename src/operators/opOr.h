@@ -2,23 +2,20 @@
 #ifndef SRC_OPERATORS_OPOR_H_
 #define SRC_OPERATORS_OPOR_H_
 #include <vector>
-#include "operators/quantifierView.h"
 #include "types/bool.h"
+#include "types/sequence.h"
 #include "utils/fastIterableIntSet.h"
-class OpOrTrigger;
 struct OpOr : public BoolView {
-    class QuantifierTrigger;
-    std::shared_ptr<QuantifierView<BoolView>> quantifier;
+    class OperandsSequenceTrigger;
+    ExprRef<SequenceView> operands;
     FastIterableIntSet minViolationIndices = FastIterableIntSet(0, 0);
-    std::vector<std::shared_ptr<OpOrTrigger>> operandTriggers;
-    std::shared_ptr<QuantifierTrigger> quantifierTrigger;
+    std::shared_ptr<OperandsSequenceTrigger> operandsSequenceTrigger;
 
    public:
-    OpOr(std::shared_ptr<QuantifierView<BoolView>> quantifier)
-        : quantifier(std::move(quantifier)) {}
+    OpOr(ExprRef<SequenceView> operands) : operands(std::move(operands)) {}
     OpOr(const OpOr& other) = delete;
     OpOr(OpOr&& other);
-    ~OpOr() { this->stopTriggering(); }
+    virtual ~OpOr() { this->stopTriggering(); }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;

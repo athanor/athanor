@@ -39,43 +39,47 @@ template <typename ContainerType>
 template <typename ViewType>
 void Quantifier<ContainerType>::unroll(UInt index,
                                        const ExprRef<ViewType>& newView) {
-    auto& members = getMembers<ViewType>();
-    debug_log("unrolling " << newView);
-    auto iterRef = this->newIterRef<ViewType>();
-    // choose which expr to copy from
-    // use previously unrolled expr if available as  can be most
-    // efficiently updated to new unrolled value  otherwise use expr
-    // template
-    auto exprToCopy = (members.empty())
-                          ? mpark::get<ExprRef<viewType(members)>>(expr)
-                          : members.back();
-    // decide if expr that is going to be unrolled needs evaluating.
-    // It needs evaluating if we are in this->triggering() mode and if the
-    // expr being unrolled is taken from the expr template, because the
-    // expr will not have been evaluated before.  If we are instead
-    // copying from an already unrolled expr, it  need not be
-    // evaluated, simply copy it and trigger the change in value.
-    bool evaluateExpr = members.empty() && this->triggering();
-    const ExprRef<ViewType>& oldValueOfIter =
-        (members.empty())
-            ? ViewRef<ViewType>(nullptr)
-            : mpark::get<IterRef<ViewType>>(unrolledIterVals.back())
-                  .getIterator()
-                  .getValue();
-    ExprRef<ViewType> newMember =
-        deepCopyForUnroll<viewType(members)>(exprToCopy, iterRef);
-    iterRef.getIterator().changeValue(
-        this->triggering() && !evaluateExpr, oldValueOfIter, newView, [&]() {
-            if (evaluateExpr) {
-                newMember->evaluate();
-            }
-            if (this->triggering()) {
-                newMember->startTriggering();
-                this->startTriggeringOnExpr(index, newMember);
-            }
-        });
-    unrolledIterVals.insert(unrolledIterVals.begin() + index, iterRef);
-    addMemberAndNotify(index, newMember);
+    mpark::visit(
+        [&](auto& members) {
+            debug_log("unrolling " << newView);
+            auto iterRef = this->newIterRef<ViewType>();
+            // choose which expr to copy from
+            // use previously unrolled expr if available as  can be most
+            // efficiently updated to new unrolled value  otherwise use expr
+            // template
+            auto exprToCopy = (members.empty())
+                                  ? mpark::get<ExprRef<viewType(members)>>(expr)
+                                  : members.back();
+            // decide if expr that is going to be unrolled needs evaluating.
+            // It needs evaluating if we are in this->triggering() mode and if
+            // the expr being unrolled is taken from the expr template, because
+            // the expr will not have been evaluated before.  If we are instead
+            // copying from an already unrolled expr, it  need not be
+            // evaluated, simply copy it and trigger the change in value.
+            bool evaluateExpr = members.empty() && this->triggering();
+            const ExprRef<ViewType>& oldValueOfIter =
+                (members.empty())
+                    ? ViewRef<ViewType>(nullptr)
+                    : mpark::get<IterRef<ViewType>>(unrolledIterVals.back())
+                          .getIterator()
+                          .getValue();
+            ExprRef<viewType(members)> newMember =
+                deepCopyForUnroll(exprToCopy, iterRef);
+            iterRef.getIterator().changeValue(
+                this->triggering() && !evaluateExpr, oldValueOfIter, newView,
+                [&]() {
+                    if (evaluateExpr) {
+                        newMember->evaluate();
+                    }
+                    if (this->triggering()) {
+                        newMember->startTriggering();
+                        this->startTriggeringOnExpr(index, newMember);
+                    }
+                });
+            unrolledIterVals.insert(unrolledIterVals.begin() + index, iterRef);
+            this->addMemberAndNotify(index, newMember);
+        },
+        members);
 }
 
 template <typename ContainerType>

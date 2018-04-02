@@ -3,8 +3,8 @@
 #define SRC_OPERATORS_SHIFTVIOLATINGINDICES_H_
 #include <vector>
 #include "utils/fastIterableIntSet.h"
-void shiftIndicesUp(UInt fromIndex, UInt newNumberElements,
-                    FastIterableIntSet& indexSet) {
+inline void shiftIndicesUp(UInt fromIndex, UInt newNumberElements,
+                           FastIterableIntSet& indexSet) {
     static thread_local std::vector<UInt> tempIndicesBuffer;
     if (newNumberElements - fromIndex <= indexSet.size()) {
         // it's faster to shift indices by scanning entire shifted range
@@ -31,8 +31,8 @@ void shiftIndicesUp(UInt fromIndex, UInt newNumberElements,
     }
 }
 
-void shiftIndicesDown(UInt fromIndex, UInt newNumberElements,
-                      FastIterableIntSet& indexSet) {
+inline void shiftIndicesDown(UInt fromIndex, UInt newNumberElements,
+                             FastIterableIntSet& indexSet) {
     static thread_local std::vector<UInt> tempIndicesBuffer;
     // need to shift indices marked as violating
     if (newNumberElements - fromIndex <= indexSet.size()) {

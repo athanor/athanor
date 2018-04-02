@@ -25,8 +25,16 @@ struct Quantifier : public SequenceView {
     std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
 
-    Quantifier(ExprRef<ContainerType> container, const int id = nextQuantId());
-    Quantifier(const Quantifier<ContainerType>&& other);
+    Quantifier(ExprRef<ContainerType> container, const int id = nextQuantId())
+        : quantId(id), container(std::move(container)) {}
+    Quantifier(Quantifier<ContainerType>&& other);
+    inline void setExpression(AnyExprRef exprIn) {
+        expr = std::move(exprIn);
+        mpark::visit(
+            [&](auto& expr) { members.emplace<ExprRefVec<viewType(expr)>>(); },
+            expr);
+    }
+
     ~Quantifier() { this->stopTriggering(); }
     void evaluate() final;
     void startTriggering() final;
@@ -41,8 +49,6 @@ struct Quantifier : public SequenceView {
     inline IterRef<T> newIterRef() {
         return IterRef<T>(quantId);
     }
-
-    void setExpression(AnyExprRef exprIn);
 
     bool triggering();
     template <typename ViewType>

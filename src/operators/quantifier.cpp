@@ -19,12 +19,7 @@ template <>
 struct ContainerTrigger<MSetView>;
 
 template <typename ContainerType>
-Quantifier<ContainerType>::Quantifier(ExprRef<ContainerType> container,
-                                      const int id)
-    : quantId(id), container(move(container)) {}
-
-template <typename ContainerType>
-Quantifier<ContainerType>::Quantifier(const Quantifier<ContainerType>&& other)
+Quantifier<ContainerType>::Quantifier(Quantifier<ContainerType>&& other)
     : SequenceView(move(other)),
       quantId(other.quantId),
       container(move(other.container)),
@@ -33,14 +28,6 @@ Quantifier<ContainerType>::Quantifier(const Quantifier<ContainerType>&& other)
       containerTrigger(move(other.containerTrigger)),
       exprTriggers(move(other.exprTriggers)) {
     setTriggerParent(this, containerTrigger, exprTriggers);
-}
-
-template <typename ContainerType>
-void Quantifier<ContainerType>::setExpression(AnyExprRef exprIn) {
-    expr = move(exprIn);
-    mpark::visit(
-        [&](auto& expr) { members.emplace<ExprRefVec<viewType(expr)>>(); },
-        expr);
 }
 
 template <typename ContainerType>
@@ -419,8 +406,13 @@ struct InitialUnroller<MSetView> {
     }
 };
 
-void instantiateQuantifierTypes() {
-    Quantifier<SetView> q1(ViewRef<SetView>(nullptr));
-    Quantifier<MSetView> q2(ViewRef<MSetView>(nullptr));
-    ignoreUnused(q1, q2);
+vector<ExprRef<SequenceView>> instantiateQuantifierTypes() {
+    vector<ExprRef<SequenceView>> quants;
+    auto q1 = make_shared<Quantifier<SetView>>(ViewRef<SetView>(nullptr));
+    q1->setExpression(ViewRef<SetView>(nullptr));
+    quants.emplace_back(ViewRef<SequenceView>(q1));
+    auto q2 = make_shared<Quantifier<MSetView>>(ViewRef<MSetView>(nullptr));
+    q2->setExpression(ViewRef<MSetView>(nullptr));
+    quants.emplace_back(ViewRef<SequenceView>(q2));
+    return quants;
 }

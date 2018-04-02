@@ -50,12 +50,12 @@ void Quantifier<ContainerType>::unroll(UInt index,
                           ? mpark::get<ExprRef<viewType(members)>>(expr)
                           : members.back();
     // decide if expr that is going to be unrolled needs evaluating.
-    // It needs evaluating if we are in triggering() mode and if the
+    // It needs evaluating if we are in this->triggering() mode and if the
     // expr being unrolled is taken from the expr template, because the
     // expr will not have been evaluated before.  If we are instead
     // copying from an already unrolled expr, it  need not be
     // evaluated, simply copy it and trigger the change in value.
-    bool evaluateExpr = members.empty() && triggering();
+    bool evaluateExpr = members.empty() && this->triggering();
     const ExprRef<ViewType>& oldValueOfIter =
         (members.empty())
             ? ViewRef<ViewType>(nullptr)
@@ -65,13 +65,13 @@ void Quantifier<ContainerType>::unroll(UInt index,
     ExprRef<ViewType> newMember =
         deepCopyForUnroll<viewType(members)>(exprToCopy, iterRef);
     iterRef.getIterator().changeValue(
-        triggering() && !evaluateExpr, oldValueOfIter, newView, [&]() {
+        this->triggering() && !evaluateExpr, oldValueOfIter, newView, [&]() {
             if (evaluateExpr) {
                 newMember->evaluate();
             }
-            if (triggering()) {
+            if (this->triggering()) {
                 newMember->startTriggering();
-                startTriggeringOnExpr(index, newMember);
+                this->startTriggeringOnExpr(index, newMember);
             }
         });
     unrolledIterVals.insert(unrolledIterVals.begin() + index, iterRef);
@@ -82,9 +82,9 @@ template <typename ContainerType>
 void Quantifier<ContainerType>::swap(UInt index1, UInt index2) {
     mpark::visit(
         [&](auto& members) {
-            notifyBeginSwaps();
-            swapAndNotify<viewType(members)>(index1, index2);
-            notifyEndSwaps();
+            this->notifyBeginSwaps();
+            this->swapAndNotify<viewType(members)>(index1, index2);
+            this->notifyEndSwaps();
         },
         members);
     std::swap(exprTriggers[index1], exprTriggers[index2]);
@@ -99,9 +99,9 @@ void Quantifier<ContainerType>::roll(UInt index) {
                                 << unrolledIterVals[index]);
     mpark::visit(
         [&](auto& members) {
-            removeMemberAndNotify<viewType(members)>(index);
-            if (triggering()) {
-                stopTriggeringOnExpr<viewType(members)>(index);
+            this->removeMemberAndNotify<viewType(members)>(index);
+            if (this->triggering()) {
+                this->stopTriggeringOnExpr<viewType(members)>(index);
             }
         },
         members);
@@ -184,7 +184,7 @@ void Quantifier<ContainerType>::stopTriggeringOnExpr(UInt oldIndex) {
 
 template <typename ContainerType>
 void Quantifier<ContainerType>::startTriggering() {
-    if (triggering()) {
+    if (this->triggering()) {
         return;
     }
     containerTrigger = make_shared<ContainerTrigger<ContainerType>>(this);
@@ -193,7 +193,7 @@ void Quantifier<ContainerType>::startTriggering() {
     mpark::visit(
         [&](auto& members) {
             for (size_t i = 0; i < members.size(); i++) {
-                startTriggeringOnExpr<viewType(members)>(i, members[i]);
+                this->startTriggeringOnExpr<viewType(members)>(i, members[i]);
                 members[i]->startTriggering();
             }
         },
@@ -209,8 +209,8 @@ void Quantifier<ContainerType>::stopTriggering() {
         mpark::visit(
             [&](auto& expr) {
                 while (!exprTriggers.empty()) {
-                    stopTriggeringOnExpr<viewType(expr)>(exprTriggers.size() -
-                                                         1);
+                    this->stopTriggeringOnExpr<viewType(expr)>(
+                        exprTriggers.size() - 1);
                 }
             },
             expr);

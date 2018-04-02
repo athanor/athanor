@@ -180,7 +180,7 @@ void SequenceView::assertValidState() {
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 auto& member = valMembersImpl[i];
                 if (cachedHashTotal.isValid()) {
-                    calculatedTotal += calcMemberHash(i, member);
+                    calculatedTotal += this->calcMemberHash(i, member);
                 }
             }
             if (success) {

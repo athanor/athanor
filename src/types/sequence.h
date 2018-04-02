@@ -75,8 +75,9 @@ struct SequenceView : public ExprInterface<SequenceView> {
         auto& members = getMembers<InnerViewType>();
         members.insert(members.begin() + index, member);
         if (index == members.size() - 1) {
-            cachedHashTotal.applyIfValid(
-                [&](auto& value) { value += calcMemberHash(index, member); });
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                value += this->calcMemberHash(index, member);
+            });
         } else {
             cachedHashTotal.invalidate();
         }
@@ -101,7 +102,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
         members.erase(members.begin() + index);
         if (index == members.size()) {
             cachedHashTotal.applyIfValid([&](auto& value) {
-                value -= calcMemberHash(index, removedMember);
+                value -= this->calcMemberHash(index, removedMember);
             });
         } else {
             cachedHashTotal.invalidate();
@@ -123,7 +124,8 @@ struct SequenceView : public ExprInterface<SequenceView> {
     inline HashType changeSubsequence(UInt startIndex, UInt endIndex) {
         HashType newHash = 0;
         cachedHashTotal.applyIfValid([&](auto& value) {
-            newHash = calcSubsequenceHash<InnerViewType>(startIndex, endIndex);
+            newHash =
+                this->calcSubsequenceHash<InnerViewType>(startIndex, endIndex);
             value -= hashOfPossibleChange;
             value += newHash;
         });
@@ -156,10 +158,10 @@ struct SequenceView : public ExprInterface<SequenceView> {
         auto& members = getMembers<InnerViewType>();
         std::swap(members[index1], members[index2]);
         cachedHashTotal.applyIfValid([&](auto& value) {
-            value -= calcMemberHash(index1, members[index2]);
-            value -= calcMemberHash(index2, members[index1]);
-            value += calcMemberHash(index1, members[index1]);
-            value += calcMemberHash(index2, members[index2]);
+            value -= this->calcMemberHash(index1, members[index2]);
+            value -= this->calcMemberHash(index2, members[index1]);
+            value += this->calcMemberHash(index1, members[index1]);
+            value += this->calcMemberHash(index2, members[index2]);
         });
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },

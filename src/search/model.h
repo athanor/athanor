@@ -6,6 +6,7 @@
 #include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/opAnd.h"
+#include "operators/opSequenceLit.h"
 #include "search/violationDescription.h"
 #include "types/int.h"
 
@@ -18,8 +19,8 @@ struct Model {
     std::vector<Neighbourhood> neighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
-    OpAnd csp = OpAnd(std::make_shared<FixedArray<BoolView>>(
-        std::vector<ExprRef<BoolView>>()));
+    OpAnd csp = OpAnd(ViewRef<SequenceView>(
+        std::make_shared<OpSequenceLit>(ExprRefVec<BoolView>())));
     ExprRef<IntView> objective = getViewPtr(make<IntValue>());
     OptimiseMode optimiseMode = OptimiseMode::NONE;
     ;
@@ -32,6 +33,7 @@ struct Model {
 
 class ModelBuilder {
     Model model;
+    ExprRefVec<BoolView> constraints;
 
    public:
     ModelBuilder() {}
@@ -41,7 +43,7 @@ class ModelBuilder {
         if (result.first) {
             model.definedMappings.emplace_back(std::move(result.second));
         } else {
-            model.csp.quantifier->exprs.emplace_back(std::move(constraint));
+            constraints.emplace_back(std::move(constraint));
         }
     }
 
@@ -65,6 +67,8 @@ class ModelBuilder {
         model.optimiseMode = mode;
     }
     Model build() {
+        model.csp = OpAnd(ViewRef<SequenceView>(
+            std::make_shared<OpSequenceLit>(move(constraints))));
         for (size_t i = 0; i < model.variables.size(); ++i) {
             if (valBase(model.variables[i].second).container == &constantPool) {
                 continue;

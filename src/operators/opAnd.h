@@ -16,6 +16,11 @@ struct OpAnd : public BoolView {
     OpAnd(const OpAnd& other) = delete;
     OpAnd(OpAnd&& other);
     virtual ~OpAnd() { this->stopTriggering(); }
+    inline OpAnd& operator=(const OpAnd& other) {
+        operands = other.operands;
+        violatingOperands = other.violatingOperands;
+        return *this;
+    }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;

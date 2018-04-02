@@ -378,7 +378,7 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseConstantMatrix(
         todoImpl();
     }
     AnyExprVec newSequenceMembers;
-    AnyDomainRef innerDomain = fakeIntDomain();
+    AnyDomainRef innerDomain = fakeIntDomain;
     bool first = true;
     for (auto& elementExpr : matrixExpr[1]) {
         auto expr = parseExpr(elementExpr, parsedModel);
@@ -388,9 +388,9 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseConstantMatrix(
         mpark::visit(
             [&](auto& member) {
                 if (first) {
-                    newSequenceMembers.emplace<BaseType<decltype(members)>>();
+                    newSequenceMembers.emplace<ExprRefVec<viewType(member)>>();
                 }
-                mpark::get<BaseType<decltype(members)>>(newSequenceMembers)
+                mpark::get<ExprRefVec<viewType(member)>>(newSequenceMembers)
                     .emplace_back(move(member));
             },
             expr.second);
@@ -402,9 +402,9 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseConstantMatrix(
 }
 
 template <typename ContainerDomainType, typename Quantifier>
-void addExprToQuantifier(json& comprExpr,
-                         shared_ptr<ContainerDomainType>& containerDomain,
-                         Quantifier& quantifier, ParsedModel& parsedModel) {
+AnyDomainRef addExprToQuantifier(
+    json& comprExpr, shared_ptr<ContainerDomainType>& containerDomain,
+    Quantifier& quantifier, ParsedModel& parsedModel) {
     auto& generatorExpr = comprExpr[1][0]["Generator"]["GenInExpr"];
     string name;
     mpark::visit(
@@ -427,7 +427,7 @@ void addExprToQuantifier(json& comprExpr,
 
 template <typename ContainerReturnType, typename ContainerDomainPtrType>
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> buildQuant(
-    json& comprExpr, ContainerReturnType& container,
+    json& comprExpr, ExprRef<ContainerReturnType>& container,
     ContainerDomainPtrType&& domain, ParsedModel& parsedModel) {
     auto quantifier = make_shared<Quantifier<ContainerReturnType>>(container);
     AnyDomainRef innerDomain =
@@ -465,7 +465,8 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
         domainContainerPair.second);
 }
 
-SequenceView parseSequenceLikeExpr(json& expr, ParsedModel& parsedModel) {
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseSequenceLikeExpr(
+    json& expr, ParsedModel& parsedModel) {
     if (expr.count("AbstractLiteral")) {
         if (expr["AbstractLiteral"].count("AbsLitMatrix")) {
             return parseConstantMatrix(expr["AbstractLiteral"]["AbsLitMatrix"],

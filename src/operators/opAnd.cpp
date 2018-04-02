@@ -1,6 +1,7 @@
 #include "operators/opAnd.h"
 #include <algorithm>
 #include <cassert>
+#include "operators/shiftViolatingIndices.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 using OperandsSequenceTrigger = OpAnd::OperandsSequenceTrigger;
@@ -9,16 +10,11 @@ class OpAnd::OperandsSequenceTrigger : public SequenceTrigger {
    public:
     UInt previousViolation;
     OpAnd* op;
-    UInt lastViolation = 0;
     OperandsSequenceTrigger(OpAnd* op) : op(op) {}
     void valueAdded(UInt index, const AnyExprRef& exprIn) final {
         auto& expr = mpark::get<ExprRef<BoolView>>(exprIn);
-        for (size_t i = op->operands->numberElements() - 1; i > index + 1;
-             i--) {
-            if (op->violatingOperands.erase(i - 1)) {
-                op->violatingOperands.insert(i);
-            }
-        }
+        shiftIndicesUp(index, op->operands->numberElements(),
+                       op->violatingOperands);
         UInt violation = expr->violation;
         if (violation > 0) {
             op->violatingOperands.insert(index);
@@ -37,11 +33,8 @@ class OpAnd::OperandsSequenceTrigger : public SequenceTrigger {
                           (!op->violatingOperands.count(index) &&
                            violationOfRemovedExpr == 0)));
         op->violatingOperands.erase(index);
-        for (size_t i = index; i < op->operands->numberElements() - 1; i++) {
-            if (op->violatingOperands.erase(index + 1)) {
-                op->violatingOperands.insert(index);
-            }
-        }
+        shiftIndicesDown(index, op->operands->numberElements(),
+                         op->violatingOperands);
         op->changeValue([&]() {
             op->violation -= violationOfRemovedExpr;
             return true;

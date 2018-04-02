@@ -16,6 +16,7 @@ struct Quantifier : public SequenceView {
         UInt index;
         ExprTriggerBase(Quantifier<ContainerType>* op, UInt index)
             : op(op), index(index) {}
+        virtual ~ExprTriggerBase() {}
     };
     const int quantId;
     ExprRef<ContainerType> container;

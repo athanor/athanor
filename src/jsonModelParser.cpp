@@ -31,6 +31,10 @@ shared_ptr<MSetDomain> fakeMSetDomain(const AnyDomainRef& ref) {
     return make_shared<MSetDomain>(exactSize(0), ref);
 }
 
+shared_ptr<SequenceDomain> fakeSequenceDomain(const AnyDomainRef& ref) {
+    return make_shared<SequenceDomain>(exactSize(0), ref);
+}
+
 ParsedModel::ParsedModel() : builder(make_unique<ModelBuilder>()) {}
 typedef function<pair<AnyDomainRef, AnyExprRef>(json&, ParsedModel&)>
     ParseFunction;
@@ -365,24 +369,36 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
         left);
 }
 
-template <typename ExprType>
-shared_ptr<FixedArray<ExprType>> parseConstantMatrix(json& matrixExpr,
-                                                     ParsedModel& parsedModel) {
-    vector<ExprRef<ExprType>> elements;
-
-    for (auto& elementExpr : matrixExpr[1]) {
-        ExprRef<ExprType> element = expect<ExprType>(
-            parseExpr(elementExpr, parsedModel).second, [&](auto&&) {
-                cerr << "Error whilst parsing one of the elements to a "
-                        "constant matrix: "
-                     << elementExpr << endl;
-            });
-        elements.emplace_back(move(element));
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseConstantMatrix(
+    json& matrixExpr, ParsedModel& parsedModel) {
+    if (matrixExpr[1].size() == 0) {
+        cerr << "Not sure how to work out type of empty matrixyet, will handle "
+                "this later.";
+        todoImpl();
     }
-    return make_shared<FixedArray<ExprType>>(move(elements));
+    auto sequence = make<SequenceValue>();
+    AnyDomainRef innerDomain = fakeIntDomain();
+    bool first = true;
+    for (auto& elementExpr : matrixExpr[1]) {
+        auto expr = parseExpr(elementExpr, parsedModel);
+        if (first) {
+            innerDomain = expr.first;
+        }
+        mpark::visit(
+            [&](auto& member) {
+                if (first) {
+                    sequence->template setInnerType<viewType(member)>();
+                }
+                sequence->getMembers<viewType(member)>().emplace_back(
+                    move(member));
+            },
+            expr.second);
+        first = false;
+    }
+    return make_pair(fakeSequenceDomain(innerDomain), getViewPtr(sequence));
 }
 
-template <typename ExprType, typename ContainerDomainType, typename Quantifier>
+template <typename ContainerDomainType, typename Quantifier>
 void addExprToQuantifier(json& comprExpr,
                          shared_ptr<ContainerDomainType>& containerDomain,
                          Quantifier& quantifier, ParsedModel& parsedModel) {
@@ -400,27 +416,29 @@ void addExprToQuantifier(json& comprExpr,
             parsedModel.namedExprs.emplace(name, make_pair(innerDomain, iter));
         },
         (containerDomain->inner));
-    quantifier->setExpression(expect<ExprType>(
-        parseExpr(comprExpr[0], parsedModel).second, [&](auto&&) {}));
+    auto expr = parseExpr(comprExpr[0], parsedModel);
+    quantifier->setExpression(expr.second);
     parsedModel.namedExprs.erase(name);
+    return expr.first;
 }
 
-template <typename ExprType, typename ContainerReturnType,
-          typename ContainerDomainPtrType>
-auto buildQuant(json& comprExpr, ContainerReturnType& container,
-                ContainerDomainPtrType&& domain, ParsedModel& parsedModel) {
-    auto quantifier =
-        make_shared<Quantifier<viewType(container), ExprType>>(container);
-    addExprToQuantifier<ExprType>(comprExpr, domain, quantifier, parsedModel);
-    return quantifier;
-};
+template <typename ContainerReturnType, typename ContainerDomainPtrType>
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> buildQuant(
+    json& comprExpr, ContainerReturnType& container,
+    ContainerDomainPtrType&& domain, ParsedModel& parsedModel) {
+    auto quantifier = make_shared<Quantifier<ContainerReturnType>>(container);
+    AnyDomainRef innerDomain =
+        addExprToQuantifier(comprExpr, domain, quantifier, parsedModel);
+    return make_pair(fakeSequenceDomain(innerDomain),
+                     ViewRef<SequenceView>(quantifier));
+}
 
-template <typename ExprType>
-shared_ptr<QuantifierView<ExprType>> parseComprehension(
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
     json& comprExpr, ParsedModel& parsedModel) {
     auto& generatorExpr = comprExpr[1][0]["Generator"]["GenInExpr"];
 
-    auto errorHandler = [&](auto &&) -> shared_ptr<QuantifierView<ExprType>> {
+    auto errorHandler = [&](auto &&)
+        -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
         cerr << "Error, not yet handling quantifier for this type: "
              << generatorExpr << endl;
         abort();
@@ -428,34 +446,30 @@ shared_ptr<QuantifierView<ExprType>> parseComprehension(
     auto domainContainerPair = parseExpr(generatorExpr[1], parsedModel);
     return mpark::visit(
         overloaded(
-            [&](ExprRef<SetView>& set) -> shared_ptr<QuantifierView<ExprType>> {
+            [&](ExprRef<SetView>& set)
+                -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
                 auto& domain = mpark::get<shared_ptr<SetDomain>>(
                     domainContainerPair.first);
-
-                return buildQuant<ExprType>(comprExpr, set, domain,
-                                            parsedModel);
+                return buildQuant(comprExpr, set, domain, parsedModel);
             },
             [&](ExprRef<MSetView>& mSet)
-                -> shared_ptr<QuantifierView<ExprType>> {
+                -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
                 auto& domain = mpark::get<shared_ptr<MSetDomain>>(
                     domainContainerPair.first);
-
-                return buildQuant<ExprType>(comprExpr, mSet, domain,
-                                            parsedModel);
+                return buildQuant(comprExpr, mSet, domain, parsedModel);
             },
             move(errorHandler)),
         domainContainerPair.second);
 }
-template <typename ExprType>
-shared_ptr<QuantifierView<ExprType>> parseQuantifierOrMatrix(
-    json& expr, ParsedModel& parsedModel) {
+
+SequenceView parseSequenceLikeExpr(json& expr, ParsedModel& parsedModel) {
     if (expr.count("AbstractLiteral")) {
         if (expr["AbstractLiteral"].count("AbsLitMatrix")) {
-            return parseConstantMatrix<ExprType>(
-                expr["AbstractLiteral"]["AbsLitMatrix"], parsedModel);
+            return parseConstantMatrix(expr["AbstractLiteral"]["AbsLitMatrix"],
+                                       parsedModel);
         }
     } else if (expr.count("Comprehension")) {
-        return parseComprehension<ExprType>(expr["Comprehension"], parsedModel);
+        return parseComprehension(expr["Comprehension"], parsedModel);
     }
     cerr << "Not sure how to parse this type within the context of an "
             "argument list, expected constant matrix or quantifier.\n"
@@ -468,8 +482,9 @@ auto makeVaradicOpParser(const Domain& domain) {
     return [&](json& essenceExpr,
                ParsedModel& parsedModel) -> pair<AnyDomainRef, AnyExprRef> {
         return make_pair(
-            domain, ViewRef<View>(make_shared<Op>(parseQuantifierOrMatrix<View>(
-                        essenceExpr, parsedModel))));
+            domain,
+            ViewRef<View>(make_shared<Op>(
+                parseSequenceLikeExpr(essenceExpr, parsedModel).second)));
     };
 }
 

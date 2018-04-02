@@ -176,6 +176,8 @@ struct SequenceView : public ExprInterface<SequenceView> {
     }
 
    public:
+    SequenceView() {}
+    SequenceView(AnyExprVec members) : members(std::move(members)) {}
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void addMemberAndNotify(UInt index,
                                    const ExprRef<InnerViewType>& member) {

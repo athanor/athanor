@@ -1,138 +1,120 @@
 #include "operators/opSum.h"
+#include <algorithm>
 #include <cassert>
+#include "operators/shiftViolatingIndices.h"
 #include "utils/ignoreUnused.h"
-
 using namespace std;
-using QuantifierTrigger = OpSum::QuantifierTrigger;
-class OpSumTrigger : public IntTrigger {
+using OperandsSequenceTrigger = OpSum::OperandsSequenceTrigger;
+void reevaluate(OpSum& op);
+class OpSum::OperandsSequenceTrigger : public SequenceTrigger {
    public:
+    Int previousValue;
     OpSum* op;
-    Int lastValue;
-
-    OpSumTrigger(OpSum* op) : op(op) {}
-    void possibleValueChange(Int oldValue) { lastValue = oldValue; }
-    void valueChanged(Int newValue) {
+    OperandsSequenceTrigger(OpSum* op) : op(op) {}
+    void valueAdded(UInt, const AnyExprRef& exprIn) final {
+        auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
         op->changeValue([&]() {
-            op->value -= lastValue;
+            op->value += expr->value;
+            return true;
+        });
+    }
+
+    void valueRemoved(UInt, const AnyExprRef& exprIn) final {
+        const auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
+        op->changeValue([&]() {
+            op->value -= expr->value;
+            return true;
+        });
+    }
+
+    inline void beginSwaps() final {}
+    inline void endSwaps() final {}
+    inline void positionsSwapped(UInt, UInt) {}
+    inline void possibleSubsequenceChange(UInt startIndex,
+                                          UInt endIndex) final {
+        previousValue = 0;
+        for (size_t i = startIndex; i < endIndex; i++) {
+            previousValue +=
+                op->operands->template getMembers<IntView>()[i]->value;
+        }
+    }
+    inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
+        Int newValue = 0;
+        for (size_t i = startIndex; i < endIndex; i++) {
+            UInt operandValue =
+                op->operands->template getMembers<IntView>()[i]->value;
+            newValue += operandValue;
+        }
+        op->changeValue([&]() {
+            op->value -= previousValue;
             op->value += newValue;
             return true;
         });
     }
-
-    void iterHasNewValue(const IntView& oldValue,
-                         const ExprRef<IntView>& newValue) final {
-        possibleValueChange(oldValue.value);
-        valueChanged(newValue->value);
-    }
-};
-
-class OpSum::QuantifierTrigger
-    : public QuantifierView<IntView>::Trigger {
-   public:
-    OpSum* op;
-    QuantifierTrigger(OpSum* op) : op(op) {}
-    void exprUnrolled(const ExprRef<IntView>& expr) final {
-        UInt value = expr->value;
-        addTrigger(expr, op->operandTrigger);
+    void possibleSequenceValueChange() final {}
+    void sequenceValueChanged() final {
         op->changeValue([&]() {
-            op->value += value;
+            reevaluate(*op);
             return true;
         });
     }
-
-    void exprRolled(UInt, const ExprRef<IntView>& expr) final {
-        Int valueOfRemovedExpr = expr->value;
-        op->changeValue([&]() {
-            op->value -= valueOfRemovedExpr;
-            return true;
-        });
-    }
-
-    void iterHasNewValue(const QuantifierView<IntView>&,
-                         const ExprRef<QuantifierView<IntView>>&) {
-        todoImpl();
+    inline void preIterValueChange(const ExprRef<SequenceView>&) final {}
+    inline void postIterValueChange(const ExprRef<SequenceView>&) final {
+        sequenceValueChanged();
     }
 };
+inline void reevaluate(OpSum& op) {
+    op.value = 0;
+    for (size_t i = 0; i < op.operands->numberElements(); ++i) {
+        auto& operand = op.operands->template getMembers<IntView>()[i];
+        op.value += operand->value;
+    }
+}
 
 void OpSum::evaluate() {
-    quantifier->initialUnroll();
-    value = 0;
-    for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
-        auto& operand = quantifier->exprs[i];
-        operand->evaluate();
-        value += operand->value;
-    }
+    operands->evaluate();
+    reevaluate(*this);
 }
 
 OpSum::OpSum(OpSum&& other)
     : IntView(move(other)),
-      quantifier(move(other.quantifier)),
-      operandTrigger(move(other.operandTrigger)),
-      quantifierTrigger(move(other.quantifierTrigger)) {
-    setTriggerParent(this, operandTrigger, quantifierTrigger);
+      operands(move(other.operands)),
+      operandsSequenceTrigger(move(other.operandsSequenceTrigger)) {
+    setTriggerParent(this, operandsSequenceTrigger);
 }
 
 void OpSum::startTriggering() {
-    if (!quantifierTrigger) {
-        quantifierTrigger = std::make_shared<QuantifierTrigger>(this);
-        addTrigger(quantifier, quantifierTrigger);
-        quantifier->startTriggeringOnContainer();
-        operandTrigger = make_shared<OpSumTrigger>(this);
-        for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
-            auto& operand = quantifier->exprs[i];
-            addTrigger(operand, operandTrigger);
-            operand->startTriggering();
-        }
+    if (!operandsSequenceTrigger) {
+        operandsSequenceTrigger =
+            std::make_shared<OperandsSequenceTrigger>(this);
+        addTrigger(operands, operandsSequenceTrigger);
+        operands->startTriggering();
     }
 }
 
 void OpSum::stopTriggering() {
-    if (operandTrigger) {
-        deleteTrigger(operandTrigger);
-        operandTrigger = nullptr;
-    }
-    if (quantifier) {
-        for (auto& operand : quantifier->exprs) {
-            operand->stopTriggering();
-        }
-    }
-    if (quantifierTrigger) {
-        deleteTrigger(quantifierTrigger);
-        quantifierTrigger = nullptr;
-        quantifier->stopTriggeringOnContainer();
+    if (operandsSequenceTrigger) {
+        deleteTrigger(operandsSequenceTrigger);
+        operandsSequenceTrigger = nullptr;
+        operands->stopTriggering();
     }
 }
 
 void OpSum::updateViolationDescription(UInt parentViolation,
                                        ViolationDescription& vioDesc) {
-    if (!quantifier) {
-        return;
-    }
-    for (auto& operand : quantifier->exprs) {
+    for (auto& operand : operands->template getMembers<IntView>()) {
         operand->updateViolationDescription(parentViolation, vioDesc);
     }
 }
 
 ExprRef<IntView> OpSum::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
-    auto newOpSum =
-        make_shared<OpSum>(quantifier->deepCopyQuantifierForUnroll(iterator));
+    auto newOpSum = make_shared<OpSum>(deepCopyForUnroll(operands, iterator));
     newOpSum->value = value;
     return ViewRef<IntView>(newOpSum);
 }
 
 std::ostream& OpSum::dumpState(std::ostream& os) const {
     os << "OpSum: value=" << value << endl;
-    os << "operands [";
-    bool first = true;
-    for (auto& operand : quantifier->exprs) {
-        if (first) {
-            first = false;
-        } else {
-            os << ",\n";
-        }
-        operand->dumpState(os);
-    }
-    os << "]";
-    return os;
+    return operands->dumpState(os);
 }

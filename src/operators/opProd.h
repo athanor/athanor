@@ -1,21 +1,19 @@
+
 #ifndef SRC_OPERATORS_OPPROD_H_
 #define SRC_OPERATORS_OPPROD_H_
 #include <vector>
-#include "operators/quantifierView.h"
 #include "types/int.h"
-class OpProdTrigger;
+#include "types/sequence.h"
 struct OpProd : public IntView {
-    class QuantifierTrigger;
-    std::shared_ptr<QuantifierView<IntView>> quantifier;
-    std::shared_ptr<OpProdTrigger> operandTrigger;
-    std::shared_ptr<QuantifierTrigger> quantifierTrigger;
+    class OperandsSequenceTrigger;
+    ExprRef<SequenceView> operands;
+    std::shared_ptr<OperandsSequenceTrigger> operandsSequenceTrigger;
 
    public:
-    OpProd(std::shared_ptr<QuantifierView<IntView>> quantifier)
-        : quantifier(std::move(quantifier)) {}
+    OpProd(ExprRef<SequenceView> operands) : operands(std::move(operands)) {}
     OpProd(const OpProd& other) = delete;
     OpProd(OpProd&& other);
-    ~OpProd() { this->stopTriggering(); }
+    virtual ~OpProd() { this->stopTriggering(); }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;

@@ -1,138 +1,120 @@
 #include "operators/opProd.h"
+#include <algorithm>
 #include <cassert>
+#include "operators/shiftViolatingIndices.h"
 #include "utils/ignoreUnused.h"
-
 using namespace std;
-using QuantifierTrigger = OpProd::QuantifierTrigger;
-class OpProdTrigger : public IntTrigger {
+using OperandsSequenceTrigger = OpProd::OperandsSequenceTrigger;
+void reevaluate(OpProd& op);
+class OpProd::OperandsSequenceTrigger : public SequenceTrigger {
    public:
+    Int previousValue;
     OpProd* op;
-    Int lastValue;
-
-    OpProdTrigger(OpProd* op) : op(op) {}
-    void possibleValueChange(Int oldValue) { lastValue = oldValue; }
-    void valueChanged(Int newValue) {
+    OperandsSequenceTrigger(OpProd* op) : op(op) {}
+    void valueAdded(UInt, const AnyExprRef& exprIn) final {
+        auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
         op->changeValue([&]() {
-            op->value /= lastValue;
+            op->value *= expr->value;
+            return true;
+        });
+    }
+
+    void valueRemoved(UInt, const AnyExprRef& exprIn) final {
+        const auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
+        op->changeValue([&]() {
+            op->value /= expr->value;
+            return true;
+        });
+    }
+
+    inline void beginSwaps() final {}
+    inline void endSwaps() final {}
+    inline void positionsSwapped(UInt, UInt) {}
+    inline void possibleSubsequenceChange(UInt startIndex,
+                                          UInt endIndex) final {
+        previousValue = 1;
+        for (size_t i = startIndex; i < endIndex; i++) {
+            previousValue *=
+                op->operands->template getMembers<IntView>()[i]->value;
+        }
+    }
+    inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
+        Int newValue = 1;
+        for (size_t i = startIndex; i < endIndex; i++) {
+            UInt operandValue =
+                op->operands->template getMembers<IntView>()[i]->value;
+            newValue *= operandValue;
+        }
+        op->changeValue([&]() {
+            op->value /= previousValue;
             op->value *= newValue;
             return true;
         });
     }
-
-    void iterHasNewValue(const IntView& oldValue,
-                         const ExprRef<IntView>& newValue) final {
-        possibleValueChange(oldValue.value);
-        valueChanged(newValue->value);
-    }
-};
-
-class OpProd::QuantifierTrigger
-    : public QuantifierView<IntView>::Trigger {
-   public:
-    OpProd* op;
-    QuantifierTrigger(OpProd* op) : op(op) {}
-    void exprUnrolled(const ExprRef<IntView>& expr) final {
-        UInt value = expr->value;
-        addTrigger(expr, op->operandTrigger);
+    void possibleSequenceValueChange() final {}
+    void sequenceValueChanged() final {
         op->changeValue([&]() {
-            op->value *= value;
+            reevaluate(*op);
             return true;
         });
     }
-
-    void exprRolled(UInt, const ExprRef<IntView>& expr) final {
-        Int valueOfRemovedExpr = expr->value;
-        op->changeValue([&]() {
-            op->value /= valueOfRemovedExpr;
-            return true;
-        });
-    }
-
-    void iterHasNewValue(const QuantifierView<IntView>&,
-                         const ExprRef<QuantifierView<IntView>>&) {
-        todoImpl();
+    inline void preIterValueChange(const ExprRef<SequenceView>&) final {}
+    inline void postIterValueChange(const ExprRef<SequenceView>&) final {
+        sequenceValueChanged();
     }
 };
+inline void reevaluate(OpProd& op) {
+    op.value = 1;
+    for (size_t i = 0; i < op.operands->numberElements(); ++i) {
+        auto& operand = op.operands->template getMembers<IntView>()[i];
+        op.value *= operand->value;
+    }
+}
 
 void OpProd::evaluate() {
-    quantifier->initialUnroll();
-    value = 1;
-    for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
-        auto& operand = quantifier->exprs[i];
-        operand->evaluate();
-        value *= operand->value;
-    }
+    operands->evaluate();
+    reevaluate(*this);
 }
 
 OpProd::OpProd(OpProd&& other)
     : IntView(move(other)),
-      quantifier(move(other.quantifier)),
-      operandTrigger(move(other.operandTrigger)),
-      quantifierTrigger(move(other.quantifierTrigger)) {
-    setTriggerParent(this, operandTrigger, quantifierTrigger);
+      operands(move(other.operands)),
+      operandsSequenceTrigger(move(other.operandsSequenceTrigger)) {
+    setTriggerParent(this, operandsSequenceTrigger);
 }
 
 void OpProd::startTriggering() {
-    if (!quantifierTrigger) {
-        quantifierTrigger = std::make_shared<QuantifierTrigger>(this);
-        addTrigger(quantifier, quantifierTrigger);
-        quantifier->startTriggeringOnContainer();
-        operandTrigger = make_shared<OpProdTrigger>(this);
-        for (size_t i = 0; i < quantifier->exprs.size(); ++i) {
-            auto& operand = quantifier->exprs[i];
-            addTrigger(operand, operandTrigger);
-            operand->startTriggering();
-        }
+    if (!operandsSequenceTrigger) {
+        operandsSequenceTrigger =
+            std::make_shared<OperandsSequenceTrigger>(this);
+        addTrigger(operands, operandsSequenceTrigger);
+        operands->startTriggering();
     }
 }
 
 void OpProd::stopTriggering() {
-    if (operandTrigger) {
-        deleteTrigger(operandTrigger);
-        operandTrigger = nullptr;
-    }
-    if (quantifier) {
-        for (auto& operand : quantifier->exprs) {
-            operand->stopTriggering();
-        }
-    }
-    if (quantifierTrigger) {
-        deleteTrigger(quantifierTrigger);
-        quantifierTrigger = nullptr;
-        quantifier->stopTriggeringOnContainer();
+    if (operandsSequenceTrigger) {
+        deleteTrigger(operandsSequenceTrigger);
+        operandsSequenceTrigger = nullptr;
+        operands->stopTriggering();
     }
 }
 
 void OpProd::updateViolationDescription(UInt parentViolation,
-                                        ViolationDescription& vioDesc) {
-    if (!quantifier) {
-        return;
-    }
-    for (auto& operand : quantifier->exprs) {
+                                       ViolationDescription& vioDesc) {
+    for (auto& operand : operands->template getMembers<IntView>()) {
         operand->updateViolationDescription(parentViolation, vioDesc);
     }
 }
 
 ExprRef<IntView> OpProd::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
-    auto newOpProd =
-        make_shared<OpProd>(quantifier->deepCopyQuantifierForUnroll(iterator));
+    auto newOpProd = make_shared<OpProd>(deepCopyForUnroll(operands, iterator));
     newOpProd->value = value;
     return ViewRef<IntView>(newOpProd);
 }
 
 std::ostream& OpProd::dumpState(std::ostream& os) const {
     os << "OpProd: value=" << value << endl;
-    os << "operands [";
-    bool first = true;
-    for (auto& operand : quantifier->exprs) {
-        if (first) {
-            first = false;
-        } else {
-            os << ",\n";
-        }
-        operand->dumpState(os);
-    }
-    os << "]";
-    return os;
+    return operands->dumpState(os);
 }

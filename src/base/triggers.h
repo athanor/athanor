@@ -3,7 +3,7 @@
 #define SRC_BASE_TRIGGERS_H_
 #include <memory>
 #include "base/exprRef.h"
-#include "base/typesMacros.h"
+#include "base/typeDecls.h"
 template <typename ViewType>
 struct AssociatedTriggerType;
 #define buildTriggerAssociations(name)         \

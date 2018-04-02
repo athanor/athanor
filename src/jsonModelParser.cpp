@@ -10,6 +10,7 @@
 #include "operators/opMod.h"
 #include "operators/opOr.h"
 #include "operators/opProd.h"
+#include "operators/opSequenceLit.h"
 #include "operators/opSetNotEq.h"
 #include "operators/opSetSize.h"
 #include "operators/opSubsetEq.h"
@@ -376,7 +377,7 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseConstantMatrix(
                 "this later.";
         todoImpl();
     }
-    auto sequence = make<SequenceValue>();
+    AnyExprVec newSequenceMembers;
     AnyDomainRef innerDomain = fakeIntDomain();
     bool first = true;
     for (auto& elementExpr : matrixExpr[1]) {
@@ -387,15 +388,17 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseConstantMatrix(
         mpark::visit(
             [&](auto& member) {
                 if (first) {
-                    sequence->template setInnerType<viewType(member)>();
+                    newSequenceMembers.emplace<BaseType<decltype(members)>>();
                 }
-                sequence->getMembers<viewType(member)>().emplace_back(
-                    move(member));
+                mpark::get<BaseType<decltype(members)>>(newSequenceMembers)
+                    .emplace_back(move(member));
             },
             expr.second);
         first = false;
     }
-    return make_pair(fakeSequenceDomain(innerDomain), getViewPtr(sequence));
+    auto sequenceLit = make_shared<OpSequenceLit>(move(newSequenceMembers));
+    return make_pair(fakeSequenceDomain(innerDomain),
+                     ViewRef<SequenceView>(sequenceLit));
 }
 
 template <typename ContainerDomainType, typename Quantifier>

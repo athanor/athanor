@@ -51,12 +51,12 @@ void Quantifier<ContainerType>::unroll(UInt index,
                                   ? mpark::get<ExprRef<viewType(members)>>(expr)
                                   : members.back();
             // decide if expr that is going to be unrolled needs evaluating.
-            // It needs evaluating if we are in this->triggering() mode and if
+            // It needs evaluating if we are not in triggering  mode or if
             // the expr being unrolled is taken from the expr template, because
-            // the expr will not have been evaluated before.  If we are instead
-            // copying from an already unrolled expr, it  need not be
+            // the expr template will not have been evaluated before.  If we are
+            // instead copying from an already unrolled expr, it  need not be
             // evaluated, simply copy it and trigger the change in value.
-            bool evaluateExpr = members.empty() && this->triggering();
+            bool evaluateExpr = members.empty() || !this->triggering();
             const ExprRef<ViewType>& oldValueOfIter =
                 (members.empty())
                     ? ViewRef<ViewType>(nullptr)
@@ -73,11 +73,14 @@ void Quantifier<ContainerType>::unroll(UInt index,
                     }
                     if (this->triggering()) {
                         newMember->startTriggering();
-                        this->startTriggeringOnExpr(index, newMember);
                     }
                 });
             unrolledIterVals.insert(unrolledIterVals.begin() + index, iterRef);
             this->addMemberAndNotify(index, newMember);
+            if (this->triggering()) {
+                this->startTriggeringOnExpr(index, newMember);
+            }
+
         },
         members);
 }

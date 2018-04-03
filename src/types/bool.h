@@ -21,11 +21,11 @@ struct BoolView : public ExprInterface<BoolView> {
     inline bool changeValue(Func&& func) {
         UInt oldViolation = violation;
         if (func() && violation != oldViolation) {
+            std::swap(oldViolation, violation);
             visitTriggers(
-                [&](auto& trigger) {
-                    trigger->possibleValueChange(oldViolation);
-                },
+                [&](auto& trigger) { trigger->possibleValueChange(violation); },
                 triggers);
+            std::swap(oldViolation, violation);
             visitTriggers(
                 [&](auto& trigger) { trigger->valueChanged(violation); },
                 triggers);

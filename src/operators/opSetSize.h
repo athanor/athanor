@@ -18,6 +18,7 @@ struct OpSetSize : public IntView {
     ExprRef<IntView> deepCopySelfForUnroll(
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };
 
 #endif /* SRC_OPERATORS_OPSETSIZE_H_ */

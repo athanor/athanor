@@ -194,3 +194,7 @@ std::ostream& OpOr::dumpState(std::ostream& os) const {
     os << "Min violating indices: " << sortedViolatingOperands << endl;
     return operands->dumpState(os);
 }
+
+void OpOr::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+    this->operands = findAndReplace(operands, func);
+}

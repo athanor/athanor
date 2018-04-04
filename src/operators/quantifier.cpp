@@ -413,6 +413,13 @@ struct InitialUnroller<MSetView> {
     }
 };
 
+template <typename ContainerType>
+void Quantifier<ContainerType>::findAndReplaceSelf(
+    const FindAndReplaceFunction& func) {
+    mpark::visit([&](auto& expr) { expr = findAndReplace(expr, func); },
+                 this->expr);
+}
+
 vector<ExprRef<SequenceView>> instantiateQuantifierTypes() {
     vector<ExprRef<SequenceView>> quants;
     auto q1 = make_shared<Quantifier<SetView>>(ViewRef<SetView>(nullptr));

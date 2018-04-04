@@ -64,3 +64,7 @@ std::ostream& OpSetSize::dumpState(std::ostream& os) const {
     operand->dumpState(os);
     return os;
 }
+
+void OpSetSize::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+    this->operand = findAndReplace(operand, func);
+}

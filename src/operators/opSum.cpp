@@ -118,3 +118,7 @@ std::ostream& OpSum::dumpState(std::ostream& os) const {
     os << "OpSum: value=" << value << endl;
     return operands->dumpState(os);
 }
+
+void OpSum::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+    this->operands = findAndReplace(operands, func);
+}

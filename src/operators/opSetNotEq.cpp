@@ -82,3 +82,8 @@ std::ostream& OpSetNotEq::dumpState(std::ostream& os) const {
     return os;
     return os;
 }
+
+void OpSetNotEq::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+    this->left = findAndReplace(left, func);
+    this->right = findAndReplace(right, func);
+}

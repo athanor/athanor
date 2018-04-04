@@ -101,3 +101,8 @@ pair<AnyValRef, AnyExprRef> define(ValRef<IntValue>& val,
     val->container = &constantPool;
     return make_pair(AnyValRef(val), AnyExprRef(expr));
 }
+
+void OpIntEq::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+    this->left = findAndReplace(left, func);
+    this->right = findAndReplace(right, func);
+}

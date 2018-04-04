@@ -159,3 +159,7 @@ std::ostream& OpAnd::dumpState(std::ostream& os) const {
     os << "Violating indices: " << sortedViolatingOperands << endl;
     return operands->dumpState(os);
 }
+
+void OpAnd::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+    this->operands = findAndReplace(operands, func);
+}

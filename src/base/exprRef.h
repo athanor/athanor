@@ -1,8 +1,10 @@
 
 #ifndef SRC_BASE_EXPRREF_H_
 #define SRC_BASE_EXPRREF_H_
+#include <functional>
 #include <iostream>
 #include <memory>
+#include <utility>
 #include "base/iterRef.h"
 #include "base/viewRef.h"
 /*
@@ -193,6 +195,7 @@ inline std::ostream& operator<<(std::ostream& os, const ExprRef<T>& ref) {
     return prettyPrint(os, *ref);
 }
 class ViolationDescription;
+typedef std::function<AnyExprRef(AnyExprRef)> FindAndReplaceFunction;
 template <typename View>
 struct ExprInterface {
     virtual void evaluate() = 0;
@@ -202,6 +205,7 @@ struct ExprInterface {
                                             ViolationDescription&) = 0;
     virtual ExprRef<View> deepCopySelfForUnroll(
         const AnyIterRef& iterator) const = 0;
+    virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
     virtual inline std::pair<bool, std::pair<AnyValRef, AnyExprRef>>
@@ -241,4 +245,14 @@ ExprRef<T> deepCopyForUnroll(const ExprRef<T>& expr,
 
 AnyExprRef deepCopyForUnroll(const AnyExprRef& expr,
                              const AnyIterRef& iterator);
+
+template <typename T>
+inline ExprRef<T> findAndReplace(ExprRef<T>& expr,
+                                 const FindAndReplaceFunction& func) {
+    if (expr.isIterRef()) {
+        return expr;
+    } else {
+        return mpark::get<ExprRef<T>>(func(expr));
+    }
+}
 #endif /* SRC_BASE_EXPRREF_H_ */

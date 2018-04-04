@@ -12,8 +12,7 @@ bool currentlyProcessingDelayedTriggerStack = false;
 vector<shared_ptr<DelayedTrigger>> delayedTriggerStack;
 
 inline pair<bool, ViolationDescription&> registerViolations(
-    const ValBase* val, const UInt violation,
-    ViolationDescription& vioDesc);
+    const ValBase* val, const UInt violation, ViolationDescription& vioDesc);
 #define specialised(name)                                                      \
     template <>                                                                \
     shared_ptr<name##Value> makeShared<name##Value>() {                        \
@@ -34,7 +33,7 @@ inline pair<bool, ViolationDescription&> registerViolations(
     void name##Value::startTriggering() {}                                     \
     void name##Value::stopTriggering() {}                                      \
     void name##Value::updateViolationDescription(                              \
-        UInt parentViolation, ViolationDescription& vioDesc) {            \
+        UInt parentViolation, ViolationDescription& vioDesc) {                 \
         registerViolations(this, parentViolation, vioDesc);                    \
     }                                                                          \
     ExprRef<name##View> name##Value::deepCopySelfForUnroll(const AnyIterRef&)  \
@@ -45,7 +44,9 @@ inline pair<bool, ViolationDescription&> registerViolations(
     }                                                                          \
     std::ostream& name##Value::dumpState(std::ostream& os) const {             \
         return prettyPrint(os, *static_cast<const name##View*>(this));         \
-    }
+    }                                                                          \
+                                                                               \
+    void name##Value::findAndReplaceSelf(const FindAndReplaceFunction&) {}
 
 buildForAllTypes(specialised, )
 #undef specialised
@@ -53,8 +54,7 @@ buildForAllTypes(specialised, )
     vector<shared_ptr<DelayedTrigger>> emptyEndOfTriggerQueue;
 
 inline pair<bool, ViolationDescription&> registerViolations(
-    const ValBase* val, const UInt violation,
-    ViolationDescription& vioDesc) {
+    const ValBase* val, const UInt violation, ViolationDescription& vioDesc) {
     if (val->container == &constantPool) {
         return pair<bool, ViolationDescription&>(false, vioDesc);
     }

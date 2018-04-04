@@ -366,6 +366,7 @@ struct SetValue : public SetView, public ValBase {
         const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };
 
 template <>

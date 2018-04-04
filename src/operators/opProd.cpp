@@ -101,7 +101,7 @@ void OpProd::stopTriggering() {
 }
 
 void OpProd::updateViolationDescription(UInt parentViolation,
-                                       ViolationDescription& vioDesc) {
+                                        ViolationDescription& vioDesc) {
     for (auto& operand : operands->template getMembers<IntView>()) {
         operand->updateViolationDescription(parentViolation, vioDesc);
     }
@@ -117,4 +117,8 @@ ExprRef<IntView> OpProd::deepCopySelfForUnroll(
 std::ostream& OpProd::dumpState(std::ostream& os) const {
     os << "OpProd: value=" << value << endl;
     return operands->dumpState(os);
+}
+
+void OpProd::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+    this->operands = findAndReplace(operands, func);
 }

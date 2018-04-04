@@ -59,6 +59,7 @@ struct Quantifier : public SequenceView {
     void startTriggeringOnExpr(UInt index, ExprRef<ViewType>& expr);
     template <typename ViewType>
     void stopTriggeringOnExpr(UInt oldIndex);
+    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };
 
 #endif /* SRC_OPERATORS_QUANTIFIER_H_ */

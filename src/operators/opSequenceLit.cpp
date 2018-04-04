@@ -118,3 +118,13 @@ std::ostream& OpSequenceLit::dumpState(std::ostream& os) const {
     os << "]";
     return os;
 }
+
+void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+    mpark::visit(
+        [&](auto& members) {
+            for (auto& member : members) {
+                member = findAndReplace(member, func);
+            }
+        },
+        members);
+}

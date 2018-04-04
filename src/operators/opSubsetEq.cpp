@@ -170,3 +170,8 @@ std::ostream& OpSubsetEq::dumpState(std::ostream& os) const {
     right->dumpState(os);
     return os;
 }
+
+void OpSubsetEq::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+    this->left = findAndReplace(left, func);
+    this->right = findAndReplace(right, func);
+}

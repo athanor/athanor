@@ -32,9 +32,6 @@ struct IterAssignedTrigger : public virtual TriggerBase {
         const ExprRef<UnrollingView>& newValue) = 0;
 };
 
-template <typename ValueType>
-struct DefinedTrigger;
-
 extern std::vector<std::shared_ptr<DelayedTrigger>> delayedTriggerStack;
 extern bool currentlyProcessingDelayedTriggerStack;
 

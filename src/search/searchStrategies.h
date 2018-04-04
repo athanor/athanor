@@ -93,11 +93,9 @@ class HillClimber {
 
         stats.startTimer();
         assignRandomValueToVariables();
-        evaluateDefinedVariables();
         model.csp.evaluate();
         lastViolation = model.csp.violation;
         bestViolation = lastViolation;
-        startTriggeringOnDefinedVariables();
         model.csp.startTriggering();
 
         if (model.optimiseMode != OptimiseMode::NONE) {
@@ -189,26 +187,6 @@ class HillClimber {
                 continue;
             }
             assignRandomValueInDomain(var.first, var.second);
-        }
-    }
-    inline void evaluateDefinedVariables() {
-        for (auto& varExprPair : model.definedMappings) {
-            mpark::visit(
-                [&](auto& expr) {
-                    typedef typename AssociatedValueType<viewType(expr)>::type
-                        ValueType;
-                    auto& val =
-                        mpark::get<ValRef<ValueType>>(varExprPair.first);
-                    expr->evaluate();
-                    val->initFrom(*expr);
-                },
-                varExprPair.second);
-        }
-    }
-    inline void startTriggeringOnDefinedVariables() {
-        for (auto& varExprPair : model.definedMappings) {
-            mpark::visit([&](auto& expr) { expr->startTriggering(); },
-                         varExprPair.second);
         }
     }
 };

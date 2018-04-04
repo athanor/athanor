@@ -398,30 +398,6 @@ struct SequenceValue : public SequenceView, public ValBase {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };
 
-template <>
-struct DefinedTrigger<SequenceValue> : public SequenceTrigger {
-    ValRef<SequenceValue> val;
-    DefinedTrigger(const ValRef<SequenceValue>& val) : val(val) {}
-    inline void valueRemoved(UInt indexOfRemovedValue, const AnyExprRef& expr) {
-        todoImpl(indexOfRemovedValue, expr);
-    }
-    inline void valueAdded(UInt index, const AnyExprRef& member) {
-        todoImpl(index, member);
-    }
-
-    virtual void sequenceValueChanged() { todoImpl(); }
-
-    inline void preIterValueChange(const ExprRef<SequenceView>&) final {
-        todoImpl();
-    }
-    inline void postIterValueChange(const ExprRef<SequenceView>&) final {
-        assert(false);
-        abort();
-    }
-    inline void possibleSubsequenceChange(UInt, UInt) final { todoImpl(); }
-    inline void subsequenceChanged(UInt, UInt) final { todoImpl(); }
-};
-
 template <typename Child>
 struct ChangeTriggerAdapter<SequenceTrigger, Child>
     : public SequenceTrigger, public ChangeTriggerAdapterBase<Child> {

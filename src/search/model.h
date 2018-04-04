@@ -25,7 +25,7 @@ struct Model {
     OptimiseMode optimiseMode = OptimiseMode::NONE;
     ;
     ViolationDescription vioDesc;
-    std::vector<std::pair<AnyValRef, AnyExprRef>> definedMappings;
+    std::vector<AnyExprRef> definingExpressions;
 
    private:
     Model() {}
@@ -39,10 +39,7 @@ class ModelBuilder {
     ModelBuilder() {}
 
     inline void addConstraint(ExprRef<BoolView> constraint) {
-        auto result = constraint->tryReplaceConstraintWithDefine();
-        if (result.first) {
-            model.definedMappings.emplace_back(std::move(result.second));
-        } else {
+        if (!constraintHandledByDefine(constraint)) {
             constraints.emplace_back(std::move(constraint));
         }
     }
@@ -88,5 +85,8 @@ class ModelBuilder {
         assert(model.neighbourhoods.size() > 0);
         return std::move(model);
     }
+
+    inline bool constraintHandledByDefine(ExprRef<BoolView>&) { return false; }
 };
+
 #endif /* SRC_SEARCH_MODEL_H_ */

@@ -117,27 +117,6 @@ struct TupleValue : public TupleView, public ValBase {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };
 
-template <>
-struct DefinedTrigger<TupleValue> : public TupleTrigger {
-    ValRef<TupleValue> val;
-    DefinedTrigger(const ValRef<TupleValue>& val) : val(val) {}
-
-    virtual inline void possibleMemberValueChange(UInt index) {
-        todoImpl(index);
-    }
-    virtual void memberValueChanged(UInt index) { todoImpl(index); }
-
-    void possibleTupleValueChanged() { todoImpl(); }
-    void tupleValueChanged() { todoImpl(); }
-    inline void preIterValueChange(const ExprRef<TupleView>&) final {
-        todoImpl();
-    }
-    inline void postIterValueChange(const ExprRef<TupleView>&) final {
-        assert(false);
-        abort();
-    }
-};
-
 template <typename Child>
 struct ChangeTriggerAdapter<TupleTrigger, Child>
     : public TupleTrigger, public ChangeTriggerAdapterBase<Child> {

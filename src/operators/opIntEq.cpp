@@ -70,38 +70,6 @@ std::ostream& OpIntEq::dumpState(std::ostream& os) const {
     right->dumpState(os);
     return os;
 }
-
-ValRef<IntValue> asIntValue(ExprRef<IntView>& expr);
-pair<AnyValRef, AnyExprRef> define(ValRef<IntValue>& val,
-                                   ExprRef<IntView>& expr);
-pair<bool, pair<AnyValRef, AnyExprRef>>
-OpIntEq::tryReplaceConstraintWithDefine() {
-    auto l = asIntValue(left);
-    auto r = asIntValue(right);
-    if (l && l->container != &constantPool) {
-        return make_pair(true, define(l, right));
-    } else if (r && r->container != &constantPool) {
-        return make_pair(true, define(r, left));
-    }
-    return make_pair(false, make_pair(ValRef<BoolValue>(nullptr),
-                                      ViewRef<BoolView>(nullptr)));
-}
-
-inline ValRef<IntValue> asIntValue(ExprRef<IntView>& expr) {
-    if (expr.isViewRef() && dynamic_cast<IntValue*>(&(*expr))) {
-        return assumeAsValue(expr.asViewRef());
-    } else {
-        return ValRef<IntValue>(nullptr);
-    }
-}
-
-pair<AnyValRef, AnyExprRef> define(ValRef<IntValue>& val,
-                                   ExprRef<IntView>& expr) {
-    addTrigger(expr, std::make_shared<DefinedTrigger<IntValue>>(val));
-    val->container = &constantPool;
-    return make_pair(AnyValRef(val), AnyExprRef(expr));
-}
-
 void OpIntEq::findAndReplaceSelf(const FindAndReplaceFunction& func) {
     this->left = findAndReplace(left, func);
     this->right = findAndReplace(right, func);

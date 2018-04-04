@@ -61,27 +61,6 @@ struct IntValue : public IntView, ValBase {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };
 
-template <>
-struct DefinedTrigger<IntValue> : public IntTrigger {
-    ValRef<IntValue> val;
-    DefinedTrigger(const ValRef<IntValue>& val) : val(val) {}
-    inline void possibleValueChange(Int) final {}
-    inline void valueChanged(Int value) final {
-        val->changeValue([&]() {
-            val->value = value;
-            return true;
-        });
-    }
-
-    inline void preIterValueChange(const ExprRef<IntView>&) final {
-        todoImpl();
-    }
-    inline void postIterValueChange(const ExprRef<IntView>&) final {
-        assert(false);
-        abort();
-    }
-};
-
 template <typename Child>
 struct ChangeTriggerAdapter<IntTrigger, Child>
     : public IntTrigger, public ChangeTriggerAdapterBase<Child> {

@@ -208,12 +208,6 @@ struct ExprInterface {
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
-    virtual inline std::pair<bool, std::pair<AnyValRef, AnyExprRef>>
-    tryReplaceConstraintWithDefine() {
-        return std::make_pair(false,
-                              std::make_pair(ValRef<BoolValue>(nullptr),
-                                             ViewRef<BoolView>(nullptr)));
-    }
 };
 HashType getValueHash(const AnyExprRef& ref);
 template <typename T>

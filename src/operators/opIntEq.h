@@ -25,8 +25,5 @@ struct OpIntEq : public BoolView {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     virtual ~OpIntEq() { this->stopTriggering(); }
-
-    std::pair<bool, std::pair<AnyValRef, AnyExprRef>>
-    tryReplaceConstraintWithDefine() final;
 };
 #endif /* SRC_OPERATORS_OPINTEQ_H_ */

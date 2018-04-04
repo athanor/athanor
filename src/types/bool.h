@@ -1,4 +1,3 @@
-
 #ifndef SRC_TYPES_BOOL_H_
 #define SRC_TYPES_BOOL_H_
 #include <utility>
@@ -49,25 +48,6 @@ struct BoolValue : public BoolView, ValBase {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };
 
-template <>
-struct DefinedTrigger<BoolValue> : public BoolTrigger {
-    ValRef<BoolValue> val;
-    DefinedTrigger(const ValRef<BoolValue>& val) : val(val) {}
-    inline void possibleValueChange(UInt) final {}
-    inline void valueChanged(UInt violation) {
-        val->changeValue([&]() {
-            val->violation = violation;
-            return true;
-        });
-    }
-    inline void preIterValueChange(const ExprRef<BoolView>&) final {
-        todoImpl();
-    }
-    inline void postIterValueChange(const ExprRef<BoolView>&) final {
-        assert(false);
-        abort();
-    }
-};
 template <typename Child>
 struct ChangeTriggerAdapter<BoolTrigger, Child>
     : public BoolTrigger, public ChangeTriggerAdapterBase<Child> {

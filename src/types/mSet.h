@@ -331,34 +331,6 @@ struct MSetValue : public MSetView, public ValBase {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };
 
-template <>
-struct DefinedTrigger<MSetValue> : public MSetTrigger {
-    ValRef<MSetValue> val;
-    DefinedTrigger(const ValRef<MSetValue>& val) : val(val) {}
-    inline void valueRemoved(UInt indexOfRemovedValue,
-                             HashType hashOfRemovedValue) {
-        todoImpl(indexOfRemovedValue, hashOfRemovedValue);
-    }
-    inline void valueAdded(const AnyExprRef& member) { todoImpl(member); }
-    virtual inline void possibleMemberValueChange(UInt index,
-                                                  const AnyExprRef& member) {
-        todoImpl(index, member);
-    }
-    virtual void memberValueChanged(UInt index, const AnyExprRef& member) {
-        todoImpl(index, member);
-        ;
-    }
-    inline void possibleMSetValueChange() final { todoImpl(); }
-    void mSetValueChanged(const MSetView& newValue) { todoImpl(newValue); }
-    inline void preIterValueChange(const ExprRef<MSetView>&) final {
-        todoImpl();
-    }
-    inline void postIterValueChange(const ExprRef<MSetView>&) final {
-        todoImpl();
-        abort();
-    }
-};
-
 template <typename Child>
 struct ChangeTriggerAdapter<MSetTrigger, Child>
     : public MSetTrigger, public ChangeTriggerAdapterBase<Child> {

@@ -137,6 +137,9 @@ extern ValBase constantPool;
 struct ValBase {
     UInt id = 0;
     ValBase* container = &constantPool;
+    inline bool operator==(const ValBase& other) const {
+        return id == other.id && container == other.container;
+    }
 };
 
 template <typename Val>

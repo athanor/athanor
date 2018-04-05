@@ -209,7 +209,10 @@ struct ExprInterface {
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
 };
+
 HashType getValueHash(const AnyExprRef& ref);
+std::ostream& prettyPrint(std::ostream& os, const AnyExprRef& expr);
+
 template <typename T>
 inline ExprRef<T> deepCopyForUnrollOverload(const IterRef<T>& iterVal,
                                             const AnyIterRef& iterator) {

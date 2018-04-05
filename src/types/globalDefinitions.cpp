@@ -7,7 +7,6 @@
 #include "types/allTypes.h"
 #define quote(x) #x
 using namespace std;
-ValBase constantPool;
 bool currentlyProcessingDelayedTriggerStack = false;
 vector<shared_ptr<DelayedTrigger>> delayedTriggerStack;
 

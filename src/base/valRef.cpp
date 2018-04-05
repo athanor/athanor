@@ -1,5 +1,8 @@
 #include "base/valRef.h"
 
+ValBase constantPool;
+ValBase definedPool;
+
 bool smallerValue(const AnyValRef& u, const AnyValRef& v) {
     return u.index() < v.index() ||
            (u.index() == v.index() &&

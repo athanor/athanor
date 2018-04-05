@@ -144,13 +144,19 @@ class HillClimber {
         }
         std::cout << std::endl;
         std::cout << stats << std::endl;
-
+        std::cout << "solution start\n";
         for (size_t i = 0; i < model.variables.size(); ++i) {
             auto& v = model.variables[i];
-            prettyPrint(std::cout << "var: " << model.variableNames[i] << ": ",
-                        v.second)
-                << std::endl;
+            std::cout << "letting " << model.variableNames[i] << " be ";
+            if (valBase(v.second).container != &definedPool) {
+                prettyPrint(std::cout, v.second);
+            } else {
+                prettyPrint(std::cout,
+                            model.definingExpressions.at(valBase(v.second).id));
+            }
+            std::cout << std::endl;
         }
+        std::cout << "solution end\n";
         debug_code(debug_log("CSP state:");
                    model.csp.dumpState(std::cout) << std::endl;
                    if (model.optimiseMode != OptimiseMode::NONE) {
@@ -183,7 +189,7 @@ class HillClimber {
 
     inline void assignRandomValueToVariables() {
         for (auto& var : model.variables) {
-            if (valBase(var.second).container == &constantPool) {
+            if (valBase(var.second).container == &definedPool) {
                 continue;
             }
             assignRandomValueInDomain(var.first, var.second);

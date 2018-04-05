@@ -144,7 +144,9 @@ class HillClimber {
         }
         std::cout << std::endl;
         std::cout << stats << std::endl;
-        std::cout << "solution start\n";
+        if (lastViolation == 0) {
+            std::cout << "solution start\n";
+        }
         for (size_t i = 0; i < model.variables.size(); ++i) {
             auto& v = model.variables[i];
             std::cout << "letting " << model.variableNames[i] << " be ";
@@ -156,7 +158,9 @@ class HillClimber {
             }
             std::cout << std::endl;
         }
-        std::cout << "solution end\n";
+        if (lastViolation == 0) {
+            std::cout << "solution end\n";
+        }
         debug_code(debug_log("CSP state:");
                    model.csp.dumpState(std::cout) << std::endl;
                    if (model.optimiseMode != OptimiseMode::NONE) {

@@ -12,7 +12,7 @@ HashType getValueHash<MSetView>(const MSetView& val) {
 
 template <>
 ostream& prettyPrint<MSetView>(ostream& os, const MSetView& v) {
-    os << "MSet(";
+    os << "mset(";
     mpark::visit(
         [&](auto& membersImpl) {
             bool first = true;

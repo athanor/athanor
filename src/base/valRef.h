@@ -6,7 +6,7 @@
 #include <vector>
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
-#include "base/viewRef.h"
+
 #include "common/common.h"
 #include "utils/variantOperations.h"
 template <typename T>

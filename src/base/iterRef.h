@@ -10,7 +10,7 @@
 #include <vector>
 #include "base/exprRef.h"
 #include "base/triggers.h"
-#include "base/viewRef.h"
+
 template <typename T>
 struct Iterator {
     u_int64_t id;

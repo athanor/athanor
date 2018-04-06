@@ -52,7 +52,7 @@ struct MSetView : public ExprInterface<MSetView> {
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void addMember(const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();
-        HashType hash = getValueHash(*member);
+        HashType hash = getValueHash(member->view());
         members.emplace_back(member);
         cachedHashTotal += mix(hash);
         debug_code(assertValidState());
@@ -201,8 +201,7 @@ struct MSetValue : public MSetView, public ValBase {
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline void addMember(const ValRef<InnerValueType>& member) {
-        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        MSetView::addMember(ExprRef<InnerViewType>(getViewPtr(member)));
+        MSetView::addMember(member.asExpr());
         valBase(*member).container = this;
         valBase(*member).id = numberElements() - 1;
         debug_code(assertValidVarBases());
@@ -213,8 +212,7 @@ struct MSetValue : public MSetView, public ValBase {
     inline bool tryAddMember(const ValRef<InnerValueType>& member,
                              Func&& func) {
         notifyPossibleMSetValueChange();
-        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        MSetView::addMember(ExprRef<InnerViewType>(getViewPtr(member)));
+        MSetView::addMember(member.asExpr());
         if (func()) {
             valBase(*member).container = this;
             valBase(*member).id = numberElements() - 1;

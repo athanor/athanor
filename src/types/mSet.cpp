@@ -22,7 +22,7 @@ ostream& prettyPrint<MSetView>(ostream& os, const MSetView& v) {
                 } else {
                     os << ",";
                 }
-                prettyPrint(os, *memberPtr);
+                prettyPrint(os, memberPtr->view());
             }
         },
         v.members);
@@ -40,7 +40,7 @@ void deepCopyImpl(const MSetValue&,
     targetMembersImpl.clear();
 
     for (auto& member : srcMemnersImpl) {
-        target.addMember(deepCopy(assumeAsValue(*member)));
+        target.addMember(deepCopy(*assumeAsValue(member)));
     }
     debug_code(target.assertValidState());
     target.notifyEntireMSetChange();
@@ -101,10 +101,10 @@ void stopTriggering(MSetValue&) {}
 template <typename InnerViewType>
 void normaliseImpl(MSetValue&, ExprRefVec<InnerViewType>& valMembersImpl) {
     for (auto& v : valMembersImpl) {
-        normalise(assumeAsValue(*v));
+        normalise(*assumeAsValue(v));
     }
     sort(valMembersImpl.begin(), valMembersImpl.end(), [](auto& u, auto& v) {
-        return smallerValue(assumeAsValue(*u), assumeAsValue(*v));
+        return smallerValue(*assumeAsValue(u), *assumeAsValue(v));
     });
 }
 
@@ -132,11 +132,11 @@ bool smallerValue<MSetValue>(const MSetValue& u, const MSetValue& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (smallerValue(assumeAsValue(*uMembersImpl[i]),
-                                 assumeAsValue(*vMembersImpl[i]))) {
+                if (smallerValue(*assumeAsValue(uMembersImpl[i]),
+                                 *assumeAsValue(vMembersImpl[i]))) {
                     return true;
-                } else if (largerValue(assumeAsValue(*uMembersImpl[i]),
-                                       assumeAsValue(*vMembersImpl[i]))) {
+                } else if (largerValue(*assumeAsValue(uMembersImpl[i]),
+                                       *assumeAsValue(vMembersImpl[i]))) {
                     return false;
                 }
             }
@@ -157,11 +157,11 @@ bool largerValue<MSetValue>(const MSetValue& u, const MSetValue& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (largerValue(assumeAsValue(*uMembersImpl[i]),
-                                assumeAsValue(*vMembersImpl[i]))) {
+                if (largerValue(*assumeAsValue(uMembersImpl[i]),
+                                *assumeAsValue(vMembersImpl[i]))) {
                     return true;
-                } else if (smallerValue(assumeAsValue(*uMembersImpl[i]),
-                                        assumeAsValue(*vMembersImpl[i]))) {
+                } else if (smallerValue(*assumeAsValue(uMembersImpl[i]),
+                                        *assumeAsValue(vMembersImpl[i]))) {
                     return false;
                 }
             }
@@ -176,7 +176,7 @@ void MSetView::assertValidState() {
             UInt calculatedTotal = 0;
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 auto& member = valMembersImpl[i];
-                HashType memberHash = getValueHash(*member);
+                HashType memberHash = getValueHash(member->view());
                 calculatedTotal += mix(memberHash);
             }
             if (success) {
@@ -231,10 +231,10 @@ void MSetValue::printVarBases() {
             cout << "parent is constant: " << (this->container == &constantPool)
                  << endl;
             for (auto& member : valMembersImpl) {
-                cout << "val id: " << valBase(assumeAsValue(*member)).id
+                cout << "val id: " << valBase(*assumeAsValue(member)).id
                      << endl;
                 cout << "is constant: "
-                     << (valBase(assumeAsValue(*member)).container ==
+                     << (valBase(*assumeAsValue(member)).container ==
                          &constantPool)
                      << endl;
             }

@@ -18,12 +18,13 @@ struct OpIntEq : public BoolView {
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
+    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<BoolView> deepCopySelfForUnroll(
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    virtual ~OpIntEq() { this->stopTriggering(); }
+    virtual ~OpIntEq() { this->stopTriggeringOnChildren(); }
 };
 #endif /* SRC_OPERATORS_OPINTEQ_H_ */

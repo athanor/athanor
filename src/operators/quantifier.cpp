@@ -64,7 +64,7 @@ void Quantifier<ContainerType>::unroll(UInt index,
                           .getIterator()
                           .getValue();
             ExprRef<viewType(members)> newMember =
-                deepCopyForUnroll(exprToCopy, iterRef);
+                exprToCopy->deepCopySelfForUnroll( iterRef);
             iterRef.getIterator().changeValue(
                 this->triggering() && !evaluateExpr, oldValueOfIter, newView,
                 [&]() {
@@ -119,8 +119,8 @@ template <typename ContainerType>
 ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
     auto newQuantifier = make_shared<Quantifier<ContainerType>>(
-        deepCopyForUnroll(container, iterator), quantId);
-    newQuantifier->setExpression(deepCopyForUnroll(expr, iterator));
+        container->deepCopySelfForUnroll( iterator), quantId);
+    newQuantifier->setExpression(expr->deepCopySelfForUnroll( iterator));
 
     mpark::visit(
         [&](auto& members) {
@@ -129,7 +129,7 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnroll(
                 auto& iterVal = unrolledIterVals[i];
                 newQuantifier->template addMember<viewType(members)>(
                     newQuantifier->numberElements(),
-                    deepCopyForUnroll(expr, iterator));
+                    expr->deepCopySelfForUnroll( iterator));
                 newQuantifier->unrolledIterVals.emplace_back(iterVal);
             }
         },
@@ -174,7 +174,7 @@ void Quantifier<ContainerType>::startTriggeringOnExpr(UInt index,
     for (size_t i = index + 1; i < exprTriggers.size(); i++) {
         exprTriggers[i]->index = i;
     }
-    addTrigger(expr, trigger);
+    expr->addTrigger( trigger);
 }
 
 template <typename ContainerType>
@@ -195,7 +195,7 @@ void Quantifier<ContainerType>::startTriggering() {
         return;
     }
     containerTrigger = make_shared<ContainerTrigger<ContainerType>>(this);
-    addTrigger(container, containerTrigger);
+    container->addTrigger( containerTrigger);
     container->startTriggering();
     mpark::visit(
         [&](auto& members) {

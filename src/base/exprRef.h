@@ -23,7 +23,8 @@ using ExprRefVecMaker = ExprRefVec<typename AssociatedViewType<T>::type>;
 typedef Variantised<ExprRefVecMaker> AnyExprVec;
 
 class ViolationDescription;
-typedef std::function<AnyExprRef(AnyExprRef)> FindAndReplaceFunction;
+typedef std::function<std::pair<bool, AnyExprRef>(AnyExprRef)>
+    FindAndReplaceFunction;
 
 template <typename View>
 struct ExprInterface {
@@ -68,5 +69,17 @@ inline std::ostream& operator<<(std::ostream& os, const ExprRef<T>& ref) {
 }
 HashType getValueHash(const AnyExprRef& ref);
 std::ostream& prettyPrint(std::ostream& os, const AnyExprRef& expr);
+
+template <typename T>
+inline ExprRef<T> findAndReplace(ExprRef<T>& expr,
+                                 const FindAndReplaceFunction& func) {
+    auto newExpr = func(expr);
+    if (newExpr.first) {
+        return mpark::get<ExprRef<T>>(newExpr.second);
+    } else {
+        expr->findAndReplaceSelf(func);
+        return expr;
+    }
+}
 
 #endif /* SRC_BASE_EXPRREF_H_ */

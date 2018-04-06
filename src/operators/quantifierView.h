@@ -45,7 +45,7 @@ struct FixedArray : public QuantifierView<ExprType> {
         newFixedArray->exprs.reserve(exprs.size());
         for (auto& expr : exprs) {
             newFixedArray->exprs.emplace_back(
-                deepCopyForUnroll(expr, iterator));
+                expr->deepCopySelfForUnroll( iterator));
         }
         return newFixedArray;
     }

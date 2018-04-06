@@ -34,8 +34,8 @@ OpMod::OpMod(OpMod&& other)
 void OpMod::startTriggering() {
     if (!operandTrigger) {
         operandTrigger = make_shared<OpMod::Trigger>(this);
-        addTrigger(left, operandTrigger);
-        addTrigger(right, operandTrigger);
+        left->addTrigger( operandTrigger);
+        right->addTrigger( operandTrigger);
         left->startTriggering();
         right->startTriggering();
     }
@@ -58,8 +58,8 @@ void OpMod::updateViolationDescription(UInt parentViolation,
 
 ExprRef<IntView> OpMod::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
-    auto newOpMod = make_shared<OpMod>(deepCopyForUnroll(left, iterator),
-                                       deepCopyForUnroll(right, iterator));
+    auto newOpMod = make_shared<OpMod>(left->deepCopySelfForUnroll( iterator),
+                                       right->deepCopySelfForUnroll( iterator));
     newOpMod->value = value;
     return ViewRef<IntView>(newOpMod);
 }

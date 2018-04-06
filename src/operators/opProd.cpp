@@ -87,7 +87,7 @@ void OpProd::startTriggering() {
     if (!operandsSequenceTrigger) {
         operandsSequenceTrigger =
             std::make_shared<OperandsSequenceTrigger>(this);
-        addTrigger(operands, operandsSequenceTrigger);
+        operands->addTrigger( operandsSequenceTrigger);
         operands->startTriggering();
     }
 }
@@ -109,7 +109,7 @@ void OpProd::updateViolationDescription(UInt parentViolation,
 
 ExprRef<IntView> OpProd::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
-    auto newOpProd = make_shared<OpProd>(deepCopyForUnroll(operands, iterator));
+    auto newOpProd = make_shared<OpProd>(operands->deepCopySelfForUnroll( iterator));
     newOpProd->value = value;
     return ViewRef<IntView>(newOpProd);
 }

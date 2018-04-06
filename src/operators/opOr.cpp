@@ -158,7 +158,7 @@ void OpOr::startTriggering() {
     if (!operandsSequenceTrigger) {
         operandsSequenceTrigger =
             std::make_shared<OperandsSequenceTrigger>(this);
-        addTrigger(operands, operandsSequenceTrigger);
+        operands->addTrigger( operandsSequenceTrigger);
         operands->startTriggering();
     }
 }
@@ -180,7 +180,7 @@ void OpOr::updateViolationDescription(const UInt,
 
 ExprRef<BoolView> OpOr::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
-    auto newOpOr = make_shared<OpOr>(deepCopyForUnroll(operands, iterator));
+    auto newOpOr = make_shared<OpOr>(operands->deepCopySelfForUnroll( iterator));
     newOpOr->violation = violation;
     newOpOr->minViolationIndices = minViolationIndices;
     return ViewRef<BoolView>(newOpOr);

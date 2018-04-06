@@ -7,7 +7,7 @@ using namespace std;
 void OpIntEq::evaluate() {
     left->evaluate();
     right->evaluate();
-    violation = std::abs(left->value - right->value);
+    violation = std::abs(left->view().value - right->view().value);
 }
 
 struct OpIntEq::Trigger
@@ -17,7 +17,8 @@ struct OpIntEq::Trigger
     inline void adapterPossibleValueChange() {}
     inline void adapterValueChanged() {
         op->changeValue([&]() {
-            op->violation = std::abs(op->left->value - op->right->value);
+            op->violation =
+                std::abs(op->left->view().value - op->right->view().value);
             return true;
         });
     }
@@ -34,10 +35,17 @@ OpIntEq::OpIntEq(OpIntEq&& other)
 void OpIntEq::startTriggering() {
     if (!operandTrigger) {
         operandTrigger = make_shared<OpIntEq::Trigger>(this);
-        addTrigger(left, operandTrigger);
-        addTrigger(right, operandTrigger);
+        left->addTrigger(operandTrigger);
+        right->addTrigger(operandTrigger);
         left->startTriggering();
         right->startTriggering();
+    }
+}
+
+void OpIntEq::stopTriggeringOnChildren() {
+    if (operandTrigger) {
+        deleteTrigger(operandTrigger);
+        operandTrigger = nullptr;
     }
 }
 
@@ -57,10 +65,11 @@ void OpIntEq::updateViolationDescription(UInt, ViolationDescription& vioDesc) {
 
 ExprRef<BoolView> OpIntEq::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
-    auto newOpIntEq = make_shared<OpIntEq>(deepCopyForUnroll(left, iterator),
-                                           deepCopyForUnroll(right, iterator));
+    auto newOpIntEq =
+        make_shared<OpIntEq>(left->deepCopySelfForUnroll(iterator),
+                             right->deepCopySelfForUnroll(iterator));
     newOpIntEq->violation = violation;
-    return ViewRef<BoolView>(newOpIntEq);
+    return newOpIntEq;
 }
 
 std::ostream& OpIntEq::dumpState(std::ostream& os) const {

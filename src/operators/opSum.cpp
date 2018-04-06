@@ -87,7 +87,7 @@ void OpSum::startTriggering() {
     if (!operandsSequenceTrigger) {
         operandsSequenceTrigger =
             std::make_shared<OperandsSequenceTrigger>(this);
-        addTrigger(operands, operandsSequenceTrigger);
+        operands->addTrigger( operandsSequenceTrigger);
         operands->startTriggering();
     }
 }
@@ -109,7 +109,7 @@ void OpSum::updateViolationDescription(UInt parentViolation,
 
 ExprRef<IntView> OpSum::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
-    auto newOpSum = make_shared<OpSum>(deepCopyForUnroll(operands, iterator));
+    auto newOpSum = make_shared<OpSum>(operands->deepCopySelfForUnroll( iterator));
     newOpSum->value = value;
     return ViewRef<IntView>(newOpSum);
 }

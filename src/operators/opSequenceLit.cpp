@@ -52,7 +52,7 @@ void OpSequenceLit::startTriggering() {
                 for (size_t i = 0; i < members.size(); i++) {
                     auto trigger =
                         make_shared<ExprTrigger<TriggerType>>(this, i);
-                    addTrigger(members[i], trigger);
+                    members[i]->addTrigger( trigger);
                     exprTriggers.emplace_back(move(trigger));
                     members[i]->startTriggering();
                 }
@@ -91,7 +91,7 @@ ExprRef<SequenceView> OpSequenceLit::deepCopySelfForUnroll(
                 newMembers.emplace<ExprRefVec<viewType(members)>>();
             for (auto& member : members) {
                 newMembersImpl.emplace_back(
-                    deepCopyForUnroll(member, iterator));
+                    member->deepCopySelfForUnroll( iterator));
             }
         },
         members);

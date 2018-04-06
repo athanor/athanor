@@ -33,7 +33,7 @@ OpSetSize::OpSetSize(OpSetSize&& other)
 void OpSetSize::startTriggering() {
     if (!operandTrigger) {
         operandTrigger = make_shared<OpSetSizeTrigger>(this);
-        addTrigger(operand, operandTrigger);
+        operand->addTrigger( operandTrigger);
         operand->startTriggering();
     }
 }
@@ -54,7 +54,7 @@ void OpSetSize::updateViolationDescription(UInt parentViolation,
 ExprRef<IntView> OpSetSize::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
     auto newOpSetSize =
-        make_shared<OpSetSize>(deepCopyForUnroll(operand, iterator));
+        make_shared<OpSetSize>(operand->deepCopySelfForUnroll( iterator));
     newOpSetSize->value = value;
     return ViewRef<IntView>(newOpSetSize);
 }

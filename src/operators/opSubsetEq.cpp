@@ -129,8 +129,8 @@ void OpSubsetEq::startTriggering() {
     if (!leftTrigger) {
         leftTrigger = make_shared<LeftSetTrigger>(this);
         rightTrigger = make_shared<RightSetTrigger>(this);
-        addTrigger(left, leftTrigger);
-        addTrigger(right, rightTrigger);
+        left->addTrigger( leftTrigger);
+        right->addTrigger( rightTrigger);
         left->startTriggering();
         right->startTriggering();
     }
@@ -158,7 +158,7 @@ void OpSubsetEq::updateViolationDescription(UInt,
 ExprRef<BoolView> OpSubsetEq::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
     auto newOpSubsetEq = make_shared<OpSubsetEq>(
-        deepCopyForUnroll(left, iterator), deepCopyForUnroll(right, iterator));
+        left->deepCopySelfForUnroll( iterator), right->deepCopySelfForUnroll( iterator));
     newOpSubsetEq->violation = violation;
     return ViewRef<BoolView>(newOpSubsetEq);
 }

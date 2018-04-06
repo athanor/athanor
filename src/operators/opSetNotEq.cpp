@@ -44,8 +44,8 @@ OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
 void OpSetNotEq::startTriggering() {
     if (!trigger) {
         trigger = make_shared<OpSetNotEqTrigger>(this);
-        addTrigger(left, trigger);
-        addTrigger(right, trigger);
+        left->addTrigger( trigger);
+        right->addTrigger( trigger);
         left->startTriggering();
         right->startTriggering();
     }
@@ -69,7 +69,7 @@ void OpSetNotEq::updateViolationDescription(UInt,
 ExprRef<BoolView> OpSetNotEq::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
     auto newOpSetNotEq = make_shared<OpSetNotEq>(
-        deepCopyForUnroll(left, iterator), deepCopyForUnroll(right, iterator));
+        left->deepCopySelfForUnroll( iterator), right->deepCopySelfForUnroll( iterator));
     newOpSetNotEq->violation = violation;
     return ViewRef<BoolView>(newOpSetNotEq);
 }

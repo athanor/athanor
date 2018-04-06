@@ -15,7 +15,7 @@ struct OpAnd : public BoolView {
     OpAnd(ExprRef<SequenceView> operands) : operands(std::move(operands)) {}
     OpAnd(const OpAnd& other) = delete;
     OpAnd(OpAnd&& other);
-    virtual ~OpAnd() { this->stopTriggering(); }
+    virtual ~OpAnd() { this->stopTriggeringOnChildren(); }
     inline OpAnd& operator=(const OpAnd& other) {
         operands = other.operands;
         violatingOperands = other.violatingOperands;
@@ -24,6 +24,7 @@ struct OpAnd : public BoolView {
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
+    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<BoolView> deepCopySelfForUnroll(

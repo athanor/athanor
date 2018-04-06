@@ -6,6 +6,7 @@
 #include <memory>
 #include <utility>
 #include "base/standardSharedPtr.h"
+#include "base/typeDecls.h"
 struct AnyIterRef;
 template <typename View>
 struct ExprRef;
@@ -27,7 +28,7 @@ typedef std::function<AnyExprRef(AnyExprRef)> FindAndReplaceFunction;
 template <typename View>
 struct ExprInterface {
     virtual View& view();
-    virtual View& view() const;
+    virtual const View& view() const;
     virtual void evaluate() = 0;
     virtual void startTriggering() = 0;
     virtual void stopTriggering() = 0;

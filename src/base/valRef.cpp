@@ -1,14 +1,7 @@
 #include "base/valRef.h"
 #include "utils/ignoreUnused.h"
-template <typename Value>
-ValRef<Value>::operator ExprRef<typename AssociatedViewType<Value>::type>() {
-    return this->getPtr();
-}
-template <typename Value>
-ValRef<Value>::
-operator const ExprRef<typename AssociatedViewType<Value>::type>() const {
-    return this->getPtr();
-}
+using namespace std;
+
 ValBase constantPool;
 ValBase definedPool;
 
@@ -43,17 +36,16 @@ AnyValRef deepCopy(const AnyValRef& val) {
         [](const auto& valImpl) { return AnyValRef(deepCopy(*valImpl)); }, val);
 }
 
-std::ostream& prettyPrint(std::ostream& os, const AnyValRef& v) {
+ostream& prettyPrint(ostream& os, const AnyValRef& v) {
     return mpark::visit(
-        [&os](auto& vImpl) -> std::ostream& { return prettyPrint(os, vImpl); },
-        v);
+        [&os](auto& vImpl) -> ostream& { return prettyPrint(os, vImpl); }, v);
 }
 
 HashType getValueHash(const AnyValRef& v) {
     return mpark::visit([](auto& vImpl) { return getValueHash(vImpl); }, v);
 }
 
-std::ostream& operator<<(std::ostream& os, const AnyValRef& v) {
+ostream& operator<<(ostream& os, const AnyValRef& v) {
     return prettyPrint(os, v);
 }
 
@@ -64,16 +56,4 @@ const ValBase& valBase(const AnyValRef& ref) {
 ValBase& valBase(AnyValRef& ref) {
     return mpark::visit([](auto& val) -> ValBase& { return valBase(*val); },
                         ref);
-}
-
-void instantiate(AnyValRef& v) {
-    mpark::visit(
-        [&](auto& v) {
-            typedef typename AssociatedViewType<valType(v)>::type View;
-            ExprRef<View> e = v;
-            const auto& v2 = v;
-            ExprRef<View> e2 = v2;
-            ignoreUnused(e, e2);
-        },
-        v);
 }

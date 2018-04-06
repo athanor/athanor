@@ -11,7 +11,10 @@ class StandardSharedPtr {
     std::shared_ptr<T> ref;
 
    public:
-    StandardSharedPtr(std::shared_ptr<T> ref) : ref(std::move(ref)) {}
+    template <typename Ptr>
+    StandardSharedPtr(Ptr&& ref) : ref(std::forward<Ptr>(ref)) {}
+    template <typename Ptr>
+    StandardSharedPtr(const Ptr& ref) : ref(ref) {}
     inline explicit operator bool() const noexcept {
         return ref.operator bool();
     }

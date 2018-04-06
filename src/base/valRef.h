@@ -15,10 +15,12 @@ struct ValRef : public StandardSharedPtr<Value> {
     using StandardSharedPtr<Value>::StandardSharedPtr;
     typedef typename AssociatedViewType<Value>::type View;
 
-    operator ExprRef<View>();
-    operator const ExprRef<View>() const;
-    inline ExprRef<View> asExpr() { return *this; }
-    inline const ExprRef<View> asExpr() const { return *this; }
+    inline ExprRef<View> asExpr() {
+        return reinterpret_cast<ExprRef<View>&>(*this);
+    }
+    inline const ExprRef<View> asExpr() const {
+        return reinterpret_cast<const ExprRef<View>&>(*this);
+    }
 };
 
 template <typename T>
@@ -61,12 +63,12 @@ EnableIfValueAndReturn<Val, ValRef<Val>> deepCopy(const Val& src) {
 template <typename InnerValueType>
 inline std::ostream& prettyPrint(std::ostream& os,
                                  const ValRef<InnerValueType>& val) {
-    return prettyPrint(os, *getViewPtr(val));
+    return prettyPrint(os, val.asExpr());
 }
 
 template <typename InnerValueType>
 inline HashType getValueHash(const ValRef<InnerValueType>& val) {
-    return getValueHash(*getViewPtr(val));
+    return getValueHash(val.asExpr());
 }
 
 template <typename InnerValueType>

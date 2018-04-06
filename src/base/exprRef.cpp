@@ -4,12 +4,12 @@
 using namespace std;
 
 template <typename View>
-View& ExprInterface::view() {
+View& ExprInterface<View>::view() {
     return *static_cast<View*>(this);
 }
 template <typename View>
-const View& ExprInterface::view() const {
-    return *static_cast<View*>(this);
+const View& ExprInterface<View>::view() const {
+    return *static_cast<const View*>(this);
 }
 
 HashType getValueHash(const AnyExprRef& ref) {
@@ -24,10 +24,12 @@ ostream& prettyPrint(ostream& os, const AnyExprRef& expr) {
 }
 
 void instantiateViewGetters(AnyExprRef& expr) {
-    mpark::visit([](auto& expr) {
-        auto& view = expr->view();
-        const auto& expr2 = expr;
-        const auto& view2 = expr2->view();
-        ignoreUnused(expr, expr2);
-    } expr)
+    mpark::visit(
+        [](auto& expr) {
+            auto& view = expr->view();
+            const auto& expr2 = expr;
+            const auto& view2 = expr2->view();
+            ignoreUnused(view, view2);
+        },
+        expr);
 }

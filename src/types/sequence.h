@@ -56,7 +56,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
         HashType input[2];
         HashType result[2];
         input[0] = index;
-        input[1] = getValueHash(*expr);
+        input[1] = getValueHash(expr->view());
         MurmurHash3_x64_128(((void*)input), sizeof(input), 0, result);
         return result[0] ^ result[1];
     }
@@ -266,15 +266,13 @@ struct SequenceValue : public SequenceView, public ValBase {
         auto& members =
             getMembers<typename AssociatedViewType<InnerValueType>::type>();
         for (size_t i = start; i < members.size(); i++) {
-            valBase(assumeAsValue(*members[i])).id = i;
+            valBase(*assumeAsValue(members[i])).id = i;
         }
     }
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline void addMember(UInt index, const ValRef<InnerValueType>& member) {
-        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        SequenceView::addMember(index,
-                                ExprRef<InnerViewType>(getViewPtr(member)));
+        SequenceView::addMember(index, member.asExpr());
         valBase(*member).container = this;
         reassignIndicesToEnd<InnerValueType>(index);
         debug_code(assertValidVarBases());
@@ -285,9 +283,7 @@ struct SequenceValue : public SequenceView, public ValBase {
     inline bool tryAddMember(UInt index, const ValRef<InnerValueType>& member,
                              Func&& func) {
         notifyPossibleSequenceValueChange();
-        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        SequenceView::addMember(index,
-                                ExprRef<InnerViewType>(getViewPtr(member)));
+        SequenceView::addMember(index, member.asExpr());
         if (func()) {
             valBase(*member).container = this;
             reassignIndicesToEnd<InnerValueType>(index);

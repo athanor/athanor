@@ -15,10 +15,11 @@ struct OpSubsetEq : public BoolView {
         : left(std::move(leftIn)), right(std::move(rightIn)) {}
     OpSubsetEq(const OpSubsetEq& other) = delete;
     OpSubsetEq(OpSubsetEq&& other);
-    ~OpSubsetEq() { this->stopTriggering(); }
+    ~OpSubsetEq() { this->stopTriggeringOnChildren(); }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
+    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<BoolView> deepCopySelfForUnroll(

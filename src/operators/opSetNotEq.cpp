@@ -7,7 +7,9 @@ using namespace std;
 
 inline void setViolation(OpSetNotEq& op, bool trigger) {
     UInt newViolation =
-        (op.left->cachedHashTotal == op.right->cachedHashTotal) ? 1 : 0;
+        (op.left->view().cachedHashTotal == op.right->view().cachedHashTotal)
+            ? 1
+            : 0;
     if (trigger) {
         op.changeValue([&]() {
             op.violation = newViolation;
@@ -44,8 +46,8 @@ OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
 void OpSetNotEq::startTriggering() {
     if (!trigger) {
         trigger = make_shared<OpSetNotEqTrigger>(this);
-        left->addTrigger( trigger);
-        right->addTrigger( trigger);
+        left->addTrigger(trigger);
+        right->addTrigger(trigger);
         left->startTriggering();
         right->startTriggering();
     }
@@ -68,10 +70,11 @@ void OpSetNotEq::updateViolationDescription(UInt,
 
 ExprRef<BoolView> OpSetNotEq::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
-    auto newOpSetNotEq = make_shared<OpSetNotEq>(
-        left->deepCopySelfForUnroll( iterator), right->deepCopySelfForUnroll( iterator));
+    auto newOpSetNotEq =
+        make_shared<OpSetNotEq>(left->deepCopySelfForUnroll(iterator),
+                                right->deepCopySelfForUnroll(iterator));
     newOpSetNotEq->violation = violation;
-    return ViewRef<BoolView>(newOpSetNotEq);
+    return newOpSetNotEq;
 }
 
 std::ostream& OpSetNotEq::dumpState(std::ostream& os) const {

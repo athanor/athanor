@@ -41,6 +41,13 @@ void OpMod::startTriggering() {
     }
 }
 
+void OpMod::stopTriggeringOnChildren() {
+    if (operandTrigger) {
+        deleteTrigger(operandTrigger);
+        operandTrigger = nullptr;
+    }
+}
+
 void OpMod::stopTriggering() {
     if (operandTrigger) {
         deleteTrigger(operandTrigger);

@@ -11,10 +11,11 @@ struct OpSetNotEq : public BoolView {
         : left(std::move(leftIn)), right(std::move(rightIn)) {}
     OpSetNotEq(const OpSetNotEq& other) = delete;
     OpSetNotEq(OpSetNotEq&& other);
-    ~OpSetNotEq() { this->stopTriggering(); }
+    ~OpSetNotEq() { this->stopTriggeringOnChildren(); }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
+    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<BoolView> deepCopySelfForUnroll(

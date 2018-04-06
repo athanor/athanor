@@ -53,6 +53,13 @@ void OpSetNotEq::startTriggering() {
     }
 }
 
+void OpSetNotEq::stopTriggeringOnChildren() {
+    if (trigger) {
+        deleteTrigger(trigger);
+        trigger = nullptr;
+    }
+}
+
 void OpSetNotEq::stopTriggering() {
     if (trigger) {
         deleteTrigger(trigger);

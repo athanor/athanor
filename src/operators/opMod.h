@@ -15,10 +15,11 @@ struct OpMod : public IntView {
 
     OpMod(const OpMod& other) = delete;
     OpMod(OpMod&& other);
-    ~OpMod() { this->stopTriggering(); }
+    ~OpMod() { this->stopTriggeringOnChildren(); }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
+    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<IntView> deepCopySelfForUnroll(

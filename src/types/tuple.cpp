@@ -11,9 +11,9 @@ HashType getValueHash<TupleView>(const TupleView& val) {
         HashType result[2];
         HashType input[val.members.size()];
         for (size_t i = 0; i < val.members.size(); i++) {
-            input[i] =
-                mpark::visit([&](auto& expr) { return getValueHash(*expr); },
-                             val.members[i]);
+            input[i] = mpark::visit(
+                [&](auto& expr) { return getValueHash(expr->view()); },
+                val.members[i]);
         }
         MurmurHash3_x64_128(((void*)input), sizeof(input), 0, result);
         return result[0] ^ result[1];
@@ -30,7 +30,8 @@ ostream& prettyPrint<TupleView>(ostream& os, const TupleView& v) {
         } else {
             os << ",";
         }
-        mpark::visit([&](auto& member) { prettyPrint(os, *member); }, member);
+        mpark::visit([&](auto& member) { prettyPrint(os, member->view()); },
+                     member);
     }
     os << ")";
     return os;
@@ -43,7 +44,7 @@ void deepCopy<TupleValue>(const TupleValue& src, TupleValue& target) {
     for (auto& member : src.members) {
         mpark::visit(
             [&](auto& expr) {
-                target.addMember(deepCopy(assumeAsValue(*expr)));
+                target.addMember(deepCopy(*assumeAsValue(expr)));
             },
             member);
     }
@@ -86,7 +87,7 @@ void stopTriggering(TupleValue&) {}
 template <>
 void normalise<TupleValue>(TupleValue& val) {
     for (auto& v : val.members) {
-        mpark::visit([](auto& v) { normalise(assumeAsValue(*v)); }, v);
+        mpark::visit([](auto& v) { normalise(*assumeAsValue(v)); }, v);
     }
 }
 

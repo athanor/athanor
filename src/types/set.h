@@ -28,15 +28,13 @@ struct SetDomain {
     }
 };
 
-struct SetTrigger : public IterAssignedTrigger<SetView> {
+struct SetTrigger : public TriggerBase {
     virtual void valueRemoved(UInt indexOfRemovedValue,
                               HashType hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyExprRef& member) = 0;
     virtual void possibleMemberValueChange(UInt index,
                                            const AnyExprRef& member) = 0;
     virtual void memberValueChanged(UInt index, const AnyExprRef& member) = 0;
-    virtual void possibleSetValueChange() = 0;
-    virtual void setValueChanged(const SetView& newValue) = 0;
 };
 struct SetView : public ExprInterface<SetView> {
     friend SetValue;
@@ -136,7 +134,7 @@ struct SetView : public ExprInterface<SetView> {
 
    public:
     inline void notifyPossibleSetValueChange() {
-        visitTriggers([](auto& t) { t->possibleSetValueChange(); }, triggers);
+        visitTriggers([](auto& t) { t->possibleValueChange(); }, triggers);
         debug_code(posSetValueChangeCalled = true);
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -187,7 +185,7 @@ struct SetView : public ExprInterface<SetView> {
                    posSetValueChangeCalled = false);
 
         debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->setValueChanged(*this); }, triggers);
+        visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
     }
 
     inline void initFrom(SetView& other) {
@@ -379,15 +377,7 @@ struct ChangeTriggerAdapter<SetTrigger, Child>
     inline void memberValueChanged(UInt, const AnyExprRef&) final {
         this->forwardValueChanged();
     }
-    inline void possibleSetValueChange() { this->forwardPossibleValueChange(); }
-    inline void setValueChanged(const SetView&) final {
-        this->forwardValueChanged();
-    }
-    inline void preIterValueChange(const ExprRef<SetView>&) final {
-        this->forwardPossibleValueChange();
-    }
-    inline void postIterValueChange(const ExprRef<SetView>&) final {
-        this->forwardValueChanged();
-    }
+    inline void possibleValueChange() { this->forwardPossibleValueChange(); }
+    inline void valueChanged() final { this->forwardValueChanged(); }
 };
 #endif /* SRC_TYPES_SET_H_ */

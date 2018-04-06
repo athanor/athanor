@@ -9,7 +9,8 @@
 #define declDomainsAndValues(name) \
     struct name##Value;            \
     struct name##View;             \
-    struct name##Domain;
+    struct name##Domain;           \
+    struct name##Trigger;
 buildForAllTypes(declDomainsAndValues, )
 #undef declDomainsAndValues
 
@@ -22,6 +23,9 @@ struct AssociatedValueType;
 
 template <typename T>
 struct AssociatedViewType;
+
+template <typename ViewType>
+struct AssociatedTriggerType;
 
 template <typename T>
 struct IsDomainPtrType : public std::false_type {};
@@ -49,6 +53,10 @@ struct TypeAsString;
     template <>                                                          \
     struct AssociatedViewType<name##Value> {                             \
         typedef name##View type;                                         \
+    };                                                                   \
+    template <>                                                          \
+    struct AssociatedTriggerType<name##View> {                           \
+        typedef name##Trigger type;                                      \
     };                                                                   \
     template <>                                                          \
     struct AssociatedValueType<name##View> {                             \

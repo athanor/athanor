@@ -14,9 +14,7 @@ struct TupleDomain {
         : inners({makeAnyDomainRef(std::forward<DomainTypes>(inners))...}) {}
 };
 struct TupleView;
-struct TupleTrigger : public IterAssignedTrigger<TupleView> {
-    virtual void possibleTupleValueChange() = 0;
-    virtual void tupleValueChanged() = 0;
+struct TupleTrigger : public TriggerBase {
     virtual void possibleMemberValueChange(UInt index) = 0;
     virtual void memberValueChanged(UInt index) = 0;
 };
@@ -40,8 +38,7 @@ struct TupleView : public ExprInterface<TupleView> {
                       triggers);
     }
     inline void notifyPossibleEntireTupleChange() {
-        visitTriggers([&](auto& t) { t->possibleTupleValueChange(); },
-                      triggers);
+        visitTriggers([&](auto& t) { t->possibleValueChange(); }, triggers);
     }
 
     inline void memberChangedAndNotify(UInt index) {
@@ -51,7 +48,7 @@ struct TupleView : public ExprInterface<TupleView> {
 
     inline void entireTupleChangeAndNotify() {
         cachedHashTotal.invalidate();
-        visitTriggers([&](auto& t) { t->tupleValueChanged(); }, triggers);
+        visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
     }
 
     inline void initFrom(TupleView&) {
@@ -123,16 +120,10 @@ struct ChangeTriggerAdapter<TupleTrigger, Child>
         this->forwardPossibleValueChange();
     }
     inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
-    inline void possibleTupleValueChange() final {
+    inline void possibleValueChange() final {
         this->forwardPossibleValueChange();
     }
-    inline void tupleValueChanged() final { this->forwardValueChanged(); }
-    inline void preIterValueChange(const ExprRef<TupleView>&) final {
-        this->forwardPossibleValueChange();
-    }
-    inline void postIterValueChange(const ExprRef<TupleView>&) final {
-        this->forwardValueChanged();
-    }
+    inline void valueChanged() final { this->forwardValueChanged(); }
 };
 
 #endif /* SRC_TYPES_TUPLE_H_ */

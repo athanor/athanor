@@ -4,32 +4,19 @@
 #include <memory>
 #include "base/exprRef.h"
 #include "base/typeDecls.h"
-template <typename ViewType>
-struct AssociatedTriggerType;
-#define buildTriggerAssociations(name)         \
-    struct name##Trigger;                      \
-    template <>                                \
-    struct AssociatedTriggerType<name##View> { \
-        typedef name##Trigger type;            \
-    };
-
-buildForAllTypes(buildTriggerAssociations, );
-#undef buildTriggerAssociations
 
 template <typename T>
 struct ExprRef;
+
 struct TriggerBase {
-    bool active;
+    bool active = true;
+    virtual void possibleValueChange() = 0;
+    virtual void valueChanged() = 0;
+    virtual void releaseAndAddTrigger() = 0;
 };
+
 struct DelayedTrigger : public virtual TriggerBase {
     virtual void trigger() = 0;
-};
-template <typename UnrollingView>
-struct IterAssignedTrigger : public virtual TriggerBase {
-    typedef UnrollingView ViewType;
-    virtual void preIterValueChange(const ExprRef<UnrollingView>& newValue) = 0;
-    virtual void postIterValueChange(
-        const ExprRef<UnrollingView>& newValue) = 0;
 };
 
 extern std::vector<std::shared_ptr<DelayedTrigger>> delayedTriggerStack;
@@ -83,39 +70,9 @@ void visitTriggers(Visitor&& func,
     }
 }
 
-template <typename T>
-class IterRef;
-template <typename>
-struct QuantifierView;
-
-template <typename ExprType, typename Trigger>
-inline void saveTriggerOverload(
-    std::shared_ptr<QuantifierView<ExprType>>& quant,
-    const std::shared_ptr<Trigger>& trigger) {
-    quant->triggers.emplace_back(trigger);
-}
-template <typename Op, typename Trigger>
-inline void saveTriggerOverload(Op& op,
-                                const std::shared_ptr<Trigger>& trigger) {
-    op->triggers.emplace_back(trigger);
-
-    op.visit(overloaded(
-        [&](IterRef<typename Trigger::ViewType>& ref) {
-            ref.getIterator().unrollTriggers.emplace_back(trigger);
-        },
-        [](auto&) {}));
-}
-
-template <typename Op, typename Trigger>
-void addTrigger(Op& op, const std::shared_ptr<Trigger>& trigger) {
-    saveTriggerOverload(op, trigger);
-    trigger->active = true;
-}
-
 template <typename Trigger>
 void addDelayedTrigger(const std::shared_ptr<Trigger>& trigger) {
     delayedTriggerStack.emplace_back(trigger);
-    delayedTriggerStack.back()->active = true;
 }
 
 template <typename Trigger>

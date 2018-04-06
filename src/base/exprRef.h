@@ -27,8 +27,10 @@ typedef std::function<AnyExprRef(AnyExprRef)> FindAndReplaceFunction;
 
 template <typename View>
 struct ExprInterface {
+    typedef typename AssociatedTriggerType<View>::type TriggerType;
     virtual View& view();
     virtual const View& view() const;
+    virtual void addTrigger(const std::shared_ptr<TriggerType>& trigger);
     virtual void evaluate() = 0;
     virtual void startTriggering() = 0;
     virtual void stopTriggering() = 0;

@@ -2,7 +2,12 @@
 #include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-
+template <typename View>
+void ExprInterface<View>::addTrigger(
+    const std::shared_ptr<typename AssociatedTriggerType<View>::type>&
+        trigger) {
+    return this->view().triggers.emplace_back(trigger);
+}
 template <typename View>
 View& ExprInterface<View>::view() {
     return *static_cast<View*>(this);
@@ -30,6 +35,20 @@ void instantiateViewGetters(AnyExprRef& expr) {
             const auto& expr2 = expr;
             const auto& view2 = expr2->view();
             ignoreUnused(view, view2);
+        },
+        expr);
+}
+
+template <typename View,
+          typename Trigger = typename AssociatedTriggerType<View>::type>
+shared_ptr<Trigger> fakeMakeTrigger(const ExprRef<View>&) {
+    abort();
+}
+void instantiate(AnyExprRef& expr) {
+    mpark::visit(
+        [&](auto& expr) {
+            auto trigger = fakeMakeTrigger(expr);
+            expr->addTrigger(trigger);
         },
         expr);
 }

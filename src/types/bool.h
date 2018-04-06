@@ -6,10 +6,7 @@
 
 #include "base/base.h"
 struct BoolDomain {};
-struct BoolTrigger : public IterAssignedTrigger<BoolView> {
-    virtual void possibleValueChange(UInt OldViolation) = 0;
-    virtual void valueChanged(UInt newViolation) = 0;
-};
+struct BoolTrigger : public TriggerBase {};
 
 struct BoolView : public ExprInterface<BoolView> {
     UInt violation;
@@ -22,12 +19,11 @@ struct BoolView : public ExprInterface<BoolView> {
         if (func() && violation != oldViolation) {
             std::swap(oldViolation, violation);
             visitTriggers(
-                [&](auto& trigger) { trigger->possibleValueChange(violation); },
+                [&](auto& trigger) { trigger->possibleValueChange(); },
                 triggers);
             std::swap(oldViolation, violation);
-            visitTriggers(
-                [&](auto& trigger) { trigger->valueChanged(violation); },
-                triggers);
+            visitTriggers([&](auto& trigger) { trigger->valueChanged(); },
+                          triggers);
             return true;
         }
         return false;
@@ -51,16 +47,10 @@ struct BoolValue : public BoolView, ValBase {
 template <typename Child>
 struct ChangeTriggerAdapter<BoolTrigger, Child>
     : public BoolTrigger, public ChangeTriggerAdapterBase<Child> {
-    inline void possibleValueChange(UInt) final {
+    inline void possibleValueChange() final {
         this->forwardPossibleValueChange();
     }
-    inline void valueChanged(UInt) final { this->forwardValueChanged(); }
-    inline void preIterValueChange(const ExprRef<BoolView>&) final {
-        this->forwardPossibleValueChange();
-    }
-    inline void postIterValueChange(const ExprRef<BoolView>&) final {
-        this->forwardValueChanged();
-    }
+    inline void valueChanged() final { this->forwardValueChanged(); }
 };
 
 #endif /* SRC_TYPES_BOOL_H_ */

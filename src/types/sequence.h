@@ -29,15 +29,13 @@ struct SequenceDomain {
     }
 };
 struct SequenceView;
-struct SequenceTrigger : public IterAssignedTrigger<SequenceView> {
+struct SequenceTrigger : public TriggerBase {
     virtual void valueRemoved(
         UInt index, const AnyExprRef& removedValueindexOfRemovedValue) = 0;
     virtual void valueAdded(UInt indexOfRemovedValue,
                             const AnyExprRef& member) = 0;
     virtual void possibleSubsequenceChange(UInt startIndex, UInt endIndex) = 0;
     virtual void subsequenceChanged(UInt startIndex, UInt endIndex) = 0;
-    virtual void possibleSequenceValueChange() = 0;
-    virtual void sequenceValueChanged() = 0;
     virtual void beginSwaps() = 0;
     virtual void positionsSwapped(UInt index1, UInt index2) = 0;
     virtual void endSwaps() = 0;
@@ -141,8 +139,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
             triggers);
     }
     inline void notifyPossibleSequenceValueChange() {
-        visitTriggers([](auto& t) { t->possibleSequenceValueChange(); },
-                      triggers);
+        visitTriggers([](auto& t) { t->possibleValueChange(); }, triggers);
         debug_code(posSequenceValueChangeCalled = true);
     }
 
@@ -227,7 +224,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
         debug_code(assert(posSequenceValueChangeCalled);
                    posSequenceValueChangeCalled = false);
         cachedHashTotal.invalidate();
-        visitTriggers([&](auto& t) { t->sequenceValueChanged(); }, triggers);
+        visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
     }
     inline void initFrom(SequenceView&) {
         std::cerr << "Deprecated, Should never be called\n"
@@ -416,12 +413,6 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
     inline void beginSwaps() final { this->forwardPossibleValueChange(); }
     inline void positionsSwapped(UInt, UInt) final {}
     inline void endSwaps() final { this->forwardValueChanged(); }
-    inline void preIterValueChange(const ExprRef<SequenceView>&) final {
-        this->forwardPossibleValueChange();
-    }
-    inline void postIterValueChange(const ExprRef<SequenceView>&) final {
-        this->forwardValueChanged();
-    }
 };
 
 #endif /* SRC_TYPES_SEQUENCE_H_ */

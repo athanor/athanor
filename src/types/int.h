@@ -21,10 +21,7 @@ struct IntDomain {
               })) {}
 };
 
-struct IntTrigger : public IterAssignedTrigger<IntView> {
-    virtual void possibleValueChange(Int value) = 0;
-    virtual void valueChanged(Int value) = 0;
-};
+struct IntTrigger : public TriggerBase {};
 
 struct IntView : public ExprInterface<IntView> {
     Int value;
@@ -38,10 +35,9 @@ struct IntView : public ExprInterface<IntView> {
 
         if (func() && value != oldValue) {
             std::swap(value, oldValue);
-            visitTriggers([&](auto& t) { t->possibleValueChange(value); },
-                          triggers);
+            visitTriggers([&](auto& t) { t->possibleValueChange(); }, triggers);
             std::swap(oldValue, value);
-            visitTriggers([&](auto& t) { t->valueChanged(value); }, triggers);
+            visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
             return true;
         }
         return false;
@@ -64,16 +60,10 @@ struct IntValue : public IntView, ValBase {
 template <typename Child>
 struct ChangeTriggerAdapter<IntTrigger, Child>
     : public IntTrigger, public ChangeTriggerAdapterBase<Child> {
-    inline void possibleValueChange(Int) final {
+    inline void possibleValueChange() final {
         this->forwardPossibleValueChange();
     }
-    inline void valueChanged(Int) final { this->forwardValueChanged(); }
-    inline void preIterValueChange(const ExprRef<IntView>&) final {
-        this->forwardPossibleValueChange();
-    }
-    inline void postIterValueChange(const ExprRef<IntView>&) final {
-        this->forwardValueChanged();
-    }
+    inline void valueChanged() final { this->forwardValueChanged(); }
 };
 
 #endif /* SRC_TYPES_INT_H_ */

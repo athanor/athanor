@@ -29,15 +29,13 @@ struct MSetDomain {
     }
 };
 
-struct MSetTrigger : public IterAssignedTrigger<MSetView> {
+struct MSetTrigger : public TriggerBase {
     virtual void valueRemoved(UInt indexOfRemovedValue,
                               HashType hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyExprRef& member) = 0;
     virtual void possibleMemberValueChange(UInt index,
                                            const AnyExprRef& member) = 0;
     virtual void memberValueChanged(UInt index, const AnyExprRef& member) = 0;
-    virtual void possibleMSetValueChange() = 0;
-    virtual void mSetValueChanged(const MSetView& newValue) = 0;
 };
 
 struct MSetView : public ExprInterface<MSetView> {
@@ -118,7 +116,7 @@ struct MSetView : public ExprInterface<MSetView> {
 
    public:
     inline void notifyPossibleMSetValueChange() {
-        visitTriggers([](auto& t) { t->possibleMSetValueChange(); }, triggers);
+        visitTriggers([](auto& t) { t->possibleValueChange(); }, triggers);
         debug_code(posMSetValueChangeCalled = true);
     }
 
@@ -165,7 +163,7 @@ struct MSetView : public ExprInterface<MSetView> {
         debug_code(assert(posMSetValueChangeCalled);
                    posMSetValueChangeCalled = false);
         debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->mSetValueChanged(*this); }, triggers);
+        visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
     }
 
     inline void initFrom(MSetView& other) {
@@ -341,18 +339,10 @@ struct ChangeTriggerAdapter<MSetTrigger, Child>
     inline void memberValueChanged(UInt, const AnyExprRef&) final {
         this->forwardValueChanged();
     }
-    inline void possibleMSetValueChange() final {
+    inline void possibleValueChange() final {
         this->forwardPossibleValueChange();
     }
-    inline void mSetValueChanged(const MSetView&) final {
-        this->forwardValueChanged();
-    }
-    inline void preIterValueChange(const ExprRef<MSetView>&) final {
-        this->forwardPossibleValueChange();
-    }
-    inline void postIterValueChange(const ExprRef<MSetView>&) final {
-        this->forwardValueChanged();
-    }
+    inline void valueChanged() final { this->forwardValueChanged(); }
 };
 
 #endif /* SRC_TYPES_MSET_H_ */

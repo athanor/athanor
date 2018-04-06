@@ -7,7 +7,7 @@ using namespace std;
 void OpMod::evaluate() {
     left->evaluate();
     right->evaluate();
-    value = left->value % right->value;
+    value = left->view().value % right->view().value;
 }
 
 struct OpMod::Trigger
@@ -17,7 +17,7 @@ struct OpMod::Trigger
     inline void adapterPossibleValueChange() {}
     inline void adapterValueChanged() {
         op->changeValue([&]() {
-            op->value = op->left->value % op->right->value;
+            op->view().value = op->left->view().value % op->right->view().value;
             return true;
         });
     }
@@ -34,8 +34,8 @@ OpMod::OpMod(OpMod&& other)
 void OpMod::startTriggering() {
     if (!operandTrigger) {
         operandTrigger = make_shared<OpMod::Trigger>(this);
-        left->addTrigger( operandTrigger);
-        right->addTrigger( operandTrigger);
+        left->addTrigger(operandTrigger);
+        right->addTrigger(operandTrigger);
         left->startTriggering();
         right->startTriggering();
     }
@@ -58,10 +58,10 @@ void OpMod::updateViolationDescription(UInt parentViolation,
 
 ExprRef<IntView> OpMod::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
-    auto newOpMod = make_shared<OpMod>(left->deepCopySelfForUnroll( iterator),
-                                       right->deepCopySelfForUnroll( iterator));
+    auto newOpMod = make_shared<OpMod>(left->deepCopySelfForUnroll(iterator),
+                                       right->deepCopySelfForUnroll(iterator));
     newOpMod->value = value;
-    return ViewRef<IntView>(newOpMod);
+    return newOpMod;
 }
 
 std::ostream& OpMod::dumpState(std::ostream& os) const {

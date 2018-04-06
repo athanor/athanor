@@ -13,10 +13,11 @@ struct OpProd : public IntView {
     OpProd(ExprRef<SequenceView> operands) : operands(std::move(operands)) {}
     OpProd(const OpProd& other) = delete;
     OpProd(OpProd&& other);
-    virtual ~OpProd() { this->stopTriggering(); }
+    virtual ~OpProd() { this->stopTriggeringOnChildren(); }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
+    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<IntView> deepCopySelfForUnroll(

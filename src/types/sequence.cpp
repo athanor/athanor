@@ -212,7 +212,7 @@ void SequenceValue::assertValidVarBases() {
             bool success = true;
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 const ValBase& base =
-                    valBase(*assumeAsValue(valMembersImpl[i].asViewRef()));
+                    valBase(*assumeAsValue(valMembersImpl[i]));
                 if (base.container != this) {
                     success = false;
                     cerr << "member " << i

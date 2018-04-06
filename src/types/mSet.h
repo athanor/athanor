@@ -196,8 +196,7 @@ struct MSetValue : public MSetView, public ValBase {
     inline ValRef<InnerValueType> member(UInt index) {
         return assumeAsValue(
             getMembers<
-                typename AssociatedViewType<InnerValueType>::type>()[index]
-                .asViewRef());
+                typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
@@ -234,8 +233,8 @@ struct MSetValue : public MSetView, public ValBase {
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline ValRef<InnerValueType> removeMember(UInt index) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        auto removedMember = assumeAsValue(
-            MSetView::removeMember<InnerViewType>(index).asViewRef());
+        auto removedMember =
+            assumeAsValue(MSetView::removeMember<InnerViewType>(index));
         valBase(*removedMember).container = NULL;
         if (index < numberElements()) {
             valBase(*member<InnerValueType>(index)).id = index;
@@ -250,8 +249,8 @@ struct MSetValue : public MSetView, public ValBase {
         UInt index, Func&& func) {
         notifyPossibleMSetValueChange();
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        auto removedMember = assumeAsValue(
-            MSetView::removeMember<InnerViewType>(index).asViewRef());
+        auto removedMember =
+            assumeAsValue(MSetView::removeMember<InnerViewType>(index));
         if (func()) {
             valBase(*removedMember).container = NULL;
             if (index < numberElements()) {

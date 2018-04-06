@@ -22,7 +22,7 @@ ostream& prettyPrint<SetView>(ostream& os, const SetView& v) {
                 } else {
                     os << ",";
                 }
-                prettyPrint(os, *memberPtr);
+                prettyPrint(os, memberPtr->view());
             }
         },
         v.members);
@@ -42,7 +42,7 @@ void deepCopyImpl(const SetValue& src,
     // instead, we remove values that are not   to be in the final target
     size_t index = 0;
     while (index < targetMembersImpl.size()) {
-        if (!src.containsMember(*targetMembersImpl[index])) {
+        if (!src.containsMember(targetMembersImpl[index]->view())) {
             target.removeMember<
                 typename AssociatedValueType<InnerViewType>::type>(index);
         } else {
@@ -50,8 +50,8 @@ void deepCopyImpl(const SetValue& src,
         }
     }
     for (auto& member : srcMemnersImpl) {
-        if (!target.hashIndexMap.count(getValueHash(*member))) {
-            target.addMember(deepCopy(assumeAsValue(*member)));
+        if (!target.hashIndexMap.count(getValueHash(member->view()))) {
+            target.addMember(deepCopy(*assumeAsValue(member)));
         }
     }
     debug_code(target.assertValidState());
@@ -109,15 +109,15 @@ void reset(SetValue& val) {
 template <typename InnerViewType>
 void normaliseImpl(SetValue& val, ExprRefVec<InnerViewType>& valMembersImpl) {
     for (auto& v : valMembersImpl) {
-        normalise(assumeAsValue(*v));
+        normalise(*assumeAsValue(v));
     }
     sort(valMembersImpl.begin(), valMembersImpl.end(), [](auto& u, auto& v) {
-        return smallerValue(assumeAsValue(*u), assumeAsValue(*v));
+        return smallerValue(*assumeAsValue(u), *assumeAsValue(v));
     });
 
     for (size_t i = 0; i < valMembersImpl.size(); i++) {
         auto& member = valMembersImpl[i];
-        val.hashIndexMap[getValueHash(*member)] = i;
+        val.hashIndexMap[getValueHash(member->view())] = i;
     }
 }
 
@@ -145,11 +145,11 @@ bool smallerValue<SetValue>(const SetValue& u, const SetValue& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (smallerValue(assumeAsValue(*uMembersImpl[i]),
-                                 assumeAsValue(*vMembersImpl[i]))) {
+                if (smallerValue(*assumeAsValue(uMembersImpl[i]),
+                                 *assumeAsValue(vMembersImpl[i]))) {
                     return true;
-                } else if (largerValue(assumeAsValue(*uMembersImpl[i]),
-                                       assumeAsValue(*vMembersImpl[i]))) {
+                } else if (largerValue(*assumeAsValue(uMembersImpl[i]),
+                                       *assumeAsValue(vMembersImpl[i]))) {
                     return false;
                 }
             }
@@ -170,11 +170,11 @@ bool largerValue<SetValue>(const SetValue& u, const SetValue& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (largerValue(assumeAsValue(*uMembersImpl[i]),
-                                assumeAsValue(*vMembersImpl[i]))) {
+                if (largerValue(*assumeAsValue(uMembersImpl[i]),
+                                *assumeAsValue(vMembersImpl[i]))) {
                     return true;
-                } else if (smallerValue(assumeAsValue(*uMembersImpl[i]),
-                                        assumeAsValue(*vMembersImpl[i]))) {
+                } else if (smallerValue(*assumeAsValue(uMembersImpl[i]),
+                                        *assumeAsValue(vMembersImpl[i]))) {
                     return false;
                 }
             }
@@ -194,23 +194,23 @@ void SetView::assertValidState() {
             } else {
                 for (size_t i = 0; i < valMembersImpl.size(); i++) {
                     auto& member = valMembersImpl[i];
-                    HashType memberHash = getValueHash(*member);
+                    HashType memberHash = getValueHash(member->view());
                     if (!seenHashes.insert(memberHash).second) {
-                        cerr << "Error: possible duplicate member: " << *member
-                             << endl;
+                        cerr << "Error: possible duplicate member: "
+                             << member->view() << endl;
                         success = false;
                         break;
                     }
                     if (!(hashIndexMap.count(memberHash))) {
-                        cerr << "Error: member " << *member
+                        cerr << "Error: member " << member->view()
                              << " has no corresponding hash in "
                                 "hashIndexMap.\n";
                         success = false;
                         break;
                     }
                     if (hashIndexMap.at(memberHash) != i) {
-                        cerr << "Error: member " << *member << "  is at index "
-                             << i
+                        cerr << "Error: member " << member->view()
+                             << "  is at index " << i
                              << " but the hashIndexMap says it should be at "
                              << hashIndexMap.at(memberHash) << endl;
                         success = false;
@@ -245,7 +245,7 @@ void SetValue::assertValidVarBases() {
             bool success = true;
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 const ValBase& base =
-                    valBase(*assumeAsValue(valMembersImpl[i].asViewRef()));
+                    valBase(*assumeAsValue(valMembersImpl[i]));
                 if (base.container != this) {
                     success = false;
                     cerr << "member " << i
@@ -272,10 +272,10 @@ void SetValue::printVarBases() {
             cout << "parent is constant: " << (this->container == &constantPool)
                  << endl;
             for (auto& member : valMembersImpl) {
-                cout << "val id: " << valBase(assumeAsValue(*member)).id
+                cout << "val id: " << valBase(*assumeAsValue(member)).id
                      << endl;
                 cout << "is constant: "
-                     << (valBase(assumeAsValue(*member)).container ==
+                     << (valBase(*assumeAsValue(member)).container ==
                          &constantPool)
                      << endl;
             }

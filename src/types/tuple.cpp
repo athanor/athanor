@@ -96,8 +96,7 @@ template <>
 bool largerValue<TupleValue>(const TupleValue& u, const TupleValue& v);
 const AnyValRef toAnyValRef(const AnyExprRef& v) {
     return mpark::visit(
-        [](const auto& v) -> AnyValRef { return assumeAsValue(v.asViewRef()); },
-        v);
+        [](const auto& v) -> AnyValRef { return assumeAsValue(v); }, v);
 }
 template <>
 bool smallerValue<TupleValue>(const TupleValue& u, const TupleValue& v) {

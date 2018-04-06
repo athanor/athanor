@@ -55,7 +55,7 @@ struct SetView : public ExprInterface<SetView> {
             return false;
         }
 
-        HashType hash = getValueHash(*member);
+        HashType hash = getValueHash(member->view());
         debug_code(assert(!hashIndexMap.count(hash)));
         members.emplace_back(member);
         hashIndexMap.emplace(hash, members.size() - 1);
@@ -76,7 +76,7 @@ struct SetView : public ExprInterface<SetView> {
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
 
-        HashType hash = getValueHash(*members[index]);
+        HashType hash = getValueHash(members[index]->view());
         debug_code(assert(hashIndexMap.count(hash)));
         hashIndexMap.erase(hash);
         cachedHashTotal -= mix(hash);
@@ -84,9 +84,9 @@ struct SetView : public ExprInterface<SetView> {
         members[index] = std::move(members.back());
         members.pop_back();
         if (index < members.size()) {
-            debug_code(
-                assert(hashIndexMap.count(getValueHash(*members[index]))));
-            hashIndexMap[getValueHash(*members[index])] = index;
+            debug_code(assert(
+                hashIndexMap.count(getValueHash(members[index]->view()))));
+            hashIndexMap[getValueHash(members[index]->view())] = index;
         }
         return removedMember;
     }
@@ -103,7 +103,7 @@ struct SetView : public ExprInterface<SetView> {
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline UInt memberChanged(HashType oldHash, UInt index) {
         auto& members = getMembers<InnerViewType>();
-        HashType newHash = getValueHash(*members[index]);
+        HashType newHash = getValueHash(members[index]->view());
         if (newHash != oldHash) {
             debug_code(assert(!hashIndexMap.count(newHash)));
             hashIndexMap[newHash] = hashIndexMap[oldHash];
@@ -163,7 +163,7 @@ struct SetView : public ExprInterface<SetView> {
     inline void notifyPossibleMemberChange(UInt index) {
         auto& members = getMembers<InnerViewType>();
         debug_code(assertValidState());
-        hashOfPossibleChange = getValueHash(*members[index]);
+        hashOfPossibleChange = getValueHash(members[index]->view());
         AnyExprRef triggerMember = members[index];
         visitTriggers(
             [&](auto& t) {
@@ -208,7 +208,7 @@ struct SetView : public ExprInterface<SetView> {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool containsMember(const ExprRef<InnerViewType>& member) const {
-        return containsMember(*member);
+        return containsMember(member->view());
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool containsMember(const InnerViewType& member) const {
@@ -225,14 +225,12 @@ struct SetValue : public SetView, public ValBase {
     inline ValRef<InnerValueType> member(UInt index) {
         return assumeAsValue(
             getMembers<
-                typename AssociatedViewType<InnerValueType>::type>()[index]
-                .asViewRef());
+                typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline bool addMember(const ValRef<InnerValueType>& member) {
-        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        if (SetView::addMember(ExprRef<InnerViewType>(getViewPtr(member)))) {
+        if (SetView::addMember(member.asExpr())) {
             valBase(*member).container = this;
             valBase(*member).id = numberElements() - 1;
             debug_code(assertValidVarBases());
@@ -247,8 +245,7 @@ struct SetValue : public SetView, public ValBase {
     inline bool tryAddMember(const ValRef<InnerValueType>& member,
                              Func&& func) {
         notifyPossibleSetValueChange();
-        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        if (SetView::addMember(ExprRef<InnerViewType>(getViewPtr(member)))) {
+        if (SetView::addMember(member.asExpr())) {
             if (func()) {
                 valBase(*member).container = this;
                 valBase(*member).id = numberElements() - 1;
@@ -268,8 +265,8 @@ struct SetValue : public SetView, public ValBase {
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline ValRef<InnerValueType> removeMember(UInt index) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        auto removedMember = assumeAsValue(
-            SetView::removeMember<InnerViewType>(index).asViewRef());
+        auto removedMember =
+            assumeAsValue(SetView::removeMember<InnerViewType>(index));
         valBase(*removedMember).container = NULL;
         if (index < numberElements()) {
             valBase(*member<InnerValueType>(index)).id = index;
@@ -284,8 +281,8 @@ struct SetValue : public SetView, public ValBase {
         UInt index, Func&& func) {
         notifyPossibleSetValueChange();
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        auto removedMember = assumeAsValue(
-            SetView::removeMember<InnerViewType>(index).asViewRef());
+        auto removedMember =
+            assumeAsValue(SetView::removeMember<InnerViewType>(index));
         if (func()) {
             valBase(*removedMember).container = NULL;
             if (index < numberElements()) {
@@ -299,7 +296,7 @@ struct SetValue : public SetView, public ValBase {
             SetView::addMember<InnerViewType>(getViewPtr(removedMember));
             auto& members = getMembers<InnerViewType>();
             std::swap(members[index], members.back());
-            hashIndexMap[getValueHash(*members[index])] = index;
+            hashIndexMap[getValueHash(members[index]->view())] = index;
             hashIndexMap[getValueHash(*members.back())] = members.size() - 1;
             debug_code(assertValidState());
             debug_code(assertValidVarBases());

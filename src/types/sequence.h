@@ -258,8 +258,7 @@ struct SequenceValue : public SequenceView, public ValBase {
     inline ValRef<InnerValueType> member(UInt index) {
         return assumeAsValue(
             getMembers<
-                typename AssociatedViewType<InnerValueType>::type>()[index]
-                .asViewRef());
+                typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
@@ -306,8 +305,8 @@ struct SequenceValue : public SequenceView, public ValBase {
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline ValRef<InnerValueType> removeMember(UInt index) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        auto removedMember = assumeAsValue(
-            SequenceView::removeMember<InnerViewType>(index).asViewRef());
+        auto removedMember =
+            assumeAsValue(SequenceView::removeMember<InnerViewType>(index));
         valBase(*removedMember).container = NULL;
         reassignIndicesToEnd<InnerValueType>(index);
         debug_code(assertValidVarBases());
@@ -320,8 +319,8 @@ struct SequenceValue : public SequenceView, public ValBase {
         UInt index, Func&& func) {
         notifyPossibleSequenceValueChange();
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        auto removedMember = assumeAsValue(
-            SequenceView::removeMember<InnerViewType>(index).asViewRef());
+        auto removedMember =
+            assumeAsValue(SequenceView::removeMember<InnerViewType>(index));
         if (func()) {
             valBase(*removedMember).container = NULL;
             reassignIndicesToEnd<InnerValueType>(index);

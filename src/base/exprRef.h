@@ -5,8 +5,8 @@
 #include <iostream>
 #include <memory>
 #include <utility>
-
-
+#include "base/standardSharedPtr.h"
+struct AnyIterRef;
 template <typename View>
 struct ExprRef;
 
@@ -26,10 +26,8 @@ typedef std::function<AnyExprRef(AnyExprRef)> FindAndReplaceFunction;
 
 template <typename View>
 struct ExprInterface {
-    virtual inline View& view() { return *static_cast<View*>(this); }
-    virtual inline const View& view() const {
-        return *static_cast<View*>(this);
-    }
+    virtual View& view();
+    virtual View& view() const;
     virtual void evaluate() = 0;
     virtual void startTriggering() = 0;
     virtual void stopTriggering() = 0;
@@ -58,6 +56,8 @@ template <typename T>
 struct ViewType<std::vector<ExprRef<T>>> {
     typedef T type;
 };
+
+#define viewType(t) typename ::ViewType<BaseType<decltype(t)>>::type
 
 template <typename T>
 inline std::ostream& operator<<(std::ostream& os, const ExprRef<T>& ref) {

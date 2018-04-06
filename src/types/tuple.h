@@ -65,8 +65,7 @@ struct TupleValue : public TupleView, public ValBase {
         return assumeAsValue(
             mpark::get<
                 ExprRef<typename AssociatedViewType<InnerValueType>::type>>(
-                members[index])
-                .asViewRef());
+                members[index]));
     }
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>

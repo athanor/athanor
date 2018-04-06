@@ -1,6 +1,7 @@
 
 #ifndef SRC_BASE_VALREF_H_
 #define SRC_BASE_VALREF_H_
+#include "base/exprRef.h"
 #include "utils/variantOperations.h"
 
 #include <vector>
@@ -9,9 +10,15 @@
 
 #include "common/common.h"
 #include "utils/variantOperations.h"
-template <typename T>
-struct ValRef : public StandardSharedPtr<T> {
-    using StandardSharedPtr<T>::StandardSharedPtr;
+template <typename Value>
+struct ValRef : public StandardSharedPtr<Value> {
+    using StandardSharedPtr<Value>::StandardSharedPtr;
+    typedef typename AssociatedViewType<Value>::type View;
+
+    operator ExprRef<View>();
+    operator const ExprRef<View>() const;
+    inline ExprRef<View> asExpr() { return *this; }
+    inline const ExprRef<View> asExpr() const { return *this; }
 };
 
 template <typename T>
@@ -44,24 +51,6 @@ struct ValType<std::vector<ValRef<T>>> {
 };
 
 #define valType(t) typename ValType<BaseType<decltype(t)>>::type
-
-template <typename T>
-struct ViewRef;
-
-template <typename ValueType,
-          typename ViewType = typename AssociatedViewType<ValueType>::type,
-          typename std::enable_if<IsValueType<ValueType>::value, int>::type = 0>
-inline const ViewRef<ViewType>& getViewPtr(const ValRef<ValueType>& value) {
-    return reinterpret_cast<const ViewRef<ViewType>&>(value);
-}
-
-template <typename ValueType,
-          typename ViewType = typename AssociatedViewType<ValueType>::type,
-          typename std::enable_if<IsValueType<ValueType>::value, int>::type = 0>
-inline ViewRef<ViewType>&& getViewPtr(ValRef<ValueType>&& value) {
-    return std::move(reinterpret_cast<ViewRef<ViewType>&&>(value));
-}
-
 template <typename Val>
 EnableIfValueAndReturn<Val, ValRef<Val>> deepCopy(const Val& src) {
     auto target = constructValueOfSameType(src);
@@ -120,14 +109,14 @@ template <typename ViewType,
           typename ValueType = typename AssociatedValueType<ViewType>::type,
           typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
 inline const ValRef<ValueType>& assumeAsValue(
-    const ViewRef<ViewType>& viewPtr) {
+    const ExprRef<ViewType>& viewPtr) {
     return reinterpret_cast<const ValRef<ValueType>&>(viewPtr);
 }
 
 template <typename ViewType,
           typename ValueType = typename AssociatedValueType<ViewType>::type,
           typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
-inline ValRef<ValueType>&& assumeAsValue(ViewRef<ViewType>&& viewPtr) {
+inline ValRef<ValueType>&& assumeAsValue(ExprRef<ViewType>&& viewPtr) {
     return reinterpret_cast<ValRef<ValueType>&&>(std::move(viewPtr));
 }
 

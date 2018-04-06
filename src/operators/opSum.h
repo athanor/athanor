@@ -13,10 +13,11 @@ struct OpSum : public IntView {
     OpSum(ExprRef<SequenceView> operands) : operands(std::move(operands)) {}
     OpSum(const OpSum& other) = delete;
     OpSum(OpSum&& other);
-    virtual ~OpSum() { this->stopTriggering(); }
+    virtual ~OpSum() { this->stopTriggeringOnChildren(); }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
+    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<IntView> deepCopySelfForUnroll(

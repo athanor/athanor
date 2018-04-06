@@ -14,7 +14,7 @@ class OpSum::OperandsSequenceTrigger : public SequenceTrigger {
     void valueAdded(UInt, const AnyExprRef& exprIn) final {
         auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
         op->changeValue([&]() {
-            op->value += expr->value;
+            op->value += expr->view().value;
             return true;
         });
     }
@@ -22,7 +22,7 @@ class OpSum::OperandsSequenceTrigger : public SequenceTrigger {
     void valueRemoved(UInt, const AnyExprRef& exprIn) final {
         const auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
         op->changeValue([&]() {
-            op->value -= expr->value;
+            op->value -= expr->view().value;
             return true;
         });
     }
@@ -32,17 +32,17 @@ class OpSum::OperandsSequenceTrigger : public SequenceTrigger {
     inline void positionsSwapped(UInt, UInt) {}
     inline void possibleSubsequenceChange(UInt startIndex,
                                           UInt endIndex) final {
-        previousValue = 0;
+        previousValue = 1;
         for (size_t i = startIndex; i < endIndex; i++) {
             previousValue +=
-                op->operands->template getMembers<IntView>()[i]->value;
+                op->operands->view().getMembers<IntView>()[i]->view().value;
         }
     }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
-        Int newValue = 0;
+        Int newValue = 1;
         for (size_t i = startIndex; i < endIndex; i++) {
             UInt operandValue =
-                op->operands->template getMembers<IntView>()[i]->value;
+                op->operands->view().getMembers<IntView>()[i]->view().value;
             newValue += operandValue;
         }
         op->changeValue([&]() {
@@ -51,23 +51,20 @@ class OpSum::OperandsSequenceTrigger : public SequenceTrigger {
             return true;
         });
     }
-    void possibleSequenceValueChange() final {}
-    void sequenceValueChanged() final {
+    void possibleValueChange() final {}
+    void valueChanged() final {
         op->changeValue([&]() {
             reevaluate(*op);
             return true;
         });
     }
-    inline void preIterValueChange(const ExprRef<SequenceView>&) final {}
-    inline void postIterValueChange(const ExprRef<SequenceView>&) final {
-        sequenceValueChanged();
-    }
 };
+
 inline void reevaluate(OpSum& op) {
-    op.value = 0;
-    for (size_t i = 0; i < op.operands->numberElements(); ++i) {
-        auto& operand = op.operands->template getMembers<IntView>()[i];
-        op.value += operand->value;
+    op.value = 1;
+    for (size_t i = 0; i < op.operands->view().numberElements(); ++i) {
+        auto& operand = op.operands->view().getMembers<IntView>()[i];
+        op.value += operand->view().value;
     }
 }
 
@@ -87,8 +84,15 @@ void OpSum::startTriggering() {
     if (!operandsSequenceTrigger) {
         operandsSequenceTrigger =
             std::make_shared<OperandsSequenceTrigger>(this);
-        operands->addTrigger( operandsSequenceTrigger);
+        operands->addTrigger(operandsSequenceTrigger);
         operands->startTriggering();
+    }
+}
+
+void OpSum::stopTriggeringOnChildren() {
+    if (operandsSequenceTrigger) {
+        deleteTrigger(operandsSequenceTrigger);
+        operandsSequenceTrigger = nullptr;
     }
 }
 
@@ -102,16 +106,17 @@ void OpSum::stopTriggering() {
 
 void OpSum::updateViolationDescription(UInt parentViolation,
                                        ViolationDescription& vioDesc) {
-    for (auto& operand : operands->template getMembers<IntView>()) {
+    for (auto& operand : operands->view().getMembers<IntView>()) {
         operand->updateViolationDescription(parentViolation, vioDesc);
     }
 }
 
 ExprRef<IntView> OpSum::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
-    auto newOpSum = make_shared<OpSum>(operands->deepCopySelfForUnroll( iterator));
+    auto newOpSum =
+        make_shared<OpSum>(operands->deepCopySelfForUnroll(iterator));
     newOpSum->value = value;
-    return ViewRef<IntView>(newOpSum);
+    return newOpSum;
 }
 
 std::ostream& OpSum::dumpState(std::ostream& os) const {

@@ -52,10 +52,26 @@ void OpSequenceLit::startTriggering() {
                 for (size_t i = 0; i < members.size(); i++) {
                     auto trigger =
                         make_shared<ExprTrigger<TriggerType>>(this, i);
-                    members[i]->addTrigger( trigger);
+                    members[i]->addTrigger(trigger);
                     exprTriggers.emplace_back(move(trigger));
                     members[i]->startTriggering();
                 }
+            },
+            members);
+    }
+}
+
+void OpSequenceLit::stopTriggeringOnChildren() {
+    if (!exprTriggers.empty()) {
+        mpark::visit(
+            [&](auto& members) {
+                typedef typename AssociatedTriggerType<viewType(members)>::type
+                    TriggerType;
+                for (auto& trigger : exprTriggers) {
+                    deleteTrigger(
+                        static_pointer_cast<ExprTrigger<TriggerType>>(trigger));
+                }
+                exprTriggers.clear();
             },
             members);
     }
@@ -91,13 +107,13 @@ ExprRef<SequenceView> OpSequenceLit::deepCopySelfForUnroll(
                 newMembers.emplace<ExprRefVec<viewType(members)>>();
             for (auto& member : members) {
                 newMembersImpl.emplace_back(
-                    member->deepCopySelfForUnroll( iterator));
+                    member->deepCopySelfForUnroll(iterator));
             }
         },
         members);
 
     auto newOpSequenceLit = make_shared<OpSequenceLit>(move(newMembers));
-    return ViewRef<SequenceView>(newOpSequenceLit);
+    return newOpSequenceLit;
 }
 
 std::ostream& OpSequenceLit::dumpState(std::ostream& os) const {

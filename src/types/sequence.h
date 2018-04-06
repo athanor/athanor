@@ -399,10 +399,10 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
     inline void valueAdded(UInt, const AnyExprRef&) final {
         this->forwardValueChanged();
     }
-    inline void possibleSequenceValueChange() final {
+    inline void possibleValueChange() final {
         this->forwardPossibleValueChange();
     }
-    inline void sequenceValueChanged() final { this->forwardValueChanged(); }
+    inline void valueChanged() final { this->forwardValueChanged(); }
     inline void possibleSubsequenceChange(UInt, UInt) final {
         this->forwardPossibleValueChange();
     }

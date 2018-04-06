@@ -14,10 +14,11 @@ struct OpSequenceLit : public SequenceView {
     OpSequenceLit(AnyExprVec members) : SequenceView(std::move(members)) {}
     OpSequenceLit(const OpSequenceLit&) = delete;
     OpSequenceLit(OpSequenceLit&& other);
-    ~OpSequenceLit() { this->stopTriggering(); }
+    ~OpSequenceLit() { this->stopTriggeringOnChildren(); }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
+    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<SequenceView> deepCopySelfForUnroll(

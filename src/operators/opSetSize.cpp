@@ -7,7 +7,7 @@ using namespace std;
 
 void OpSetSize::evaluate() {
     operand->evaluate();
-    value = operand->numberElements();
+    value = operand->view().numberElements();
 }
 
 class OpSetSizeTrigger
@@ -18,7 +18,7 @@ class OpSetSizeTrigger
     inline void adapterPossibleValueChange() {}
     inline void adapterValueChanged() {
         op->changeValue([&]() {
-            op->value = op->operand->numberElements();
+            op->value = op->operand->view().numberElements();
             return true;
         });
     }
@@ -33,8 +33,15 @@ OpSetSize::OpSetSize(OpSetSize&& other)
 void OpSetSize::startTriggering() {
     if (!operandTrigger) {
         operandTrigger = make_shared<OpSetSizeTrigger>(this);
-        operand->addTrigger( operandTrigger);
+        operand->addTrigger(operandTrigger);
         operand->startTriggering();
+    }
+}
+
+void OpSetSize::stopTriggeringOnChildren() {
+    if (operandTrigger) {
+        deleteTrigger(operandTrigger);
+        operandTrigger = nullptr;
     }
 }
 
@@ -54,9 +61,9 @@ void OpSetSize::updateViolationDescription(UInt parentViolation,
 ExprRef<IntView> OpSetSize::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
     auto newOpSetSize =
-        make_shared<OpSetSize>(operand->deepCopySelfForUnroll( iterator));
+        make_shared<OpSetSize>(operand->deepCopySelfForUnroll(iterator));
     newOpSetSize->value = value;
-    return ViewRef<IntView>(newOpSetSize);
+    return newOpSetSize;
 }
 
 std::ostream& OpSetSize::dumpState(std::ostream& os) const {

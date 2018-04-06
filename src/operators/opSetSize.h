@@ -9,10 +9,11 @@ struct OpSetSize : public IntView {
     OpSetSize(ExprRef<SetView> operandIn) : operand(operandIn) {}
     OpSetSize(const OpSetSize&) = delete;
     OpSetSize(OpSetSize&& other);
-    ~OpSetSize() { this->stopTriggering(); }
+    ~OpSetSize() { this->stopTriggeringOnChildren(); }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
+    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<IntView> deepCopySelfForUnroll(

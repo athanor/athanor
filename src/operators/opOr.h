@@ -15,10 +15,11 @@ struct OpOr : public BoolView {
     OpOr(ExprRef<SequenceView> operands) : operands(std::move(operands)) {}
     OpOr(const OpOr& other) = delete;
     OpOr(OpOr&& other);
-    virtual ~OpOr() { this->stopTriggering(); }
+    virtual ~OpOr() { this->stopTriggeringOnChildren(); }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
+    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<BoolView> deepCopySelfForUnroll(

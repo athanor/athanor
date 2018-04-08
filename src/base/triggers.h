@@ -1,4 +1,5 @@
 
+
 #ifndef SRC_BASE_TRIGGERS_H_
 #define SRC_BASE_TRIGGERS_H_
 #include <memory>
@@ -113,4 +114,26 @@ struct ChangeTriggerAdapterBase {
 template <typename TriggerType, typename Child>
 struct ChangeTriggerAdapter;
 
+template <typename TriggerType>
+struct ForwardingTriggerBase {
+    std::vector<std::shared_ptr<TriggerType>>* recipientTriggers;
+    ForwardingTriggerBase(
+        std::vector<std::shared_ptr<TriggerType>>* recipientTriggers)
+        : recipientTriggers(recipientTriggers) {}
+    virtual ~ForwardingTriggerBase() {}
+};
+
+template <typename TriggerType>
+struct ForwardingTrigger;
+
+template <typename TriggerType>
+std::shared_ptr<ForwardingTriggerBase<TriggerType>> getForwardingTriggerBase(
+    const std::shared_ptr<ForwardingTrigger<TriggerType>>& derived);
+
+template <typename TriggerType>
+std::shared_ptr<TriggerType> getAsTriggerType(
+    const std::shared_ptr<ForwardingTrigger<TriggerType>>& derived);
+template <typename TriggerType>
+std::shared_ptr<ForwardingTrigger<TriggerType>> makeForwardingTrigger(
+    std::vector<std::shared_ptr<TriggerType>>* recipientTriggers);
 #endif /* SRC_BASE_TRIGGERS_H_ */

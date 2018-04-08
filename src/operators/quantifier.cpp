@@ -174,7 +174,7 @@ void Quantifier<ContainerType>::startTriggeringOnExpr(UInt index,
     for (size_t i = index + 1; i < exprTriggers.size(); i++) {
         exprTriggers[i]->index = i;
     }
-    expr->addTrigger( trigger);
+    expr->addTrigger(trigger);
 }
 
 template <typename ContainerType>
@@ -195,7 +195,7 @@ void Quantifier<ContainerType>::startTriggering() {
         return;
     }
     containerTrigger = make_shared<ContainerTrigger<ContainerType>>(this);
-    container->addTrigger( containerTrigger);
+    container->addTrigger(containerTrigger);
     container->startTriggering();
     mpark::visit(
         [&](auto& members) {
@@ -347,7 +347,7 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
             },
             op->container->members);
     }
-    void valueRemoved(UInt indexOfRemovedValue, HashType) final {
+    void valueRemoved(UInt indexOfRemovedValue, const AnyExprRef&) final {
         if (indexOfRemovedValue < op->numberElements() - 1) {
             op->swap(indexOfRemovedValue, op->numberElements() - 1);
         }
@@ -370,7 +370,8 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
     void possibleMSetValueChange() final {}
     void mSetValueChanged(const MSetView& newValue) {
         while (op->numberElements() != 0) {
-            this->valueRemoved(op->numberElements() - 1, 0);
+            this->valueRemoved(op->numberElements() - 1,
+                               ExprRef<BoolView>(nullptr));
         }
         mpark::visit(
             [&](auto& membersImpl) {

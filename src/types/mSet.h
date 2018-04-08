@@ -31,7 +31,7 @@ struct MSetDomain {
 
 struct MSetTrigger : public TriggerBase {
     virtual void valueRemoved(UInt indexOfRemovedValue,
-                              HashType hashOfRemovedValue) = 0;
+                              const AnyExprRef& removedExpr) = 0;
     virtual void valueAdded(const AnyExprRef& member) = 0;
     virtual void possibleMemberValueChange(UInt index,
                                            const AnyExprRef& member) = 0;
@@ -76,13 +76,11 @@ struct MSetView : public ExprInterface<MSetView> {
         return removedMember;
     }
 
-    inline void notifyMemberRemoved(UInt index, HashType hashOfRemovedMember) {
+    inline void notifyMemberRemoved(UInt index, const AnyExprRef& expr) {
         debug_code(assert(posMSetValueChangeCalled);
                    posMSetValueChangeCalled = false);
         debug_code(assertValidState());
-        visitTriggers(
-            [&](auto& t) { t->valueRemoved(index, hashOfRemovedMember); },
-            triggers);
+        visitTriggers([&](auto& t) { t->valueRemoved(index, expr); }, triggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -132,7 +130,7 @@ struct MSetView : public ExprInterface<MSetView> {
         notifyPossibleMSetValueChange();
         ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
-        notifyMemberRemoved(index, getValueHash(*removedValue));
+        notifyMemberRemoved(index, removedValue);
         return removedValue;
     }
 
@@ -253,11 +251,10 @@ struct MSetValue : public MSetView, public ValBase {
                 valBase(*member<InnerValueType>(index)).id = index;
             }
             debug_code(assertValidVarBases());
-            MSetView::notifyMemberRemoved(
-                index, getValueHash(*getViewPtr(removedMember)));
+            MSetView::notifyMemberRemoved(index, removedMember);
             return std::make_pair(true, std::move(removedMember));
         } else {
-            MSetView::addMember<InnerViewType>(getViewPtr(removedMember));
+            MSetView::addMember<InnerViewType>(removedMember.asExpr());
             auto& members = getMembers<InnerValueType>();
             std::swap(members[index], members.back());
             debug_code(assertValidState());
@@ -329,7 +326,9 @@ struct MSetValue : public MSetView, public ValBase {
 template <typename Child>
 struct ChangeTriggerAdapter<MSetTrigger, Child>
     : public MSetTrigger, public ChangeTriggerAdapterBase<Child> {
-    inline void valueRemoved(UInt, HashType) { this->forwardValueChanged(); }
+    inline void valueRemoved(UInt, const AnyExprRef&) {
+        this->forwardValueChanged();
+    }
     inline void valueAdded(const AnyExprRef&) final {
         this->forwardValueChanged();
     }
@@ -343,6 +342,37 @@ struct ChangeTriggerAdapter<MSetTrigger, Child>
         this->forwardPossibleValueChange();
     }
     inline void valueChanged() final { this->forwardValueChanged(); }
+};
+
+template <>
+struct ForwardingTrigger<MSetTrigger>
+    : public MSetTrigger, public ForwardingTriggerBase<MSetTrigger> {
+    using ForwardingTriggerBase<MSetTrigger>::ForwardingTriggerBase;
+    inline void possibleValueChange() final {
+        visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                      *recipientTriggers);
+    }
+    inline void valueChanged() final {
+        visitTriggers([&](auto& t) { t->valueChanged(); }, *recipientTriggers);
+    }
+    inline void valueRemoved(UInt index, const AnyExprRef& expr) {
+        visitTriggers([&](auto& t) { t->valueRemoved(index, expr); },
+                      *recipientTriggers);
+    }
+    inline void valueAdded(const AnyExprRef& expr) final {
+        visitTriggers([&](auto& t) { t->valueAdded(expr); },
+                      *recipientTriggers);
+    }
+    inline void possibleMemberValueChange(UInt index,
+                                          const AnyExprRef& expr) final {
+        visitTriggers(
+            [&](auto& t) { t->possibleMemberValueChange(index, expr); },
+            *recipientTriggers);
+    }
+    inline void memberValueChanged(UInt index, const AnyExprRef& expr) final {
+        visitTriggers([&](auto& t) { t->memberValueChanged(index, expr); },
+                      *recipientTriggers);
+    }
 };
 
 #endif /* SRC_TYPES_MSET_H_ */

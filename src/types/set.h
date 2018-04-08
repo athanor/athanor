@@ -380,4 +380,36 @@ struct ChangeTriggerAdapter<SetTrigger, Child>
     inline void possibleValueChange() { this->forwardPossibleValueChange(); }
     inline void valueChanged() final { this->forwardValueChanged(); }
 };
+
+template <>
+struct ForwardingTrigger<SetTrigger>
+    : public SetTrigger, public ForwardingTriggerBase<SetTrigger> {
+    using ForwardingTriggerBase<SetTrigger>::ForwardingTriggerBase;
+    inline void possibleValueChange() final {
+        visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                      *recipientTriggers);
+    }
+    inline void valueChanged() final {
+        visitTriggers([&](auto& t) { t->valueChanged(); }, *recipientTriggers);
+    }
+    inline void valueRemoved(UInt index, HashType hash) {
+        visitTriggers([&](auto& t) { t->valueRemoved(index, hash); },
+                      *recipientTriggers);
+    }
+    inline void valueAdded(const AnyExprRef& expr) final {
+        visitTriggers([&](auto& t) { t->valueAdded(expr); },
+                      *recipientTriggers);
+    }
+    inline void possibleMemberValueChange(UInt index,
+                                          const AnyExprRef& expr) final {
+        visitTriggers(
+            [&](auto& t) { t->possibleMemberValueChange(index, expr); },
+            *recipientTriggers);
+    }
+    inline void memberValueChanged(UInt index, const AnyExprRef& expr) final {
+        visitTriggers([&](auto& t) { t->memberValueChanged(index, expr); },
+                      *recipientTriggers);
+    }
+};
+
 #endif /* SRC_TYPES_SET_H_ */

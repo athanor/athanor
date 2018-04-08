@@ -92,7 +92,7 @@ void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction& func) {
     this->ref = findAndReplace(ref, func);
 }
 
-void instantiate(AnyExprRef& expr) {
+void instantiateIterator(AnyExprRef& expr) {
     mpark::visit(
         [&](auto& expr) {
             Iterator<viewType(expr)> iter(0, expr);

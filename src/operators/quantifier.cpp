@@ -431,9 +431,11 @@ vector<ExprRef<SequenceView>> instantiateQuantifierTypes() {
     vector<ExprRef<SequenceView>> quants;
     auto q1 = make_shared<Quantifier<SetView>>(nullptr);
     q1->setExpression(ExprRef<SetView>(nullptr));
+    q1->Quantifier<SetView>::stopTriggering();
     quants.emplace_back(ExprRef<SequenceView>(q1));
     auto q2 = make_shared<Quantifier<MSetView>>(nullptr);
-    q2->setExpression(ExprRef<MSetView>(nullptr));
+    q2->Quantifier<MSetView>::stopTriggering();
+    q2->Quantifier<MSetView>::setExpression(ExprRef<MSetView>(nullptr));
     quants.emplace_back(ExprRef<SequenceView>(q2));
     return quants;
 }

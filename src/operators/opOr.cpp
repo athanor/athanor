@@ -159,6 +159,13 @@ void OpOr::startTriggering() {
     }
 }
 
+void OpOr::stopTriggeringOnChildren() {
+    if (operandsSequenceTrigger) {
+        deleteTrigger(operandsSequenceTrigger);
+        operandsSequenceTrigger = nullptr;
+    }
+}
+
 void OpOr::stopTriggering() {
     if (operandsSequenceTrigger) {
         deleteTrigger(operandsSequenceTrigger);

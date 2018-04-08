@@ -68,7 +68,7 @@ struct MSetView : public ExprInterface<MSetView> {
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
 
-        HashType hash = getValueHash(*members[index]);
+        HashType hash = getValueHash(members[index]->view());
         cachedHashTotal -= mix(hash);
         ExprRef<InnerViewType> removedMember = std::move(members[index]);
         members[index] = std::move(members.back());
@@ -86,7 +86,7 @@ struct MSetView : public ExprInterface<MSetView> {
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline UInt memberChanged(HashType oldHash, UInt index) {
         auto& members = getMembers<InnerViewType>();
-        HashType newHash = getValueHash(*members[index]);
+        HashType newHash = getValueHash(members[index]->view());
         if (newHash != oldHash) {
             cachedHashTotal -= mix(oldHash);
             cachedHashTotal += mix(newHash);
@@ -138,7 +138,7 @@ struct MSetView : public ExprInterface<MSetView> {
     inline void notifyPossibleMemberChange(UInt index) {
         auto& members = getMembers<InnerViewType>();
         debug_code(assertValidState());
-        hashOfPossibleChange = getValueHash(*members[index]);
+        hashOfPossibleChange = getValueHash(members[index]->view());
         AnyExprRef triggerMember = members[index];
         visitTriggers(
             [&](auto& t) {

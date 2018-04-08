@@ -20,9 +20,9 @@ struct Model {
     std::vector<Neighbourhood> neighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
-    OpAnd csp = OpAnd(ViewRef<SequenceView>(
+    OpAnd csp = OpAnd(ExprRef<SequenceView>(
         std::make_shared<OpSequenceLit>(ExprRefVec<BoolView>())));
-    ExprRef<IntView> objective = getViewPtr(make<IntValue>());
+    ExprRef<IntView> objective = make<IntValue>().asExpr();
     OptimiseMode optimiseMode = OptimiseMode::NONE;
     ;
     ViolationDescription vioDesc;
@@ -66,7 +66,7 @@ class ModelBuilder {
         model.optimiseMode = mode;
     }
     Model build() {
-        model.csp = OpAnd(ViewRef<SequenceView>(
+        model.csp = OpAnd(ExprRef<SequenceView>(
             std::make_shared<OpSequenceLit>(move(constraints))));
         for (size_t i = 0; i < model.variables.size(); ++i) {
             if (valBase(model.variables[i].second).container == &definedPool) {
@@ -93,14 +93,14 @@ class ModelBuilder {
     inline ValRef<Value> getIfValue(ExprRef<View>& expr) {
         Value* value = dynamic_cast<Value*>(&(*expr));
         if (value) {
-            return assumeAsValue(expr.asViewRef());
+            return assumeAsValue(expr);
         } else {
             return ValRef<Value>(nullptr);
         }
     }
 
     inline bool constraintHandledByDefine(ExprRef<BoolView>& constraint) {
-        BoolView* eqExprTester = &(*constraint);
+        BoolView* eqExprTester = &(constraint->view());
         OpIntEq* opIntEq;
         if ((opIntEq = dynamic_cast<OpIntEq*>(eqExprTester)) != NULL) {
             ValRef<IntValue> definedVar = getIfValue(opIntEq->left);
@@ -141,16 +141,17 @@ class ModelBuilder {
                 typedef
                     typename AssociatedViewType<valType(var)>::type ViewType;
                 auto& exprImpl = mpark::get<ExprRef<ViewType>>(expr);
-                return [this, var, exprImpl](AnyExprRef ref) -> AnyExprRef {
+                return [this, var, exprImpl](
+                           AnyExprRef ref) -> std::pair<bool, AnyExprRef> {
                     auto exprRefTest = mpark::get_if<ExprRef<ViewType>>(&ref);
                     if (exprRefTest) {
                         auto valRefTest = this->getIfValue(*exprRefTest);
                         if (valRefTest &&
                             (valBase(valRefTest) == valBase(var))) {
-                            return exprImpl;
+                            return std::make_pair(true, exprImpl);
                         }
                     }
-                    return ref;
+                    return std::make_pair(false, ref);
                 };
             },
             var);

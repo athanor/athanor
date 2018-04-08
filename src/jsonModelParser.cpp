@@ -50,7 +50,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> stringMatch(
         }
     }
     return make_pair(false,
-                     make_pair(fakeBoolDomain, ViewRef<BoolView>(nullptr)));
+                     make_pair(fakeBoolDomain, ExprRef<BoolView>(nullptr)));
 }
 
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
@@ -87,7 +87,7 @@ AnyValRef toValRef(const AnyExprRef& op) {
         [&](auto& ref) -> AnyValRef {
             typedef typename AssociatedValueType<viewType(ref)>::type ValType;
             auto val = make<ValType>();
-            val->initFrom(*ref);
+            val->initFrom(ref->view());
             return val;
         },
         op);
@@ -109,7 +109,7 @@ AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {
     }
 }
 
-pair<shared_ptr<SetDomain>, ViewRef<SetView>> parseConstantSet(
+pair<shared_ptr<SetDomain>, ExprRef<SetView>> parseConstantSet(
     json& essenceSetConstant, ParsedModel& parsedModel) {
     ValRef<SetValue> val = make<SetValue>();
     if (essenceSetConstant.size() == 0) {
@@ -130,7 +130,7 @@ pair<shared_ptr<SetDomain>, ViewRef<SetView>> parseConstantSet(
             }
             return make_pair(make_shared<SetDomain>(
                                  exactSize(val->numberElements()), innerDomain),
-                             getViewPtr(val));
+                             val.asExpr());
         },
         parseValue(essenceSetConstant[0], parsedModel).first);
 }
@@ -146,11 +146,11 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
     } else if (essenceExpr.count("ConstantInt")) {
         auto val = make<IntValue>();
         val->value = essenceExpr["ConstantInt"];
-        return make_pair(true, make_pair(fakeIntDomain, getViewPtr(val)));
+        return make_pair(true, make_pair(fakeIntDomain, val.asExpr()));
     } else if (essenceExpr.count("ConstantBool")) {
         auto val = make<BoolValue>();
         val->violation = (bool(essenceExpr["ConstantBool"])) ? 0 : 1;
-        return make_pair(true, make_pair(fakeBoolDomain, getViewPtr(val)));
+        return make_pair(true, make_pair(fakeBoolDomain, val.asExpr()));
     } else if (essenceExpr.count("AbsLitSet")) {
         return make_pair(
             true, parseConstantSet(essenceExpr["AbsLitSet"], parsedModel));
@@ -168,7 +168,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
     }
     return make_pair(false,
                      make_pair(AnyDomainRef(shared_ptr<IntDomain>(nullptr)),
-                               AnyExprRef(ViewRef<IntView>(nullptr))));
+                               AnyExprRef(ExprRef<IntView>(nullptr))));
 }
 
 shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
@@ -296,7 +296,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpMod(json& modExpr,
     ExprRef<IntView> right =
         expect<IntView>(parseExpr(modExpr[1], parsedModel).second,
                         [&](auto&&) { cerr << errorMessage << modExpr[1]; });
-    return make_pair(fakeIntDomain, ViewRef<IntView>(make_shared<OpMod>(
+    return make_pair(fakeIntDomain, ExprRef<IntView>(make_shared<OpMod>(
                                         move(left), move(right))));
 }
 
@@ -310,7 +310,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpSubsetEq(json& subsetExpr,
     ExprRef<SetView> right =
         expect<SetView>(parseExpr(subsetExpr[1], parsedModel).second,
                         [&](auto&&) { cerr << errorMessage << subsetExpr[1]; });
-    return make_pair(fakeBoolDomain, ViewRef<BoolView>(make_shared<OpSubsetEq>(
+    return make_pair(fakeBoolDomain, ExprRef<BoolView>(make_shared<OpSubsetEq>(
                                          move(left), move(right))));
 }
 
@@ -322,14 +322,13 @@ pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
             [&](ExprRef<SetView>& set)
                 -> pair<shared_ptr<IntDomain>, AnyExprRef> {
                 return make_pair(fakeIntDomain,
-                                 ViewRef<IntView>(make_shared<OpSetSize>(set)));
+                                 ExprRef<IntView>(make_shared<OpSetSize>(set)));
             },
             [&](auto&& operand) -> pair<shared_ptr<IntDomain>, AnyExprRef> {
                 cerr << "Error, not yet handling OpTwoBars with an operand "
                         "of type "
-                     << TypeAsString<
-                            typename AssociatedValueType<typename BaseType<
-                                decltype(operand)>::element_type>::type>::value
+                     << TypeAsString<typename AssociatedValueType<viewType(
+                            operand)>::type>::value
                      << ": " << operandExpr << endl;
                 abort();
             }),
@@ -351,14 +350,14 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
             };
             return overloaded(
                 [&](ExprRef<IntView>& left)
-                    -> pair<shared_ptr<BoolDomain>, ViewRef<BoolView>> {
+                    -> pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> {
                     return make_pair(
                         fakeBoolDomain,
-                        ViewRef<BoolView>(make_shared<OpIntEq>(
+                        ExprRef<BoolView>(make_shared<OpIntEq>(
                             left, expect<IntView>(right, errorHandler))));
                 },
                 [&](auto&& left)
-                    -> pair<shared_ptr<BoolDomain>, ViewRef<BoolView>> {
+                    -> pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> {
                     cerr
                         << "Error, not yet handling OpEq with operands of type "
                         << TypeAsString<typename AssociatedValueType<viewType(
@@ -398,7 +397,7 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseConstantMatrix(
     }
     auto sequenceLit = make_shared<OpSequenceLit>(move(newSequenceMembers));
     return make_pair(fakeSequenceDomain(innerDomain),
-                     ViewRef<SequenceView>(sequenceLit));
+                     ExprRef<SequenceView>(sequenceLit));
 }
 
 template <typename ContainerDomainType, typename Quantifier>
@@ -415,7 +414,8 @@ AnyDomainRef addExprToQuantifier(
                 typename AssociatedValueType<InnerDomainType>::type>::type
                 InnerViewType;
             name = generatorExpr[0]["Single"]["Name"];
-            auto iter = quantifier->template newIterRef<InnerViewType>();
+            auto iter = ExprRef<InnerViewType>(
+                quantifier->template newIterRef<InnerViewType>());
             parsedModel.namedExprs.emplace(name, make_pair(innerDomain, iter));
         },
         (containerDomain->inner));
@@ -433,7 +433,7 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> buildQuant(
     AnyDomainRef innerDomain =
         addExprToQuantifier(comprExpr, domain, quantifier, parsedModel);
     return make_pair(fakeSequenceDomain(innerDomain),
-                     ViewRef<SequenceView>(quantifier));
+                     ExprRef<SequenceView>(quantifier));
 }
 
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
@@ -487,7 +487,7 @@ auto makeVaradicOpParser(const Domain& domain) {
                ParsedModel& parsedModel) -> pair<AnyDomainRef, AnyExprRef> {
         return make_pair(
             domain,
-            ViewRef<View>(make_shared<Op>(
+            ExprRef<View>(make_shared<Op>(
                 parseSequenceLikeExpr(essenceExpr, parsedModel).second)));
     };
 }
@@ -522,7 +522,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
         return boolValuePair;
     }
     return make_pair(false,
-                     make_pair(fakeBoolDomain, ViewRef<BoolView>(nullptr)));
+                     make_pair(fakeBoolDomain, ExprRef<BoolView>(nullptr)));
 }
 
 void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
@@ -546,9 +546,10 @@ void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {
     mpark::visit(
         [&](auto& domainImpl) {
             parsedModel.namedExprs.emplace(
-                findName, make_pair(domainImpl,
-                                    getViewPtr(parsedModel.builder->addVariable(
-                                        findName, domainImpl))));
+                findName,
+                make_pair(domainImpl,
+                          parsedModel.builder->addVariable(findName, domainImpl)
+                              .asExpr()));
         },
         findDomain);
 }

@@ -38,7 +38,7 @@ class HillClimber {
         }
     }
     inline bool acceptValue() {
-        UInt newObjValue = model.objective->value;
+        UInt newObjValue = model.objective->view().value;
         Int deltaObj = getDeltaObj(lastObjValue, newObjValue);
         Int deltaViolation = lastViolation - model.csp.violation;
         bool solutionAllowed;
@@ -100,7 +100,7 @@ class HillClimber {
 
         if (model.optimiseMode != OptimiseMode::NONE) {
             model.objective->evaluate();
-            lastObjValue = model.objective->value;
+            lastObjValue = model.objective->view().value;
             bestObjValue = lastObjValue;
             model.objective->startTriggering();
         }

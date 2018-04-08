@@ -247,7 +247,7 @@ struct SetValue : public SetView, public ValBase {
             if (func()) {
                 valBase(*member).container = this;
                 valBase(*member).id = numberElements() - 1;
-                SetView::notifyMemberAdded(getViewPtr(member));
+                SetView::notifyMemberAdded(member.asExpr());
                 debug_code(assertValidVarBases());
                 return true;
             } else {
@@ -291,11 +291,12 @@ struct SetValue : public SetView, public ValBase {
                                          getValueHash(asView(*removedMember)));
             return std::make_pair(true, std::move(removedMember));
         } else {
-            SetView::addMember<InnerViewType>(getViewPtr(removedMember));
+            SetView::addMember<InnerViewType>(removedMember.asExpr());
             auto& members = getMembers<InnerViewType>();
             std::swap(members[index], members.back());
             hashIndexMap[getValueHash(members[index]->view())] = index;
-            hashIndexMap[getValueHash(*members.back())] = members.size() - 1;
+            hashIndexMap[getValueHash(members.back()->view())] =
+                members.size() - 1;
             debug_code(assertValidState());
             debug_code(assertValidVarBases());
             return std::make_pair(false, ValRef<InnerValueType>(nullptr));

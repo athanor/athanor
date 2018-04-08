@@ -115,7 +115,7 @@ template <typename TriggerType, typename Child>
 struct ChangeTriggerAdapter;
 
 template <typename TriggerType>
-struct ForwardingTriggerBase {
+struct ForwardingTriggerBase : public virtual TriggerBase {
     std::vector<std::shared_ptr<TriggerType>>* recipientTriggers;
     ForwardingTriggerBase(
         std::vector<std::shared_ptr<TriggerType>>* recipientTriggers)

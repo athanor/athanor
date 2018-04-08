@@ -12,39 +12,37 @@ vector<shared_ptr<DelayedTrigger>> delayedTriggerStack;
 
 inline pair<bool, ViolationDescription&> registerViolations(
     const ValBase* val, const UInt violation, ViolationDescription& vioDesc);
-#define specialised(name)                                                      \
-    template <>                                                                \
-    shared_ptr<name##Value> makeShared<name##Value>() {                        \
-        return make_shared<name##Value>();                                     \
-    }                                                                          \
-    const string TypeAsString<name##Value>::value = quote(name##Value);        \
-    const string TypeAsString<name##Domain>::value = quote(name##Domain);      \
-    template <>                                                                \
-    ValBase& valBase<name##Value>(name##Value & v) {                           \
-        return v;                                                              \
-    }                                                                          \
-    template <>                                                                \
-    const ValBase& valBase<name##Value>(const name##Value& v) {                \
-        return v;                                                              \
-    }                                                                          \
-                                                                               \
-    void name##Value::evaluate() {}                                            \
-    void name##Value::startTriggering() {}                                     \
-    void name##Value::stopTriggering() {}                                      \
-    void name##Value::updateViolationDescription(                              \
-        UInt parentViolation, ViolationDescription& vioDesc) {                 \
-        registerViolations(this, parentViolation, vioDesc);                    \
-    }                                                                          \
-    ExprRef<name##View> name##Value::deepCopySelfForUnroll(const AnyIterRef&)  \
-        const {                                                                \
-        cerr << "This function should never be called: " << __func__ << " in " \
-             << __FILE__ << endl;                                              \
-        abort();                                                               \
-    }                                                                          \
-    std::ostream& name##Value::dumpState(std::ostream& os) const {             \
-        return prettyPrint(os, *static_cast<const name##View*>(this));         \
-    }                                                                          \
-                                                                               \
+#define specialised(name)                                                 \
+    template <>                                                           \
+    shared_ptr<name##Value> makeShared<name##Value>() {                   \
+        return make_shared<name##Value>();                                \
+    }                                                                     \
+    const string TypeAsString<name##Value>::value = quote(name##Value);   \
+    const string TypeAsString<name##Domain>::value = quote(name##Domain); \
+    template <>                                                           \
+    ValBase& valBase<name##Value>(name##Value & v) {                      \
+        return v;                                                         \
+    }                                                                     \
+    template <>                                                           \
+    const ValBase& valBase<name##Value>(const name##Value& v) {           \
+        return v;                                                         \
+    }                                                                     \
+                                                                          \
+    void name##Value::evaluate() {}                                       \
+    void name##Value::startTriggering() {}                                \
+    void name##Value::stopTriggering() {}                                 \
+    void name##Value::updateViolationDescription(                         \
+        UInt parentViolation, ViolationDescription& vioDesc) {            \
+        registerViolations(this, parentViolation, vioDesc);               \
+    }                                                                     \
+    ExprRef<name##View> name##Value::deepCopySelfForUnroll(               \
+        ExprRef<name##View>& self, const AnyIterRef&) const {             \
+        return self;                                                      \
+    }                                                                     \
+    std::ostream& name##Value::dumpState(std::ostream& os) const {        \
+        return prettyPrint(os, *static_cast<const name##View*>(this));    \
+    }                                                                     \
+                                                                          \
     void name##Value::findAndReplaceSelf(const FindAndReplaceFunction&) {}
 
 buildForAllTypes(specialised, )

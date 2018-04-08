@@ -58,10 +58,10 @@ void OpSetSize::updateViolationDescription(UInt parentViolation,
     operand->updateViolationDescription(parentViolation, vioDesc);
 }
 
-ExprRef<IntView> OpSetSize::deepCopySelfForUnroll(
+ExprRef<IntView> IntView::deepCopySelfForUnroll(ExprRef<IntView>&,ExprRef<IntView>ExprRef<IntView> OpSetSize::deepCopySelfForUnroll(ExprRef<IntView>&,,
     const AnyIterRef& iterator) const {
-    auto newOpSetSize =
-        make_shared<OpSetSize>(operand->deepCopySelfForUnroll(iterator));
+    auto newOpSetSize = make_shared<OpSetSize>(
+        operand->deepCopySelfForUnroll(operand, iterator));
     newOpSetSize->value = value;
     return newOpSetSize;
 }

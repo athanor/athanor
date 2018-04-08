@@ -38,7 +38,7 @@ struct ExprInterface {
     virtual void updateViolationDescription(UInt parentViolation,
                                             ViolationDescription&) = 0;
     virtual ExprRef<View> deepCopySelfForUnroll(
-        const AnyIterRef& iterator) const = 0;
+        ExprRef<View>& self, const AnyIterRef& iterator) const = 0;
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;

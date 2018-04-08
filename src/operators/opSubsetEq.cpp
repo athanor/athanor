@@ -157,11 +157,11 @@ void OpSubsetEq::updateViolationDescription(UInt,
     right->updateViolationDescription(violation, vioDesc);
 }
 
-ExprRef<BoolView> OpSubsetEq::deepCopySelfForUnroll(
+ExprRef<BoolView> BoolView::deepCopySelfForUnroll(ExprRef<BoolView>&,ExprRef<BoolView>ExprRef<BoolView> OpSubsetEq::deepCopySelfForUnroll(ExprRef<BoolView>&,,
     const AnyIterRef& iterator) const {
     auto newOpSubsetEq =
-        make_shared<OpSubsetEq>(left->deepCopySelfForUnroll(iterator),
-                                right->deepCopySelfForUnroll(iterator));
+        make_shared<OpSubsetEq>(left->deepCopySelfForUnroll(left, iterator),
+                                right->deepCopySelfForUnroll(right, iterator));
     newOpSubsetEq->violation = violation;
     return newOpSubsetEq;
 }

@@ -63,10 +63,11 @@ void OpMod::updateViolationDescription(UInt parentViolation,
     right->updateViolationDescription(parentViolation, vioDesc);
 }
 
-ExprRef<IntView> OpMod::deepCopySelfForUnroll(
+ExprRef<IntView> IntView::deepCopySelfForUnroll(ExprRef<IntView>&,ExprRef<IntView>ExprRef<IntView> OpMod::deepCopySelfForUnroll(ExprRef<IntView>&,,
     const AnyIterRef& iterator) const {
-    auto newOpMod = make_shared<OpMod>(left->deepCopySelfForUnroll(iterator),
-                                       right->deepCopySelfForUnroll(iterator));
+    auto newOpMod =
+        make_shared<OpMod>(left->deepCopySelfForUnroll(left, iterator),
+                           right->deepCopySelfForUnroll(right, iterator));
     newOpMod->value = value;
     return newOpMod;
 }

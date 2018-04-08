@@ -99,7 +99,7 @@ void OpSequenceLit::stopTriggering() {
 void OpSequenceLit::updateViolationDescription(UInt, ViolationDescription&) {}
 
 ExprRef<SequenceView> OpSequenceLit::deepCopySelfForUnroll(
-    const AnyIterRef& iterator) const {
+    ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
     AnyExprVec newMembers;
     mpark::visit(
         [&](auto& members) {
@@ -107,7 +107,7 @@ ExprRef<SequenceView> OpSequenceLit::deepCopySelfForUnroll(
                 newMembers.emplace<ExprRefVec<viewType(members)>>();
             for (auto& member : members) {
                 newMembersImpl.emplace_back(
-                    member->deepCopySelfForUnroll(iterator));
+                    member->deepCopySelfForUnroll(member, iterator));
             }
         },
         members);

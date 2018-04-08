@@ -19,7 +19,7 @@ struct OpSetNotEq : public BoolView {
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<BoolView> deepCopySelfForUnroll(
-        const AnyIterRef& iterator) const final;
+        ExprRef<BoolView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };

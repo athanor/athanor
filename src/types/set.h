@@ -358,7 +358,7 @@ struct SetValue : public SetView, public ValBase {
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<SetView> deepCopySelfForUnroll(
-        const AnyIterRef& iterator) const final;
+        ExprRef<SetView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;

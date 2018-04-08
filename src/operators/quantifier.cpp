@@ -64,7 +64,7 @@ void Quantifier<ContainerType>::unroll(UInt index,
                           .getIterator()
                           .getValue();
             ExprRef<viewType(members)> newMember =
-                exprToCopy->deepCopySelfForUnroll( iterRef);
+                exprToCopy->deepCopySelfForUnroll(exprToCopy, iterRef);
             iterRef.getIterator().changeValue(
                 this->triggering() && !evaluateExpr, oldValueOfIter, newView,
                 [&]() {
@@ -119,8 +119,8 @@ template <typename ContainerType>
 ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnroll(
     const AnyIterRef& iterator) const {
     auto newQuantifier = make_shared<Quantifier<ContainerType>>(
-        container->deepCopySelfForUnroll( iterator), quantId);
-    newQuantifier->setExpression(expr->deepCopySelfForUnroll( iterator));
+        container->deepCopySelfForUnroll(container, iterator), quantId);
+    newQuantifier->setExpression(expr->deepCopySelfForUnroll(expr, iterator));
 
     mpark::visit(
         [&](auto& members) {
@@ -129,7 +129,7 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnroll(
                 auto& iterVal = unrolledIterVals[i];
                 newQuantifier->template addMember<viewType(members)>(
                     newQuantifier->numberElements(),
-                    expr->deepCopySelfForUnroll( iterator));
+                    expr->deepCopySelfForUnroll(expr, iterator));
                 newQuantifier->unrolledIterVals.emplace_back(iterVal);
             }
         },

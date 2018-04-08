@@ -111,7 +111,7 @@ void OpSum::updateViolationDescription(UInt parentViolation,
     }
 }
 
-ExprRef<IntView> IntView::deepCopySelfForUnroll(ExprRef<IntView>&,ExprRef<IntView>ExprRef<IntView> OpSum::deepCopySelfForUnroll(ExprRef<IntView>&,,
+ExprRef<IntView> IntView::deepCopySelfForUnroll(const ExprRef<IntView>&,ExprRef<IntView>ExprRef<IntView> OpSum::deepCopySelfForUnroll(const ExprRef<IntView>&,,
     const AnyIterRef& iterator) const {
     auto newOpSum =
         make_shared<OpSum>(operands->deepCopySelfForUnroll(operands, iterator));

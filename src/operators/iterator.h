@@ -15,14 +15,14 @@ struct Iterator : public ExprInterface<View> {
 
     Iterator(u_int64_t id, ExprRef<View> ref) : id(id), ref(std::move(ref)) {}
     template <typename Func>
-    inline void changeValue(bool triggering, ExprRef<View>& newVal,
-                            Func&& callback) {
-        std::swap(ref, newVal);
+    inline void changeValue(bool triggering, const ExprRef<View>& oldVal,
+                            const ExprRef<View>& newVal, Func&& callback) {
+        ref = newVal;
         callback();
         if (triggering) {
-            std::swap(ref, newVal);
+            ref = oldVal;
             visitTriggers([&](auto& t) { t->possibleValueChange(); }, triggers);
-            std::swap(ref, newVal);
+            ref = newVal;
             visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
         }
     }
@@ -41,7 +41,7 @@ struct Iterator : public ExprInterface<View> {
     void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
-    ExprRef<View> deepCopySelfForUnroll(ExprRef<View>& self,
+    ExprRef<View> deepCopySelfForUnroll(const ExprRef<View>& self,
                                         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
@@ -53,6 +53,7 @@ template <typename Value>
 using IterRefMaker = IterRef<typename AssociatedViewType<Value>::type>;
 
 struct AnyIterRef : public Variantised<IterRefMaker> {
+    using Variantised<IterRefMaker>::variant;
     inline auto& asVariant() {
         return static_cast<Variantised<IterRefMaker>&>(*this);
     }
@@ -60,4 +61,5 @@ struct AnyIterRef : public Variantised<IterRefMaker> {
         return static_cast<const Variantised<IterRefMaker>&>(*this);
     }
 };
+std::ostream& operator<<(std::ostream& os, const AnyIterRef& iter);
 #endif /* SRC_OPERATORS_ITERATOR_H_ */

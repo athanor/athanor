@@ -29,7 +29,7 @@ struct MSetDomain {
     }
 };
 
-struct MSetTrigger : public TriggerBase {
+struct MSetTrigger : public virtual TriggerBase {
     virtual void valueRemoved(UInt indexOfRemovedValue,
                               const AnyExprRef& removedExpr) = 0;
     virtual void valueAdded(const AnyExprRef& member) = 0;
@@ -317,7 +317,7 @@ struct MSetValue : public MSetView, public ValBase {
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<MSetView> deepCopySelfForUnroll(
-        ExprRef<MSetView>&, const AnyIterRef& iterator) const final;
+        const ExprRef<MSetView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;

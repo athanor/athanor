@@ -6,7 +6,7 @@
 
 #include "base/base.h"
 struct BoolDomain {};
-struct BoolTrigger : public TriggerBase {};
+struct BoolTrigger : public virtual TriggerBase {};
 
 struct BoolView : public ExprInterface<BoolView> {
     UInt violation;
@@ -37,7 +37,7 @@ struct BoolValue : public BoolView, ValBase {
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<BoolView> deepCopySelfForUnroll(
-        ExprRef<BoolView>&, const AnyIterRef& iterator) const final;
+        const ExprRef<BoolView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
 

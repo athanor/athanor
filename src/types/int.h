@@ -21,7 +21,7 @@ struct IntDomain {
               })) {}
 };
 
-struct IntTrigger : public TriggerBase {};
+struct IntTrigger : public virtual TriggerBase {};
 
 struct IntView : public ExprInterface<IntView> {
     Int value;
@@ -51,7 +51,7 @@ struct IntValue : public IntView, ValBase {
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<IntView> deepCopySelfForUnroll(
-        ExprRef<IntView>&, const AnyIterRef& iterator) const final;
+        const ExprRef<IntView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;

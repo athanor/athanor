@@ -111,7 +111,7 @@ void OpProd::updateViolationDescription(UInt parentViolation,
     }
 }
 
-ExprRef<IntView> IntView::deepCopySelfForUnroll(ExprRef<IntView>&,ExprRef<IntView>ExprRef<IntView> OpProd::deepCopySelfForUnroll(ExprRef<IntView>&,,
+ExprRef<IntView> IntView::deepCopySelfForUnroll(const ExprRef<IntView>&,ExprRef<IntView>ExprRef<IntView> OpProd::deepCopySelfForUnroll(const ExprRef<IntView>&,,
     const AnyIterRef& iterator) const {
     auto newOpProd = make_shared<OpProd>(
         operands->deepCopySelfForUnroll(operands, iterator));

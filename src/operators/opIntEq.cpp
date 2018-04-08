@@ -64,7 +64,7 @@ void OpIntEq::updateViolationDescription(UInt, ViolationDescription& vioDesc) {
 }
 
 ExprRef<BoolView> OpIntEq::deepCopySelfForUnroll(
-    ExprRef<BoolView>&, const AnyIterRef& iterator) const {
+    const ExprRef<BoolView>&, const AnyIterRef& iterator) const {
     auto newOpIntEq =
         make_shared<OpIntEq>(left->deepCopySelfForUnroll(left, iterator),
                              right->deepCopySelfForUnroll(right, iterator));

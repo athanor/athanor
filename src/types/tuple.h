@@ -14,7 +14,7 @@ struct TupleDomain {
         : inners({makeAnyDomainRef(std::forward<DomainTypes>(inners))...}) {}
 };
 struct TupleView;
-struct TupleTrigger : public TriggerBase {
+struct TupleTrigger : public virtual TriggerBase {
     virtual void possibleMemberValueChange(UInt index) = 0;
     virtual void memberValueChanged(UInt index) = 0;
 };
@@ -108,7 +108,7 @@ struct TupleValue : public TupleView, public ValBase {
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<TupleView> deepCopySelfForUnroll(
-        ExprRef<TupleView>&, const AnyIterRef& iterator) const final;
+        const ExprRef<TupleView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };

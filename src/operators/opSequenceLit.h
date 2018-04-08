@@ -22,7 +22,7 @@ struct OpSequenceLit : public SequenceView {
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<SequenceView> deepCopySelfForUnroll(
-        ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
+        const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };

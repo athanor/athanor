@@ -1,6 +1,7 @@
 #ifndef SRC_OPERATORS_QUANTIFIER_H_
 #define SRC_OPERATORS_QUANTIFIER_H_
 #include "base/base.h"
+#include "operators/iterator.h"
 #include "types/sequence.h"
 inline static u_int64_t nextQuantId() {
     static u_int64_t quantId = 0;
@@ -20,7 +21,7 @@ struct Quantifier : public SequenceView {
     };
     const int quantId;
     ExprRef<ContainerType> container;
-    AnyExprRef expr = ViewRef<BoolView>(nullptr);
+    AnyExprRef expr = ExprRef<BoolView>(nullptr);
     std::vector<AnyIterRef> unrolledIterVals;
     std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
@@ -35,19 +36,20 @@ struct Quantifier : public SequenceView {
             expr);
     }
 
-    ~Quantifier() { this->stopTriggering(); }
+    ~Quantifier() { this->stopTriggeringOnChildren(); }
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
+    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<SequenceView> deepCopySelfForUnroll(
-        ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
+        const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
 
     template <typename T>
     inline IterRef<T> newIterRef() {
-        return IterRef<T>(quantId);
+        return std::make_shared<Iterator<T>>(quantId, nullptr);
     }
 
     bool triggering();

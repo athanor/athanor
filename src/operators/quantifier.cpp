@@ -59,22 +59,20 @@ void Quantifier<ContainerType>::unroll(UInt index,
             bool evaluateExpr = members.empty() || !this->triggering();
             const ExprRef<ViewType>& oldValueOfIter =
                 (members.empty())
-                    ? ViewRef<ViewType>(nullptr)
+                    ? IterRef<ViewType>(nullptr)
                     : mpark::get<IterRef<ViewType>>(unrolledIterVals.back())
-                          .getIterator()
-                          .getValue();
+                          ->getValue();
             ExprRef<viewType(members)> newMember =
                 exprToCopy->deepCopySelfForUnroll(exprToCopy, iterRef);
-            iterRef.getIterator().changeValue(
-                this->triggering() && !evaluateExpr, oldValueOfIter, newView,
-                [&]() {
-                    if (evaluateExpr) {
-                        newMember->evaluate();
-                    }
-                    if (this->triggering()) {
-                        newMember->startTriggering();
-                    }
-                });
+            iterRef->changeValue(this->triggering() && !evaluateExpr,
+                                 oldValueOfIter, newView, [&]() {
+                                     if (evaluateExpr) {
+                                         newMember->evaluate();
+                                     }
+                                     if (this->triggering()) {
+                                         newMember->startTriggering();
+                                     }
+                                 });
             unrolledIterVals.insert(unrolledIterVals.begin() + index, iterRef);
             this->addMemberAndNotify(index, newMember);
             if (this->triggering()) {
@@ -117,24 +115,26 @@ void Quantifier<ContainerType>::roll(UInt index) {
 
 template <typename ContainerType>
 ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnroll(
-    const AnyIterRef& iterator) const {
+    const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
     auto newQuantifier = make_shared<Quantifier<ContainerType>>(
         container->deepCopySelfForUnroll(container, iterator), quantId);
-    newQuantifier->setExpression(expr->deepCopySelfForUnroll(expr, iterator));
 
     mpark::visit(
-        [&](auto& members) {
+        [&](const auto& expr) {
+            newQuantifier->setExpression(
+                expr->deepCopySelfForUnroll(expr, iterator));
+            auto& members = this->getMembers<viewType(expr)>();
             for (size_t i = 0; i < members.size(); ++i) {
-                auto& expr = members[i];
+                auto& member = members[i];
                 auto& iterVal = unrolledIterVals[i];
                 newQuantifier->template addMember<viewType(members)>(
                     newQuantifier->numberElements(),
-                    expr->deepCopySelfForUnroll(expr, iterator));
+                    member->deepCopySelfForUnroll(member, iterator));
                 newQuantifier->unrolledIterVals.emplace_back(iterVal);
             }
         },
-        members);
-    return ViewRef<SequenceView>(newQuantifier);
+        this->expr);
+    return newQuantifier;
 }
 
 template <typename ContainerType, typename ViewType>
@@ -208,6 +208,22 @@ void Quantifier<ContainerType>::startTriggering() {
 }
 
 template <typename ContainerType>
+void Quantifier<ContainerType>::stopTriggeringOnChildren() {
+    if (containerTrigger) {
+        deleteTrigger(containerTrigger);
+        containerTrigger = nullptr;
+        mpark::visit(
+            [&](auto& expr) {
+                while (!exprTriggers.empty()) {
+                    this->stopTriggeringOnExpr<viewType(expr)>(
+                        exprTriggers.size() - 1);
+                }
+            },
+            expr);
+    }
+}
+
+template <typename ContainerType>
 void Quantifier<ContainerType>::stopTriggering() {
     if (containerTrigger) {
         deleteTrigger(containerTrigger);
@@ -218,6 +234,9 @@ void Quantifier<ContainerType>::stopTriggering() {
                 while (!exprTriggers.empty()) {
                     this->stopTriggeringOnExpr<viewType(expr)>(
                         exprTriggers.size() - 1);
+                }
+                for (auto& member : this->getMembers<viewType(expr)>()) {
+                    member->stopTriggering();
                 }
             },
             expr);
@@ -267,9 +286,9 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
             [&](auto& members) {
                 valuesToUnroll.emplace<BaseType<decltype(members)>>();
             },
-            op->container->members);
+            op->container->view().members);
     }
-    void possibleSetValueChange() final {}
+    void possibleValueChange() final {}
     void valueRemoved(UInt indexOfRemovedValue, HashType) final {
         if (indexOfRemovedValue < op->numberElements() - 1) {
             op->swap(indexOfRemovedValue, op->numberElements() - 1);
@@ -291,7 +310,7 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
     void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
     void memberValueChanged(UInt, const AnyExprRef&) final{};
 
-    void setValueChanged(const SetView& newValue) {
+    void valueChanged() {
         while (op->numberElements() != 0) {
             this->valueRemoved(op->numberElements() - 1, 0);
         }
@@ -301,13 +320,7 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
                     this->valueAdded(member);
                 }
             },
-            newValue.members);
-    }
-    void preIterValueChange(const ExprRef<SetView>&) final {
-        this->possibleSetValueChange();
-    }
-    void postIterValueChange(const ExprRef<SetView>& newValue) final {
-        this->setValueChanged(*newValue);
+            op->container->view().members);
     }
     void trigger() final {
         mpark::visit(
@@ -331,7 +344,7 @@ struct InitialUnroller<SetView> {
                     quantifier.unroll(quantifier.numberElements(), member);
                 }
             },
-            quantifier.container->members);
+            quantifier.container->view().members);
     }
 };
 
@@ -345,7 +358,7 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
             [&](auto& members) {
                 valuesToUnroll.emplace<ExprRefVec<viewType(members)>>();
             },
-            op->container->members);
+            op->container->view().members);
     }
     void valueRemoved(UInt indexOfRemovedValue, const AnyExprRef&) final {
         if (indexOfRemovedValue < op->numberElements() - 1) {
@@ -367,8 +380,8 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
 
     void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
     void memberValueChanged(UInt, const AnyExprRef&) final{};
-    void possibleMSetValueChange() final {}
-    void mSetValueChanged(const MSetView& newValue) {
+    void possibleValueChange() final {}
+    void valueChanged() {
         while (op->numberElements() != 0) {
             this->valueRemoved(op->numberElements() - 1,
                                ExprRef<BoolView>(nullptr));
@@ -379,14 +392,7 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
                     this->valueAdded(member);
                 }
             },
-            newValue.members);
-    }
-
-    void preIterValueChange(const ExprRef<MSetView>&) final {
-        this->possibleMSetValueChange();
-    }
-    void postIterValueChange(const ExprRef<MSetView>& newValue) final {
-        this->mSetValueChanged(*newValue);
+            op->container->view().members);
     }
     void trigger() final {
         mpark::visit(
@@ -410,7 +416,7 @@ struct InitialUnroller<MSetView> {
                     quantifier.unroll(quantifier.numberElements(), member);
                 }
             },
-            quantifier.container->members);
+            quantifier.container->view().members);
     }
 };
 
@@ -423,11 +429,11 @@ void Quantifier<ContainerType>::findAndReplaceSelf(
 
 vector<ExprRef<SequenceView>> instantiateQuantifierTypes() {
     vector<ExprRef<SequenceView>> quants;
-    auto q1 = make_shared<Quantifier<SetView>>(ViewRef<SetView>(nullptr));
-    q1->setExpression(ViewRef<SetView>(nullptr));
-    quants.emplace_back(ViewRef<SequenceView>(q1));
-    auto q2 = make_shared<Quantifier<MSetView>>(ViewRef<MSetView>(nullptr));
-    q2->setExpression(ViewRef<MSetView>(nullptr));
-    quants.emplace_back(ViewRef<SequenceView>(q2));
+    auto q1 = make_shared<Quantifier<SetView>>(nullptr);
+    q1->setExpression(ExprRef<SetView>(nullptr));
+    quants.emplace_back(ExprRef<SequenceView>(q1));
+    auto q2 = make_shared<Quantifier<MSetView>>(nullptr);
+    q2->setExpression(ExprRef<MSetView>(nullptr));
+    quants.emplace_back(ExprRef<SequenceView>(q2));
     return quants;
 }

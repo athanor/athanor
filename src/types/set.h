@@ -28,7 +28,7 @@ struct SetDomain {
     }
 };
 
-struct SetTrigger : public TriggerBase {
+struct SetTrigger : public virtual TriggerBase {
     virtual void valueRemoved(UInt indexOfRemovedValue,
                               HashType hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyExprRef& member) = 0;
@@ -358,7 +358,7 @@ struct SetValue : public SetView, public ValBase {
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<SetView> deepCopySelfForUnroll(
-        ExprRef<SetView>&, const AnyIterRef& iterator) const final;
+        const ExprRef<SetView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;

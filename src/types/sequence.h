@@ -29,7 +29,7 @@ struct SequenceDomain {
     }
 };
 struct SequenceView;
-struct SequenceTrigger : public TriggerBase {
+struct SequenceTrigger : public virtual TriggerBase {
     virtual void valueRemoved(
         UInt index, const AnyExprRef& removedValueindexOfRemovedValue) = 0;
     virtual void valueAdded(UInt indexOfRemovedValue,
@@ -384,7 +384,7 @@ struct SequenceValue : public SequenceView, public ValBase {
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<SequenceView> deepCopySelfForUnroll(
-        ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
+        const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;

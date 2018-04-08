@@ -23,7 +23,7 @@ struct OpMod : public IntView {
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<IntView> deepCopySelfForUnroll(
-        ExprRef<IntView>&, const AnyIterRef& iterator) const final;
+        const ExprRef<IntView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };

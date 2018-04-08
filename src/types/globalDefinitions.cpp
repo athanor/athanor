@@ -36,7 +36,7 @@ inline pair<bool, ViolationDescription&> registerViolations(
         registerViolations(this, parentViolation, vioDesc);                 \
     }                                                                       \
     ExprRef<name##View> name##Value::deepCopySelfForUnroll(                 \
-        ExprRef<name##View>& self, const AnyIterRef&) const {               \
+        const ExprRef<name##View>& self, const AnyIterRef&) const {         \
         return self;                                                        \
     }                                                                       \
     std::ostream& name##Value::dumpState(std::ostream& os) const {          \

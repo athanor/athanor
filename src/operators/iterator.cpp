@@ -70,7 +70,7 @@ void Iterator<View>::updateViolationDescription(UInt parentViolation,
 
 template <typename View>
 ExprRef<View> Iterator<View>::deepCopySelfForUnroll(
-    ExprRef<View>& self, const AnyIterRef& iterator) const {
+    const ExprRef<View>& self, const AnyIterRef& iterator) const {
     const auto iteratorPtr =
         mpark::get_if<IterRef<View>>(&iterator.asVariant());
     if (iteratorPtr != NULL && (**iteratorPtr).id == id) {
@@ -99,4 +99,9 @@ void instantiate(AnyExprRef& expr) {
             ignoreUnused(iter);
         },
         expr);
+}
+
+std::ostream& operator<<(std::ostream& os, const AnyIterRef& iter) {
+    mpark::visit([&](auto& iter) { os << iter->view(); }, iter.asVariant());
+    return os;
 }

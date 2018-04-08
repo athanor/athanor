@@ -175,7 +175,7 @@ void OpOr::updateViolationDescription(const UInt,
 }
 
 ExprRef<BoolView> OpOr::deepCopySelfForUnroll(
-    ExprRef<BoolView>&, const AnyIterRef& iterator) const {
+    const ExprRef<BoolView>&, const AnyIterRef& iterator) const {
     auto newOpOr =
         make_shared<OpOr>(operands->deepCopySelfForUnroll(operands, iterator));
     newOpOr->violation = violation;

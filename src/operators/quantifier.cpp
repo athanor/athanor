@@ -226,15 +226,9 @@ void Quantifier<ContainerType>::stopTriggeringOnChildren() {
 template <typename ContainerType>
 void Quantifier<ContainerType>::stopTriggering() {
     if (containerTrigger) {
-        deleteTrigger(containerTrigger);
-        containerTrigger = nullptr;
-        container->stopTriggering();
+        stopTriggeringOnChildren();
         mpark::visit(
             [&](auto& expr) {
-                while (!exprTriggers.empty()) {
-                    this->stopTriggeringOnExpr<viewType(expr)>(
-                        exprTriggers.size() - 1);
-                }
                 for (auto& member : this->getMembers<viewType(expr)>()) {
                     member->stopTriggering();
                 }
@@ -427,15 +421,15 @@ void Quantifier<ContainerType>::findAndReplaceSelf(
                  this->expr);
 }
 
-vector<ExprRef<SequenceView>> instantiateQuantifierTypes() {
+void instantiateQuantifierTypes() {
     vector<ExprRef<SequenceView>> quants;
     auto q1 = make_shared<Quantifier<SetView>>(nullptr);
     q1->setExpression(ExprRef<SetView>(nullptr));
     q1->Quantifier<SetView>::stopTriggering();
-    quants.emplace_back(ExprRef<SequenceView>(q1));
+    q1->Quantifier<SetView>::stopTriggeringOnChildren();
     auto q2 = make_shared<Quantifier<MSetView>>(nullptr);
     q2->Quantifier<MSetView>::stopTriggering();
+    q2->Quantifier<MSetView>::stopTriggeringOnChildren();
     q2->Quantifier<MSetView>::setExpression(ExprRef<MSetView>(nullptr));
-    quants.emplace_back(ExprRef<SequenceView>(q2));
-    return quants;
+    ignoreUnused(q1, q2);
 }

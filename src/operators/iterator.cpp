@@ -89,7 +89,9 @@ std::ostream& Iterator<View>::dumpState(std::ostream& os) const {
 
 template <typename View>
 void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction& func) {
-    this->ref = findAndReplace(ref, func);
+    if (ref) {
+        this->ref = findAndReplace(ref, func);
+    }
 }
 
 void instantiateIterator(AnyExprRef& expr) {

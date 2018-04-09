@@ -32,14 +32,14 @@ class OpSum::OperandsSequenceTrigger : public SequenceTrigger {
     inline void positionsSwapped(UInt, UInt) {}
     inline void possibleSubsequenceChange(UInt startIndex,
                                           UInt endIndex) final {
-        previousValue = 1;
+        previousValue = 0;
         for (size_t i = startIndex; i < endIndex; i++) {
             previousValue +=
                 op->operands->view().getMembers<IntView>()[i]->view().value;
         }
     }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
-        Int newValue = 1;
+        Int newValue = 0;
         for (size_t i = startIndex; i < endIndex; i++) {
             UInt operandValue =
                 op->operands->view().getMembers<IntView>()[i]->view().value;
@@ -61,7 +61,7 @@ class OpSum::OperandsSequenceTrigger : public SequenceTrigger {
 };
 
 inline void reevaluate(OpSum& op) {
-    op.value = 1;
+    op.value = 0;
     for (size_t i = 0; i < op.operands->view().numberElements(); ++i) {
         auto& operand = op.operands->view().getMembers<IntView>()[i];
         op.value += operand->view().value;

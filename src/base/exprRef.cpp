@@ -29,28 +29,12 @@ ostream& prettyPrint(ostream& os, const AnyExprRef& expr) {
         expr);
 }
 
-void instantiateViewGetters(AnyExprRef& expr) {
-    mpark::visit(
-        [](auto& expr) {
-            auto& view = expr->ExprInterface<viewType(expr)>::view();
-            const auto& expr2 = *expr;
-            const auto& view2 = expr2.ExprInterface<viewType(expr)>::view();
-            ignoreUnused(view, view2);
-        },
-        expr);
-}
-
 template <typename View,
           typename Trigger = typename AssociatedTriggerType<View>::type>
 shared_ptr<Trigger> fakeMakeTrigger(const ExprRef<View>&) {
     abort();
 }
-void instantiateExprInterface(AnyExprRef& expr) {
-    mpark::visit(
-        [&](auto& expr) {
-            auto trigger = fakeMakeTrigger(expr);
-            expr->ExprInterface<viewType(expr)>::addTrigger(trigger);
-            ignoreUnused(expr);
-        },
-        expr);
-}
+
+#define exprInstantiators(name)  name##Value name##Instantiator;
+buildForAllTypes(exprInstantiators, );
+#undef exprInstantiators

@@ -5,6 +5,13 @@
 
 using namespace std;
 
+#define iteratorInstantiators(name) \
+    template <>                     \
+    struct Iterator<name##View>;    \
+    Iterator<name##View> name##IteratorInstantiator(0, nullptr);
+buildForAllTypes(iteratorInstantiators, );
+#undef iteratorInstantiators
+
 template <typename View>
 void Iterator<View>::addTrigger(
     const shared_ptr<typename Iterator<View>::TriggerType>& trigger) {
@@ -47,14 +54,6 @@ void Iterator<View>::startTriggering() {
 }
 
 template <typename View>
-void Iterator<View>::stopTriggeringOnChildren() {
-    if (refTrigger) {
-        deleteTrigger(refTrigger);
-        refTrigger = nullptr;
-    }
-}
-
-template <typename View>
 void Iterator<View>::stopTriggering() {
     if (refTrigger) {
         deleteTrigger(refTrigger);
@@ -92,18 +91,4 @@ void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction& func) {
     if (ref) {
         this->ref = findAndReplace(ref, func);
     }
-}
-
-void instantiateIterator(AnyExprRef& expr) {
-    mpark::visit(
-        [&](auto& expr) {
-            Iterator<viewType(expr)> iter(0, expr);
-            ignoreUnused(iter);
-        },
-        expr);
-}
-
-std::ostream& operator<<(std::ostream& os, const AnyIterRef& iter) {
-    mpark::visit([&](auto& iter) { os << iter->view(); }, iter.asVariant());
-    return os;
 }

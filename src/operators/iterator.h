@@ -38,7 +38,13 @@ struct Iterator : public ExprInterface<View> {
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
-    void stopTriggeringOnChildren();
+    void stopTriggeringOnChildren() {
+        if (refTrigger) {
+            deleteTrigger(refTrigger);
+            refTrigger = nullptr;
+        }
+    }
+
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;
     ExprRef<View> deepCopySelfForUnroll(const ExprRef<View>& self,

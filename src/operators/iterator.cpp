@@ -15,7 +15,10 @@ buildForAllTypes(iteratorInstantiators, );
 template <typename View>
 void Iterator<View>::addTrigger(
     const shared_ptr<typename Iterator<View>::TriggerType>& trigger) {
-    triggers.emplace_back(trigger);
+    auto otherTrigger = trigger;
+    triggers.emplace_back(
+        reinterpret_cast<std::shared_ptr<TriggerBase>&>(otherTrigger));
+    ref->addTrigger(trigger);
 }
 
 template <typename View>
@@ -38,28 +41,16 @@ Iterator<View>::Iterator(Iterator<View>&& other)
     : ExprInterface<View>(move(other)),
       triggers(move(other.triggers)),
       id(move(other.id)),
-      ref(move(other.ref)),
-      refTrigger(move(other.refTrigger)) {
-    refTrigger->RecipientTriggers = &triggers;
-}
+      ref(move(other.ref)) {}
 
 template <typename View>
 void Iterator<View>::startTriggering() {
-    if (!refTrigger) {
-        auto trigger = makeForwardingTrigger<TriggerType>(&triggers);
-        refTrigger = getForwardingTriggerBase(trigger);
-        ref->addTrigger(getAsTriggerType(trigger));
-        ref->startTriggering();
-    }
+    ref->startTriggering();
 }
 
 template <typename View>
 void Iterator<View>::stopTriggering() {
-    if (refTrigger) {
-        deleteTrigger(refTrigger);
-        refTrigger = nullptr;
-        ref->stopTriggering();
-    }
+    ref->stopTriggering();
 }
 template <typename View>
 void Iterator<View>::updateViolationDescription(UInt parentViolation,

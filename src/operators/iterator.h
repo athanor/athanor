@@ -7,11 +7,9 @@
 template <typename View>
 struct Iterator : public ExprInterface<View> {
     typedef typename AssociatedTriggerType<View>::type TriggerType;
-    std::vector<std::shared_ptr<TriggerType>> triggers;
-
+    std::vector<std::shared_ptr<TriggerBase>> triggers;
     u_int64_t id;
     ExprRef<View> ref;
-    std::shared_ptr<ForwardingTriggerBase<TriggerType>> refTrigger;
 
     Iterator(u_int64_t id, ExprRef<View> ref) : id(id), ref(std::move(ref)) {}
     template <typename Func>
@@ -38,12 +36,7 @@ struct Iterator : public ExprInterface<View> {
     void evaluate() final;
     void startTriggering() final;
     void stopTriggering() final;
-    void stopTriggeringOnChildren() {
-        if (refTrigger) {
-            deleteTrigger(refTrigger);
-            refTrigger = nullptr;
-        }
-    }
+    void stopTriggeringOnChildren() {}
 
     void updateViolationDescription(UInt parentViolation,
                                     ViolationDescription&) final;

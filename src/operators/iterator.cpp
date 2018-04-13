@@ -83,3 +83,8 @@ void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         this->ref = findAndReplace(ref, func);
     }
 }
+
+std::ostream& operator<<(std::ostream& os, const AnyIterRef& ref) {
+    mpark::visit([&](auto& ref) { ref->dumpState(os); }, ref);
+    return os;
+}

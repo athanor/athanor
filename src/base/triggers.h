@@ -13,6 +13,7 @@ struct TriggerBase {
     bool active = true;
     virtual void possibleValueChange() = 0;
     virtual void valueChanged() = 0;
+    virtual void reattachTrigger() = 0;
 };
 
 struct DelayedTrigger : public virtual TriggerBase {

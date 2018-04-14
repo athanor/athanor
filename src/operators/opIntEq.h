@@ -1,13 +1,18 @@
 
 #ifndef SRC_OPERATORS_OPINTEQ_H_
 #define SRC_OPERATORS_OPINTEQ_H_
+#include "operators/simpleTrigger.h"
 #include "types/bool.h"
 #include "types/int.h"
 struct OpIntEq : public BoolView {
+    typedef SimpleBinaryTrigger<OpIntEq, IntTrigger, true> LeftTrigger;
+    typedef SimpleBinaryTrigger<OpIntEq, IntTrigger, false> RightTrigger;
+    template <bool left>
     struct Trigger;
     ExprRef<IntView> left;
     ExprRef<IntView> right;
-    std::shared_ptr<Trigger> operandTrigger = nullptr;
+    std::shared_ptr<LeftTrigger> leftTrigger;
+    std::shared_ptr<RightTrigger> rightTrigger;
 
    public:
     OpIntEq(ExprRef<IntView> left, ExprRef<IntView> right)

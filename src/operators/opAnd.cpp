@@ -93,6 +93,13 @@ class OpAnd::OperandsSequenceTrigger : public SequenceTrigger {
             return true;
         });
     }
+
+    void reattachTrigger() final {
+        deleteTrigger(op->operandsSequenceTrigger);
+        auto trigger = make_shared<OperandsSequenceTrigger>(op);
+        op->operands->addTrigger(trigger);
+        op->operandsSequenceTrigger = trigger;
+    }
 };
 inline void reevaluate(OpAnd& op) {
     op.violation = 0;

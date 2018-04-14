@@ -4,55 +4,50 @@
 #include "types/int.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
+
+inline void reevaluate(OpIntEq& op) {
+    op.violation = std::abs(op.left->view().value - op.right->view().value);
+}
 void OpIntEq::evaluate() {
     left->evaluate();
     right->evaluate();
-    violation = std::abs(left->view().value - right->view().value);
+    reevaluate(*this);
 }
-
-struct OpIntEq::Trigger
-    : public ChangeTriggerAdapter<IntTrigger, OpIntEq::Trigger> {
-    OpIntEq* op;
-    Trigger(OpIntEq* op) : op(op) {}
-    inline void adapterPossibleValueChange() {}
-    inline void adapterValueChanged() {
-        op->changeValue([&]() {
-            op->violation =
-                std::abs(op->left->view().value - op->right->view().value);
-            return true;
-        });
-    }
-};
 
 OpIntEq::OpIntEq(OpIntEq&& other)
     : BoolView(std::move(other)),
       left(std::move(other.left)),
       right(std::move(other.right)),
-      operandTrigger(std::move(other.operandTrigger)) {
-    setTriggerParent(this, operandTrigger);
+      leftTrigger(std::move(other.leftTrigger)),
+      rightTrigger(std::move(other.rightTrigger)) {
+    setTriggerParent(this, leftTrigger, rightTrigger);
 }
 
 void OpIntEq::startTriggering() {
-    if (!operandTrigger) {
-        operandTrigger = make_shared<OpIntEq::Trigger>(this);
-        left->addTrigger(operandTrigger);
-        right->addTrigger(operandTrigger);
+    if (!leftTrigger) {
+        leftTrigger = make_shared<OpIntEq::LeftTrigger>(this);
+        ;
+        rightTrigger = make_shared<OpIntEq::RightTrigger>(this);
+        ;
+        left->addTrigger(leftTrigger);
+        right->addTrigger(rightTrigger);
         left->startTriggering();
         right->startTriggering();
     }
 }
 
 void OpIntEq::stopTriggeringOnChildren() {
-    if (operandTrigger) {
-        deleteTrigger(operandTrigger);
-        operandTrigger = nullptr;
+    if (leftTrigger) {
+        deleteTrigger(leftTrigger);
+        leftTrigger = nullptr;
+        deleteTrigger(rightTrigger);
+        rightTrigger = nullptr;
     }
 }
 
 void OpIntEq::stopTriggering() {
-    if (operandTrigger) {
-        deleteTrigger(operandTrigger);
-        operandTrigger = nullptr;
+    if (leftTrigger) {
+        stopTriggeringOnChildren();
         left->stopTriggering();
         right->stopTriggering();
     }

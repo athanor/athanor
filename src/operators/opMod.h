@@ -1,33 +1,36 @@
 
 #ifndef SRC_OPERATORS_OPMOD_H_
 #define SRC_OPERATORS_OPMOD_H_
+#include "operators/simpleOperator.h"
+#include "operators/simpleTrigger.h"
 #include "types/int.h"
+struct OpMod;
+template <>
+struct OperatorTrates<OpMod> {
+    typedef SimpleBinaryTrigger<OpMod, IntTrigger, true> LeftTrigger;
+    typedef SimpleBinaryTrigger<OpMod, IntTrigger, false> RightTrigger;
+};
+struct OpMod : public SimpleBinaryOperator<IntView, IntView, OpMod> {
+    using SimpleBinaryOperator<IntView, IntView, OpMod>::SimpleBinaryOperator;
+    inline void reevaluate() {
+        value = left->view().value % right->view().value;
+    }
 
-struct OpMod : public IntView {
-    typedef SimpleBinaryTrigger<OpIntEq, IntTrigger, true> LeftTrigger;
-    typedef SimpleBinaryTrigger<OpIntEq, IntTrigger, false> RightTrigger;
-
-    ExprRef<IntView> left;
-    ExprRef<IntView> right;
-    std::shared_ptr<Trigger> operandTrigger = nullptr;
-
-   public:
-    OpMod(ExprRef<IntView> left, ExprRef<IntView> right)
-        : left(std::move(left)), right(std::move(right)) {}
-
-    OpMod(const OpMod& other) = delete;
-    OpMod(OpMod&& other);
-    ~OpMod() { this->stopTriggeringOnChildren(); }
-    void evaluate() final;
-    void startTriggering() final;
-    void stopTriggering() final;
-    void stopTriggeringOnChildren();
     void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription&) final;
-    ExprRef<IntView> deepCopySelfForUnroll(
-        const ExprRef<IntView>&, const AnyIterRef& iterator) const final;
-    std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+                                    ViolationDescription& vioDesc) final {
+        left->updateViolationDescription(parentViolation, vioDesc);
+        right->updateViolationDescription(parentViolation, vioDesc);
+    }
+
+    inline void copy(OpMod& newOp) const { newOp.value = value; }
+
+    inline std::ostream& dumpState(std::ostream& os) const final {
+        os << "OpMod: value=" << value << "\nleft: ";
+        left->dumpState(os);
+        os << "\nright: ";
+        right->dumpState(os);
+        return os;
+    }
 };
 
 #endif /* SRC_OPERATORS_OPMOD_H_ */

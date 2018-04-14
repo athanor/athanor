@@ -1,35 +1,37 @@
 
 #ifndef SRC_OPERATORS_OPINTEQ_H_
 #define SRC_OPERATORS_OPINTEQ_H_
+
+#include "operators/simpleOperator.h"
 #include "operators/simpleTrigger.h"
 #include "types/bool.h"
 #include "types/int.h"
-struct OpIntEq : public BoolView {
+struct OpIntEq;
+template <>
+struct OperatorTrates<OpIntEq> {
     typedef SimpleBinaryTrigger<OpIntEq, IntTrigger, true> LeftTrigger;
     typedef SimpleBinaryTrigger<OpIntEq, IntTrigger, false> RightTrigger;
-    template <bool left>
-    struct Trigger;
-    ExprRef<IntView> left;
-    ExprRef<IntView> right;
-    std::shared_ptr<LeftTrigger> leftTrigger;
-    std::shared_ptr<RightTrigger> rightTrigger;
+};
+struct OpIntEq : public SimpleBinaryOperator<BoolView, IntView, OpIntEq> {
+    using SimpleBinaryOperator<BoolView, IntView,
+                               OpIntEq>::SimpleBinaryOperator;
+    inline void reevaluate() {
+        violation = std::abs(left->view().value - right->view().value);
+    }
 
-   public:
-    OpIntEq(ExprRef<IntView> left, ExprRef<IntView> right)
-        : left(std::move(left)), right(std::move(right)) {}
+    inline void updateViolationDescription(
+        UInt, ViolationDescription& vioDesc) final {
+        left->updateViolationDescription(violation, vioDesc);
+        right->updateViolationDescription(violation, vioDesc);
+    }
+    inline void copy(OpIntEq& newOp) const { newOp.violation = violation; }
 
-    OpIntEq(const OpIntEq& other) = delete;
-    OpIntEq(OpIntEq&& other);
-    void evaluate() final;
-    void startTriggering() final;
-    void stopTriggering() final;
-    void stopTriggeringOnChildren();
-    void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription&) final;
-    ExprRef<BoolView> deepCopySelfForUnroll(
-        const ExprRef<BoolView>&, const AnyIterRef& iterator) const final;
-    std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    virtual ~OpIntEq() { this->stopTriggeringOnChildren(); }
+    inline std::ostream& dumpState(std::ostream& os) const final {
+        os << "OpIntEq: violation=" << violation << "\nleft: ";
+        left->dumpState(os);
+        os << "\nright: ";
+        right->dumpState(os);
+        return os;
+    }
 };
 #endif /* SRC_OPERATORS_OPINTEQ_H_ */

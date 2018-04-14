@@ -12,7 +12,7 @@ struct SimpleBinaryTrigger
     inline void adapterPossibleValueChange() {}
     inline void adapterValueChanged() {
         op->changeValue([&]() {
-            reevaluate(*op);
+            op->reevaluate();
             return true;
         });
     }
@@ -48,7 +48,7 @@ struct SimpleUnaryTrigger
     inline void adapterPossibleValueChange() {}
     inline void adapterValueChanged() {
         op->changeValue([&]() {
-            reevaluate(*op);
+            op->reevaluate();
             return true;
         });
     }

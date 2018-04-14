@@ -4,7 +4,9 @@
 #include "types/int.h"
 
 struct OpMod : public IntView {
-    struct Trigger;
+    typedef SimpleBinaryTrigger<OpIntEq, IntTrigger, true> LeftTrigger;
+    typedef SimpleBinaryTrigger<OpIntEq, IntTrigger, false> RightTrigger;
+
     ExprRef<IntView> left;
     ExprRef<IntView> right;
     std::shared_ptr<Trigger> operandTrigger = nullptr;

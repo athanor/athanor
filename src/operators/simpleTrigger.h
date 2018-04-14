@@ -1,6 +1,6 @@
 
-#ifndef SRC_OPERATORS_SHIFTVIOLATINGINDICES_H_
-#define SRC_OPERATORS_SHIFTVIOLATINGINDICES_H_
+#ifndef SRC_OPERATORS_SIMPLETRIGGER_H_
+#define SRC_OPERATORS_SIMPLETRIGGER_H_
 #include <memory>
 #include "base/base.h"
 template <typename Op, typename TriggerType, bool isLeftTrigger>
@@ -62,4 +62,4 @@ struct SimpleUnaryTrigger
     }
 };
 
-#endif /* SRC_OPERATORS_SHIFTVIOLATINGINDICES_H_ */
+#endif /* SRC_OPERATORS_SIMPLETRIGGER_H_ */

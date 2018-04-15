@@ -15,9 +15,9 @@ struct OperatorTrates<OpAnd> {
 };
 
 struct OpAnd : public SimpleUnaryOperator<BoolView, SequenceView, OpAnd> {
-    FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
     using SimpleUnaryOperator<BoolView, SequenceView,
                               OpAnd>::SimpleUnaryOperator;
+    FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
 
     inline OpAnd& operator=(const OpAnd& other) {
         operand = other.operand;

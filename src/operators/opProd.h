@@ -1,29 +1,27 @@
 
 #ifndef SRC_OPERATORS_OPPROD_H_
 #define SRC_OPERATORS_OPPROD_H_
-#include <vector>
+#include "operators/simpleOperator.h"
 #include "types/int.h"
 #include "types/sequence.h"
-struct OpProd : public IntView {
-    class OperandsSequenceTrigger;
-    ExprRef<SequenceView> operands;
-    std::shared_ptr<OperandsSequenceTrigger> operandsSequenceTrigger;
+#include "utils/fastIterableIntSet.h"
 
-   public:
-    OpProd(ExprRef<SequenceView> operands) : operands(std::move(operands)) {}
-    OpProd(const OpProd& other) = delete;
-    OpProd(OpProd&& other);
-    virtual ~OpProd() { this->stopTriggeringOnChildren(); }
-    void evaluate() final;
-    void startTriggering() final;
-    void stopTriggering() final;
-    void stopTriggeringOnChildren();
+struct OpProd;
+template <>
+struct OperatorTrates<OpProd> {
+    class OperandsSequenceTrigger;
+    typedef OperandsSequenceTrigger OperandTrigger;
+};
+
+struct OpProd : public SimpleUnaryOperator<IntView, SequenceView, OpProd> {
+    using SimpleUnaryOperator<IntView, SequenceView,
+                              OpProd>::SimpleUnaryOperator;
+
+    void reevaluate();
     void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription&) final;
-    ExprRef<IntView> deepCopySelfForUnroll(
-        const ExprRef<IntView>&, const AnyIterRef& iterator) const final;
+                                    ViolationDescription& vioDesc) final;
+    void copy(OpProd& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };
 
 #endif /* SRC_OPERATORS_OPPROD_H_ */

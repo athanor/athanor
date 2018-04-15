@@ -1,6 +1,7 @@
 #include "operators/opSequenceLit.h"
 #include <cassert>
 #include <cstdlib>
+#include "operators/operatorMakers.h"
 #include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
@@ -34,6 +35,15 @@ struct ExprTrigger
                         this->index, this->index + 1);
             },
             this->op->members);
+    }
+
+    void reattachTrigger() final {
+        deleteTrigger(static_pointer_cast<ExprTrigger<TriggerType>>(
+            op->exprTriggers[index]));
+        auto trigger = make_shared<ExprTrigger<TriggerType>>(op, index);
+        op->getMembers<typename AssociatedViewType<TriggerType>::type>()[index]
+            ->addTrigger(trigger);
+        op->exprTriggers[index] = trigger;
     }
 };
 
@@ -143,4 +153,8 @@ void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
             }
         },
         members);
+}
+
+ExprRef<SequenceView> OpMaker<OpSequenceLit>::make(AnyExprVec o) {
+    return make_shared<OpSequenceLit>(move(o));
 }

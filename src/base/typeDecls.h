@@ -59,6 +59,10 @@ struct TypeAsString;
         typedef name##Trigger type;                                      \
     };                                                                   \
     template <>                                                          \
+    struct AssociatedViewType<name##Trigger> {                           \
+        typedef name##View type;                                         \
+    };                                                                   \
+    template <>                                                          \
     struct AssociatedValueType<name##View> {                             \
         typedef name##Value type;                                        \
     };                                                                   \

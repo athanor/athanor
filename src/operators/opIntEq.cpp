@@ -1,8 +1,9 @@
 #include "operators/opIntEq.h"
+#include "operators/operatorMakers.h"
 #include "operators/simpleOperator.hpp"
-
+using namespace std;
 void OpIntEq::reevaluate() {
-    violation = std::abs(left->view().value - right->view().value);
+    violation = abs(left->view().value - right->view().value);
 }
 
 void OpIntEq::updateViolationDescription(UInt, ViolationDescription& vioDesc) {
@@ -12,10 +13,15 @@ void OpIntEq::updateViolationDescription(UInt, ViolationDescription& vioDesc) {
 
 void OpIntEq::copy(OpIntEq& newOp) const { newOp.violation = violation; }
 
-std::ostream& OpIntEq::dumpState(std::ostream& os) const {
+ostream& OpIntEq::dumpState(ostream& os) const {
     os << "OpIntEq: violation=" << violation << "\nleft: ";
     left->dumpState(os);
     os << "\nright: ";
     right->dumpState(os);
     return os;
+}
+
+ExprRef<BoolView> OpMaker<OpIntEq>::make(ExprRef<IntView> l,
+                                         ExprRef<IntView> r) {
+    return make_shared<OpIntEq>(move(l), move(r));
 }

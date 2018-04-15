@@ -1,6 +1,7 @@
 #include "operators/opMod.h"
+#include "operators/operatorMakers.h"
 #include "operators/simpleOperator.hpp"
-
+using namespace std;
 void OpMod::reevaluate() { value = left->view().value % right->view().value; }
 
 void OpMod::updateViolationDescription(UInt parentViolation,
@@ -11,10 +12,14 @@ void OpMod::updateViolationDescription(UInt parentViolation,
 
 void OpMod::copy(OpMod& newOp) const { newOp.value = value; }
 
-std::ostream& OpMod::dumpState(std::ostream& os) const final {
+ostream& OpMod::dumpState(ostream& os) const {
     os << "OpMod: value=" << value << "\nleft: ";
     left->dumpState(os);
     os << "\nright: ";
     right->dumpState(os);
     return os;
+}
+
+ExprRef<IntView> OpMaker<OpMod>::make(ExprRef<IntView> l, ExprRef<IntView> r) {
+    return make_shared<OpMod>(move(l), move(r));
 }

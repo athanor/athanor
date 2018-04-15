@@ -31,52 +31,42 @@ struct SimpleBinaryOperator : public View {
         setTriggerParent(&derived(), leftTrigger, rightTrigger);
     }
     virtual ~SimpleBinaryOperator() { this->stopTriggeringOnChildren(); }
-    void evaluate() final {
-        left->evaluate();
-        right->evaluate();
-        derived().reevaluate();
-    }
 
-    void startTriggering() final {
-        if (!leftTrigger) {
-            leftTrigger = std::make_shared<LeftTrigger>(&derived());
-            rightTrigger = std::make_shared<RightTrigger>(&derived());
-            left->addTrigger(leftTrigger);
-            right->addTrigger(rightTrigger);
-            left->startTriggering();
-            right->startTriggering();
-        }
-    }
-
-    void stopTriggeringOnChildren() {
-        if (leftTrigger) {
-            deleteTrigger(leftTrigger);
-            leftTrigger = nullptr;
-            deleteTrigger(rightTrigger);
-            rightTrigger = nullptr;
-        }
-    }
-
-    void stopTriggering() final {
-        if (leftTrigger) {
-            stopTriggeringOnChildren();
-            left->stopTriggering();
-            right->stopTriggering();
-        }
-    }
-
-    ExprRef<View> deepCopySelfForUnroll(
-        const ExprRef<View>&, const AnyIterRef& iterator) const final {
-        auto newOp = std::make_shared<Derived>(
-            left->deepCopySelfForUnroll(left, iterator),
-            right->deepCopySelfForUnroll(right, iterator));
-        derived().copy(*newOp);
-        return newOp;
-    }
-
-    void findAndReplaceSelf(const FindAndReplaceFunction& func) final {
-        this->left = findAndReplace(left, func);
-        this->right = findAndReplace(right, func);
-    }
+    void evaluate() final;
+    void startTriggering() final;
+    void stopTriggeringOnChildren();
+    void stopTriggering() final;
+    ExprRef<View> deepCopySelfForUnroll(const ExprRef<View>&,
+                                        const AnyIterRef& iterator) const final;
+    void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
 };
+
+template <typename View, typename OperandView, typename Derived>
+struct SimpleUnaryOperator : public View {
+    typedef typename OperatorTrates<Derived>::OperandTrigger OperandTrigger;
+    ExprRef<OperandView> operand;
+    std::shared_ptr<OperandTrigger> operandTrigger;
+
+    SimpleUnaryOperator(ExprRef<OperandView> operand)
+        : operand(std::move(operand)) {}
+
+    auto& derived() { return *static_cast<Derived*>(this); }
+    const auto& derived() const { return *static_cast<const Derived*>(this); }
+    SimpleUnaryOperator(
+        const SimpleUnaryOperator<View, OperandView, Derived>& other) = delete;
+    SimpleUnaryOperator(SimpleUnaryOperator<View, OperandView, Derived>&& other)
+        : operand(std::move(other.operand)),
+          operandTrigger(std::move(other.operandTrigger)) {
+        setTriggerParent(&derived(), operandTrigger);
+    }
+    virtual ~SimpleUnaryOperator() { this->stopTriggeringOnChildren(); }
+    void evaluate() final;
+    void startTriggering() final;
+    void stopTriggeringOnChildren();
+    void stopTriggering() final;
+    ExprRef<View> deepCopySelfForUnroll(const ExprRef<View>&,
+                                        const AnyIterRef& iterator) const final;
+    void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
+};
+
 #endif /* SRC_OPERATORS_SIMPLEOPERATOR_H_ */

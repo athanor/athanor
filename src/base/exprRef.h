@@ -81,5 +81,4 @@ inline ExprRef<T> findAndReplace(ExprRef<T>& expr,
         return expr;
     }
 }
-
 #endif /* SRC_BASE_EXPRREF_H_ */

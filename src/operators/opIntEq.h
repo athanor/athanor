@@ -15,23 +15,11 @@ struct OperatorTrates<OpIntEq> {
 struct OpIntEq : public SimpleBinaryOperator<BoolView, IntView, OpIntEq> {
     using SimpleBinaryOperator<BoolView, IntView,
                                OpIntEq>::SimpleBinaryOperator;
-    inline void reevaluate() {
-        violation = std::abs(left->view().value - right->view().value);
-    }
 
-    inline void updateViolationDescription(
-        UInt, ViolationDescription& vioDesc) final {
-        left->updateViolationDescription(violation, vioDesc);
-        right->updateViolationDescription(violation, vioDesc);
-    }
-    inline void copy(OpIntEq& newOp) const { newOp.violation = violation; }
-
-    inline std::ostream& dumpState(std::ostream& os) const final {
-        os << "OpIntEq: violation=" << violation << "\nleft: ";
-        left->dumpState(os);
-        os << "\nright: ";
-        right->dumpState(os);
-        return os;
-    }
+    void reevaluate();
+    void updateViolationDescription(UInt parentViolation,
+                                    ViolationDescription& vioDesc) final;
+    void copy(OpIntEq& newOp) const;
+    std::ostream& dumpState(std::ostream& os) const final;
 };
 #endif /* SRC_OPERATORS_OPINTEQ_H_ */

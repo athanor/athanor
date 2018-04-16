@@ -2,7 +2,6 @@
 #include "operators/opOr.h"
 #include <algorithm>
 #include <cassert>
-#include "operators/operatorMakers.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
@@ -165,6 +164,16 @@ std::ostream& OpOr::dumpState(std::ostream& os) const {
     os << "Min violating indices: " << sortedViolatingOperands << endl;
     return operand->dumpState(os);
 }
+
+
+
+template <typename Op>
+struct OpMaker;
+
+template <>
+struct OpMaker<OpOr> {
+    ExprRef<BoolView> make(ExprRef<SequenceView>);
+};
 
 ExprRef<BoolView> OpMaker<OpOr>::make(ExprRef<SequenceView> o) {
     return make_shared<OpOr>(move(o));

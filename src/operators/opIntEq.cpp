@@ -1,5 +1,4 @@
 #include "operators/opIntEq.h"
-#include "operators/operatorMakers.h"
 #include "operators/simpleOperator.hpp"
 using namespace std;
 void OpIntEq::reevaluate() {
@@ -20,6 +19,13 @@ ostream& OpIntEq::dumpState(ostream& os) const {
     right->dumpState(os);
     return os;
 }
+template <typename Op>
+struct OpMaker;
+
+template <>
+struct OpMaker<OpIntEq> {
+    ExprRef<BoolView> make(ExprRef<IntView> l, ExprRef<IntView> r);
+};
 
 ExprRef<BoolView> OpMaker<OpIntEq>::make(ExprRef<IntView> l,
                                          ExprRef<IntView> r) {

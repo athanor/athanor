@@ -1,7 +1,6 @@
 #include "operators/opSequenceLit.h"
 #include <cassert>
 #include <cstdlib>
-#include "operators/operatorMakers.h"
 #include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
@@ -154,6 +153,13 @@ void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         },
         members);
 }
+template <typename Op>
+struct OpMaker;
+
+template <>
+struct OpMaker<OpSequenceLit> {
+    ExprRef<SequenceView> make(AnyExprVec members);
+};
 
 ExprRef<SequenceView> OpMaker<OpSequenceLit>::make(AnyExprVec o) {
     return make_shared<OpSequenceLit>(move(o));

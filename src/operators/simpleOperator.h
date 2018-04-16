@@ -10,7 +10,7 @@ struct SimpleBinaryOperator : public View {
     typedef typename OperatorTrates<Derived>::LeftTrigger LeftTrigger;
     typedef typename OperatorTrates<Derived>::RightTrigger RightTrigger;
     ExprRef<OperandView> left;
-    ExprRef<IntView> right;
+    ExprRef<OperandView> right;
     std::shared_ptr<LeftTrigger> leftTrigger;
     std::shared_ptr<RightTrigger> rightTrigger;
 

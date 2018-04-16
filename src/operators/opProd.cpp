@@ -1,7 +1,6 @@
 #include "operators/opProd.h"
 #include <algorithm>
 #include <cassert>
-#include "operators/operatorMakers.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
@@ -87,6 +86,13 @@ std::ostream& OpProd::dumpState(std::ostream& os) const {
     os << "OpProd: value=" << value << endl;
     return operand->dumpState(os);
 }
+template <typename Op>
+struct OpMaker;
+
+template <>
+struct OpMaker<OpProd> {
+    ExprRef<IntView> make(ExprRef<SequenceView>);
+};
 
 ExprRef<IntView> OpMaker<OpProd>::make(ExprRef<SequenceView> o) {
     return make_shared<OpProd>(move(o));

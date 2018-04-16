@@ -1,72 +1,12 @@
 #include "operators/opSetNotEq.h"
 #include <iostream>
 #include <memory>
-#include "types/set.h"
 
 using namespace std;
 
-inline void setViolation(OpSetNotEq& op, bool trigger) {
-    UInt newViolation =
-        (op.left->view().cachedHashTotal == op.right->view().cachedHashTotal)
-            ? 1
-            : 0;
-    if (trigger) {
-        op.changeValue([&]() {
-            op.violation = newViolation;
-            return true;
-        });
-    } else {
-        op.violation = newViolation;
-    }
-}
-
-void OpSetNotEq::evaluate() {
-    left->evaluate();
-    right->evaluate();
-    setViolation(*this, false);
-}
-
-class OpSetNotEqTrigger
-    : public ChangeTriggerAdapter<SetTrigger, OpSetNotEqTrigger> {
-   public:
-    OpSetNotEq* op;
-    OpSetNotEqTrigger(OpSetNotEq* op) : op(op) {}
-    inline void adapterPossibleValueChange() {}
-    inline void adapterValueChanged() { setViolation(*op, true); }
-};
-
-OpSetNotEq::OpSetNotEq(OpSetNotEq&& other)
-    : BoolView(std::move(other)),
-      left(std::move(other.left)),
-      right(std::move(other.right)),
-      trigger(std::move(other.trigger)) {
-    setTriggerParent(this, trigger);
-}
-
-void OpSetNotEq::startTriggering() {
-    if (!trigger) {
-        trigger = make_shared<OpSetNotEqTrigger>(this);
-        left->addTrigger(trigger);
-        right->addTrigger(trigger);
-        left->startTriggering();
-        right->startTriggering();
-    }
-}
-
-void OpSetNotEq::stopTriggeringOnChildren() {
-    if (trigger) {
-        deleteTrigger(trigger);
-        trigger = nullptr;
-    }
-}
-
-void OpSetNotEq::stopTriggering() {
-    if (trigger) {
-        deleteTrigger(trigger);
-        trigger = nullptr;
-        left->stopTriggering();
-        right->stopTriggering();
-    }
+void OpSetNotEq::reevaluate() {
+    violation =
+        (left->view().cachedHashTotal == right->view().cachedHashTotal) ? 1 : 0;
 }
 
 void OpSetNotEq::updateViolationDescription(UInt,
@@ -75,14 +15,7 @@ void OpSetNotEq::updateViolationDescription(UInt,
     right->updateViolationDescription(violation, vioDesc);
 }
 
-ExprRef<BoolView> OpSetNotEq::deepCopySelfForUnroll(
-    const ExprRef<BoolView>&, const AnyIterRef& iterator) const {
-    auto newOpSetNotEq =
-        make_shared<OpSetNotEq>(left->deepCopySelfForUnroll(left, iterator),
-                                right->deepCopySelfForUnroll(right, iterator));
-    newOpSetNotEq->violation = violation;
-    return newOpSetNotEq;
-}
+void OpSetNotEq::copy(OpSetNotEq& newOp) const { newOp.violation = violation; }
 
 std::ostream& OpSetNotEq::dumpState(std::ostream& os) const {
     os << "OpSetNotEq: violation=" << violation << "\nleft: ";
@@ -93,7 +26,14 @@ std::ostream& OpSetNotEq::dumpState(std::ostream& os) const {
     return os;
 }
 
-void OpSetNotEq::findAndReplaceSelf(const FindAndReplaceFunction& func) {
-    this->left = findAndReplace(left, func);
-    this->right = findAndReplace(right, func);
+template <typename Op>
+struct OpMaker;
+template <>
+struct OpMaker<OpSetNotEq> {
+    ExprRef<BoolView> make(ExprRef<SetView> l, ExprRef<SetView> r);
+};
+
+ExprRef<BoolView> OpMaker<OpSetNotEq>::make(ExprRef<SetView> l,
+                                            ExprRef<SetView> r) {
+    return make_shared<OpSetNotEq>(move(l), move(r));
 }

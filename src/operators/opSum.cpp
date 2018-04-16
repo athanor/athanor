@@ -2,11 +2,11 @@
 #include <algorithm>
 #include <cassert>
 #include "operators/shiftViolatingIndices.h"
+#include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
 using namespace std;
-using OperandsSequenceTrigger = OpSum::OperandsSequenceTrigger;
-void reevaluate(OpSum& op);
-class OpSum::OperandsSequenceTrigger : public SequenceTrigger {
+using OperandsSequenceTrigger = OperatorTrates<OpSum>::OperandsSequenceTrigger;
+class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
    public:
     Int previousValue;
     OpSum* op;
@@ -35,14 +35,14 @@ class OpSum::OperandsSequenceTrigger : public SequenceTrigger {
         previousValue = 0;
         for (size_t i = startIndex; i < endIndex; i++) {
             previousValue +=
-                op->operands->view().getMembers<IntView>()[i]->view().value;
+                op->operand->view().getMembers<IntView>()[i]->view().value;
         }
     }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         Int newValue = 0;
         for (size_t i = startIndex; i < endIndex; i++) {
             UInt operandValue =
-                op->operands->view().getMembers<IntView>()[i]->view().value;
+                op->operand->view().getMembers<IntView>()[i]->view().value;
             newValue += operandValue;
         }
         op->changeValue([&]() {
@@ -54,76 +54,46 @@ class OpSum::OperandsSequenceTrigger : public SequenceTrigger {
     void possibleValueChange() final {}
     void valueChanged() final {
         op->changeValue([&]() {
-            reevaluate(*op);
+            op->reevaluate();
             return true;
         });
     }
+    void reattachTrigger() final {
+        deleteTrigger(op->operandTrigger);
+        auto trigger = make_shared<OperandsSequenceTrigger>(op);
+        op->operand->addTrigger(trigger);
+        op->operandTrigger = trigger;
+    }
 };
 
-inline void reevaluate(OpSum& op) {
-    op.value = 0;
-    for (size_t i = 0; i < op.operands->view().numberElements(); ++i) {
-        auto& operand = op.operands->view().getMembers<IntView>()[i];
-        op.value += operand->view().value;
-    }
-}
-
-void OpSum::evaluate() {
-    operands->evaluate();
-    reevaluate(*this);
-}
-
-OpSum::OpSum(OpSum&& other)
-    : IntView(move(other)),
-      operands(move(other.operands)),
-      operandsSequenceTrigger(move(other.operandsSequenceTrigger)) {
-    setTriggerParent(this, operandsSequenceTrigger);
-}
-
-void OpSum::startTriggering() {
-    if (!operandsSequenceTrigger) {
-        operandsSequenceTrigger =
-            std::make_shared<OperandsSequenceTrigger>(this);
-        operands->addTrigger(operandsSequenceTrigger);
-        operands->startTriggering();
-    }
-}
-
-void OpSum::stopTriggeringOnChildren() {
-    if (operandsSequenceTrigger) {
-        deleteTrigger(operandsSequenceTrigger);
-        operandsSequenceTrigger = nullptr;
-    }
-}
-
-void OpSum::stopTriggering() {
-    if (operandsSequenceTrigger) {
-        deleteTrigger(operandsSequenceTrigger);
-        operandsSequenceTrigger = nullptr;
-        operands->stopTriggering();
+void OpSum::reevaluate() {
+    value = 0;
+    for (auto& operandChild : operand->view().getMembers<IntView>()) {
+        value += operandChild->view().value;
     }
 }
 
 void OpSum::updateViolationDescription(UInt parentViolation,
                                        ViolationDescription& vioDesc) {
-    for (auto& operand : operands->view().getMembers<IntView>()) {
-        operand->updateViolationDescription(parentViolation, vioDesc);
+    for (auto& operandChild : operand->view().getMembers<IntView>()) {
+        operandChild->updateViolationDescription(parentViolation, vioDesc);
     }
 }
 
-ExprRef<IntView> OpSum::deepCopySelfForUnroll(
-    const ExprRef<IntView>&, const AnyIterRef& iterator) const {
-    auto newOpSum =
-        make_shared<OpSum>(operands->deepCopySelfForUnroll(operands, iterator));
-    newOpSum->value = value;
-    return newOpSum;
-}
+void OpSum::copy(OpSum& newOp) const { newOp.value = value; }
 
 std::ostream& OpSum::dumpState(std::ostream& os) const {
     os << "OpSum: value=" << value << endl;
-    return operands->dumpState(os);
+    return operand->dumpState(os);
 }
+template <typename Op>
+struct OpMaker;
 
-void OpSum::findAndReplaceSelf(const FindAndReplaceFunction& func) {
-    this->operands = findAndReplace(operands, func);
+template <>
+struct OpMaker<OpSum> {
+    ExprRef<IntView> make(ExprRef<SequenceView>);
+};
+
+ExprRef<IntView> OpMaker<OpSum>::make(ExprRef<SequenceView> o) {
+    return make_shared<OpSum>(move(o));
 }

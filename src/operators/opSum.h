@@ -1,29 +1,27 @@
 
 #ifndef SRC_OPERATORS_OPSUM_H_
 #define SRC_OPERATORS_OPSUM_H_
-#include <vector>
+#include "operators/simpleOperator.h"
 #include "types/int.h"
 #include "types/sequence.h"
-struct OpSum : public IntView {
-    class OperandsSequenceTrigger;
-    ExprRef<SequenceView> operands;
-    std::shared_ptr<OperandsSequenceTrigger> operandsSequenceTrigger;
+#include "utils/fastIterableIntSet.h"
 
-   public:
-    OpSum(ExprRef<SequenceView> operands) : operands(std::move(operands)) {}
-    OpSum(const OpSum& other) = delete;
-    OpSum(OpSum&& other);
-    virtual ~OpSum() { this->stopTriggeringOnChildren(); }
-    void evaluate() final;
-    void startTriggering() final;
-    void stopTriggering() final;
-    void stopTriggeringOnChildren();
+struct OpSum;
+template <>
+struct OperatorTrates<OpSum> {
+    class OperandsSequenceTrigger;
+    typedef OperandsSequenceTrigger OperandTrigger;
+};
+
+struct OpSum : public SimpleUnaryOperator<IntView, SequenceView, OpSum> {
+    using SimpleUnaryOperator<IntView, SequenceView,
+                              OpSum>::SimpleUnaryOperator;
+
+    void reevaluate();
     void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription&) final;
-    ExprRef<IntView> deepCopySelfForUnroll(
-        const ExprRef<IntView>&, const AnyIterRef& iterator) const final;
+                                    ViolationDescription& vioDesc) final;
+    void copy(OpSum& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 };
 
 #endif /* SRC_OPERATORS_OPSUM_H_ */

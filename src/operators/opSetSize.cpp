@@ -5,66 +5,13 @@
 
 using namespace std;
 
-void OpSetSize::evaluate() {
-    operand->evaluate();
-    value = operand->view().numberElements();
-}
-
-class OpSetSizeTrigger
-    : public ChangeTriggerAdapter<SetTrigger, OpSetSizeTrigger> {
-   public:
-    OpSetSize* op;
-    OpSetSizeTrigger(OpSetSize* op) : op(op) {}
-    inline void adapterPossibleValueChange() {}
-    inline void adapterValueChanged() {
-        op->changeValue([&]() {
-            op->value = op->operand->view().numberElements();
-            return true;
-        });
-    }
-};
-
-OpSetSize::OpSetSize(OpSetSize&& other)
-    : IntView(std::move(other)),
-      operand(std::move(other.operand)),
-      operandTrigger(std::move(other.operandTrigger)) {
-    setTriggerParent(this, operandTrigger);
-}
-void OpSetSize::startTriggering() {
-    if (!operandTrigger) {
-        operandTrigger = make_shared<OpSetSizeTrigger>(this);
-        operand->addTrigger(operandTrigger);
-        operand->startTriggering();
-    }
-}
-
-void OpSetSize::stopTriggeringOnChildren() {
-    if (operandTrigger) {
-        deleteTrigger(operandTrigger);
-        operandTrigger = nullptr;
-    }
-}
-
-void OpSetSize::stopTriggering() {
-    if (operandTrigger) {
-        deleteTrigger(operandTrigger);
-        operandTrigger = nullptr;
-        operand->stopTriggering();
-    }
-}
-
+void OpSetSize::reevaluate() { value = operand->view().numberElements(); }
 void OpSetSize::updateViolationDescription(UInt parentViolation,
                                            ViolationDescription& vioDesc) {
     operand->updateViolationDescription(parentViolation, vioDesc);
 }
 
-ExprRef<IntView> OpSetSize::deepCopySelfForUnroll(
-    const ExprRef<IntView>&, const AnyIterRef& iterator) const {
-    auto newOpSetSize = make_shared<OpSetSize>(
-        operand->deepCopySelfForUnroll(operand, iterator));
-    newOpSetSize->value = value;
-    return newOpSetSize;
-}
+void OpSetSize::copy(OpSetSize& newOp) const { newOp.value = value; }
 
 std::ostream& OpSetSize::dumpState(std::ostream& os) const {
     os << "OpSetSize: value=" << value << "\noperand: ";
@@ -72,6 +19,14 @@ std::ostream& OpSetSize::dumpState(std::ostream& os) const {
     return os;
 }
 
-void OpSetSize::findAndReplaceSelf(const FindAndReplaceFunction& func) {
-    this->operand = findAndReplace(operand, func);
+template <typename Op>
+struct OpMaker;
+
+template <>
+struct OpMaker<OpSetSize> {
+    ExprRef<IntView> make(ExprRef<SetView> o);
+};
+
+ExprRef<IntView> OpMaker<OpSetSize>::make(ExprRef<SetView> o) {
+    return make_shared<OpSetSize>(move(o));
 }

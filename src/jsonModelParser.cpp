@@ -5,16 +5,7 @@
 #include <unordered_map>
 #include <utility>
 #include "common/common.h"
-#include "operators/opAnd.h"
-#include "operators/opIntEq.h"
-#include "operators/opMod.h"
-#include "operators/opOr.h"
-#include "operators/opProd.h"
-#include "operators/opSequenceLit.h"
-#include "operators/opSetNotEq.h"
-#include "operators/opSetSize.h"
-#include "operators/opSubsetEq.h"
-#include "operators/opSum.h"
+#include "operators/operatorMakers.h"
 #include "operators/quantifier.h"
 #include "search/model.h"
 #include "types/allTypes.h"
@@ -296,8 +287,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpMod(json& modExpr,
     ExprRef<IntView> right =
         expect<IntView>(parseExpr(modExpr[1], parsedModel).second,
                         [&](auto&&) { cerr << errorMessage << modExpr[1]; });
-    return make_pair(fakeIntDomain, ExprRef<IntView>(make_shared<OpMod>(
-                                        move(left), move(right))));
+    return make_pair(fakeIntDomain,
+                     OpMaker<OpMod>::make(move(left), move(right)));
 }
 
 pair<AnyDomainRef, AnyExprRef> parseOpSubsetEq(json& subsetExpr,
@@ -310,8 +301,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpSubsetEq(json& subsetExpr,
     ExprRef<SetView> right =
         expect<SetView>(parseExpr(subsetExpr[1], parsedModel).second,
                         [&](auto&&) { cerr << errorMessage << subsetExpr[1]; });
-    return make_pair(fakeBoolDomain, ExprRef<BoolView>(make_shared<OpSubsetEq>(
-                                         move(left), move(right))));
+    return make_pair(fakeBoolDomain,
+                     OpMaker<OpSubsetEq>::make(move(left), move(right)));
 }
 
 pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
@@ -321,8 +312,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
         overloaded(
             [&](ExprRef<SetView>& set)
                 -> pair<shared_ptr<IntDomain>, AnyExprRef> {
-                return make_pair(fakeIntDomain,
-                                 ExprRef<IntView>(make_shared<OpSetSize>(set)));
+                return make_pair(fakeIntDomain, OpMaker<OpSetSize>::make(set));
             },
             [&](auto&& operand) -> pair<shared_ptr<IntDomain>, AnyExprRef> {
                 cerr << "Error, not yet handling OpTwoBars with an operand "
@@ -353,8 +343,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
                     -> pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> {
                     return make_pair(
                         fakeBoolDomain,
-                        ExprRef<BoolView>(make_shared<OpIntEq>(
-                            left, expect<IntView>(right, errorHandler))));
+                        OpMaker<OpIntEq>::make(
+                            left, expect<IntView>(right, errorHandler)));
                 },
                 [&](auto&& left)
                     -> pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> {
@@ -395,9 +385,8 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseConstantMatrix(
             expr.second);
         first = false;
     }
-    auto sequenceLit = make_shared<OpSequenceLit>(move(newSequenceMembers));
     return make_pair(fakeSequenceDomain(innerDomain),
-                     ExprRef<SequenceView>(sequenceLit));
+                     OpMaker<OpSequenceLit>::make(move(newSequenceMembers)));
 }
 
 template <typename ContainerDomainType, typename Quantifier>
@@ -487,8 +476,8 @@ auto makeVaradicOpParser(const Domain& domain) {
                ParsedModel& parsedModel) -> pair<AnyDomainRef, AnyExprRef> {
         return make_pair(
             domain,
-            ExprRef<View>(make_shared<Op>(
-                parseSequenceLikeExpr(essenceExpr, parsedModel).second)));
+            OpMaker<Op>::make(
+                parseSequenceLikeExpr(essenceExpr, parsedModel).second));
     };
 }
 

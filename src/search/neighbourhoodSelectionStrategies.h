@@ -46,16 +46,15 @@ class RandomNeighbourhoodWithViolation {
 
     inline void initialise(Model& model) {
         model.vioDesc.reset();
-        if (model.csp.violation == 0) {
+        if (model.csp->violation == 0) {
             return;
         }
-        model.csp.updateViolationDescription(0, model.vioDesc);
+        model.csp->updateViolationDescription(0, model.vioDesc);
     }
     inline void reportResult(NeighbourhoodResult&& result) {
         initialise(result.model);
     }
-    inline int selectNeighbourhoodFromVarId(const Model& model,
-                                            UInt varId) {
+    inline int selectNeighbourhoodFromVarId(const Model& model, UInt varId) {
         return model.varNeighbourhoodMapping[varId][globalRandom<size_t>(
             0, model.varNeighbourhoodMapping[varId].size() - 1)];
     }
@@ -123,10 +122,10 @@ class InteractiveNeighbourhoodSelector {
 
     inline void initialise(Model& model) {
         model.vioDesc.reset();
-        if (model.csp.violation == 0) {
+        if (model.csp->violation == 0) {
             return;
         }
-        model.csp.updateViolationDescription(0, model.vioDesc);
+        model.csp->updateViolationDescription(0, model.vioDesc);
     }
     inline void reportResult(NeighbourhoodResult&& result) {
         initialise(result.model);

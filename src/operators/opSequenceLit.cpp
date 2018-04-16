@@ -1,6 +1,7 @@
 #include "operators/opSequenceLit.h"
 #include <cassert>
 #include <cstdlib>
+#include "operators/simpleOperator.hpp"
 #include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 using namespace std;

@@ -1,6 +1,7 @@
 #include "operators/opSetNotEq.h"
 #include <iostream>
 #include <memory>
+#include "operators/simpleOperator.hpp"
 
 using namespace std;
 

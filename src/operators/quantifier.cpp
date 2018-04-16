@@ -1,4 +1,5 @@
 #include "operators/quantifier.h"
+#include <vector>
 #include "types/allTypes.h"
 using namespace std;
 template <typename ContainerType>
@@ -161,13 +162,15 @@ struct ExprChangeTrigger
             this->op->members);
     }
     void reattachTrigger() final {
+        auto& triggerToChange = this->op->exprTriggers.at(this->index);
         deleteTrigger(
             static_pointer_cast<ExprChangeTrigger<ContainerType, ViewType>>(
-                this->op->exprTriggers[index]));
+                triggerToChange));
         auto trigger = make_shared<ExprChangeTrigger<ContainerType, ViewType>>(
-            this->op, index);
-        this->op->template getMembers<ViewType>()[index]->addTrigger(trigger);
-        this->op->exprTriggers[index] = trigger;
+            this->op, this->index);
+        this->op->template getMembers<ViewType>()[this->index]->addTrigger(
+            trigger);
+        triggerToChange = trigger;
     }
 };
 

@@ -5,6 +5,7 @@
 #include <memory>
 #include "base/exprRef.h"
 #include "base/typeDecls.h"
+#include "utils/ignoreUnused.h"
 
 template <typename T>
 struct ExprRef;
@@ -122,6 +123,7 @@ struct ForwardingTriggerBase : public virtual TriggerBase {
         std::vector<std::shared_ptr<TriggerType>>* recipientTriggers)
         : recipientTriggers(recipientTriggers) {}
     virtual ~ForwardingTriggerBase() {}
+    void reattachTrigger() { todoImpl(); }
 };
 
 template <typename TriggerType>

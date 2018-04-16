@@ -40,7 +40,7 @@ class HillClimber {
     inline bool acceptValue() {
         UInt newObjValue = model.objective->view().value;
         Int deltaObj = getDeltaObj(lastObjValue, newObjValue);
-        Int deltaViolation = lastViolation - model.csp.violation;
+        Int deltaViolation = lastViolation - model.csp->violation;
         bool solutionAllowed;
         if (!otherPhase) {
             solutionAllowed =
@@ -48,7 +48,7 @@ class HillClimber {
         } else {
             solutionAllowed = deltaViolation >= 0 &&
                               getDeltaObj(bestObjValue, newObjValue) > 0;
-            if (solutionAllowed && model.csp.violation == 0) {
+            if (solutionAllowed && model.csp->violation == 0) {
                 otherPhase = false;
                 numberNodesAtLastEvent = stats.majorNodeCount;
             }
@@ -60,7 +60,7 @@ class HillClimber {
                 numberNodesAtLastEvent = stats.majorNodeCount;
             }
 
-            lastViolation = model.csp.violation;
+            lastViolation = model.csp->violation;
             if (model.optimiseMode != OptimiseMode::NONE) {
                 lastObjValue = newObjValue;
             }
@@ -93,10 +93,10 @@ class HillClimber {
 
         stats.startTimer();
         assignRandomValueToVariables();
-        model.csp.evaluate();
-        lastViolation = model.csp.violation;
+        model.csp->evaluate();
+        lastViolation = model.csp->violation;
         bestViolation = lastViolation;
-        model.csp.startTriggering();
+        model.csp->startTriggering();
 
         if (model.optimiseMode != OptimiseMode::NONE) {
             model.objective->evaluate();
@@ -162,7 +162,7 @@ class HillClimber {
             std::cout << "solution end\n";
         }
         debug_code(debug_log("CSP state:");
-                   model.csp.dumpState(std::cout) << std::endl;
+                   model.csp->dumpState(std::cout) << std::endl;
                    if (model.optimiseMode != OptimiseMode::NONE) {
                        debug_log("Objective state:");
                        model.objective->dumpState(std::cout) << std::endl;

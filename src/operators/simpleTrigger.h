@@ -57,7 +57,7 @@ struct SimpleUnaryTrigger
         deleteTrigger(op->operandTrigger);
         auto newTrigger =
             std::make_shared<SimpleUnaryTrigger<Op, TriggerType>>(op);
-        op->operand.addTrigger(newTrigger);
+        op->operand->addTrigger(newTrigger);
         op->operandTrigger = newTrigger;
     }
 };

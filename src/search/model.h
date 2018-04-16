@@ -20,11 +20,9 @@ struct Model {
     std::vector<Neighbourhood> neighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
-    OpAnd csp = OpAnd(ExprRef<SequenceView>(
-        std::make_shared<OpSequenceLit>(ExprRefVec<BoolView>())));
+    std::shared_ptr<OpAnd> csp = nullptr;
     ExprRef<IntView> objective = make<IntValue>().asExpr();
     OptimiseMode optimiseMode = OptimiseMode::NONE;
-    ;
     ViolationDescription vioDesc;
     std::unordered_map<size_t, AnyExprRef> definingExpressions;
 
@@ -66,8 +64,8 @@ class ModelBuilder {
         model.optimiseMode = mode;
     }
     Model build() {
-        model.csp = OpAnd(ExprRef<SequenceView>(
-            std::make_shared<OpSequenceLit>(move(constraints))));
+        model.csp = std::make_shared<OpAnd>(
+            std::make_shared<OpSequenceLit>(move(constraints)));
         for (size_t i = 0; i < model.variables.size(); ++i) {
             if (valBase(model.variables[i].second).container == &definedPool) {
                 continue;
@@ -129,7 +127,7 @@ class ModelBuilder {
         for (auto& var : varsToBeDefined) {
             auto func = makeFindReplaceFunc(
                 var, model.definingExpressions.at(valBase(var).id));
-            model.csp.operands = findAndReplace(model.csp.operands, func);
+            model.csp->operand = findAndReplace(model.csp->operand, func);
             model.objective = findAndReplace(model.objective, func);
         }
     }

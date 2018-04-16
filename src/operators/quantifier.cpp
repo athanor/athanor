@@ -160,7 +160,15 @@ struct ExprChangeTrigger
             },
             this->op->members);
     }
-    ExprChangeTrigger() {}
+    void reattachTrigger() final {
+        deleteTrigger(
+            static_pointer_cast<ExprChangeTrigger<ContainerType, ViewType>>(
+                this->op->exprTriggers[index]));
+        auto trigger = make_shared<ExprChangeTrigger<ContainerType, ViewType>>(
+            this->op, index);
+        this->op->template getMembers<ViewType>()[index]->addTrigger(trigger);
+        this->op->exprTriggers[index] = trigger;
+    }
 };
 
 template <typename ContainerType>
@@ -326,6 +334,12 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
             },
             valuesToUnroll);
     }
+    void reattachTrigger() final {
+        deleteTrigger(op->containerTrigger);
+        auto trigger = make_shared<ContainerTrigger<SetView>>(op);
+        op->container->addTrigger(trigger);
+        op->containerTrigger = trigger;
+    }
 };
 
 template <>
@@ -397,6 +411,12 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
                 vToUnroll.clear();
             },
             valuesToUnroll);
+    }
+    void reattachTrigger() final {
+        deleteTrigger(op->containerTrigger);
+        auto trigger = make_shared<ContainerTrigger<MSetView>>(op);
+        op->container->addTrigger(trigger);
+        op->containerTrigger = trigger;
     }
 };
 

@@ -4,30 +4,20 @@
 #include "types/set.h"
 using namespace std;
 
-using LeftSetTrigger = OpSubsetEq::LeftSetTrigger;
-using RightSetTrigger = OpSubsetEq::RightSetTrigger;
-
-inline void evaluate(OpSubsetEq& op) {
-    op.violation = 0;
-    for (auto& hashIndexPair : op.left->view().hashIndexMap) {
-        op.violation +=
-            !op.right->view().hashIndexMap.count(hashIndexPair.first);
+void OpSubsetEq::reevaluate() {
+    violation = 0;
+    for (auto& hashIndexPair : left->view().hashIndexMap) {
+        violation += !right->view().hashIndexMap.count(hashIndexPair.first);
     }
 }
 
-void OpSubsetEq::evaluate() {
-    left->evaluate();
-    right->evaluate();
-    ::evaluate(*this);
-}
-
-struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
+struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
    public:
     OpSubsetEq* op;
     HashType oldHash;
 
    public:
-    LeftSetTrigger(OpSubsetEq* op) : op(op) {}
+    LeftTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(UInt, HashType hash) final {
         if (!op->right->view().hashIndexMap.count(hash)) {
             op->changeValue([&]() {
@@ -49,7 +39,7 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
     void possibleValueChange() final {}
     inline void valueChanged() final {
         op->changeValue([&]() {
-            ::evaluate(*op);
+            op->reevaluate();
             return true;
         });
     }
@@ -63,13 +53,19 @@ struct OpSubsetEq::LeftSetTrigger : public SetTrigger {
         valueRemoved(0, oldHash);
         valueAdded(member);
     }
+    void reattachTrigger() final {
+        deleteTrigger(op->leftTrigger);
+        auto trigger = make_shared<OperatorTrates<OpSubsetEq>::LeftTrigger>(op);
+        op->left->addTrigger(trigger);
+        op->leftTrigger = trigger;
+    }
 };
 
-struct OpSubsetEq::RightSetTrigger : public SetTrigger {
+struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
     OpSubsetEq* op;
     HashType oldHash;
 
-    RightSetTrigger(OpSubsetEq* op) : op(op) {}
+    RightTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(UInt, HashType hash) final {
         if (op->left->view().hashIndexMap.count(hash)) {
             op->changeValue([&]() {
@@ -91,7 +87,7 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
     void possibleValueChange() final {}
     inline void valueChanged() final {
         op->changeValue([&]() {
-            ::evaluate(*op);
+            op->reevaluate();
             return true;
         });
     }
@@ -105,51 +101,14 @@ struct OpSubsetEq::RightSetTrigger : public SetTrigger {
         valueRemoved(0, oldHash);
         valueAdded(member);
     }
+    void reattachTrigger() final {
+        deleteTrigger(op->rightTrigger);
+        auto trigger =
+            make_shared<OperatorTrates<OpSubsetEq>::RightTrigger>(op);
+        op->left->addTrigger(trigger);
+        op->rightTrigger = trigger;
+    }
 };
-
-OpSubsetEq::OpSubsetEq(OpSubsetEq&& other)
-    : BoolView(std::move(other)),
-      left(std::move(other.left)),
-      right(std::move(other.right)),
-      leftTrigger(std::move(other.leftTrigger)),
-      rightTrigger(std::move(other.rightTrigger)) {
-    setTriggerParent(this, leftTrigger, rightTrigger);
-}
-
-void OpSubsetEq::startTriggering() {
-    if (!leftTrigger) {
-        leftTrigger = make_shared<LeftSetTrigger>(this);
-        rightTrigger = make_shared<RightSetTrigger>(this);
-        left->addTrigger(leftTrigger);
-        right->addTrigger(rightTrigger);
-        left->startTriggering();
-        right->startTriggering();
-    }
-}
-
-void OpSubsetEq::stopTriggeringOnChildren() {
-    if (leftTrigger) {
-        deleteTrigger(leftTrigger);
-        leftTrigger = nullptr;
-    }
-    if (rightTrigger) {
-        deleteTrigger<SetTrigger>(rightTrigger);
-        rightTrigger = nullptr;
-    }
-}
-
-void OpSubsetEq::stopTriggering() {
-    if (leftTrigger) {
-        deleteTrigger(leftTrigger);
-        leftTrigger = nullptr;
-        left->stopTriggering();
-    }
-    if (rightTrigger) {
-        deleteTrigger<SetTrigger>(rightTrigger);
-        rightTrigger = nullptr;
-        right->stopTriggering();
-    }
-}
 
 void OpSubsetEq::updateViolationDescription(UInt,
                                             ViolationDescription& vioDesc) {
@@ -157,14 +116,7 @@ void OpSubsetEq::updateViolationDescription(UInt,
     right->updateViolationDescription(violation, vioDesc);
 }
 
-ExprRef<BoolView> OpSubsetEq::deepCopySelfForUnroll(
-    const ExprRef<BoolView>&, const AnyIterRef& iterator) const {
-    auto newOpSubsetEq =
-        make_shared<OpSubsetEq>(left->deepCopySelfForUnroll(left, iterator),
-                                right->deepCopySelfForUnroll(right, iterator));
-    newOpSubsetEq->violation = violation;
-    return newOpSubsetEq;
-}
+void OpSubsetEq::copy(OpSubsetEq& newOp) const { newOp.violation = violation; }
 
 std::ostream& OpSubsetEq::dumpState(std::ostream& os) const {
     os << "OpSubsetEq: violation=" << violation << "\nLeft: ";
@@ -173,8 +125,15 @@ std::ostream& OpSubsetEq::dumpState(std::ostream& os) const {
     right->dumpState(os);
     return os;
 }
+template <typename Op>
+struct OpMaker;
 
-void OpSubsetEq::findAndReplaceSelf(const FindAndReplaceFunction& func) {
-    this->left = findAndReplace(left, func);
-    this->right = findAndReplace(right, func);
+template <>
+struct OpMaker<OpSubsetEq> {
+    ExprRef<BoolView> make(ExprRef<SetView> l, ExprRef<SetView> r);
+};
+
+ExprRef<BoolView> OpMaker<OpSubsetEq>::make(ExprRef<SetView> l,
+                                            ExprRef<SetView> r) {
+    return make_shared<OpSubsetEq>(move(l), move(r));
 }

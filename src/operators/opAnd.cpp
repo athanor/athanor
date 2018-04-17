@@ -143,3 +143,7 @@ struct OpMaker<OpAnd> {
 ExprRef<BoolView> OpMaker<OpAnd>::make(ExprRef<SequenceView> o) {
     return make_shared<OpAnd>(move(o));
 }
+
+void initialiseOpAnd(OpAnd&) {}
+
+template struct SimpleUnaryOperator<BoolView, SequenceView, OpAnd>;

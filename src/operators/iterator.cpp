@@ -5,13 +5,6 @@
 
 using namespace std;
 
-#define iteratorInstantiators(name) \
-    template <>                     \
-    struct Iterator<name##View>;    \
-    Iterator<name##View> name##IteratorInstantiator(0, nullptr);
-buildForAllTypes(iteratorInstantiators, );
-#undef iteratorInstantiators
-
 template <typename View>
 void Iterator<View>::addTrigger(
     const shared_ptr<typename Iterator<View>::TriggerType>& trigger) {
@@ -88,3 +81,9 @@ std::ostream& operator<<(std::ostream& os, const AnyIterRef& ref) {
     mpark::visit([&](auto& ref) { ref->dumpState(os); }, ref);
     return os;
 }
+
+#define iteratorInstantiators(name)       \
+    template struct Iterator<name##View>;
+
+    buildForAllTypes(iteratorInstantiators, );
+#undef iteratorInstantiators

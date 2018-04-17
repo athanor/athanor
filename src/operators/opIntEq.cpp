@@ -24,7 +24,7 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpIntEq> {
-    ExprRef<BoolView> make(ExprRef<IntView> l, ExprRef<IntView> r);
+    static ExprRef<BoolView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
 
 ExprRef<BoolView> OpMaker<OpIntEq>::make(ExprRef<IntView> l,

@@ -91,7 +91,7 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpProd> {
-    ExprRef<IntView> make(ExprRef<SequenceView>);
+    static ExprRef<IntView> make(ExprRef<SequenceView>);
 };
 
 ExprRef<IntView> OpMaker<OpProd>::make(ExprRef<SequenceView> o) {

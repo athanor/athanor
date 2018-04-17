@@ -159,7 +159,7 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpSequenceLit> {
-    ExprRef<SequenceView> make(AnyExprVec members);
+    static ExprRef<SequenceView> make(AnyExprVec members);
 };
 
 ExprRef<SequenceView> OpMaker<OpSequenceLit>::make(AnyExprVec o) {

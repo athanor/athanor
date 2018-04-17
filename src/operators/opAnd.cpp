@@ -137,7 +137,7 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpAnd> {
-    ExprRef<BoolView> make(ExprRef<SequenceView>);
+    static ExprRef<BoolView> make(ExprRef<SequenceView>);
 };
 
 ExprRef<BoolView> OpMaker<OpAnd>::make(ExprRef<SequenceView> o) {

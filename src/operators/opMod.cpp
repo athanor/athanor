@@ -24,7 +24,7 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpMod> {
-    ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
+    static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
 
 ExprRef<IntView> OpMaker<OpMod>::make(ExprRef<IntView> l, ExprRef<IntView> r) {

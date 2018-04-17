@@ -25,7 +25,7 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpSetSize> {
-    ExprRef<IntView> make(ExprRef<SetView> o);
+    static ExprRef<IntView> make(ExprRef<SetView> o);
 };
 
 ExprRef<IntView> OpMaker<OpSetSize>::make(ExprRef<SetView> o) {

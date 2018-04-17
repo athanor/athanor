@@ -131,7 +131,7 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpSubsetEq> {
-    ExprRef<BoolView> make(ExprRef<SetView> l, ExprRef<SetView> r);
+    static ExprRef<BoolView> make(ExprRef<SetView> l, ExprRef<SetView> r);
 };
 
 ExprRef<BoolView> OpMaker<OpSubsetEq>::make(ExprRef<SetView> l,

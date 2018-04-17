@@ -31,7 +31,7 @@ template <typename Op>
 struct OpMaker;
 template <>
 struct OpMaker<OpSetNotEq> {
-    ExprRef<BoolView> make(ExprRef<SetView> l, ExprRef<SetView> r);
+    static ExprRef<BoolView> make(ExprRef<SetView> l, ExprRef<SetView> r);
 };
 
 ExprRef<BoolView> OpMaker<OpSetNotEq>::make(ExprRef<SetView> l,

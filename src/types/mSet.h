@@ -212,7 +212,7 @@ struct MSetValue : public MSetView, public ValBase {
         if (func()) {
             valBase(*member).container = this;
             valBase(*member).id = numberElements() - 1;
-            MSetView::notifyMemberAdded(member);
+            MSetView::notifyMemberAdded(member.asExpr());
             debug_code(assertValidVarBases());
             return true;
         } else {
@@ -251,11 +251,11 @@ struct MSetValue : public MSetView, public ValBase {
                 valBase(*member<InnerValueType>(index)).id = index;
             }
             debug_code(assertValidVarBases());
-            MSetView::notifyMemberRemoved(index, removedMember);
+            MSetView::notifyMemberRemoved(index, removedMember.asExpr());
             return std::make_pair(true, std::move(removedMember));
         } else {
             MSetView::addMember<InnerViewType>(removedMember.asExpr());
-            auto& members = getMembers<InnerValueType>();
+            auto& members = getMembers<InnerViewType>();
             std::swap(members[index], members.back());
             debug_code(assertValidState());
             debug_code(assertValidVarBases());

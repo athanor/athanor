@@ -204,7 +204,24 @@ void OpSequenceIndex<SequenceMemberViewType>::findAndReplaceSelf(
     this->sequenceOperand = findAndReplace(sequenceOperand, func);
 }
 
-#define opSequenceIndexInstantiators(name) \
-    template struct OpSequenceIndex<name##View>;
+template <typename Op>
+struct OpMaker;
+
+template <typename View>
+struct OpMaker<OpSequenceIndex<View>> {
+    static ExprRef<View> make(ExprRef<SequenceView> sequence,
+                              ExprRef<IntView> index);
+};
+
+template <typename View>
+ExprRef<View> OpMaker<OpSequenceIndex<View>>::make(
+    ExprRef<SequenceView> sequence, ExprRef<IntView> index) {
+    return make_shared<OpSequenceIndex<View>>(move(sequence), move(index));
+}
+
+#define opSequenceIndexInstantiators(name)       \
+    template struct OpSequenceIndex<name##View>; \
+    template struct OpMaker<OpSequenceIndex<name##View>>;
+
 buildForAllTypes(opSequenceIndexInstantiators, );
 #undef opSequenceIndexInstantiators

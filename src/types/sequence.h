@@ -415,49 +415,4 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
     inline void endSwaps() final { this->forwardValueChanged(); }
 };
 
-template <>
-struct ForwardingTrigger<SequenceTrigger>
-    : public SequenceTrigger, public ForwardingTriggerBase<SequenceTrigger> {
-    using ForwardingTriggerBase<SequenceTrigger>::ForwardingTriggerBase;
-    inline void possibleValueChange() final {
-        visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                      *recipientTriggers);
-    }
-    inline void valueChanged() final {
-        visitTriggers([&](auto& t) { t->valueChanged(); }, *recipientTriggers);
-    }
-    inline void valueRemoved(UInt index, const AnyExprRef& expr) {
-        visitTriggers([&](auto& t) { t->valueRemoved(index, expr); },
-                      *recipientTriggers);
-    }
-    inline void valueAdded(UInt index, const AnyExprRef& expr) final {
-        visitTriggers([&](auto& t) { t->valueAdded(index, expr); },
-                      *recipientTriggers);
-    }
-    inline void possibleSubsequenceChange(UInt startIndex,
-                                          UInt endIndex) final {
-        visitTriggers(
-            [&](auto& t) {
-                t->possibleSubsequenceChange(startIndex, endIndex);
-            },
-            *recipientTriggers);
-    }
-
-    inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
-        visitTriggers(
-            [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
-            *recipientTriggers);
-    }
-    inline void beginSwaps() final {
-        visitTriggers([&](auto& t) { t->beginSwaps(); }, *recipientTriggers);
-    }
-    inline void endSwaps() final {
-        visitTriggers([&](auto& t) { t->endSwaps(); }, *recipientTriggers);
-    }
-    inline void positionsSwapped(UInt index1, UInt index2) final {
-        visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
-                      *recipientTriggers);
-    }
-};
-
 #endif /* SRC_TYPES_SEQUENCE_H_ */

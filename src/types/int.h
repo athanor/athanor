@@ -65,18 +65,4 @@ struct ChangeTriggerAdapter<IntTrigger, Child>
     }
     inline void valueChanged() final { this->forwardValueChanged(); }
 };
-
-template <>
-struct ForwardingTrigger<IntTrigger>
-    : public IntTrigger, public ForwardingTriggerBase<IntTrigger> {
-    using ForwardingTriggerBase<IntTrigger>::ForwardingTriggerBase;
-    inline void possibleValueChange() final {
-        visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                      *recipientTriggers);
-    }
-    inline void valueChanged() final {
-        visitTriggers([&](auto& t) { t->valueChanged(); }, *recipientTriggers);
-    }
-};
-
 #endif /* SRC_TYPES_INT_H_ */

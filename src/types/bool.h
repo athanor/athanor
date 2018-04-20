@@ -53,17 +53,4 @@ struct ChangeTriggerAdapter<BoolTrigger, Child>
     inline void valueChanged() final { this->forwardValueChanged(); }
 };
 
-template <>
-struct ForwardingTrigger<BoolTrigger>
-    : public BoolTrigger, public ForwardingTriggerBase<BoolTrigger> {
-    using ForwardingTriggerBase<BoolTrigger>::ForwardingTriggerBase;
-    inline void possibleValueChange() final {
-        visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                      *recipientTriggers);
-    }
-    inline void valueChanged() final {
-        visitTriggers([&](auto& t) { t->valueChanged(); }, *recipientTriggers);
-    }
-};
-
 #endif /* SRC_TYPES_BOOL_H_ */

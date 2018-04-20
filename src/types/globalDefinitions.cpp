@@ -12,59 +12,38 @@ vector<shared_ptr<DelayedTrigger>> delayedTriggerStack;
 
 inline pair<bool, ViolationDescription&> registerViolations(
     const ValBase* val, const UInt violation, ViolationDescription& vioDesc);
-#define specialised(name)                                                   \
-    template <>                                                             \
-    shared_ptr<name##Value> makeShared<name##Value>() {                     \
-        return make_shared<name##Value>();                                  \
-    }                                                                       \
-    const string TypeAsString<name##Value>::value = quote(name##Value);     \
-    const string TypeAsString<name##Domain>::value = quote(name##Domain);   \
-    template <>                                                             \
-    ValBase& valBase<name##Value>(name##Value & v) {                        \
-        return v;                                                           \
-    }                                                                       \
-    template <>                                                             \
-    const ValBase& valBase<name##Value>(const name##Value& v) {             \
-        return v;                                                           \
-    }                                                                       \
-                                                                            \
-    void name##Value::evaluate() {}                                         \
-    void name##Value::startTriggering() {}                                  \
-    void name##Value::stopTriggering() {}                                   \
-    void name##Value::updateViolationDescription(                           \
-        UInt parentViolation, ViolationDescription& vioDesc) {              \
-        registerViolations(this, parentViolation, vioDesc);                 \
-    }                                                                       \
-    ExprRef<name##View> name##Value::deepCopySelfForUnroll(                 \
-        const ExprRef<name##View>& self, const AnyIterRef&) const {         \
-        return self;                                                        \
-    }                                                                       \
-    std::ostream& name##Value::dumpState(std::ostream& os) const {          \
-        return prettyPrint(os, *static_cast<const name##View*>(this));      \
-    }                                                                       \
-                                                                            \
-    void name##Value::findAndReplaceSelf(const FindAndReplaceFunction&) {}  \
-    template <>                                                             \
-    std::shared_ptr<ForwardingTriggerBase<name##Trigger>>                   \
-    getForwardingTriggerBase<name##Trigger>(                                \
-        const std::shared_ptr<ForwardingTrigger<name##Trigger>>& derived) { \
-        return static_pointer_cast<ForwardingTriggerBase<name##Trigger>>(   \
-            derived);                                                       \
-    }                                                                       \
-                                                                            \
-    template <>                                                             \
-    std::shared_ptr<name##Trigger> getAsTriggerType<name##Trigger>(         \
-        const std::shared_ptr<ForwardingTrigger<name##Trigger>>& derived) { \
-        return static_pointer_cast<name##Trigger>(derived);                 \
-    }                                                                       \
-                                                                            \
-    template <>                                                             \
-    std::shared_ptr<ForwardingTrigger<name##Trigger>>                       \
-    makeForwardingTrigger<name##Trigger>(                                   \
-        std::vector<std::shared_ptr<name##Trigger>> * recipientTriggers) {  \
-        return make_shared<ForwardingTrigger<name##Trigger>>(               \
-            recipientTriggers);                                             \
-    }
+#define specialised(name)                                                 \
+    template <>                                                           \
+    shared_ptr<name##Value> makeShared<name##Value>() {                   \
+        return make_shared<name##Value>();                                \
+    }                                                                     \
+    const string TypeAsString<name##Value>::value = quote(name##Value);   \
+    const string TypeAsString<name##Domain>::value = quote(name##Domain); \
+    template <>                                                           \
+    ValBase& valBase<name##Value>(name##Value & v) {                      \
+        return v;                                                         \
+    }                                                                     \
+    template <>                                                           \
+    const ValBase& valBase<name##Value>(const name##Value& v) {           \
+        return v;                                                         \
+    }                                                                     \
+                                                                          \
+    void name##Value::evaluate() {}                                       \
+    void name##Value::startTriggering() {}                                \
+    void name##Value::stopTriggering() {}                                 \
+    void name##Value::updateViolationDescription(                         \
+        UInt parentViolation, ViolationDescription& vioDesc) {            \
+        registerViolations(this, parentViolation, vioDesc);               \
+    }                                                                     \
+    ExprRef<name##View> name##Value::deepCopySelfForUnroll(               \
+        const ExprRef<name##View>& self, const AnyIterRef&) const {       \
+        return self;                                                      \
+    }                                                                     \
+    std::ostream& name##Value::dumpState(std::ostream& os) const {        \
+        return prettyPrint(os, *static_cast<const name##View*>(this));    \
+    }                                                                     \
+                                                                          \
+    void name##Value::findAndReplaceSelf(const FindAndReplaceFunction&) {}
 
 buildForAllTypes(specialised, )
 #undef specialised

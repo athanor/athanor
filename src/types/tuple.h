@@ -126,26 +126,4 @@ struct ChangeTriggerAdapter<TupleTrigger, Child>
     inline void valueChanged() final { this->forwardValueChanged(); }
 };
 
-template <>
-struct ForwardingTrigger<TupleTrigger>
-    : public TupleTrigger, public ForwardingTriggerBase<TupleTrigger> {
-    using ForwardingTriggerBase<TupleTrigger>::ForwardingTriggerBase;
-    inline void possibleValueChange() final {
-        visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                      *recipientTriggers);
-    }
-    inline void valueChanged() final {
-        visitTriggers([&](auto& t) { t->valueChanged(); }, *recipientTriggers);
-    }
-
-    inline void possibleMemberValueChange(UInt index) final {
-        visitTriggers([&](auto& t) { t->possibleMemberValueChange(index); },
-                      *recipientTriggers);
-    }
-    inline void memberValueChanged(UInt index) final {
-        visitTriggers([&](auto& t) { t->memberValueChanged(index); },
-                      *recipientTriggers);
-    }
-};
-
 #endif /* SRC_TYPES_TUPLE_H_ */

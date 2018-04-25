@@ -284,7 +284,7 @@ struct SequenceValue : public SequenceView, public ValBase {
         if (func()) {
             valBase(*member).container = this;
             reassignIndicesToEnd<InnerValueType>(index);
-            SequenceView::notifyMemberAdded(index, member);
+            SequenceView::notifyMemberAdded(index, member.asExpr());
             debug_code(assertValidVarBases());
             return true;
         } else {
@@ -318,11 +318,11 @@ struct SequenceValue : public SequenceView, public ValBase {
             valBase(*removedMember).container = NULL;
             reassignIndicesToEnd<InnerValueType>(index);
             debug_code(assertValidVarBases());
-            SequenceView::notifyMemberRemoved(index, removedMember);
+            SequenceView::notifyMemberRemoved(index, removedMember.asExpr());
             return std::make_pair(true, std::move(removedMember));
         } else {
             SequenceView::addMember<InnerViewType>(index,
-                                                   getViewPtr(removedMember));
+                                                   removedMember.asExpr());
             debug_code(assertValidState());
             debug_code(assertValidVarBases());
             return std::make_pair(false, ValRef<InnerValueType>(nullptr));

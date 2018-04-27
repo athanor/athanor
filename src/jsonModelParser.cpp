@@ -253,6 +253,7 @@ pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
         {{"DomainInt", parseDomainInt},
          {"DomainBool", parseDomainBool},
          {"DomainSet", parseDomainSet},
+         {"DomainMSet", parseDomainMSet},
          {"DomainReference", parseDomainReference}},
         AnyDomainRef(fakeIntDomain), domainExpr, parsedModel);
 }

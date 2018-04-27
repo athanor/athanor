@@ -234,6 +234,19 @@ shared_ptr<MSetDomain> parseDomainMSet(json& mSetDomainExpr,
                                    parseDomain(mSetDomainExpr[2], parsedModel));
 }
 
+shared_ptr<SequenceDomain> parseDomainSequence(json& sequenceDomainExpr,
+                                               ParsedModel& parsedModel) {
+    SizeAttr sizeAttr = parseSizeAttr(sequenceDomainExpr[1][0], parsedModel);
+    if (sequenceDomainExpr[1][1] != "JectivityAttr_None") {
+        cerr << "Error: for the moment, given attribute must be "
+                "JectivityAttr_None.  This is not handled yet: "
+             << sequenceDomainExpr[1][1] << endl;
+        abort();
+    }
+    return make_shared<SequenceDomain>(
+        sizeAttr, parseDomain(sequenceDomainExpr[2], parsedModel));
+}
+
 AnyDomainRef parseDomainReference(json& domainReference,
                                   ParsedModel& parsedModel) {
     string referenceName = domainReference[0]["Name"];
@@ -254,6 +267,7 @@ pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
          {"DomainBool", parseDomainBool},
          {"DomainSet", parseDomainSet},
          {"DomainMSet", parseDomainMSet},
+         {"DomainSequence", parseDomainSequence},
          {"DomainReference", parseDomainReference}},
         AnyDomainRef(fakeIntDomain), domainExpr, parsedModel);
 }

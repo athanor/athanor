@@ -483,20 +483,18 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     if (essenceExpr.count("Op")) {
         auto boolExprPair = stringMatch<ParseExprFunction>(
             {
-                {"MkOpEq", parseOpEq},              //
-                {"MkOpMod", parseOpMod},            //
-                {"MkOpTwoBars", parseOpTwoBars},    //
-                {"MkOpSubsetEq", parseOpSubsetEq},  //
+                {"MkOpEq", parseOpEq},
+                {"MkOpMod", parseOpMod},
+                {"MkOpTwoBars", parseOpTwoBars},
+                {"MkOpSubsetEq", parseOpSubsetEq},
                 {"MkOpAnd",
-                 makeVaradicOpParser<BoolView, OpAnd>(fakeBoolDomain)},  //
-                {"MkOpOr",
-                 makeVaradicOpParser<BoolView, OpOr>(fakeBoolDomain)},  //
-                {"MkOpSum",
-                 makeVaradicOpParser<IntView, OpSum>(fakeIntDomain)},  //
+                 makeVaradicOpParser<BoolView, OpAnd>(fakeBoolDomain)},
+                {"MkOpOr", makeVaradicOpParser<BoolView, OpOr>(fakeBoolDomain)},
+                {"MkOpSum", makeVaradicOpParser<IntView, OpSum>(fakeIntDomain)},
                 {"MkOpProduct",
-                 makeVaradicOpParser<IntView, OpProd>(fakeIntDomain)},  //
+                 makeVaradicOpParser<IntView, OpProd>(fakeIntDomain)},
 
-            },  //
+            },
             make_pair(AnyDomainRef(fakeIntDomain),
                       AnyExprRef(ExprRef<IntView>(nullptr))),
             essenceExpr["Op"], parsedModel);

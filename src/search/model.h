@@ -88,9 +88,9 @@ class ModelBuilder {
     }
     template <typename View,
               typename Value = typename AssociatedValueType<View>::type>
-    inline ValRef<Value> getIfValue(ExprRef<View>& expr) {
+    inline ValRef<Value> getIfNonConstValue(ExprRef<View>& expr) {
         Value* value = dynamic_cast<Value*>(&(*expr));
-        if (value) {
+        if (value && value->container != &constantPool) {
             return assumeAsValue(expr);
         } else {
             return ValRef<Value>(nullptr);
@@ -101,12 +101,12 @@ class ModelBuilder {
         BoolView* eqExprTester = &(constraint->view());
         OpIntEq* opIntEq;
         if ((opIntEq = dynamic_cast<OpIntEq*>(eqExprTester)) != NULL) {
-            ValRef<IntValue> definedVar = getIfValue(opIntEq->left);
+            ValRef<IntValue> definedVar = getIfNonConstValue(opIntEq->left);
             if (definedVar) {
                 define(definedVar, opIntEq->right);
                 return true;
             }
-            definedVar = getIfValue(opIntEq->right);
+            definedVar = getIfNonConstValue(opIntEq->right);
             if (definedVar) {
                 define(definedVar, opIntEq->left);
                 return true;
@@ -143,7 +143,8 @@ class ModelBuilder {
                            AnyExprRef ref) -> std::pair<bool, AnyExprRef> {
                     auto exprRefTest = mpark::get_if<ExprRef<ViewType>>(&ref);
                     if (exprRefTest) {
-                        auto valRefTest = this->getIfValue(*exprRefTest);
+                        auto valRefTest =
+                            this->getIfNonConstValue(*exprRefTest);
                         if (valRefTest &&
                             (valBase(valRefTest) == valBase(var))) {
                             return std::make_pair(true, exprImpl);

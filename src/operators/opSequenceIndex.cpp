@@ -58,19 +58,34 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
     }
     void valueChanged() final {
-        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+        visitTriggers(
+            [&](auto& t) {
+                t->valueChanged();
+                t->reattachTrigger();
+            },
+            op->triggers);
     }
     inline void valueRemoved(UInt index, const AnyExprRef&) {
         if (index > op->cachedIndex) {
             return;
         }
-        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+        visitTriggers(
+            [&](auto& t) {
+                t->valueChanged();
+                t->reattachTrigger();
+            },
+            op->triggers);
     }
     inline void valueAdded(UInt index, const AnyExprRef&) final {
         if (index > op->cachedIndex) {
             return;
         }
-        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+        visitTriggers(
+            [&](auto& t) {
+                t->valueChanged();
+                t->reattachTrigger();
+            },
+            op->triggers);
     }
     inline void possibleSubsequenceChange(UInt startIndex,
                                           UInt endIndex) final {
@@ -84,7 +99,12 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         if (op->cachedIndex >= endIndex || op->cachedIndex < startIndex) {
             return;
         }
-        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+        visitTriggers(
+            [&](auto& t) {
+                t->valueChanged();
+                t->reattachTrigger();
+            },
+            op->triggers);
     }
     inline void beginSwaps() final {}
     inline void endSwaps() final {}
@@ -99,7 +119,12 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         op->cachedIndex = index2;
         visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
         op->cachedIndex = index1;
-        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+        visitTriggers(
+            [&](auto& t) {
+                t->valueChanged();
+                t->reattachTrigger();
+            },
+            op->triggers);
     }
     void reattachTrigger() final {
         deleteTrigger(op->sequenceTrigger);
@@ -120,7 +145,12 @@ struct OpSequenceIndex<SequenceMemberViewType>::IndexTrigger
     void valueChanged() final {
         visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
         op->cachedIndex = op->indexOperand->view().value;
-        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+        visitTriggers(
+            [&](auto& t) {
+                t->valueChanged();
+                t->reattachTrigger();
+            },
+            op->triggers);
     }
 
     void reattachTrigger() final {

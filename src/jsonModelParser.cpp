@@ -336,6 +336,50 @@ pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
             }),
         operand);
 }
+pair<AnyDomainRef, AnyExprRef> parseOpSequenceIndex(
+    AnyDomainRef& innerDomain, ExprRef<SequenceView>& sequence, json& indexExpr,
+    ParsedModel& parsedModel) {
+    auto index = expect<IntView>(
+        parseExpr(indexExpr[0], parsedModel).second, [](auto&&) {
+            cerr << "Sequence must be indexed by an int expression.\n";
+        });
+    return mpark::visit(
+        [&](auto& innerDomain) -> pair<AnyDomainRef, AnyExprRef> {
+            typedef typename BaseType<decltype(innerDomain)>::element_type
+                InnerDomainType;
+            typedef typename AssociatedViewType<
+                typename AssociatedValueType<InnerDomainType>::type>::type View;
+            return make_pair(innerDomain,
+                             ExprRef<View>(OpMaker<OpSequenceIndex<View>>::make(
+                                 sequence, index)));
+        },
+        innerDomain);
+}
+
+pair<AnyDomainRef, AnyExprRef> parseOpRelationProj(json& operandsExpr,
+                                                   ParsedModel& parsedModel) {
+    auto leftOperand = parseExpr(operandsExpr[0], parsedModel);
+    return mpark::visit(
+        overloaded(
+            [&](ExprRef<SequenceView>& sequence)
+                -> pair<AnyDomainRef, AnyExprRef> {
+                auto& innerDomain =
+                    mpark::get<shared_ptr<SequenceDomain>>(leftOperand.first)
+                        ->inner;
+                return parseOpSequenceIndex(innerDomain, sequence,
+                                            operandsExpr[1], parsedModel);
+            },
+            [&](auto&& operand) -> pair<AnyDomainRef, AnyExprRef> {
+                cerr << "Error, not yet handling op relation projection with a "
+                        "left operand "
+                        "of type "
+                     << TypeAsString<typename AssociatedValueType<viewType(
+                            operand)>::type>::value
+                     << ": " << operandsExpr << endl;
+                abort();
+            }),
+        leftOperand.second);
+}
 
 pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
                                          ParsedModel& parsedModel) {
@@ -497,17 +541,16 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     json& essenceExpr, ParsedModel& parsedModel) {
     if (essenceExpr.count("Op")) {
         auto boolExprPair = stringMatch<ParseExprFunction>(
-            {
-                {"MkOpEq", parseOpEq},
-                {"MkOpMod", parseOpMod},
-                {"MkOpTwoBars", parseOpTwoBars},
-                {"MkOpSubsetEq", parseOpSubsetEq},
-                {"MkOpAnd",
-                 makeVaradicOpParser<BoolView, OpAnd>(fakeBoolDomain)},
-                {"MkOpOr", makeVaradicOpParser<BoolView, OpOr>(fakeBoolDomain)},
-                {"MkOpSum", makeVaradicOpParser<IntView, OpSum>(fakeIntDomain)},
-                {"MkOpProduct",
-                 makeVaradicOpParser<IntView, OpProd>(fakeIntDomain)},
+            {{"MkOpEq", parseOpEq},
+             {"MkOpMod", parseOpMod},
+             {"MkOpTwoBars", parseOpTwoBars},
+             {"MkOpSubsetEq", parseOpSubsetEq},
+             {"MkOpAnd", makeVaradicOpParser<BoolView, OpAnd>(fakeBoolDomain)},
+             {"MkOpOr", makeVaradicOpParser<BoolView, OpOr>(fakeBoolDomain)},
+             {"MkOpSum", makeVaradicOpParser<IntView, OpSum>(fakeIntDomain)},
+             {"MkOpProduct",
+              makeVaradicOpParser<IntView, OpProd>(fakeIntDomain)},
+             {"MkOpRelationProj", parseOpRelationProj}
 
             },
             make_pair(AnyDomainRef(fakeIntDomain),

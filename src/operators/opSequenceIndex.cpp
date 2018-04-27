@@ -33,7 +33,7 @@ template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::evaluate() {
     indexOperand->evaluate();
     sequenceOperand->evaluate();
-    cachedIndex = indexOperand->view().value;
+    cachedIndex = indexOperand->view().value - 1;
 }
 
 template <typename SequenceMemberViewType>
@@ -144,7 +144,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::IndexTrigger
     void possibleValueChange() final {}
     void valueChanged() final {
         visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
-        op->cachedIndex = op->indexOperand->view().value;
+        op->cachedIndex = op->indexOperand->view().value - 1;
         visitTriggers(
             [&](auto& t) {
                 t->valueChanged();
@@ -220,10 +220,10 @@ OpSequenceIndex<SequenceMemberViewType>::deepCopySelfForUnroll(
 template <typename SequenceMemberViewType>
 std::ostream& OpSequenceIndex<SequenceMemberViewType>::dumpState(
     std::ostream& os) const {
-    os << "opSequenceIndex(index=";
-    indexOperand->dumpState(os) << ",\n";
-    os << "sequence=";
-    sequenceOperand->dumpState(os) << ")";
+    os << "opSequenceIndex(sequence=";
+    sequenceOperand->dumpState(os) << ",\n";
+    os << "index=";
+    indexOperand->dumpState(os) << ")";
     return os;
 }
 

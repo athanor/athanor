@@ -14,13 +14,8 @@ template <typename Value>
 struct ValRef : public StandardSharedPtr<Value> {
     using StandardSharedPtr<Value>::StandardSharedPtr;
     typedef typename AssociatedViewType<Value>::type View;
-
-    inline ExprRef<View> asExpr() {
-        return reinterpret_cast<ExprRef<View>&>(*this);
-    }
-    inline const ExprRef<View> asExpr() const {
-        return reinterpret_cast<const ExprRef<View>&>(*this);
-    }
+    ExprRef<View> asExpr();
+    const ExprRef<View> asExpr() const;
 };
 
 template <typename T>
@@ -93,34 +88,17 @@ std::ostream& operator<<(std::ostream& os, const AnyValRef& v);
 HashType getValueHash(const AnyValRef& v);
 std::ostream& prettyPrint(std::ostream& os, const AnyValRef& v);
 
-template <typename ViewType,
-          typename ValueType = typename AssociatedValueType<ViewType>::type,
-          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
-inline ValueType& assumeAsValue(ViewType& view) {
-    return reinterpret_cast<ValueType&>(view);
-}
+template <typename ViewType>
+typename std::enable_if<
+    IsViewType<ViewType>::value,
+    const ValRef<typename AssociatedValueType<ViewType>::type>>::type
+assumeAsValue(const ExprRef<ViewType>& viewPtr);
 
-template <typename ViewType,
-          typename ValueType = typename AssociatedValueType<ViewType>::type,
-          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
-inline const ValueType& assumeAsValue(const ViewType& view) {
-    return reinterpret_cast<const ValueType&>(view);
-}
-
-template <typename ViewType,
-          typename ValueType = typename AssociatedValueType<ViewType>::type,
-          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
-inline const ValRef<ValueType>& assumeAsValue(
-    const ExprRef<ViewType>& viewPtr) {
-    return reinterpret_cast<const ValRef<ValueType>&>(viewPtr);
-}
-
-template <typename ViewType,
-          typename ValueType = typename AssociatedValueType<ViewType>::type,
-          typename std::enable_if<IsViewType<ViewType>::value, int>::type = 0>
-inline ValRef<ValueType>&& assumeAsValue(ExprRef<ViewType>&& viewPtr) {
-    return reinterpret_cast<ValRef<ValueType>&&>(std::move(viewPtr));
-}
+template <typename ViewType>
+typename std::enable_if<
+    IsViewType<ViewType>::value,
+    ValRef<typename AssociatedValueType<ViewType>::type>>::type
+assumeAsValue(ExprRef<ViewType>& viewPtr);
 
 struct ValBase;
 extern ValBase constantPool;

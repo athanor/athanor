@@ -29,10 +29,15 @@ shared_ptr<SequenceDomain> fakeSequenceDomain(const AnyDomainRef& ref) {
 
 ParsedModel::ParsedModel() : builder(make_unique<ModelBuilder>()) {}
 typedef function<pair<AnyDomainRef, AnyExprRef>(json&, ParsedModel&)>
-    ParseFunction;
-pair<bool, pair<AnyDomainRef, AnyExprRef>> stringMatch(
-    const vector<pair<string, ParseFunction>>& match, json& essenceExpr,
-    ParsedModel& parsedModel) {
+    ParseExprFunction;
+typedef function<AnyDomainRef(json&, ParsedModel&)> ParseDomainFunction;
+
+template <typename Function, typename DefaultValue,
+          typename ReturnType = typename Function::result_type>
+pair<bool, ReturnType> stringMatch(const vector<pair<string, Function>>& match,
+                                   const DefaultValue& defaultValue,
+                                   json& essenceExpr,
+                                   ParsedModel& parsedModel) {
     for (auto& matchCase : match) {
         if (essenceExpr.count(matchCase.first)) {
             return make_pair(
@@ -40,8 +45,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> stringMatch(
                 matchCase.second(essenceExpr[matchCase.first], parsedModel));
         }
     }
-    return make_pair(false,
-                     make_pair(fakeBoolDomain, ExprRef<BoolView>(nullptr)));
+    return make_pair(false, defaultValue);
 }
 
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
@@ -230,34 +234,27 @@ shared_ptr<MSetDomain> parseDomainMSet(json& mSetDomainExpr,
                                    parseDomain(mSetDomainExpr[2], parsedModel));
 }
 
+AnyDomainRef parseDomainReference(json& domainReference,
+                                  ParsedModel& parsedModel) {
+    string referenceName = domainReference[0]["Name"];
+    if (!parsedModel.domainLettings.count(referenceName)) {
+        cerr << "Found reference to domainwith name \"" << referenceName
+             << "\" but this does not appear to be in scope.\n"
+             << domainReference << endl;
+        abort();
+    } else {
+        return parsedModel.domainLettings.at(referenceName);
+    }
+}
+
 pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
                                         ParsedModel& parsedModel) {
-    if (domainExpr.count("DomainInt")) {
-        return make_pair(true,
-                         parseDomainInt(domainExpr["DomainInt"], parsedModel));
-    } else if (domainExpr.count("DomainBool")) {
-        return make_pair(
-            true, parseDomainBool(domainExpr["DomainBool"], parsedModel));
-    } else if (domainExpr.count("DomainSet")) {
-        return make_pair(true,
-                         parseDomainSet(domainExpr["DomainSet"], parsedModel));
-    } else if (domainExpr.count("DomainMSet")) {
-        return make_pair(
-            true, parseDomainMSet(domainExpr["DomainMSet"], parsedModel));
-    } else if (domainExpr.count("DomainReference")) {
-        auto& domainReference = domainExpr["DomainReference"];
-        string referenceName = domainReference[0]["Name"];
-        if (!parsedModel.domainLettings.count(referenceName)) {
-            cerr << "Found reference to domainwith name \"" << referenceName
-                 << "\" but this does not appear to be in scope.\n"
-                 << domainExpr << endl;
-            abort();
-        } else {
-            return make_pair(true,
-                             parsedModel.domainLettings.at(referenceName));
-        }
-    }
-    return make_pair(false, AnyDomainRef(shared_ptr<IntDomain>(nullptr)));
+    return stringMatch<ParseDomainFunction>(
+        {{"DomainInt", parseDomainInt},
+         {"DomainBool", parseDomainBool},
+         {"DomainSet", parseDomainSet},
+         {"DomainReference", parseDomainReference}},
+        AnyDomainRef(fakeIntDomain), domainExpr, parsedModel);
 }
 
 template <typename RetType, typename Constraint, typename Func>
@@ -484,7 +481,7 @@ auto makeVaradicOpParser(const Domain& domain) {
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     json& essenceExpr, ParsedModel& parsedModel) {
     if (essenceExpr.count("Op")) {
-        auto boolExprPair = stringMatch(
+        auto boolExprPair = stringMatch<ParseExprFunction>(
             {
                 {"MkOpEq", parseOpEq},              //
                 {"MkOpMod", parseOpMod},            //
@@ -500,6 +497,8 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
                  makeVaradicOpParser<IntView, OpProd>(fakeIntDomain)},  //
 
             },  //
+            make_pair(AnyDomainRef(fakeIntDomain),
+                      AnyExprRef(ExprRef<IntView>(nullptr))),
             essenceExpr["Op"], parsedModel);
         if (boolExprPair.first) {
             return boolExprPair;

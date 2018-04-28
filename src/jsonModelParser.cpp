@@ -247,6 +247,15 @@ shared_ptr<SequenceDomain> parseDomainSequence(json& sequenceDomainExpr,
         sizeAttr, parseDomain(sequenceDomainExpr[2], parsedModel));
 }
 
+shared_ptr<TupleDomain> parseDomainTuple(json& tupleDomainExpr,
+                                         ParsedModel& parsedModel) {
+    vector<AnyDomainRef> innerDomains;
+    for (auto& innerDomainExpr : tupleDomainExpr) {
+        innerDomains.emplace_back(parseDomain(innerDomainExpr, parsedModel));
+    }
+    return make_shared<TupleDomain>(move(innerDomains));
+}
+
 AnyDomainRef parseDomainReference(json& domainReference,
                                   ParsedModel& parsedModel) {
     string referenceName = domainReference[0]["Name"];
@@ -268,6 +277,7 @@ pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
          {"DomainSet", parseDomainSet},
          {"DomainMSet", parseDomainMSet},
          {"DomainSequence", parseDomainSequence},
+         {"DomainTuple", parseDomainTuple},
          {"DomainReference", parseDomainReference}},
         AnyDomainRef(fakeIntDomain), domainExpr, parsedModel);
 }
@@ -356,6 +366,23 @@ pair<AnyDomainRef, AnyExprRef> parseOpSequenceIndex(
         innerDomain);
 }
 
+pair<AnyDomainRef, AnyExprRef> parseOpTupleIndex(
+    shared_ptr<TupleDomain>& tupleDomain, ExprRef<TupleView>& tuple,
+    json& indexExpr, ParsedModel& parsedModel) {
+    UInt index = parseValueAsInt(indexExpr[0], parsedModel) - 1;
+    return mpark::visit(
+        [&](auto& innerDomain) -> pair<AnyDomainRef, AnyExprRef> {
+            typedef typename BaseType<decltype(innerDomain)>::element_type
+                InnerDomainType;
+            typedef typename AssociatedViewType<
+                typename AssociatedValueType<InnerDomainType>::type>::type View;
+            return make_pair(
+                innerDomain,
+                ExprRef<View>(OpMaker<OpTupleIndex<View>>::make(tuple, index)));
+        },
+        tupleDomain->inners[index]);
+}
+
 pair<AnyDomainRef, AnyExprRef> parseOpRelationProj(json& operandsExpr,
                                                    ParsedModel& parsedModel) {
     auto leftOperand = parseExpr(operandsExpr[0], parsedModel);
@@ -368,6 +395,12 @@ pair<AnyDomainRef, AnyExprRef> parseOpRelationProj(json& operandsExpr,
                         ->inner;
                 return parseOpSequenceIndex(innerDomain, sequence,
                                             operandsExpr[1], parsedModel);
+            },
+            [&](ExprRef<TupleView>& tuple) -> pair<AnyDomainRef, AnyExprRef> {
+                auto& tupleDomain =
+                    mpark::get<shared_ptr<TupleDomain>>(leftOperand.first);
+                return parseOpTupleIndex(tupleDomain, tuple, operandsExpr[1],
+                                         parsedModel);
             },
             [&](auto&& operand) -> pair<AnyDomainRef, AnyExprRef> {
                 cerr << "Error, not yet handling op relation projection with a "

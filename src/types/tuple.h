@@ -12,6 +12,8 @@ struct TupleDomain {
     template <typename... DomainTypes>
     TupleDomain(DomainTypes&&... inners)
         : inners({makeAnyDomainRef(std::forward<DomainTypes>(inners))...}) {}
+
+    TupleDomain(std::vector<AnyDomainRef> inners) : inners(std::move(inners)) {}
 };
 struct TupleView;
 struct TupleTrigger : public virtual TriggerBase {

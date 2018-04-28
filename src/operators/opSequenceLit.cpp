@@ -135,7 +135,7 @@ std::ostream& OpSequenceLit::dumpState(std::ostream& os) const {
                 if (first) {
                     first = false;
                 } else {
-                    os << ",";
+                    os << ",\n";
                 }
                 member->dumpState(os);
             }

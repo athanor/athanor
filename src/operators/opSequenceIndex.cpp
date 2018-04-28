@@ -1,6 +1,7 @@
 #include "operators/opSequenceIndex.h"
 #include <iostream>
 #include <memory>
+#include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 
 using namespace std;
@@ -11,8 +12,7 @@ void OpSequenceIndex<SequenceMemberViewType>::addTrigger(
     sequenceOperand->view()
         .getMembers<SequenceMemberViewType>()[cachedIndex]
         ->addTrigger(trigger);
-    triggers.emplace_back(
-        reinterpret_cast<const std::shared_ptr<TriggerBase>&>(trigger));
+    triggers.emplace_back(static_pointer_cast<TriggerBase>(trigger));
 }
 
 template <typename SequenceMemberViewType>
@@ -87,25 +87,9 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
             },
             op->triggers);
     }
-    inline void possibleSubsequenceChange(UInt startIndex,
-                                          UInt endIndex) final {
-        if (op->cachedIndex >= endIndex || op->cachedIndex < startIndex) {
-            return;
-        }
-        visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
-    }
+    inline void possibleSubsequenceChange(UInt, UInt) final {}
 
-    inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
-        if (op->cachedIndex >= endIndex || op->cachedIndex < startIndex) {
-            return;
-        }
-        visitTriggers(
-            [&](auto& t) {
-                t->valueChanged();
-                t->reattachTrigger();
-            },
-            op->triggers);
-    }
+    inline void subsequenceChanged(UInt, UInt) final {}
     inline void beginSwaps() final {}
     inline void endSwaps() final {}
     inline void positionsSwapped(UInt index1, UInt index2) final {

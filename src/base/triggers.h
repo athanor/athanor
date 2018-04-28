@@ -115,4 +115,7 @@ struct ChangeTriggerAdapterBase {
 
 template <typename TriggerType, typename Child>
 struct ChangeTriggerAdapter;
+template <typename TriggerType>
+const std::shared_ptr<TriggerBase> getTriggerBase(
+    const std::shared_ptr<TriggerType>& trigger);
 #endif /* SRC_BASE_TRIGGERS_H_ */

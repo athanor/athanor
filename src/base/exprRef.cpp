@@ -60,14 +60,22 @@ assumeAsValue(ExprRef<ViewType>& viewPtr) {
     return static_pointer_cast<ValueType>(viewPtr.getPtr());
 }
 
-#define exprInstantiators(name)                                   \
-    template struct ExprInterface<name##View>;                    \
-    template struct ExprRef<name##View>;                          \
-    template struct ValRef<name##Value>;                          \
-    template ValRef<name##Value> assumeAsValue<name##View>(       \
-        ExprRef<name##View>&);                                    \
-    template const ValRef<name##Value> assumeAsValue<name##View>( \
-        const ExprRef<name##View>&);
+template <typename TriggerType>
+const std::shared_ptr<TriggerBase> getTriggerBase(
+    const std::shared_ptr<TriggerType>& trigger) {
+    return static_pointer_cast<TriggerBase>(trigger);
+}
+
+#define exprInstantiators(name)                                                \
+    template struct ExprInterface<name##View>;                                 \
+    template struct ExprRef<name##View>;                                       \
+    template struct ValRef<name##Value>;                                       \
+    template ValRef<name##Value> assumeAsValue<name##View>(                    \
+        ExprRef<name##View>&);                                                 \
+    template const ValRef<name##Value> assumeAsValue<name##View>(              \
+        const ExprRef<name##View>&);                                           \
+    template const std::shared_ptr<TriggerBase> getTriggerBase<name##Trigger>( \
+        const std::shared_ptr<name##Trigger>& trigger);
 
 buildForAllTypes(exprInstantiators, );
 #undef exprInstantiators

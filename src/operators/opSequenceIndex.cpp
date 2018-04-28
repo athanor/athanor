@@ -1,7 +1,6 @@
 #include "operators/opSequenceIndex.h"
 #include <iostream>
 #include <memory>
-#include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 
 using namespace std;
@@ -12,7 +11,7 @@ void OpSequenceIndex<SequenceMemberViewType>::addTrigger(
     sequenceOperand->view()
         .getMembers<SequenceMemberViewType>()[cachedIndex]
         ->addTrigger(trigger);
-    triggers.emplace_back(static_pointer_cast<TriggerBase>(trigger));
+    triggers.emplace_back(getTriggerBase(trigger));
 }
 
 template <typename SequenceMemberViewType>

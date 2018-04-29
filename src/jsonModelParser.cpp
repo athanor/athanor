@@ -497,7 +497,7 @@ void checkTuplePatternMatchSize(json& tupleMatchExpr,
                 "that the number of members in the "
                 "tuple is "
              << domain->inners.size() << ".\n";
-        cerr << "expr: " << tupleMatchExpr << "\ntuple domain: " << domain
+        cerr << "expr: " << tupleMatchExpr << "\ntuple domain: " << *domain
              << endl;
         abort();
     }
@@ -529,7 +529,7 @@ void extractPatternMatchAndAddExprsToScope(
                         "not "
                         "a tuple.\n";
                 cerr << patternExpr << endl;
-                cerr << "Expected domain: " << domain << endl;
+                cerr << "Expected domain: " << *domain << endl;
                 abort();
             },
             [&](shared_ptr<TupleDomain>& domain, ExprRef<TupleView>& expr) {
@@ -564,8 +564,7 @@ AnyDomainRef addExprToQuantifier(
                 typename AssociatedValueType<InnerDomainType>::type>::type
                 InnerViewType;
 
-            if (is_same<TupleDomain, typename BaseType<decltype(
-                                         innerDomain)>::element_type>::value) {
+            if (is_same<SequenceDomain, ContainerDomainType>::value) {
                 auto iterDomain = fakeTupleDomain({fakeIntDomain, innerDomain});
                 auto iter = ExprRef<TupleView>(
                     quantifier->template newIterRef<TupleView>());
@@ -624,6 +623,12 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
                 auto& domain = mpark::get<shared_ptr<MSetDomain>>(
                     domainContainerPair.first);
                 return buildQuant(comprExpr, mSet, domain, parsedModel);
+            },
+            [&](ExprRef<SequenceView>& sequence)
+                -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
+                auto& domain = mpark::get<shared_ptr<SequenceDomain>>(
+                    domainContainerPair.first);
+                return buildQuant(comprExpr, sequence, domain, parsedModel);
             },
             move(errorHandler)),
         domainContainerPair.second);

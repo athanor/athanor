@@ -27,6 +27,10 @@ shared_ptr<SequenceDomain> fakeSequenceDomain(const AnyDomainRef& ref) {
     return make_shared<SequenceDomain>(exactSize(0), ref);
 }
 
+shared_ptr<TupleDomain> fakeTupleDomain(std::vector<AnyDomainRef> domains) {
+    return make_shared<TupleDomain>(move(domains));
+}
+
 ParsedModel::ParsedModel() : builder(make_unique<ModelBuilder>()) {}
 typedef function<pair<AnyDomainRef, AnyExprRef>(json&, ParsedModel&)>
     ParseExprFunction;
@@ -477,13 +481,30 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseConstantMatrix(
     return make_pair(fakeSequenceDomain(innerDomain),
                      OpMaker<OpSequenceLit>::make(move(newSequenceMembers)));
 }
+template <typename Domain, typename View>
+using EnableIfDomainMatchesView = typename enable_if<
+    is_same<typename AssociatedViewType<
+                typename AssociatedValueType<Domain>::type>::type,
+            View>::value,
+    int>::type;
+template <typename DomainType, typename ViewType,
+          EnableIfDomainMatchesView<DomainType, ViewType> = 0>
+void extractPatternMatchAndAddExprsToScope(
+    json& patternExpr, const shared_ptr<DomainType>& domain,
+    ExprRef<ViewType>& expr, ParsedModel& parsedModel,
+    vector<string>& variablesAddedToScope) {
+    string name = patternExpr["Single"]["Name"];
+    variablesAddedToScope.emplace_back(name);
+    parsedModel.namedExprs.emplace(variablesAddedToScope.back(),
+                                   make_pair(domain, expr));
+}
 
 template <typename ContainerDomainType, typename Quantifier>
 AnyDomainRef addExprToQuantifier(
     json& comprExpr, shared_ptr<ContainerDomainType>& containerDomain,
     Quantifier& quantifier, ParsedModel& parsedModel) {
     auto& generatorExpr = comprExpr[1][0]["Generator"]["GenInExpr"];
-    string name;
+    vector<string> variablesAddedToScope;
     mpark::visit(
         [&](auto& innerDomain) {
             typedef typename BaseType<decltype(innerDomain)>::element_type
@@ -491,15 +512,29 @@ AnyDomainRef addExprToQuantifier(
             typedef typename AssociatedViewType<
                 typename AssociatedValueType<InnerDomainType>::type>::type
                 InnerViewType;
-            name = generatorExpr[0]["Single"]["Name"];
-            auto iter = ExprRef<InnerViewType>(
-                quantifier->template newIterRef<InnerViewType>());
-            parsedModel.namedExprs.emplace(name, make_pair(innerDomain, iter));
+
+            if (is_same<TupleDomain, typename BaseType<decltype(
+                                         innerDomain)>::element_type>::value) {
+                auto iterDomain = fakeTupleDomain({fakeIntDomain, innerDomain});
+                auto iter = ExprRef<TupleView>(
+                    quantifier->template newIterRef<TupleView>());
+                extractPatternMatchAndAddExprsToScope(
+                    generatorExpr[0], iterDomain, iter, parsedModel,
+                    variablesAddedToScope);
+            } else {
+                auto iter = ExprRef<InnerViewType>(
+                    quantifier->template newIterRef<InnerViewType>());
+                extractPatternMatchAndAddExprsToScope(
+                    generatorExpr[0], innerDomain, iter, parsedModel,
+                    variablesAddedToScope);
+            }
         },
         (containerDomain->inner));
     auto expr = parseExpr(comprExpr[0], parsedModel);
     quantifier->setExpression(expr.second);
-    parsedModel.namedExprs.erase(name);
+    for (auto& varName : variablesAddedToScope) {
+        parsedModel.namedExprs.erase(varName);
+    }
     return expr.first;
 }
 

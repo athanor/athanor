@@ -27,6 +27,9 @@ struct TupleView : public ExprInterface<TupleView> {
     std::vector<std::shared_ptr<TupleTrigger>> triggers;
     SimpleCache<HashType> cachedHashTotal;
 
+    TupleView() {}
+    TupleView(std::vector<AnyExprRef> members) : members(members) {}
+
    private:
     inline void memberChanged(UInt) { cachedHashTotal.invalidate(); }
 

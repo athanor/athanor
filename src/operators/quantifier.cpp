@@ -1,5 +1,7 @@
 #include "operators/quantifier.h"
+
 #include <vector>
+#include "operators/opTupleLit.h"
 #include "types/allTypes.h"
 using namespace std;
 template <typename ContainerType>
@@ -12,12 +14,17 @@ template <>
 struct InitialUnroller<SetView>;
 template <>
 struct InitialUnroller<MSetView>;
+template <>
+struct InitialUnroller<SequenceView>;
+
 template <typename Container>
 struct ContainerTrigger;
 template <>
 struct ContainerTrigger<SetView>;
 template <>
 struct ContainerTrigger<MSetView>;
+template <>
+struct ContainerTrigger<SequenceView>;
 
 template <typename ContainerType>
 Quantifier<ContainerType>::Quantifier(Quantifier<ContainerType>&& other)
@@ -85,12 +92,17 @@ void Quantifier<ContainerType>::unroll(UInt index,
 }
 
 template <typename ContainerType>
-void Quantifier<ContainerType>::swap(UInt index1, UInt index2) {
+void Quantifier<ContainerType>::swap(UInt index1, UInt index2,
+                                     bool notifyBeginEnd) {
     mpark::visit(
         [&](auto& members) {
-            this->notifyBeginSwaps();
+            if (notifyBeginEnd) {
+                this->notifyBeginSwaps();
+            }
             this->swapAndNotify<viewType(members)>(index1, index2);
-            this->notifyEndSwaps();
+            if (notifyBeginEnd) {
+                this->notifyEndSwaps();
+            }
         },
         members);
     std::swap(exprTriggers[index1], exprTriggers[index2]);
@@ -281,6 +293,13 @@ template <typename ContainerType>
 void Quantifier<ContainerType>::updateViolationDescription(
     UInt, ViolationDescription&) {}
 
+template <typename ContainerType>
+void Quantifier<ContainerType>::findAndReplaceSelf(
+    const FindAndReplaceFunction& func) {
+    mpark::visit([&](auto& expr) { expr = findAndReplace(expr, func); },
+                 this->expr);
+}
+
 template <>
 struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
     Quantifier<SetView>* op;
@@ -437,12 +456,142 @@ struct InitialUnroller<MSetView> {
     }
 };
 
-template <typename ContainerType>
-void Quantifier<ContainerType>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func) {
-    mpark::visit([&](auto& expr) { expr = findAndReplace(expr, func); },
-                 this->expr);
-}
+template <typename Op>
+struct OpMaker;
+template <>
+struct OpMaker<OpTupleLit> {
+    static ExprRef<TupleView> make(std::vector<AnyExprRef> members);
+};
+
+template <>
+struct ContainerTrigger<SequenceView> : public SequenceTrigger,
+                                        public DelayedTrigger {
+    Quantifier<SequenceView>* op;
+    vector<UInt> indicesOfValuesToUnroll;
+    AnyExprVec valuesToUnroll;
+
+    ContainerTrigger(Quantifier<SequenceView>* op) : op(op) {
+        mpark::visit(
+            [&](auto& members) {
+                valuesToUnroll.emplace<ExprRefVec<viewType(members)>>();
+            },
+            op->container->view().members);
+    }
+    void valueRemoved(UInt indexOfRemovedValue, const AnyExprRef&) final {
+        op->roll(indexOfRemovedValue);
+        correctUnrolledTupleIndices(indexOfRemovedValue);
+    }
+    void valueAdded(UInt index, const AnyExprRef& member) final {
+        mpark::visit(
+            [&](auto& vToUnroll) {
+                vToUnroll.emplace_back(
+                    mpark::get<ExprRef<viewType(vToUnroll)>>(member));
+                indicesOfValuesToUnroll.emplace_back(index);
+                if (vToUnroll.size() == 1) {
+                    addDelayedTrigger(op->containerTrigger);
+                }
+            },
+            valuesToUnroll);
+    }
+
+    void possibleSubsequenceChange(UInt, UInt) final {}
+    void subsequenceChanged(UInt, UInt) final{};
+    void possibleValueChange() final {}
+    void valueChanged() {
+        while (op->numberElements() != 0) {
+            this->valueRemoved(op->numberElements() - 1,
+                               ExprRef<BoolView>(nullptr));
+        }
+        indicesOfValuesToUnroll.clear();
+        mpark::visit(
+            [&](auto& membersImpl) {
+                auto& vToUnroll = mpark::get<ExprRefVec<viewType(membersImpl)>>(
+                    valuesToUnroll);
+                indicesOfValuesToUnroll.clear();
+                vToUnroll.clear();
+                for (auto& member : membersImpl) {
+                    this->valueAdded(vToUnroll.size(), member);
+                }
+            },
+            op->container->view().members);
+    }
+
+    void beginSwaps() final { op->notifyBeginSwaps(); }
+    void endSwaps() final { op->notifyEndSwaps(); }
+    void positionsSwapped(UInt index1, UInt index2) final {
+        op->swap(index1, index2, false);
+        correctUnrolledTupleIndex(index1);
+        correctUnrolledTupleIndex(index2);
+    }
+    void trigger() final {
+        mpark::visit(
+            [&](auto& vToUnroll) {
+                debug_code(
+                    assert(vToUnroll.size() == indicesOfValuesToUnroll.size()));
+                const UInt MAX_UINT = ~((UInt)0);
+                UInt minIndex = MAX_UINT;
+                for (size_t i = 0; i < vToUnroll.size(); i++) {
+                    auto tupleFirstMember = make<IntValue>();
+                    tupleFirstMember->value = indicesOfValuesToUnroll[i] + 1;
+                    auto unrolledExpr = OpMaker<OpTupleLit>::make(
+                        {tupleFirstMember.asExpr(), vToUnroll[i]});
+                    op->unroll(indicesOfValuesToUnroll[i], unrolledExpr);
+                    if (indicesOfValuesToUnroll[i] + 1 <
+                            op->unrolledIterVals.size() &&
+                        indicesOfValuesToUnroll[i] + 1 < minIndex) {
+                        minIndex = indicesOfValuesToUnroll[i] + 1;
+                    }
+                }
+                vToUnroll.clear();
+                indicesOfValuesToUnroll.clear();
+                if (minIndex != MAX_UINT) {
+                    correctUnrolledTupleIndices(minIndex);
+                }
+            },
+            valuesToUnroll);
+    }
+    void reattachTrigger() final {
+        deleteTrigger(op->containerTrigger);
+        auto trigger = make_shared<ContainerTrigger<SequenceView>>(op);
+        op->container->addTrigger(trigger);
+        op->containerTrigger = trigger;
+    }
+
+    void correctUnrolledTupleIndices(size_t startIndex) {
+        for (size_t i = startIndex; i < op->unrolledIterVals.size(); i++) {
+            correctUnrolledTupleIndex(i);
+        }
+    }
+    void correctUnrolledTupleIndex(size_t index) {
+        auto& tuple =
+            mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
+        auto& intView = mpark::get<ExprRef<IntView>>(tuple->view().members[0]);
+        auto& intVal = static_cast<IntValue&>(*intView);
+        intVal.changeValue([&]() {
+            intVal.value = index + 1;
+            return true;
+        });
+    }
+};
+
+template <>
+struct InitialUnroller<SequenceView> {
+    template <typename Quant>
+    static void initialUnroll(Quant& quantifier) {
+        mpark::visit(
+            [&](auto& membersImpl) {
+                for (size_t i = 0; i < membersImpl.size(); i++) {
+                    auto tupleFirstMember = make<IntValue>();
+                    tupleFirstMember->value = i + 1;
+                    auto unrolledExpr = OpMaker<OpTupleLit>::make(
+                        {tupleFirstMember.asExpr(), membersImpl[i]});
+                    quantifier.unroll(i, unrolledExpr);
+                }
+            },
+            quantifier.container->view().members);
+    }
+};
 
 template struct Quantifier<SetView>;
 template struct Quantifier<MSetView>;
+template struct Quantifier<SequenceView>;

@@ -487,16 +487,67 @@ using EnableIfDomainMatchesView = typename enable_if<
                 typename AssociatedValueType<Domain>::type>::type,
             View>::value,
     int>::type;
+
+void checkTuplePatternMatchSize(json& tupleMatchExpr,
+                                const shared_ptr<TupleDomain>& domain) {
+    if (tupleMatchExpr.size() != domain->inners.size()) {
+        cerr << "Error, given pattern match assumes exactly "
+             << tupleMatchExpr.size()
+             << " members to be present in tuple.  However, it appears "
+                "that the number of members in the "
+                "tuple is "
+             << domain->inners.size() << ".\n";
+        cerr << "expr: " << tupleMatchExpr << "\ntuple domain: " << domain
+             << endl;
+        abort();
+    }
+}
+
+template <typename Domain,
+          typename View = typename AssociatedViewType<
+              typename AssociatedValueType<Domain>::type>::type>
+ExprRef<View> makeTupleIndexFromDomain(shared_ptr<Domain>&,
+                                       ExprRef<TupleView>& expr, UInt index) {
+    return OpMaker<OpTupleIndex<View>>::make(expr, index);
+}
+
 template <typename DomainType, typename ViewType,
           EnableIfDomainMatchesView<DomainType, ViewType> = 0>
 void extractPatternMatchAndAddExprsToScope(
     json& patternExpr, const shared_ptr<DomainType>& domain,
     ExprRef<ViewType>& expr, ParsedModel& parsedModel,
     vector<string>& variablesAddedToScope) {
-    string name = patternExpr["Single"]["Name"];
-    variablesAddedToScope.emplace_back(name);
-    parsedModel.namedExprs.emplace(variablesAddedToScope.back(),
-                                   make_pair(domain, expr));
+    if (patternExpr.count("Single")) {
+        string name = patternExpr["Single"]["Name"];
+        variablesAddedToScope.emplace_back(name);
+        parsedModel.namedExprs.emplace(variablesAddedToScope.back(),
+                                       make_pair(domain, expr));
+    } else if (patternExpr.count("AbsPatTuple")) {
+        overloaded(
+            [&](auto&, auto&) {
+                cerr << "Error, trying to pattern match from something that is "
+                        "not "
+                        "a tuple.\n";
+                cerr << patternExpr << endl;
+                cerr << "Expected domain: " << domain << endl;
+                abort();
+            },
+            [&](shared_ptr<TupleDomain>& domain, ExprRef<TupleView>& expr) {
+                json& tupleMatchExpr = patternExpr["AbsPatTuple"];
+                checkTuplePatternMatchSize(tupleMatchExpr, domain);
+                for (size_t i = 0; i < tupleMatchExpr.size(); i++) {
+                    mpark::visit(
+                        [&](auto& innerDomain) {
+                            auto tupleIndexExpr =
+                                makeTupleIndexFromDomain(innerDomain, expr, i);
+                            extractPatternMatchAndAddExprsToScope(
+                                tupleMatchExpr[i], innerDomain, tupleIndexExpr,
+                                parsedModel, variablesAddedToScope);
+                        },
+                        domain->inners[i]);
+                }
+            })(domain, expr);
+    }
 }
 
 template <typename ContainerDomainType, typename Quantifier>

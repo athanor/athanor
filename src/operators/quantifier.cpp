@@ -444,15 +444,5 @@ void Quantifier<ContainerType>::findAndReplaceSelf(
                  this->expr);
 }
 
-void instantiateQuantifierTypes() {
-    vector<ExprRef<SequenceView>> quants;
-    auto q1 = make_shared<Quantifier<SetView>>(nullptr);
-    q1->setExpression(ExprRef<SetView>(nullptr));
-    q1->Quantifier<SetView>::stopTriggering();
-    q1->Quantifier<SetView>::stopTriggeringOnChildren();
-    auto q2 = make_shared<Quantifier<MSetView>>(nullptr);
-    q2->Quantifier<MSetView>::stopTriggering();
-    q2->Quantifier<MSetView>::stopTriggeringOnChildren();
-    q2->Quantifier<MSetView>::setExpression(ExprRef<MSetView>(nullptr));
-    ignoreUnused(q1, q2);
-}
+template struct Quantifier<SetView>;
+template struct Quantifier<MSetView>;

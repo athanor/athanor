@@ -8,6 +8,7 @@ struct OpTupleLit : public TupleView {
         OpTupleLit* op;
         UInt index;
         ExprTriggerBase(OpTupleLit* op, UInt index) : op(op), index(index) {}
+        virtual ~ExprTriggerBase() {}
     };
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
 

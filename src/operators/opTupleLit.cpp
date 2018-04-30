@@ -10,6 +10,7 @@ void OpTupleLit::evaluate() {
         mpark::visit([&](auto& member) { member->evaluate(); }, member);
     }
 }
+namespace {
 template <typename TriggerType>
 struct ExprTrigger
     : public OpTupleLit::ExprTriggerBase,
@@ -32,7 +33,7 @@ struct ExprTrigger
         op->exprTriggers[index] = trigger;
     }
 };
-
+}  // namespace
 OpTupleLit::OpTupleLit(OpTupleLit&& other)
     : TupleView(std::move(other)), exprTriggers(std::move(other.exprTriggers)) {
     setTriggerParent(this, exprTriggers);

@@ -528,11 +528,11 @@ void extractPatternMatchAndAddExprsToScope(
                 cerr << "Error, trying to pattern match from something that is "
                         "not "
                         "a tuple.\n";
-                cerr << patternExpr << endl;
-                cerr << "Expected domain: " << *domain << endl;
+                cerr << "Found domain: " << *domain << endl;
+                cerr << "Expr: " << patternExpr << endl;
                 abort();
             },
-            [&](shared_ptr<TupleDomain>& domain, ExprRef<TupleView>& expr) {
+            [&](const shared_ptr<TupleDomain>& domain, ExprRef<TupleView>& expr) {
                 json& tupleMatchExpr = patternExpr["AbsPatTuple"];
                 checkTuplePatternMatchSize(tupleMatchExpr, domain);
                 for (size_t i = 0; i < tupleMatchExpr.size(); i++) {

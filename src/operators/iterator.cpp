@@ -9,8 +9,7 @@ template <typename View>
 void Iterator<View>::addTrigger(
     const shared_ptr<typename Iterator<View>::TriggerType>& trigger) {
     auto otherTrigger = trigger;
-    triggers.emplace_back(
-        reinterpret_cast<std::shared_ptr<TriggerBase>&>(otherTrigger));
+    triggers.emplace_back(getTriggerBase(otherTrigger));
     ref->addTrigger(trigger);
 }
 
@@ -82,8 +81,7 @@ std::ostream& operator<<(std::ostream& os, const AnyIterRef& ref) {
     return os;
 }
 
-#define iteratorInstantiators(name)       \
-    template struct Iterator<name##View>;
+#define iteratorInstantiators(name) template struct Iterator<name##View>;
 
-    buildForAllTypes(iteratorInstantiators, );
+buildForAllTypes(iteratorInstantiators, );
 #undef iteratorInstantiators

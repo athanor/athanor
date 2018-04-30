@@ -558,11 +558,13 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
     }
 
     void correctUnrolledTupleIndices(size_t startIndex) {
+        debug_log("correct tuple indices from " << startIndex << " onwards.");
         for (size_t i = startIndex; i < op->unrolledIterVals.size(); i++) {
             correctUnrolledTupleIndex(i);
         }
     }
     void correctUnrolledTupleIndex(size_t index) {
+        debug_log("Correcting tuple index " << index);
         auto& tuple =
             mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
         auto& intView = mpark::get<ExprRef<IntView>>(tuple->view().members[0]);

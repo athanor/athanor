@@ -3,6 +3,10 @@
 #define SRC_OPERATORS_SIMPLETRIGGER_H_
 #include <memory>
 #include "base/base.h"
+
+template <typename Op>
+using IsBoolReturning = std::is_base_of<BoolView, Op>;
+
 template <typename Op, typename TriggerType, bool isLeftTrigger>
 struct SimpleBinaryTrigger
     : public ChangeTriggerAdapter<
@@ -38,7 +42,17 @@ struct SimpleBinaryTrigger
         op->right->addTrigger(newTrigger);
         op->rightTrigger = newTrigger;
     }
+
+    void hasBecomeUndefined() final { op->setDefined(false, true); }
+
+    void hasBecomeDefined() final {
+        if ((isLeftTrigger && !op->right->isUndefined()) ||
+            (!isLeftTrigger && !op->left->isUndefined())) {
+            op->setDefined(true, true);
+        }
+    }
 };
+
 template <typename Op, typename TriggerType>
 struct SimpleUnaryTrigger
     : public ChangeTriggerAdapter<TriggerType,
@@ -60,6 +74,10 @@ struct SimpleUnaryTrigger
         op->operand->addTrigger(newTrigger);
         op->operandTrigger = newTrigger;
     }
+
+    void hasBecomeUndefined() final { op->setDefined(false, true); }
+
+    void hasBecomeDefined() final { op->setDefined(true, true); }
 };
 
 #endif /* SRC_OPERATORS_SIMPLETRIGGER_H_ */

@@ -363,6 +363,7 @@ struct SetValue : public SetView, public ValBase {
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    bool isUndefined();
 };
 
 template <typename Child>

@@ -27,7 +27,15 @@ typedef std::function<std::pair<bool, AnyExprRef>(AnyExprRef)>
     FindAndReplaceFunction;
 
 template <typename View>
-struct ExprInterface {
+struct Undefinable {
+    virtual bool isUndefined() = 0;
+};
+template <>
+struct Undefinable<BoolView> {
+    inline bool isUndefined() { return false; }
+};
+template <typename View>
+struct ExprInterface : public Undefinable<View> {
     typedef typename AssociatedTriggerType<View>::type TriggerType;
     virtual View& view();
     virtual const View& view() const;
@@ -81,4 +89,7 @@ inline ExprRef<T> findAndReplace(ExprRef<T>& expr,
         return expr;
     }
 }
+
+extern UInt LARGE_VIOLATION;
+
 #endif /* SRC_BASE_EXPRREF_H_ */

@@ -55,6 +55,7 @@ struct IntValue : public IntView, ValBase {
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    bool isUndefined();
 };
 
 template <typename Child>

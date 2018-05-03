@@ -76,6 +76,11 @@ void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction& func) {
     }
 }
 
+template <typename View>
+void Iterator<View>::isUndefined() {
+    return ref->isUndefined();
+}
+
 std::ostream& operator<<(std::ostream& os, const AnyIterRef& ref) {
     mpark::visit([&](auto& ref) { ref->dumpState(os); }, ref);
     return os;

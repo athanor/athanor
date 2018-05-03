@@ -5,6 +5,8 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 
+UInt LARGE_VIOLATION = ((UInt)1) << ((sizeof(UInt) * 4) - 1);
+
 template <typename View>
 View& ExprInterface<View>::view() {
     return *static_cast<View*>(this);

@@ -116,6 +116,7 @@ struct TupleValue : public TupleView, public ValBase {
         const ExprRef<TupleView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    bool isUndefined();
 };
 
 template <typename Child>

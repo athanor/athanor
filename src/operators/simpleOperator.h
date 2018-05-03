@@ -3,10 +3,60 @@
 #define SRC_OPERATORS_SIMPLEOPERATOR_H_
 #include "base/base.h"
 
+template <typename View, typename Derived>
+struct DefinedContainer {
+    bool defined = false;
+    void setDefined(bool defined, bool trigger = false) {
+        bool triggerChange = trigger && (defined != this->defined);
+        if (triggerChange && !defined) {
+            visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                          static_cast<Derived&>(*this).triggers);
+        }
+        this->defined = defined;
+        if (triggerChange) {
+            if (defined) {
+                static_cast<Derived&>(*this).reevaluate();
+                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                              static_cast<Derived&>(*this).triggers);
+            } else {
+                visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                              static_cast<Derived&>(*this).triggers);
+            }
+        }
+    }
+    bool isDefined() { return defined; }
+};
+template <typename Derived>
+struct DefinedContainer<BoolView, Derived> {
+    void setDefined(bool defined, bool triggerChange = false) {
+        if (defined) {
+            if (triggerChange) {
+                static_cast<Derived&>(*this).changeValue([&]() {
+                    static_cast<Derived&>(*this).reevaluate();
+                    return true;
+                });
+            } else {
+                static_cast<Derived&>(*this).reevaluate();
+            }
+        } else {
+            if (triggerChange) {
+                static_cast<Derived&>(*this).changeValue([&]() {
+                    static_cast<Derived&>(*this).violation = LARGE_VIOLATION;
+                    return true;
+                });
+            } else {
+                static_cast<Derived&>(*this).violation = LARGE_VIOLATION;
+            }
+        }
+    }
+    bool isDefined() { return true; }
+};
+
 template <typename Derived>
 struct OperatorTrates;
 template <typename View, typename OperandView, typename Derived>
-struct SimpleBinaryOperator : public View {
+struct SimpleBinaryOperator : public View,
+                              public DefinedContainer<View, Derived> {
     typedef typename OperatorTrates<Derived>::LeftTrigger LeftTrigger;
     typedef typename OperatorTrates<Derived>::RightTrigger RightTrigger;
     ExprRef<OperandView> left;
@@ -39,10 +89,12 @@ struct SimpleBinaryOperator : public View {
     ExprRef<View> deepCopySelfForUnroll(const ExprRef<View>&,
                                         const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
+    bool isUndefined();
 };
 
 template <typename View, typename OperandView, typename Derived>
-struct SimpleUnaryOperator : public View {
+struct SimpleUnaryOperator : public View,
+                             public DefinedContainer<View, Derived> {
     typedef typename OperatorTrates<Derived>::OperandTrigger OperandTrigger;
     ExprRef<OperandView> operand;
     std::shared_ptr<OperandTrigger> operandTrigger;
@@ -67,6 +119,7 @@ struct SimpleUnaryOperator : public View {
     ExprRef<View> deepCopySelfForUnroll(const ExprRef<View>&,
                                         const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
+    bool isUndefined();
 };
 
 #endif /* SRC_OPERATORS_SIMPLEOPERATOR_H_ */

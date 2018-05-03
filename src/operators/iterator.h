@@ -44,6 +44,7 @@ struct Iterator : public ExprInterface<View> {
                                         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void isDefined();
 };
 
 template <typename T>

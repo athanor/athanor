@@ -6,7 +6,18 @@
 
 #include "base/base.h"
 struct BoolDomain {};
-struct BoolTrigger : public virtual TriggerBase {};
+struct BoolTrigger : public virtual TriggerBase {
+    inline void hasBecomeUndefined() final {
+        std::cerr << "This function should never be called. " << __func__
+                  << "\nFile: " << __FILE__ << "\nLine: " << __LINE__ << "\n";
+        abort();
+    }
+    inline void hasBecomeDefined() final {
+        std::cerr << "This function should never be called. " << __func__
+                  << "\nFile: " << __FILE__ << "\nLine: " << __LINE__ << "\n";
+        abort();
+    }
+};
 
 struct BoolView : public ExprInterface<BoolView> {
     UInt violation;
@@ -42,6 +53,7 @@ struct BoolValue : public BoolView, ValBase {
     std::ostream& dumpState(std::ostream& os) const final;
 
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    bool isUndefined();
 };
 
 template <typename Child>

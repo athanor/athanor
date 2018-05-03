@@ -7,7 +7,6 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 using OperandsSequenceTrigger = OperatorTrates<OpOr>::OperandsSequenceTrigger;
-UInt LARGE_VIOLATION = ((UInt)1) << ((sizeof(UInt) * 4) - 1);
 UInt findNewMinViolation(OpOr& op, UInt minViolation);
 void OpOr::reevaluate() {
     minViolationIndices.clear();
@@ -164,8 +163,6 @@ std::ostream& OpOr::dumpState(std::ostream& os) const {
     os << "Min violating indices: " << sortedViolatingOperands << endl;
     return operand->dumpState(os);
 }
-
-
 
 template <typename Op>
 struct OpMaker;

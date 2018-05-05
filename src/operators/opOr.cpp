@@ -141,6 +141,8 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
         op->operand->addTrigger(trigger);
         op->operandTrigger = trigger;
     }
+    void hasBecomeUndefined() final { op->setDefined(false, true); }
+    void hasBecomeDefined() final { op->setDefined(true, true); }
 };
 
 void OpOr::updateViolationDescription(const UInt,

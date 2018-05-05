@@ -14,7 +14,8 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     std::vector<std::shared_ptr<TriggerBase>> triggers;
     ExprRef<SequenceView> sequenceOperand;
     ExprRef<IntView> indexOperand;
-    UInt cachedIndex;
+    Int cachedIndex;
+    bool defined = false;
     std::shared_ptr<SequenceOperandTrigger> sequenceTrigger;
     std::shared_ptr<IndexTrigger> indexTrigger;
     OpSequenceIndex(ExprRef<SequenceView> sequenceOperand,
@@ -41,6 +42,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    bool isUndefined();
 };
 
 #endif /* SRC_OPERATORS_OPSEQUENCEINDEX_H_ */

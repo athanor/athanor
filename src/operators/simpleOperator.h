@@ -25,6 +25,9 @@ struct DefinedContainer {
         }
     }
     bool isDefined() { return defined; }
+    void copyDefinedStatus(DefinedContainer<View, Derived>& other) const {
+        other.defined = defined;
+    }
 };
 template <typename Derived>
 struct DefinedContainer<BoolView, Derived> {
@@ -50,6 +53,7 @@ struct DefinedContainer<BoolView, Derived> {
         }
     }
     bool isDefined() { return true; }
+    void copyDefinedStatus(DefinedContainer<BoolView, Derived>&) const {}
 };
 
 template <typename Derived>

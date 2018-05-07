@@ -140,6 +140,7 @@ ExprRef<SequenceView> OpSequenceLit::deepCopySelfForUnroll(
         members);
 
     auto newOpSequenceLit = make_shared<OpSequenceLit>(move(newMembers));
+    newOpSequenceLit->numberUndefined = numberUndefined;
     return newOpSequenceLit;
 }
 

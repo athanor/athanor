@@ -32,7 +32,10 @@ struct ExprTrigger
             ->addTrigger(trigger);
         op->exprTriggers[index] = trigger;
     }
+    void adapterHasBecomeDefined() { op->notifyMemberDefined(index); }
+    void adapterHasBecomeUndefined() { op->notifyMemberUndefined(index); }
 };
+
 }  // namespace
 OpTupleLit::OpTupleLit(OpTupleLit&& other)
     : TupleView(std::move(other)), exprTriggers(std::move(other.exprTriggers)) {
@@ -101,6 +104,7 @@ ExprRef<TupleView> OpTupleLit::deepCopySelfForUnroll(
             member);
     }
     auto newOpTupleLit = make_shared<OpTupleLit>(move(newMembers));
+    newOpTupleLit->numberUndefined = numberUndefined;
     return newOpTupleLit;
 }
 
@@ -127,6 +131,7 @@ void OpTupleLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
     }
 }
 
+bool OpTupleLit::isUndefined() { return numberUndefined > 0; }
 template <typename Op>
 struct OpMaker;
 

@@ -26,7 +26,7 @@ struct TupleView : public ExprInterface<TupleView> {
     std::vector<AnyExprRef> members;
     std::vector<std::shared_ptr<TupleTrigger>> triggers;
     SimpleCache<HashType> cachedHashTotal;
-
+    UInt numberUndefined = 0;
     TupleView() {}
     TupleView(std::vector<AnyExprRef> members) : members(members) {}
 
@@ -54,6 +54,23 @@ struct TupleView : public ExprInterface<TupleView> {
     inline void entireTupleChangeAndNotify() {
         cachedHashTotal.invalidate();
         visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
+    }
+
+    inline void notifyMemberDefined(UInt) {
+        cachedHashTotal.invalidate();
+        debug_code(assert(numberUndefined > 0));
+        numberUndefined--;
+        if (numberUndefined == 0) {
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, triggers);
+        }
+    }
+
+    inline void notifyMemberUndefined(UInt) {
+        cachedHashTotal.invalidate();
+        numberUndefined++;
+        if (numberUndefined == 1) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers);
+        }
     }
 
     inline void initFrom(TupleView&) {

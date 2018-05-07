@@ -143,6 +143,8 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
     }
     void hasBecomeUndefined() final { op->setDefined(false, true); }
     void hasBecomeDefined() final { op->setDefined(true, true); }
+    void memberHasBecomeUndefined(UInt) final { shouldNotBeCalledPanic; }
+    void memberHasBecomeDefined(UInt) final { shouldNotBeCalledPanic; }
 };
 
 void OpOr::updateViolationDescription(const UInt,

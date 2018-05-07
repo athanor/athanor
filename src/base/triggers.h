@@ -1,12 +1,10 @@
 
-
 #ifndef SRC_BASE_TRIGGERS_H_
 #define SRC_BASE_TRIGGERS_H_
 #include <memory>
 #include "base/exprRef.h"
 #include "base/typeDecls.h"
 #include "utils/ignoreUnused.h"
-
 template <typename T>
 struct ExprRef;
 
@@ -104,8 +102,28 @@ void setTriggerParent(Op* op, Triggers&... triggers) {
     static_cast<void>(unpack);
 }
 
+struct BoolTrigger : public virtual TriggerBase {
+    inline void hasBecomeUndefined() final { shouldNotBeCalledPanic; }
+    inline void hasBecomeDefined() { shouldNotBeCalledPanic; }
+};
+
+template <typename TriggerType, typename Child>
+struct ChangeTriggerAdapterBaseHelper : public TriggerType {
+    inline void hasBecomeDefined() final {
+        static_cast<Child*>(this)->adapterHasBecomeDefined();
+    }
+    inline void hasBecomeUndefined() final {
+        static_cast<Child*>(this)->adapterHasBecomeUndefined();
+    }
+};
+
 template <typename Child>
-struct ChangeTriggerAdapterBase {
+struct ChangeTriggerAdapterBaseHelper<BoolTrigger, Child> : public BoolTrigger {
+};
+
+template <typename TriggerType, typename Child>
+struct ChangeTriggerAdapterBase
+    : public ChangeTriggerAdapterBaseHelper<TriggerType, Child> {
     inline void forwardPossibleValueChange() {
         static_cast<Child*>(this)->adapterPossibleValueChange();
     }
@@ -113,6 +131,10 @@ struct ChangeTriggerAdapterBase {
     inline void forwardValueChanged() {
         static_cast<Child*>(this)->adapterValueChanged();
     }
+    inline void possibleValueChange() final {
+        this->forwardPossibleValueChange();
+    }
+    inline void valueChanged() final { this->forwardValueChanged(); }
 };
 
 template <typename TriggerType, typename Child>

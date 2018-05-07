@@ -368,7 +368,7 @@ struct SetValue : public SetView, public ValBase {
 
 template <typename Child>
 struct ChangeTriggerAdapter<SetTrigger, Child>
-    : public SetTrigger, public ChangeTriggerAdapterBase<Child> {
+    : public ChangeTriggerAdapterBase<SetTrigger, Child> {
     inline void valueRemoved(UInt, HashType) { this->forwardValueChanged(); }
     inline void valueAdded(const AnyExprRef&) final {
         this->forwardValueChanged();
@@ -379,8 +379,6 @@ struct ChangeTriggerAdapter<SetTrigger, Child>
     inline void memberValueChanged(UInt, const AnyExprRef&) final {
         this->forwardValueChanged();
     }
-    inline void possibleValueChange() { this->forwardPossibleValueChange(); }
-    inline void valueChanged() final { this->forwardValueChanged(); }
 };
 
 #endif /* SRC_TYPES_SET_H_ */

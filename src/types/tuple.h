@@ -121,15 +121,11 @@ struct TupleValue : public TupleView, public ValBase {
 
 template <typename Child>
 struct ChangeTriggerAdapter<TupleTrigger, Child>
-    : public TupleTrigger, public ChangeTriggerAdapterBase<Child> {
+    : public ChangeTriggerAdapterBase<TupleTrigger, Child> {
     inline void possibleMemberValueChange(UInt) final {
         this->forwardPossibleValueChange();
     }
     inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
-    inline void possibleValueChange() final {
-        this->forwardPossibleValueChange();
-    }
-    inline void valueChanged() final { this->forwardValueChanged(); }
 };
 
 #endif /* SRC_TYPES_TUPLE_H_ */

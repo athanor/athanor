@@ -39,6 +39,8 @@ struct SequenceTrigger : public virtual TriggerBase {
     virtual void beginSwaps() = 0;
     virtual void positionsSwapped(UInt index1, UInt index2) = 0;
     virtual void endSwaps() = 0;
+    virtual void memberHasBecomeUndefined(UInt) = 0;
+    virtual void memberHasBecomeDefined(UInt) = 0;
 };
 
 struct SequenceView : public ExprInterface<SequenceView> {
@@ -47,7 +49,9 @@ struct SequenceView : public ExprInterface<SequenceView> {
     std::vector<std::shared_ptr<SequenceTrigger>> triggers;
     SimpleCache<HashType> cachedHashTotal;
     HashType hashOfPossibleChange;
+    UInt numberUndefined = 0;
     debug_code(bool posSequenceValueChangeCalled = false);
+
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline HashType calcMemberHash(UInt index,
                                    const ExprRef<InnerViewType>& expr) const {
@@ -93,7 +97,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRef<InnerViewType> removeMember(UInt index) {
-        cachedHashTotal.invalidate();
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
         ExprRef<InnerViewType> removedMember = std::move(members[index]);
@@ -165,6 +168,39 @@ struct SequenceView : public ExprInterface<SequenceView> {
                       triggers);
     }
 
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void notifyMemberDefined(UInt index) {
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            value +=
+                this->calcMemberHash(index, getMembers<InnerViewType>()[index]);
+        });
+        debug_code(assert(numberUndefined > 0));
+        numberUndefined--;
+        visitTriggers(
+            [&](auto& t) {
+                t->memberHasBecomeDefined(index);
+                if (numberUndefined == 0) {
+                    t->hasBecomeDefined();
+                }
+            },
+            triggers);
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void notifyMemberUndefined(UInt index) {
+        cachedHashTotal.applyIfValid(
+            [&](auto& value) { value -= hashOfPossibleChange; });
+        numberUndefined++;
+        visitTriggers(
+            [&](auto& t) {
+                if (numberUndefined == 1) {
+                    t->hasBecomeUndefined();
+                }
+                t->memberHasBecomeUndefined(index);
+            },
+            triggers);
+    }
+
     void silentClear() {
         mpark::visit(
             [&](auto& membersImpl) {
@@ -201,7 +237,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
         if (cachedHashTotal.isValid()) {
             hashOfPossibleChange =
                 calcSubsequenceHash<InnerViewType>(startIndex, endIndex);
-            ;
         }
         visitTriggers(
             [&](auto& t) {
@@ -393,17 +428,14 @@ struct SequenceValue : public SequenceView, public ValBase {
 
 template <typename Child>
 struct ChangeTriggerAdapter<SequenceTrigger, Child>
-    : public SequenceTrigger, public ChangeTriggerAdapterBase<Child> {
+    : public ChangeTriggerAdapterBase<SequenceTrigger, Child> {
     inline void valueRemoved(UInt, const AnyExprRef&) {
         this->forwardValueChanged();
     }
     inline void valueAdded(UInt, const AnyExprRef&) final {
         this->forwardValueChanged();
     }
-    inline void possibleValueChange() final {
-        this->forwardPossibleValueChange();
-    }
-    inline void valueChanged() final { this->forwardValueChanged(); }
+
     inline void possibleSubsequenceChange(UInt, UInt) final {
         this->forwardPossibleValueChange();
     }
@@ -414,6 +446,8 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
     inline void beginSwaps() final { this->forwardPossibleValueChange(); }
     inline void positionsSwapped(UInt, UInt) final {}
     inline void endSwaps() final { this->forwardValueChanged(); }
+    inline void memberHasBecomeDefined(UInt) {}
+    inline void memberHasBecomeUndefined(UInt) {}
 };
 
 #endif /* SRC_TYPES_SEQUENCE_H_ */

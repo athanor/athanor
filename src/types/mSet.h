@@ -326,7 +326,7 @@ struct MSetValue : public MSetView, public ValBase {
 
 template <typename Child>
 struct ChangeTriggerAdapter<MSetTrigger, Child>
-    : public MSetTrigger, public ChangeTriggerAdapterBase<Child> {
+    : public ChangeTriggerAdapterBase<MSetTrigger, Child> {
     inline void valueRemoved(UInt, const AnyExprRef&) {
         this->forwardValueChanged();
     }
@@ -339,10 +339,6 @@ struct ChangeTriggerAdapter<MSetTrigger, Child>
     inline void memberValueChanged(UInt, const AnyExprRef&) final {
         this->forwardValueChanged();
     }
-    inline void possibleValueChange() final {
-        this->forwardPossibleValueChange();
-    }
-    inline void valueChanged() final { this->forwardValueChanged(); }
 };
 
 #endif /* SRC_TYPES_MSET_H_ */

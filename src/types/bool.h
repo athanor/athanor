@@ -6,19 +6,6 @@
 
 #include "base/base.h"
 struct BoolDomain {};
-struct BoolTrigger : public virtual TriggerBase {
-    inline void hasBecomeUndefined() final {
-        std::cerr << "This function should never be called. " << __func__
-                  << "\nFile: " << __FILE__ << "\nLine: " << __LINE__ << "\n";
-        abort();
-    }
-    inline void hasBecomeDefined() final {
-        std::cerr << "This function should never be called. " << __func__
-                  << "\nFile: " << __FILE__ << "\nLine: " << __LINE__ << "\n";
-        abort();
-    }
-};
-
 struct BoolView : public ExprInterface<BoolView> {
     UInt violation;
     std::vector<std::shared_ptr<BoolTrigger>> triggers;
@@ -58,11 +45,6 @@ struct BoolValue : public BoolView, ValBase {
 
 template <typename Child>
 struct ChangeTriggerAdapter<BoolTrigger, Child>
-    : public BoolTrigger, public ChangeTriggerAdapterBase<Child> {
-    inline void possibleValueChange() final {
-        this->forwardPossibleValueChange();
-    }
-    inline void valueChanged() final { this->forwardValueChanged(); }
-};
+    : public ChangeTriggerAdapterBase<BoolTrigger, Child> {};
 
 #endif /* SRC_TYPES_BOOL_H_ */

@@ -16,39 +16,54 @@ void OpSequenceLit::evaluate() {
 }
 
 namespace {
-    template <typename TriggerType>
-    struct ExprTrigger
-        : public OpSequenceLit::ExprTriggerBase,
-          public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>> {
-        using ExprTriggerBase::ExprTriggerBase;
-        void adapterPossibleValueChange() {
-            mpark::visit(
-                [&](auto& members) {
-                    this->op->template notifyPossibleSubsequenceChange<viewType(
-                        members)>(this->index, this->index + 1);
-                },
-                this->op->members);
-        }
-        void adapterValueChanged() {
-            mpark::visit(
-                [&](auto& members) {
-                    this->op->template changeSubsequenceAndNotify<viewType(
-                        members)>(this->index, this->index + 1);
-                },
-                this->op->members);
-        }
+template <typename TriggerType>
+struct ExprTrigger
+    : public OpSequenceLit::ExprTriggerBase,
+      public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>> {
+    using ExprTriggerBase::ExprTriggerBase;
+    void adapterPossibleValueChange() {
+        mpark::visit(
+            [&](auto& members) {
+                this->op->template notifyPossibleSubsequenceChange<viewType(
+                    members)>(this->index, this->index + 1);
+            },
+            this->op->members);
+    }
+    void adapterValueChanged() {
+        mpark::visit(
+            [&](auto& members) {
+                this->op
+                    ->template changeSubsequenceAndNotify<viewType(members)>(
+                        this->index, this->index + 1);
+            },
+            this->op->members);
+    }
 
-        void reattachTrigger() final {
-            deleteTrigger(static_pointer_cast<ExprTrigger<TriggerType>>(
-                op->exprTriggers[index]));
-            auto trigger = make_shared<ExprTrigger<TriggerType>>(op, index);
-            op->getMembers<
-                  typename AssociatedViewType<TriggerType>::type>()[index]
-                ->addTrigger(trigger);
-            op->exprTriggers[index] = trigger;
-        }
-    };
-}
+    void reattachTrigger() final {
+        deleteTrigger(static_pointer_cast<ExprTrigger<TriggerType>>(
+            op->exprTriggers[index]));
+        auto trigger = make_shared<ExprTrigger<TriggerType>>(op, index);
+        op->getMembers<typename AssociatedViewType<TriggerType>::type>()[index]
+            ->addTrigger(trigger);
+        op->exprTriggers[index] = trigger;
+    }
+
+    void adapterHasBecomeDefined() {
+        mpark::visit(
+            [&](auto& members) {
+                op->template notifyMemberDefined<viewType(members)>(index);
+            },
+            op->members);
+    }
+    void adapterHasBecomeUndefined() {
+        mpark::visit(
+            [&](auto& members) {
+                op->template notifyMemberUndefined<viewType(members)>(index);
+            },
+            op->members);
+    }
+};
+}  // namespace
 OpSequenceLit::OpSequenceLit(OpSequenceLit&& other)
     : SequenceView(std::move(other)),
       exprTriggers(std::move(other.exprTriggers)) {
@@ -156,6 +171,7 @@ void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         },
         members);
 }
+bool OpSequenceLit::isUndefined() { return this->numberUndefined > 0; }
 template <typename Op>
 struct OpMaker;
 

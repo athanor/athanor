@@ -60,10 +60,5 @@ struct IntValue : public IntView, ValBase {
 
 template <typename Child>
 struct ChangeTriggerAdapter<IntTrigger, Child>
-    : public IntTrigger, public ChangeTriggerAdapterBase<Child> {
-    inline void possibleValueChange() final {
-        this->forwardPossibleValueChange();
-    }
-    inline void valueChanged() final { this->forwardValueChanged(); }
-};
+    : public ChangeTriggerAdapterBase<IntTrigger, Child> {};
 #endif /* SRC_TYPES_INT_H_ */

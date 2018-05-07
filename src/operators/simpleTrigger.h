@@ -43,9 +43,9 @@ struct SimpleBinaryTrigger
         op->rightTrigger = newTrigger;
     }
 
-    void hasBecomeUndefined() final { op->setDefined(false, true); }
+    void adapterHasBecomeUndefined()  { op->setDefined(false, true); }
 
-    void hasBecomeDefined() final {
+    void adapterHasBecomeDefined()  {
         if ((isLeftTrigger && !op->right->isUndefined()) ||
             (!isLeftTrigger && !op->left->isUndefined())) {
             op->setDefined(true, true);
@@ -75,9 +75,9 @@ struct SimpleUnaryTrigger
         op->operandTrigger = newTrigger;
     }
 
-    void hasBecomeUndefined() final { op->setDefined(false, true); }
+    void adapterHasBecomeUndefined()  { op->setDefined(false, true); }
 
-    void hasBecomeDefined() final { op->setDefined(true, true); }
+    void adapterHasBecomeDefined() { op->setDefined(true, true); }
 };
 
 #endif /* SRC_OPERATORS_SIMPLETRIGGER_H_ */

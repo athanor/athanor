@@ -25,6 +25,7 @@ struct OpSequenceLit : public SequenceView {
         const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    bool isUndefined() final;
 };
 
 #endif /* SRC_OPERATORS_OPSEQUENCELIT_H_ */

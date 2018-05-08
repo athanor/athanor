@@ -60,6 +60,8 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
         op->left->addTrigger(trigger);
         op->leftTrigger = trigger;
     }
+    void hasBecomeUndefined() final { op->setDefined(false, true); }
+    void hasBecomeDefined() final { op->setDefined(true, true); }
 };
 
 struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
@@ -109,6 +111,8 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
         op->left->addTrigger(trigger);
         op->rightTrigger = trigger;
     }
+    void hasBecomeUndefined() final { op->setDefined(false, true); }
+    void hasBecomeDefined() final { op->setDefined(true, true); }
 };
 
 void OpSubsetEq::updateViolationDescription(UInt,

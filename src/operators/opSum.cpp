@@ -50,6 +50,8 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
                                           UInt endIndex) final {
         previousValue = 0;
         for (size_t i = startIndex; i < endIndex; i++) {
+            debug_code(assert(
+                !op->operand->view().getMembers<IntView>()[i]->isUndefined()));
             previousValue +=
                 op->operand->view().getMembers<IntView>()[i]->view().value;
         }

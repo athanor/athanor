@@ -43,8 +43,8 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
-    ExprRef<SequenceMemberViewType> getMember();
-    const ExprRef<SequenceMemberViewType> getMember() const;
+    ExprRef<SequenceMemberViewType>& getMember();
+    const ExprRef<SequenceMemberViewType>& getMember() const;
     void reevaluateDefined();
 };
 

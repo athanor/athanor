@@ -11,22 +11,26 @@ void OpTupleIndex<TupleMemberViewType>::addTrigger(
 }
 
 template <typename TupleMemberViewType>
-ExprRef<TupleMemberViewType> OpTupleIndex<TupleMemberViewType>::getMember() {
+ExprRef<TupleMemberViewType>& OpTupleIndex<TupleMemberViewType>::getMember() {
     debug_code(assert(defined));
-    debug_code(
-        assert(index >= 0 && index < (UInt)tupleOperand->view().members.size()));
-    return mpark::get<ExprRef<TupleMemberViewType>>(
+    debug_code(assert(index >= 0 && !tupleOperand->isUndefined() &&
+                      index < (UInt)tupleOperand->view().members.size()));
+    auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
         tupleOperand->view().members[index]);
+    debug_code(assert(!member->isUndefined()));
+    return member;
 }
 
 template <typename TupleMemberViewType>
-const ExprRef<TupleMemberViewType>
+const ExprRef<TupleMemberViewType>&
 OpTupleIndex<TupleMemberViewType>::getMember() const {
     debug_code(assert(defined));
-    debug_code(assert(index >= 0 &&
+    debug_code(assert(index >= 0 && !tupleOperand->isUndefined() &&
                       index < (UInt)tupleOperand->view().members.size()));
-    return mpark::get<ExprRef<TupleMemberViewType>>(
+    const auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
         tupleOperand->view().members[index]);
+    debug_code(assert(!member->isUndefined()));
+    return member;
 }
 
 template <typename TupleMemberViewType>

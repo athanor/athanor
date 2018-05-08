@@ -11,26 +11,30 @@ void OpSequenceIndex<SequenceMemberViewType>::addTrigger(
 }
 
 template <typename SequenceMemberViewType>
-ExprRef<SequenceMemberViewType>
+ExprRef<SequenceMemberViewType>&
 OpSequenceIndex<SequenceMemberViewType>::getMember() {
-    debug_code(assert(defined));
     debug_code(
-        assert(cachedIndex >= 0 &&
+        assert(!indexOperand->isUndefined() && cachedIndex >= 0 &&
+               !sequenceOperand->isUndefined() &&
                cachedIndex < (Int)sequenceOperand->view().numberElements()));
-    return sequenceOperand->view()
-        .getMembers<SequenceMemberViewType>()[cachedIndex];
+    auto& member = sequenceOperand->view()
+                       .getMembers<SequenceMemberViewType>()[cachedIndex];
+    debug_code(assert(!member->isUndefined()));
+    return member;
 }
 
 template <typename SequenceMemberViewType>
-const ExprRef<SequenceMemberViewType>
+const ExprRef<SequenceMemberViewType>&
 OpSequenceIndex<SequenceMemberViewType>::getMember() const {
-    debug_code(assert(defined));
     debug_code(
-        assert(cachedIndex >= 0 &&
+        assert(!indexOperand->isUndefined() && cachedIndex >= 0 &&
+               !sequenceOperand->isUndefined() &&
                cachedIndex < (Int)sequenceOperand->view().numberElements()));
 
-    return sequenceOperand->view()
-        .getMembers<SequenceMemberViewType>()[cachedIndex];
+    const auto& member = sequenceOperand->view()
+                             .getMembers<SequenceMemberViewType>()[cachedIndex];
+    debug_code(assert(!member->isUndefined()));
+    return member;
 }
 
 template <typename SequenceMemberViewType>
@@ -52,8 +56,8 @@ void OpSequenceIndex<SequenceMemberViewType>::reevaluateDefined() {
 
 template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::evaluate() {
-    indexOperand->evaluate();
     sequenceOperand->evaluate();
+    indexOperand->evaluate();
     if (indexOperand->isUndefined()) {
         defined = false;
     } else {

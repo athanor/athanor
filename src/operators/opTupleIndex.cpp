@@ -68,8 +68,31 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
         op->tupleOperand->addTrigger(trigger);
         op->tupleTrigger = trigger;
     }
-    void possibleMemberValueChange(UInt) final {}
-    void memberValueChanged(UInt) final {}
+    inline void hasBecomeUndefined() final {
+        if (!op->defined) {
+            return;
+        }
+        op->defined = false;
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
+    }
+    void hasBecomeDefined() final {
+        if (op->indexOperand->isUndefined()) {
+            return;
+        }
+        op->defined =
+            op->cachedIndex >= 0 &&
+            op->cachedIndex < (Int)op->sequenceOperand->view().numberElements();
+        if (!op->defined) {
+            return;
+        }
+        visitTriggers(
+            [&](auto& t) {
+                t->hasBecomeDefined();
+                t->reattachTrigger();
+            },
+            op->triggers);
+    }
+
 };
 
 template <typename TupleMemberViewType>
@@ -129,6 +152,16 @@ void OpTupleIndex<TupleMemberViewType>::findAndReplaceSelf(
     const FindAndReplaceFunction& func) {
     this->tupleOperand = findAndReplace(tupleOperand, func);
 }
+
+template <typename TupleMemberViewType>
+bool OpTupleIndex<TupleMemberViewType>::isUndefined() {
+    if (tupleOperand->isUndefined()) {
+        return true;
+    }
+    auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
+        tupleOperand->view().members[index]);
+    return member->isUndefined();
+}(
 
 template <typename Op>
 struct OpMaker;

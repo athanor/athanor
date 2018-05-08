@@ -2,43 +2,63 @@
 #include <iostream>
 #include <memory>
 #include "utils/ignoreUnused.h"
-
 using namespace std;
 
 template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::addTrigger(
     const shared_ptr<SequenceMemberTriggerType>& trigger) {
-    if (defined) {
-        debug_code(assert(cachedIndex <
-                          (Int)sequenceOperand->view().numberElements()));
-        sequenceOperand->view()
-            .getMembers<SequenceMemberViewType>()[cachedIndex]
-            ->addTrigger(trigger);
-    }
     triggers.emplace_back(getTriggerBase(trigger));
 }
 
 template <typename SequenceMemberViewType>
-SequenceMemberViewType& OpSequenceIndex<SequenceMemberViewType>::view() {
+ExprRef<SequenceMemberViewType>
+OpSequenceIndex<SequenceMemberViewType>::getMember() {
+    debug_code(assert(defined));
+    debug_code(
+        assert(cachedIndex >= 0 &&
+               cachedIndex < (Int)sequenceOperand->view().numberElements()));
     return sequenceOperand->view()
-        .getMembers<SequenceMemberViewType>()[cachedIndex]
-        ->view();
+        .getMembers<SequenceMemberViewType>()[cachedIndex];
+}
+
+template <typename SequenceMemberViewType>
+const ExprRef<SequenceMemberViewType>
+OpSequenceIndex<SequenceMemberViewType>::getMember() const {
+    debug_code(assert(defined));
+    debug_code(
+        assert(cachedIndex >= 0 &&
+               cachedIndex < (Int)sequenceOperand->view().numberElements()));
+
+    return sequenceOperand->view()
+        .getMembers<SequenceMemberViewType>()[cachedIndex];
+}
+
+template <typename SequenceMemberViewType>
+SequenceMemberViewType& OpSequenceIndex<SequenceMemberViewType>::view() {
+    return getMember()->view();
 }
 template <typename SequenceMemberViewType>
 const SequenceMemberViewType& OpSequenceIndex<SequenceMemberViewType>::view()
     const {
-    return sequenceOperand->view()
-        .getMembers<SequenceMemberViewType>()[cachedIndex]
-        ->view();
+    return getMember()->view();
+}
+template <typename SequenceMemberViewType>
+void OpSequenceIndex<SequenceMemberViewType>::reevaluateDefined() {
+    defined = !indexOperand->isUndefined() && cachedIndex >= 0 &&
+              !sequenceOperand->isUndefined() &&
+              cachedIndex < (Int)sequenceOperand->view().numberElements();
 }
 
 template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::evaluate() {
     indexOperand->evaluate();
     sequenceOperand->evaluate();
-    cachedIndex = indexOperand->view().value - 1;
-    defined = cachedIndex >= 0 &&
-              cachedIndex < (Int)sequenceOperand->view().numberElements();
+    if (indexOperand->isUndefined()) {
+        defined = false;
+    } else {
+        cachedIndex = indexOperand->view().value - 1;
+        reevaluateDefined();
+    }
 }
 
 template <typename SequenceMemberViewType>
@@ -69,26 +89,15 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
     }
     void valueChanged() final {
         bool wasDefined = op->defined;
-        op->defined =
-            op->cachedIndex >= 0 &&
-            op->cachedIndex < (Int)op->sequenceOperand->view().numberElements();
+        op->reevaluateDefined();
         if (wasDefined && !op->defined) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
                           op->triggers);
         } else if (!wasDefined && op->defined) {
-            visitTriggers(
-                [&](auto& t) {
-                    t->hasBecomeDefined();
-                    t->reattachTrigger();
-                },
-                op->triggers);
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                          op->triggers);
         } else if (op->defined) {
-            visitTriggers(
-                [&](auto& t) {
-                    t->valueChanged();
-                    t->reattachTrigger();
-                },
-                op->triggers);
+            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
         }
     }
 
@@ -97,7 +106,6 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
             return;
         }
         op->defined =
-            op->cachedIndex >= 0 &&
             op->cachedIndex < (Int)op->sequenceOperand->view().numberElements();
         if (!op->defined) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
@@ -111,56 +119,44 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         visitTriggers(
             [&](auto& t) {
                 t->valueChanged();
-                t->reattachTrigger();
+
             },
             op->triggers);
     }
 
     inline void valueAdded(UInt index, const AnyExprRef&) final {
         if (!op->defined) {
-            op->defined = op->cachedIndex >= 0 &&
-                          op->cachedIndex <
-                              (Int)op->sequenceOperand->view().numberElements();
+            op->reevaluateDefined();
             if (op->defined) {
-                visitTriggers(
-                    [&](auto& t) {
-                        t->hasBecomeDefined();
-                        t->reattachTrigger();
-                    },
-                    op->triggers);
+                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                              op->triggers);
             }
             return;
         }
         if ((Int)index > op->cachedIndex) {
             return;
         }
-        visitTriggers(
-            [&](auto& t) {
-                t->valueChanged();
-                t->reattachTrigger();
-            },
-            op->triggers);
-    }
-    inline void possibleSubsequenceChange(UInt, UInt) final {
-        // no need to pass trigger event up the tree, parent will already be
-        // triggering on the member pointed to by index
+        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
     }
 
-    inline void subsequenceChanged(UInt, UInt) final {
-        // no need to pass trigger event up the tree, parent will already be
-        // triggering on the member pointed to by index
+    inline void possibleSubsequenceChange(UInt startIndex,
+                                          UInt endIndex) final {
+        if (op->defined && (Int)startIndex <= op->cachedIndex &&
+            (Int)endIndex > op->cachedIndex) {
+            visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                          op->triggers);
+        }
     }
 
-    inline void beginSwaps() final {
-        if (!op->defined) {
-            return;
+    inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
+        if (op->defined && (Int)startIndex <= op->cachedIndex &&
+            (Int)endIndex > op->cachedIndex) {
+            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
         }
     }
-    inline void endSwaps() final {
-        if (!op->defined) {
-            return;
-        }
-    }
+
+    inline void beginSwaps() final {}
+    inline void endSwaps() final {}
     inline void positionsSwapped(UInt index1, UInt index2) final {
         if (!op->defined) {
             return;
@@ -177,12 +173,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         op->cachedIndex = index2;
         visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
         op->cachedIndex = index1;
-        visitTriggers(
-            [&](auto& t) {
-                t->valueChanged();
-                t->reattachTrigger();
-            },
-            op->triggers);
+        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
     }
 
     void reattachTrigger() final {
@@ -202,22 +193,14 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
     }
     void hasBecomeDefined() final {
-        if (op->indexOperand->isUndefined()) {
-            return;
-        }
-        op->defined =
-            op->cachedIndex >= 0 &&
-            op->cachedIndex < (Int)op->sequenceOperand->view().numberElements();
+        op->reevaluateDefined();
         if (!op->defined) {
             return;
         }
-        visitTriggers(
-            [&](auto& t) {
-                t->hasBecomeDefined();
-                t->reattachTrigger();
-            },
-            op->triggers);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
     }
+    void memberHasBecomeUndefined(UInt) final {}
+    void memberHasBecomeDefined(UInt) final {}
 };
 
 template <typename SequenceMemberViewType>
@@ -234,32 +217,17 @@ struct OpSequenceIndex<SequenceMemberViewType>::IndexTrigger
     }
 
     void valueChanged() final {
-        if (op->defined) {
-            visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                          op->triggers);
-        }
         op->cachedIndex = op->indexOperand->view().value - 1;
         bool wasDefined = op->defined;
-        op->defined =
-            op->cachedIndex >= 0 &&
-            op->cachedIndex < (Int)op->sequenceOperand->view().numberElements();
+        op->reevaluateDefined();
         if (wasDefined && !op->defined) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
                           op->triggers);
         } else if (!wasDefined && op->defined) {
-            visitTriggers(
-                [&](auto& t) {
-                    t->hasBecomeDefined();
-                    t->reattachTrigger();
-                },
-                op->triggers);
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                          op->triggers);
         } else if (op->defined) {
-            visitTriggers(
-                [&](auto& t) {
-                    t->valueChanged();
-                    t->reattachTrigger();
-                },
-                op->triggers);
+            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
         }
     }
 
@@ -280,18 +248,11 @@ struct OpSequenceIndex<SequenceMemberViewType>::IndexTrigger
     }
     void hasBecomeDefined() final {
         op->cachedIndex = op->indexOperand->view().value - 1;
-        op->defined =
-            !op->sequenceOperand->isUndefined() && op->cachedIndex >= 0 &&
-            op->cachedIndex < (Int)op->sequenceOperand->view().numberElements();
+        op->reevaluateDefined();
         if (!op->defined) {
             return;
         }
-        visitTriggers(
-            [&](auto& t) {
-                t->hasBecomeDefined();
-                t->reattachTrigger();
-            },
-            op->triggers);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
     }
 };
 
@@ -334,9 +295,9 @@ void OpSequenceIndex<SequenceMemberViewType>::updateViolationDescription(
     UInt parentViolation, ViolationDescription& vioDesc) {
     indexOperand->updateViolationDescription(parentViolation, vioDesc);
     if (defined) {
-        sequenceOperand->view()
-            .getMembers<SequenceMemberViewType>()[cachedIndex]
-            ->updateViolationDescription(parentViolation, vioDesc);
+        getMember()->updateViolationDescription(parentViolation, vioDesc);
+    } else {
+        sequenceOperand->updateViolationDescription(parentViolation, vioDesc);
     }
 }
 

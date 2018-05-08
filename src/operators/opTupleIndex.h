@@ -40,6 +40,7 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    bool isUndefined();
 };
 
 #endif /* SRC_OPERATORS_OPTUPLEINDEX_H_ */

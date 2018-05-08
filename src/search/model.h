@@ -1,6 +1,8 @@
 #ifndef SRC_SEARCH_MODEL_H_
 #define SRC_SEARCH_MODEL_H_
 #include <algorithm>
+#include "operators/operatorMakers.h"
+
 #include <cassert>
 #include "base/base.h"
 #include "common/common.h"
@@ -64,6 +66,9 @@ class ModelBuilder {
         model.optimiseMode = mode;
     }
     Model build() {
+        if (model.optimiseMode != OptimiseMode::NONE) {
+            addConstraint(OpMaker<OpIsDefined>::make(model.objective));
+        }
         model.csp = std::make_shared<OpAnd>(
             std::make_shared<OpSequenceLit>(move(constraints)));
         for (size_t i = 0; i < model.variables.size(); ++i) {

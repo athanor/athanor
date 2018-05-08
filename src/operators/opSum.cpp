@@ -13,6 +13,14 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     OperandsSequenceTrigger(OpSum* op) : op(op) {}
     void valueAdded(UInt, const AnyExprRef& exprIn) final {
         auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
+        if (expr->isUndefined()) {
+            if (op->operand->view().numberUndefined == 1) {
+                op->setDefined(false, false);
+                visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                              op->triggers);
+            }
+            return;
+        }
         op->changeValue([&]() {
             op->value += expr->view().value;
             return true;
@@ -21,6 +29,14 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
 
     void valueRemoved(UInt, const AnyExprRef& exprIn) final {
         const auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
+        if (expr->isUndefined()) {
+            if (op->operand->view().numberUndefined == 0) {
+                op->setDefined(true, false);
+                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                              op->triggers);
+            }
+            return;
+        }
         op->changeValue([&]() {
             op->value -= expr->view().value;
             return true;
@@ -64,10 +80,27 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         op->operand->addTrigger(trigger);
         op->operandTrigger = trigger;
     }
-    void hasBecomeUndefined() final {
-        op->setDefined(false, true);
-    }
+    void hasBecomeUndefined() final { op->setDefined(false, true); }
     void hasBecomeDefined() final { op->setDefined(true, true); }
+
+    void memberHasBecomeUndefined(UInt) {
+        op->value -= previousValue;
+        if (op->operand->view().numberUndefined == 1) {
+            op->setDefined(false, false);
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                          op->triggers);
+        }
+    }
+
+    void memberHasBecomeDefined(UInt index) {
+        op->value +=
+            op->operand->view().getMembers<IntView>()[index]->view().value;
+        if (op->operand->view().numberUndefined == 0) {
+            op->setDefined(true, false);
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                          op->triggers);
+        }
+    }
 };
 
 void OpSum::reevaluate() {

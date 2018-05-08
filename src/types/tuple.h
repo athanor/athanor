@@ -16,7 +16,10 @@ struct TupleDomain {
     TupleDomain(std::vector<AnyDomainRef> inners) : inners(std::move(inners)) {}
 };
 struct TupleView;
-struct TupleTrigger : public virtual TriggerBase {};
+struct TupleTrigger : public virtual TriggerBase {
+    virtual void possibleMemberValueChange(UInt index) = 0;
+    virtual void memberValueChanged(UInt index) = 0;
+};
 struct TupleValue;
 struct TupleView : public ExprInterface<TupleView> {
     friend TupleValue;
@@ -27,9 +30,23 @@ struct TupleView : public ExprInterface<TupleView> {
     TupleView() {}
     TupleView(std::vector<AnyExprRef> members) : members(members) {}
 
-   private:
+    inline void memberChanged(UInt) { cachedHashTotal.invalidate(); }
+
+    inline void notifyMemberChanged(UInt index) {
+        visitTriggers([&](auto& t) { t->memberValueChanged(index); }, triggers);
+    }
 
    public:
+    inline void notifyPossibleMemberChange(UInt index) {
+        visitTriggers([&](auto& t) { t->possibleMemberValueChange(index); },
+                      triggers);
+    }
+
+    inline void memberChangedAndNotify(UInt index) {
+        memberChanged(index);
+        notifyMemberChanged(index);
+    }
+
     inline void notifyPossibleEntireTupleChange() {
         visitTriggers([&](auto& t) { t->possibleValueChange(); }, triggers);
     }
@@ -77,6 +94,20 @@ struct TupleValue : public TupleView, public ValBase {
         valBase(*member).container = this;
         valBase(*member).id = members.size() - 1;
         debug_code(assertValidVarBases());
+    }
+
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
+    inline bool tryMemberChange(size_t index, Func&& func) {
+        TupleView::notifyPossibleMemberChange(index);
+
+        if (func()) {
+            TupleView::memberChanged(index);
+            TupleView::notifyMemberChanged(index);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     template <typename Func>

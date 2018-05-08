@@ -2,35 +2,50 @@
 #include <iostream>
 #include <memory>
 #include "utils/ignoreUnused.h"
-
 using namespace std;
 
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::addTrigger(
     const shared_ptr<TupleMemberTriggerType>& trigger) {
-    auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
-        tupleOperand->view().members[index]);
-    member->addTrigger(trigger);
     triggers.emplace_back(getTriggerBase(trigger));
 }
 
 template <typename TupleMemberViewType>
-TupleMemberViewType& OpTupleIndex<TupleMemberViewType>::view() {
-    auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
+ExprRef<TupleMemberViewType> OpTupleIndex<TupleMemberViewType>::getMember() {
+    debug_code(assert(defined));
+    debug_code(
+        assert(index >= 0 && index < (UInt)tupleOperand->view().members.size()));
+    return mpark::get<ExprRef<TupleMemberViewType>>(
         tupleOperand->view().members[index]);
-    return member->view();
 }
 
 template <typename TupleMemberViewType>
-const TupleMemberViewType& OpTupleIndex<TupleMemberViewType>::view() const {
-    const auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
+const ExprRef<TupleMemberViewType>
+OpTupleIndex<TupleMemberViewType>::getMember() const {
+    debug_code(assert(defined));
+    debug_code(assert(index >= 0 &&
+                      index < (UInt)tupleOperand->view().members.size()));
+    return mpark::get<ExprRef<TupleMemberViewType>>(
         tupleOperand->view().members[index]);
-    return member->view();
+}
+
+template <typename TupleMemberViewType>
+TupleMemberViewType& OpTupleIndex<TupleMemberViewType>::view() {
+    return getMember()->view();
+}
+template <typename TupleMemberViewType>
+const TupleMemberViewType& OpTupleIndex<TupleMemberViewType>::view() const {
+    return getMember()->view();
+}
+template <typename TupleMemberViewType>
+void OpTupleIndex<TupleMemberViewType>::reevaluateDefined() {
+    defined = !tupleOperand->isUndefined();
 }
 
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::evaluate() {
     tupleOperand->evaluate();
+    reevaluateDefined();
 }
 
 template <typename TupleMemberViewType>
@@ -40,6 +55,7 @@ OpTupleIndex<TupleMemberViewType>::OpTupleIndex(
       triggers(move(other.triggers)),
       tupleOperand(move(other.tupleOperand)),
       index(move(other.index)),
+      defined(move(other.defined)),
       tupleTrigger(move(other.tupleTrigger)) {
     setTriggerParent(this, tupleTrigger);
 }
@@ -53,13 +69,22 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
         visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
     }
     void valueChanged() final {
-        visitTriggers(
-            [&](auto& t) {
-                t->valueChanged();
-                t->reattachTrigger();
-            },
-            op->triggers);
+        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
     }
+
+    inline void possibleMemberValueChange(UInt index) final {
+        if ((UInt)index == op->index) {
+            visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                          op->triggers);
+        }
+    }
+
+    inline void memberValueChanged(UInt index) final {
+        if ((UInt)index == op->index) {
+            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+        }
+    }
+
     void reattachTrigger() final {
         deleteTrigger(op->tupleTrigger);
         auto trigger =
@@ -68,31 +93,18 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
         op->tupleOperand->addTrigger(trigger);
         op->tupleTrigger = trigger;
     }
+
     inline void hasBecomeUndefined() final {
-        if (!op->defined) {
-            return;
-        }
         op->defined = false;
         visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
     }
     void hasBecomeDefined() final {
-        if (op->indexOperand->isUndefined()) {
-            return;
-        }
-        op->defined =
-            op->cachedIndex >= 0 &&
-            op->cachedIndex < (Int)op->sequenceOperand->view().numberElements();
+        op->reevaluateDefined();
         if (!op->defined) {
             return;
         }
-        visitTriggers(
-            [&](auto& t) {
-                t->hasBecomeDefined();
-                t->reattachTrigger();
-            },
-            op->triggers);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
     }
-
 };
 
 template <typename TupleMemberViewType>
@@ -124,9 +136,11 @@ void OpTupleIndex<TupleMemberViewType>::stopTriggering() {
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::updateViolationDescription(
     UInt parentViolation, ViolationDescription& vioDesc) {
-    auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
-        tupleOperand->view().members[index]);
-    member->updateViolationDescription(parentViolation, vioDesc);
+    if (defined) {
+        getMember()->updateViolationDescription(parentViolation, vioDesc);
+    } else {
+        tupleOperand->updateViolationDescription(parentViolation, vioDesc);
+    }
 }
 
 template <typename TupleMemberViewType>
@@ -135,6 +149,8 @@ OpTupleIndex<TupleMemberViewType>::deepCopySelfForUnroll(
     const ExprRef<TupleMemberViewType>&, const AnyIterRef& iterator) const {
     auto newOpTupleIndex = make_shared<OpTupleIndex<TupleMemberViewType>>(
         tupleOperand->deepCopySelfForUnroll(tupleOperand, iterator), index);
+    newOpTupleIndex->index = index;
+    newOpTupleIndex->defined = defined;
     return newOpTupleIndex;
 }
 
@@ -155,14 +171,8 @@ void OpTupleIndex<TupleMemberViewType>::findAndReplaceSelf(
 
 template <typename TupleMemberViewType>
 bool OpTupleIndex<TupleMemberViewType>::isUndefined() {
-    if (tupleOperand->isUndefined()) {
-        return true;
-    }
-    auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
-        tupleOperand->view().members[index]);
-    return member->isUndefined();
-}(
-
+    return !defined;
+}
 template <typename Op>
 struct OpMaker;
 
@@ -174,7 +184,7 @@ struct OpMaker<OpTupleIndex<View>> {
 template <typename View>
 ExprRef<View> OpMaker<OpTupleIndex<View>>::make(ExprRef<TupleView> tuple,
                                                 UInt index) {
-    return make_shared<OpTupleIndex<View>>(move(tuple), move(index));
+    return make_shared<OpTupleIndex<View>>(move(tuple), index);
 }
 
 #define opTupleIndexInstantiators(name)       \

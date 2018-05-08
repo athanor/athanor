@@ -184,6 +184,23 @@ struct ExprChangeTrigger
             trigger);
         triggerToChange = trigger;
     }
+
+    void adapterHasBecomeDefined() {
+        mpark::visit(
+            [&](auto& members) {
+                this->op->template notifyMemberDefined<viewType(members)>(
+                    this->index);
+            },
+            this->op->members);
+    }
+    void adapterHasBecomeUndefined() {
+        mpark::visit(
+            [&](auto& members) {
+                this->op->template notifyMemberUndefined<viewType(members)>(
+                    this->index);
+            },
+            this->op->members);
+    }
 };
 
 template <typename ContainerType>
@@ -300,6 +317,11 @@ void Quantifier<ContainerType>::findAndReplaceSelf(
                  this->expr);
 }
 
+template <typename ContainerType>
+bool Quantifier<ContainerType>::isUndefined() {
+    return this->numberUndefined > 0 || !containerDefined;
+}
+
 template <>
 struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
     Quantifier<SetView>* op;
@@ -361,6 +383,18 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
         auto trigger = make_shared<ContainerTrigger<SetView>>(op);
         op->container->addTrigger(trigger);
         op->containerTrigger = trigger;
+    }
+
+    void hasBecomeUndefined() {
+        op->containerDefined = false;
+        if (op->numberUndefined == 0) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                          op->triggers);
+        }
+    }
+    void hasBecomeDefined() {
+        op->containerDefined = true;
+        this->valueChanged();
     }
 };
 
@@ -439,6 +473,17 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
         auto trigger = make_shared<ContainerTrigger<MSetView>>(op);
         op->container->addTrigger(trigger);
         op->containerTrigger = trigger;
+    }
+    void hasBecomeUndefined() {
+        op->containerDefined = false;
+        if (op->numberUndefined == 0) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                          op->triggers);
+        }
+    }
+    void hasBecomeDefined() {
+        op->containerDefined = true;
+        this->valueChanged();
     }
 };
 
@@ -574,6 +619,20 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
             return true;
         });
     }
+    void hasBecomeUndefined() {
+        op->containerDefined = false;
+        if (op->numberUndefined == 0) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                          op->triggers);
+        }
+    }
+    void hasBecomeDefined() {
+        op->containerDefined = true;
+        this->valueChanged();
+    }
+
+    void memberHasBecomeUndefined(UInt) final {}
+    void memberHasBecomeDefined(UInt) final {}
 };
 
 template <>

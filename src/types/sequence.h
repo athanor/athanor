@@ -76,12 +76,16 @@ struct SequenceView : public ExprInterface<SequenceView> {
     inline void addMember(size_t index, const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();
         members.insert(members.begin() + index, member);
-        if (index == members.size() - 1) {
+        bool memberUndefined = !member->isUndefined();
+        if (!memberUndefined && index == members.size() - 1) {
             cachedHashTotal.applyIfValid([&](auto& value) {
                 value += this->calcMemberHash(index, member);
             });
         } else {
             cachedHashTotal.invalidate();
+        }
+        if (memberUndefined) {
+            numberUndefined++;
         }
         debug_code(assertValidState());
     }
@@ -107,6 +111,9 @@ struct SequenceView : public ExprInterface<SequenceView> {
             });
         } else {
             cachedHashTotal.invalidate();
+        }
+        if (removedMember->isUndefined()) {
+            numberUndefined--;
         }
         return removedMember;
     }
@@ -219,6 +226,9 @@ struct SequenceView : public ExprInterface<SequenceView> {
         notifyPossibleSequenceValueChange();
         addMember(index, member);
         notifyMemberAdded(index, getMembers<InnerViewType>().back());
+        if (numberUndefined == 1 && member->isUndefined()) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers);
+        }
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -227,6 +237,9 @@ struct SequenceView : public ExprInterface<SequenceView> {
         ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
         notifyMemberRemoved(index, removedValue);
+        if (numberUndefined == 0 && removedValue->isUndefined()) {
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, triggers);
+        }
         return removedValue;
     }
 

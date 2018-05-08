@@ -77,7 +77,7 @@ void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction& func) {
 }
 
 template <typename View>
-void Iterator<View>::isUndefined() {
+bool Iterator<View>::isUndefined() {
     return ref->isUndefined();
 }
 

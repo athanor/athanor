@@ -22,6 +22,7 @@ struct Quantifier : public SequenceView {
     const int quantId;
     ExprRef<ContainerType> container;
     AnyExprRef expr = ExprRef<BoolView>(nullptr);
+    bool containerDefined = true;
     std::vector<AnyIterRef> unrolledIterVals;
     std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
@@ -62,6 +63,7 @@ struct Quantifier : public SequenceView {
     template <typename ViewType>
     void stopTriggeringOnExpr(UInt oldIndex);
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    bool isUndefined();
 };
 
 #endif /* SRC_OPERATORS_QUANTIFIER_H_ */

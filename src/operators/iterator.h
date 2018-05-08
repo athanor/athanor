@@ -18,12 +18,26 @@ struct Iterator : public ExprInterface<View> {
         ref = newVal;
         callback();
         if (triggering) {
-            ref = oldVal;
-            visitTriggers([&](auto& t) { t->possibleValueChange(); }, triggers);
-            ref = newVal;
-            visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
+            bool oldValUndefined = oldVal->isUndefined();
+            if (!oldValUndefined) {
+                ref = oldVal;
+                visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                              triggers);
+                ref = newVal;
+            }
+            bool newValUndefined = newVal->isUndefined();
+            if (oldValUndefined && !newValUndefined) {
+                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                              triggers);
+            } else if (!oldValUndefined && newValUndefined) {
+                visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                              triggers);
+            } else if (!newValUndefined) {
+                visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
+            }
         }
     }
+
     inline ExprRef<View>& getValue() { return ref; }
 
     Iterator(const Iterator<View>&) = delete;
@@ -44,7 +58,7 @@ struct Iterator : public ExprInterface<View> {
                                         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    void isDefined();
+    bool isUndefined();
 };
 
 template <typename T>

@@ -19,7 +19,7 @@ HashType getValueHash<SequenceView>(const SequenceView& val) {
 
 template <>
 ostream& prettyPrint<SequenceView>(ostream& os, const SequenceView& v) {
-    os << "Sequence(";
+    os << "sequence(";
     mpark::visit(
         [&](auto& membersImpl) {
             bool first = true;

@@ -67,7 +67,7 @@ def startReading():
         print("***No solutions found.", file=sys.stderr)
         sys.exit(1)
     else:
-        print("Success, all solutions valid.\nNumber solutions found: " + numberSolutions)
+        print("Success, all solutions valid.\nNumber solutions found: " + str(numberSolutions))
 
 
     

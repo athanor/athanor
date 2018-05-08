@@ -46,7 +46,8 @@ template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::reevaluateDefined() {
     defined = !indexOperand->isUndefined() && cachedIndex >= 0 &&
               !sequenceOperand->isUndefined() &&
-              cachedIndex < (Int)sequenceOperand->view().numberElements();
+              cachedIndex < (Int)sequenceOperand->view().numberElements() &&
+              !getMember()->isUndefined();
 }
 
 template <typename SequenceMemberViewType>
@@ -199,8 +200,23 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         }
         visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
     }
-    void memberHasBecomeUndefined(UInt) final {}
-    void memberHasBecomeDefined(UInt) final {}
+    void memberHasBecomeUndefined(UInt index) final {
+        if (!op->defined) {
+            return;
+        }
+        if ((Int)index != op->cachedIndex) {
+            return;
+        }
+        op->defined = false;
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
+    }
+    void memberHasBecomeDefined(UInt) final {
+        op->reevaluateDefined();
+        if (!op->defined) {
+            return;
+        }
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
+    }
 };
 
 template <typename SequenceMemberViewType>

@@ -183,14 +183,8 @@ struct SequenceView : public ExprInterface<SequenceView> {
         });
         debug_code(assert(numberUndefined > 0));
         numberUndefined--;
-        visitTriggers(
-            [&](auto& t) {
-                t->memberHasBecomeDefined(index);
-                if (numberUndefined == 0) {
-                    t->hasBecomeDefined();
-                }
-            },
-            triggers);
+        visitTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
+                      triggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -198,14 +192,8 @@ struct SequenceView : public ExprInterface<SequenceView> {
         cachedHashTotal.applyIfValid(
             [&](auto& value) { value -= hashOfPossibleChange; });
         numberUndefined++;
-        visitTriggers(
-            [&](auto& t) {
-                if (numberUndefined == 1) {
-                    t->hasBecomeUndefined();
-                }
-                t->memberHasBecomeUndefined(index);
-            },
-            triggers);
+        visitTriggers([&](auto& t) { t->memberHasBecomeUndefined(index); },
+                      triggers);
     }
 
     void silentClear() {
@@ -226,9 +214,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
         notifyPossibleSequenceValueChange();
         addMember(index, member);
         notifyMemberAdded(index, getMembers<InnerViewType>().back());
-        if (numberUndefined == 1 && member->isUndefined()) {
-            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers);
-        }
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -237,9 +222,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
         ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
         notifyMemberRemoved(index, removedValue);
-        if (numberUndefined == 0 && removedValue->isUndefined()) {
-            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, triggers);
-        }
         return removedValue;
     }
 

@@ -1,6 +1,7 @@
 #include "operators/opProd.h"
 #include <algorithm>
 #include <cassert>
+#include <unordered_map>
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
@@ -9,6 +10,7 @@ using OperandsSequenceTrigger = OperatorTrates<OpProd>::OperandsSequenceTrigger;
 class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
    public:
     Int previousValue;
+    unordered_map<UInt, Int> previousValues;
     OpProd* op;
     OperandsSequenceTrigger(OpProd* op) : op(op) {}
     void valueAdded(UInt, const AnyExprRef& exprIn) final {
@@ -50,21 +52,41 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     inline void positionsSwapped(UInt, UInt) {}
     inline void possibleSubsequenceChange(UInt startIndex,
                                           UInt endIndex) final {
+        if (endIndex - startIndex == 1) {
+            previousValues[startIndex] = op->operand->view()
+                                             .getMembers<IntView>()[startIndex]
+                                             ->view()
+                                             .value;
+            return;
+        }
+
         previousValue = 1;
         for (size_t i = startIndex; i < endIndex; i++) {
+            debug_code(assert(
+                !op->operand->view().getMembers<IntView>()[i]->isUndefined()));
             previousValue *=
                 op->operand->view().getMembers<IntView>()[i]->view().value;
         }
     }
+
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         Int newValue = 1;
+        Int valueToRemove;
+        if (endIndex - startIndex == 1) {
+            debug_code(assert(previousValues.count(startIndex)));
+            valueToRemove = previousValues[startIndex];
+            previousValues.erase(startIndex);
+        } else {
+            valueToRemove = previousValue;
+        }
+
         for (size_t i = startIndex; i < endIndex; i++) {
             UInt operandValue =
                 op->operand->view().getMembers<IntView>()[i]->view().value;
             newValue *= operandValue;
         }
         op->changeValue([&]() {
-            op->value /= previousValue;
+            op->value /= valueToRemove;
             op->value *= newValue;
             return true;
         });

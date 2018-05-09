@@ -1,6 +1,7 @@
 #include "operators/opAnd.h"
 #include <algorithm>
 #include <cassert>
+#include <unordered_map>
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
@@ -8,6 +9,7 @@ using namespace std;
 using OperandsSequenceTrigger = OperatorTrates<OpAnd>::OperandsSequenceTrigger;
 class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
    public:
+    unordered_map<UInt, UInt> previousViolations;
     UInt previousViolation;
     OpAnd* op;
     OperandsSequenceTrigger(OpAnd* op) : op(op) {}
@@ -58,6 +60,14 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
     inline void possibleSubsequenceChange(UInt startIndex,
                                           UInt endIndex) final {
+        if (endIndex - startIndex == 1) {
+            previousViolations[startIndex] =
+                op->operand->view()
+                    .getMembers<BoolView>()[startIndex]
+                    ->view()
+                    .violation;
+            return;
+        }
         previousViolation = 0;
         for (size_t i = startIndex; i < endIndex; i++) {
             previousViolation +=
@@ -66,6 +76,14 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         UInt newViolation = 0;
+        UInt violationToRemove;
+        if (endIndex - startIndex == 1) {
+            debug_code(assert(previousViolations.count(startIndex)));
+            violationToRemove = previousViolations[startIndex];
+            previousViolations.erase(startIndex);
+        } else {
+            violationToRemove = previousViolation;
+        }
         for (size_t i = startIndex; i < endIndex; i++) {
             UInt operandViolation =
                 op->operand->view().getMembers<BoolView>()[i]->view().violation;
@@ -77,11 +95,12 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
             }
         }
         op->changeValue([&]() {
-            op->violation -= previousViolation;
+            op->violation -= violationToRemove;
             op->violation += newViolation;
             return true;
         });
     }
+
     void possibleValueChange() final {}
     void valueChanged() final {
         op->changeValue([&]() {

@@ -16,6 +16,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     ExprRef<IntView> indexOperand;
     Int cachedIndex;
     bool defined = false;
+    bool locallyDefined = false;
     std::shared_ptr<SequenceOperandTrigger> sequenceTrigger;
     std::shared_ptr<IndexTrigger> indexTrigger;
     OpSequenceIndex(ExprRef<SequenceView> sequenceOperand,

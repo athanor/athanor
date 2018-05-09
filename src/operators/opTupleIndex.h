@@ -8,7 +8,6 @@
 template <typename TupleMemberViewType>
 struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
     struct TupleOperandTrigger;
-    struct IndexTrigger;
     typedef typename AssociatedTriggerType<TupleMemberViewType>::type
         TupleMemberTriggerType;
     std::vector<std::shared_ptr<TriggerBase>> triggers;
@@ -16,7 +15,6 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
     UInt index;
     bool defined = false;
     std::shared_ptr<TupleOperandTrigger> tupleTrigger;
-
     OpTupleIndex(ExprRef<TupleView> tupleOperand, UInt index)
         : tupleOperand(std::move(tupleOperand)), index(index) {}
     OpTupleIndex(const OpTupleIndex<TupleMemberViewType>&) = delete;

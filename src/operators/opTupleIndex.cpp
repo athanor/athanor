@@ -8,13 +8,14 @@ template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::addTrigger(
     const shared_ptr<TupleMemberTriggerType>& trigger) {
     triggers.emplace_back(getTriggerBase(trigger));
+    if (!tupleOperand->isUndefined()) {
+        getMember()->addTrigger(trigger);
+    }
 }
 
 template <typename TupleMemberViewType>
 ExprRef<TupleMemberViewType>& OpTupleIndex<TupleMemberViewType>::getMember() {
-    debug_code(assert(defined));
-    debug_code(assert(index >= 0 && !tupleOperand->isUndefined() &&
-                      index < (UInt)tupleOperand->view().members.size()));
+    debug_code(assert(!tupleOperand->isUndefined()));
     auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
         tupleOperand->view().members[index]);
     debug_code(assert(!member->isUndefined()));
@@ -24,9 +25,8 @@ ExprRef<TupleMemberViewType>& OpTupleIndex<TupleMemberViewType>::getMember() {
 template <typename TupleMemberViewType>
 const ExprRef<TupleMemberViewType>&
 OpTupleIndex<TupleMemberViewType>::getMember() const {
-    debug_code(assert(defined));
-    debug_code(assert(index >= 0 && !tupleOperand->isUndefined() &&
-                      index < (UInt)tupleOperand->view().members.size()));
+    debug_code(assert(!tupleOperand->isUndefined()));
+
     const auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
         tupleOperand->view().members[index]);
     debug_code(assert(!member->isUndefined()));
@@ -43,7 +43,7 @@ const TupleMemberViewType& OpTupleIndex<TupleMemberViewType>::view() const {
 }
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::reevaluateDefined() {
-    defined = !tupleOperand->isUndefined();
+    defined = !tupleOperand->isUndefined() && !getMember()->isUndefined();
 }
 
 template <typename TupleMemberViewType>
@@ -67,26 +67,76 @@ OpTupleIndex<TupleMemberViewType>::OpTupleIndex(
 template <typename TupleMemberViewType>
 struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
     : public TupleTrigger {
-    OpTupleIndex* op;
-    TupleOperandTrigger(OpTupleIndex* op) : op(op) {}
+    OpTupleIndex<TupleMemberViewType>* op;
+    TupleOperandTrigger(OpTupleIndex<TupleMemberViewType>* op) : op(op) {}
+
+    bool eventForwardedAsDefinednessChange() {
+        bool wasDefined = op->defined;
+        op->reevaluateDefined();
+        if (wasDefined && !op->defined) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                          op->triggers);
+            return true;
+        } else if (!wasDefined && op->defined) {
+            visitTriggers(
+                [&](auto& t) {
+                    t->hasBecomeDefined();
+                    t->reattachTrigger();
+                },
+                op->triggers);
+            return true;
+        } else {
+            return !op->defined;
+        }
+    }
+
+    inline void hasBecomeUndefined() final {
+        if (!op->defined) {
+            return;
+        }
+        op->defined = false;
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
+    }
+
+    void hasBecomeDefined() final {
+        op->reevaluateDefined();
+        if (!op->defined) {
+            return;
+        }
+        visitTriggers(
+            [&](auto& t) {
+                t->hasBecomeDefined();
+                t->reattachTrigger();
+            },
+            op->triggers);
+    }
+
     void possibleValueChange() final {
+        if (!op->defined) {
+            return;
+        }
+
         visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
     }
     void valueChanged() final {
-        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
-    }
-
-    inline void possibleMemberValueChange(UInt index) final {
-        if ((UInt)index == op->index) {
-            visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                          op->triggers);
+        if (!eventForwardedAsDefinednessChange()) {
+            visitTriggers(
+                [&](auto& t) {
+                    t->valueChanged();
+                    t->reattachTrigger();
+                },
+                op->triggers);
         }
     }
 
-    inline void memberValueChanged(UInt index) final {
-        if ((UInt)index == op->index) {
-            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
-        }
+    inline void possibleMemberValueChange(UInt) final {
+        // since the parent will already be directly triggering on the tuple
+        // member, this trigger need not be forwarded
+    }
+
+    inline void memberValueChanged(UInt) final {
+        // since the parent will already be directly triggering on the tuple
+        // member, this trigger need not be forwarded
     }
 
     void reattachTrigger() final {
@@ -98,16 +148,20 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
         op->tupleTrigger = trigger;
     }
 
-    inline void hasBecomeUndefined() final {
-        op->defined = false;
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
-    }
-    void hasBecomeDefined() final {
-        op->reevaluateDefined();
-        if (!op->defined) {
+    void memberHasBecomeUndefined(UInt index) final {
+        if (index != op->index) {
             return;
         }
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
+        debug_code(assert(op->defined));
+        op->defined = false;
+    }
+
+    void memberHasBecomeDefined(UInt index) final {
+        if (index != op->index) {
+            return;
+        }
+        debug_code(assert(!op->defined));
+        op->defined = true;
     }
 };
 
@@ -153,7 +207,6 @@ OpTupleIndex<TupleMemberViewType>::deepCopySelfForUnroll(
     const ExprRef<TupleMemberViewType>&, const AnyIterRef& iterator) const {
     auto newOpTupleIndex = make_shared<OpTupleIndex<TupleMemberViewType>>(
         tupleOperand->deepCopySelfForUnroll(tupleOperand, iterator), index);
-    newOpTupleIndex->index = index;
     newOpTupleIndex->defined = defined;
     return newOpTupleIndex;
 }

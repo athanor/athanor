@@ -19,6 +19,8 @@ struct TupleView;
 struct TupleTrigger : public virtual TriggerBase {
     virtual void possibleMemberValueChange(UInt index) = 0;
     virtual void memberValueChanged(UInt index) = 0;
+    virtual void memberHasBecomeUndefined(UInt) = 0;
+    virtual void memberHasBecomeDefined(UInt) = 0;
 };
 struct TupleValue;
 struct TupleView : public ExprInterface<TupleView> {
@@ -56,21 +58,19 @@ struct TupleView : public ExprInterface<TupleView> {
         visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
     }
 
-    inline void notifyMemberDefined(UInt) {
+    inline void notifyMemberDefined(UInt index) {
         cachedHashTotal.invalidate();
         debug_code(assert(numberUndefined > 0));
         numberUndefined--;
-        if (numberUndefined == 0) {
-            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, triggers);
-        }
+        visitTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
+                      triggers);
     }
 
-    inline void notifyMemberUndefined(UInt) {
+    inline void notifyMemberUndefined(UInt index) {
         cachedHashTotal.invalidate();
         numberUndefined++;
-        if (numberUndefined == 1) {
-            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers);
-        }
+        visitTriggers([&](auto& t) { t->memberHasBecomeUndefined(index); },
+                      triggers);
     }
 
     inline void initFrom(TupleView&) {
@@ -143,6 +143,8 @@ struct ChangeTriggerAdapter<TupleTrigger, Child>
         this->forwardPossibleValueChange();
     }
     inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
+    inline void memberHasBecomeDefined(UInt) {}
+    inline void memberHasBecomeUndefined(UInt) {}
 };
 
 #endif /* SRC_TYPES_TUPLE_H_ */

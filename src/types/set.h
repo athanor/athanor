@@ -40,7 +40,7 @@ struct SetView : public ExprInterface<SetView> {
     friend SetValue;
     std::unordered_map<UInt, UInt> hashIndexMap;
     AnyExprVec members;
-    HashType cachedHashTotal;
+    HashType cachedHashTotal = 0;
     HashType hashOfPossibleChange;
     std::vector<std::shared_ptr<SetTrigger>> triggers;
     debug_code(bool posSetValueChangeCalled = false);

@@ -37,7 +37,7 @@ void deepCopyImpl(const MSetValue&,
     target.notifyPossibleMSetValueChange();
     auto& targetMembersImpl = target.getMembers<InnerViewType>();
     // to be optimised later
-    targetMembersImpl.clear();
+    target.silentClear();
 
     for (auto& member : srcMemnersImpl) {
         target.addMember(deepCopy(*assumeAsValue(member)));

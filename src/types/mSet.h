@@ -41,7 +41,7 @@ struct MSetTrigger : public virtual TriggerBase {
 struct MSetView : public ExprInterface<MSetView> {
     friend MSetValue;
     AnyExprVec members;
-    HashType cachedHashTotal;
+    HashType cachedHashTotal = 0;
     HashType hashOfPossibleChange;
     std::vector<std::shared_ptr<MSetTrigger>> triggers;
     debug_code(bool posMSetValueChangeCalled = false);

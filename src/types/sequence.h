@@ -76,7 +76,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
     inline void addMember(size_t index, const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();
         members.insert(members.begin() + index, member);
-        bool memberUndefined = !member->isUndefined();
+        bool memberUndefined = member->isUndefined();
         if (!memberUndefined && index == members.size() - 1) {
             cachedHashTotal.applyIfValid([&](auto& value) {
                 value += this->calcMemberHash(index, member);

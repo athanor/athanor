@@ -14,6 +14,9 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     OpProd* op;
     OperandsSequenceTrigger(OpProd* op) : op(op) {}
     void valueAdded(UInt, const AnyExprRef& exprIn) final {
+        if (!op->evaluated) {
+            return;
+        }
         auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
         if (expr->isUndefined()) {
             if (op->operand->view().numberUndefined == 1) {
@@ -31,6 +34,10 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     void valueRemoved(UInt, const AnyExprRef& exprIn) final {
+        if (!op->evaluated) {
+            return;
+        }
+
         const auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
         if (expr->isUndefined()) {
             if (op->operand->view().numberUndefined == 0) {
@@ -50,26 +57,37 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     inline void beginSwaps() final {}
     inline void endSwaps() final {}
     inline void positionsSwapped(UInt, UInt) {}
+
+    ExprRef<IntView>& getMember(UInt index) {
+        return op->operand->view().getMembers<IntView>()[index];
+    }
+    Int getValueCatchUndef(UInt index) {
+        auto& member = getMember(index);
+        return (member->isUndefined()) ? 1 : member->view().value;
+    }
+
     inline void possibleSubsequenceChange(UInt startIndex,
                                           UInt endIndex) final {
+        if (!op->evaluated) {
+            return;
+        }
+
         if (endIndex - startIndex == 1) {
-            previousValues[startIndex] = op->operand->view()
-                                             .getMembers<IntView>()[startIndex]
-                                             ->view()
-                                             .value;
+            previousValues[startIndex] = getValueCatchUndef(startIndex);
             return;
         }
 
         previousValue = 1;
         for (size_t i = startIndex; i < endIndex; i++) {
-            debug_code(assert(
-                !op->operand->view().getMembers<IntView>()[i]->isUndefined()));
-            previousValue *=
-                op->operand->view().getMembers<IntView>()[i]->view().value;
+            previousValue *= getValueCatchUndef(i);
         }
     }
 
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
+        if (!op->evaluated) {
+            return;
+        }
+
         Int newValue = 1;
         Int valueToRemove;
         if (endIndex - startIndex == 1) {
@@ -81,23 +99,39 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
         }
 
         for (size_t i = startIndex; i < endIndex; i++) {
-            UInt operandValue =
-                op->operand->view().getMembers<IntView>()[i]->view().value;
-            newValue *= operandValue;
+            newValue *= getValueCatchUndef(i);
         }
-        op->changeValue([&]() {
+        if (!op->isDefined()) {
             op->value /= valueToRemove;
             op->value *= newValue;
-            return true;
-        });
+        } else {
+            op->changeValue([&]() {
+                op->value /= valueToRemove;
+                op->value *= newValue;
+                return true;
+            });
+        }
     }
     void possibleValueChange() final {}
     void valueChanged() final {
-        op->changeValue([&]() {
+        if (!op->isDefined()) {
             op->reevaluate();
-            return true;
+            if (op->isDefined()) {
+                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                              op->triggers);
+            }
+            return;
+        }
+        bool isDefined = op->changeValue([&]() {
+            op->reevaluate();
+            return op->isDefined();
         });
+        if (!isDefined) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                          op->triggers);
+        }
     }
+
     void reattachTrigger() final {
         deleteTrigger(op->operandTrigger);
         auto trigger = make_shared<OperandsSequenceTrigger>(op);
@@ -109,6 +143,10 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     void hasBecomeDefined() final { op->setDefined(true, true); }
 
     void memberHasBecomeUndefined(UInt) {
+        if (!op->evaluated) {
+            return;
+        }
+
         op->value /= previousValue;
         if (op->operand->view().numberUndefined == 1) {
             op->setDefined(false, false);
@@ -118,6 +156,13 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     void memberHasBecomeDefined(UInt index) {
+        if (!op->evaluated) {
+            if (op->operand->view().numberUndefined == 0) {
+                op->setDefined(true, true);
+            }
+            return;
+        }
+
         op->value *=
             op->operand->view().getMembers<IntView>()[index]->view().value;
         if (op->operand->view().numberUndefined == 0) {
@@ -129,10 +174,16 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
 };
 
 void OpProd::reevaluate() {
+    setDefined(true, false);
     value = 1;
     for (auto& operandChild : operand->view().getMembers<IntView>()) {
-        value *= operandChild->view().value;
+        if (operandChild->isUndefined()) {
+            setDefined(false, false);
+        } else {
+            value *= operandChild->view().value;
+        }
     }
+    evaluated = true;
 }
 
 void OpProd::updateViolationDescription(UInt parentViolation,
@@ -142,7 +193,10 @@ void OpProd::updateViolationDescription(UInt parentViolation,
     }
 }
 
-void OpProd::copy(OpProd& newOp) const { newOp.value = value; }
+void OpProd::copy(OpProd& newOp) const {
+    newOp.value = value;
+    newOp.evaluated = evaluated;
+}
 
 std::ostream& OpProd::dumpState(std::ostream& os) const {
     os << "OpProd: value=" << value << endl;

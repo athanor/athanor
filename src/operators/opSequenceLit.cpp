@@ -6,10 +6,14 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 void OpSequenceLit::evaluate() {
+    numberUndefined = 0;
     mpark::visit(
         [&](auto& members) {
             for (auto& member : members) {
                 member->evaluate();
+                if (member->isUndefined()) {
+                    numberUndefined++;
+                }
             }
         },
         members);

@@ -174,13 +174,17 @@ bool largerValue<SequenceValue>(const SequenceValue& u,
 void SequenceView::assertValidState() {
     mpark::visit(
         [&](auto& valMembersImpl) {
+            UInt numberUndefinedFound = 0;
             bool success = true;
             UInt calculatedTotal = 0;
 
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 auto& member = valMembersImpl[i];
-                if (cachedHashTotal.isValid()) {
+                if (cachedHashTotal.isValid() && !member->isUndefined()) {
                     calculatedTotal += this->calcMemberHash(i, member);
+                }
+                if (member->isUndefined()) {
+                    numberUndefinedFound++;
                 }
             }
             if (success) {
@@ -193,6 +197,15 @@ void SequenceView::assertValidState() {
                         ;
                     }
                 });
+            }
+            if (success) {
+                success = numberUndefined == numberUndefinedFound;
+                if (!success) {
+                    cerr << "Error: numberUndefined = " << numberUndefined
+                         << " but think it should be " << numberUndefinedFound
+                         << endl;
+                    cerr << "members size " << valMembersImpl.size() << endl;
+                }
             }
             if (!success) {
                 cerr << "sequence Members: " << valMembersImpl << endl;

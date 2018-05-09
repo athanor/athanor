@@ -65,6 +65,8 @@ struct SimpleBinaryOperator : public View,
     typedef typename OperatorTrates<Derived>::RightTrigger RightTrigger;
     ExprRef<OperandView> left;
     ExprRef<OperandView> right;
+    bool evaluated = false;
+
     std::shared_ptr<LeftTrigger> leftTrigger;
     std::shared_ptr<RightTrigger> rightTrigger;
 
@@ -80,6 +82,7 @@ struct SimpleBinaryOperator : public View,
         SimpleBinaryOperator<View, OperandView, Derived>&& other)
         : left(std::move(other.left)),
           right(std::move(other.right)),
+          evaluated(other.evaluated),
           leftTrigger(std::move(other.leftTrigger)),
           rightTrigger(std::move(other.rightTrigger)) {
         setTriggerParent(&derived(), leftTrigger, rightTrigger);
@@ -101,6 +104,8 @@ struct SimpleUnaryOperator : public View,
                              public DefinedContainer<View, Derived> {
     typedef typename OperatorTrates<Derived>::OperandTrigger OperandTrigger;
     ExprRef<OperandView> operand;
+    bool evaluated = false;
+
     std::shared_ptr<OperandTrigger> operandTrigger;
 
     SimpleUnaryOperator(ExprRef<OperandView> operand)
@@ -112,6 +117,7 @@ struct SimpleUnaryOperator : public View,
         const SimpleUnaryOperator<View, OperandView, Derived>& other) = delete;
     SimpleUnaryOperator(SimpleUnaryOperator<View, OperandView, Derived>&& other)
         : operand(std::move(other.operand)),
+          evaluated(other.evaluated),
           operandTrigger(std::move(other.operandTrigger)) {
         setTriggerParent(&derived(), operandTrigger);
     }

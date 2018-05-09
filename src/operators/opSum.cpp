@@ -140,12 +140,12 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     void hasBecomeUndefined() final { op->setDefined(false, true); }
     void hasBecomeDefined() final { op->setDefined(true, true); }
 
-    void memberHasBecomeUndefined(UInt) {
+    void memberHasBecomeUndefined(UInt index) {
         if (!op->evaluated) {
             return;
         }
-
-        op->value -= previousValue;
+        debug_code(assert(previousValues.count(index)));
+        op->value -= previousValues[index];
         if (op->operand->view().numberUndefined == 1) {
             op->setDefined(false, false);
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },

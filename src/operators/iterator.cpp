@@ -64,7 +64,11 @@ ExprRef<View> Iterator<View>::deepCopySelfForUnroll(
 template <typename View>
 std::ostream& Iterator<View>::dumpState(std::ostream& os) const {
     os << "iter(";
-    ref->dumpState(os);
+    if (ref) {
+        ref->dumpState(os);
+    } else {
+        os << "null";
+    }
     os << ")";
     return os;
 }

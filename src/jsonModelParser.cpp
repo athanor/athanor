@@ -86,7 +86,7 @@ AnyValRef toValRef(const AnyExprRef& op) {
         [&](auto& ref) -> AnyValRef {
             typedef typename AssociatedValueType<viewType(ref)>::type ValType;
             auto val = make<ValType>();
-            val->initFrom(ref->view());
+            val.asExpr()->view() = ref->view();
             return val;
         },
         op);
@@ -532,7 +532,8 @@ void extractPatternMatchAndAddExprsToScope(
                 cerr << "Expr: " << patternExpr << endl;
                 abort();
             },
-            [&](const shared_ptr<TupleDomain>& domain, ExprRef<TupleView>& expr) {
+            [&](const shared_ptr<TupleDomain>& domain,
+                ExprRef<TupleView>& expr) {
                 json& tupleMatchExpr = patternExpr["AbsPatTuple"];
                 checkTuplePatternMatchSize(tupleMatchExpr, domain);
                 for (size_t i = 0; i < tupleMatchExpr.size(); i++) {

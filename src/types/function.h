@@ -73,6 +73,10 @@ struct FunctionView : public ExprInterface<FunctionView> {
     std::pair<bool, UInt> domainToIndex(const IntView& intV);
     std::pair<bool, UInt> domainToIndex(const TupleView& tupleV);
 
+    template <typename View, EnableIfView<BaseType<View>> = 0>
+    std::pair<bool, UInt> domainToIndex(const View&) {
+        shouldNotBeCalledPanic;
+    }
     template <typename View, EnableIfView<View> = 0>
     ExprRef<View> indexToDomain(UInt index) const {
         return functionIndexToDomain<View>(dimensions, index);

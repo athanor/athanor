@@ -68,8 +68,7 @@ ExprRef<TupleView> functionIndexToDomain<TupleView>(
     for (auto& dim : dimensions) {
         auto intVal = make<IntValue>();
         UInt row = index / dim.blockSize;
-        index %= row;
-
+        index %= dim.blockSize;
         intVal->value = row + dim.lower;
         val->addMember(intVal);
     }

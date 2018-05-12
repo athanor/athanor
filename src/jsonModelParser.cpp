@@ -27,6 +27,12 @@ shared_ptr<SequenceDomain> fakeSequenceDomain(const AnyDomainRef& ref) {
     return make_shared<SequenceDomain>(exactSize(0), ref);
 }
 
+shared_ptr<FunctionDomain> fakeFunctionDomain(AnyDomainRef d1,
+                                              AnyDomainRef d2) {
+    return make_shared<FunctionDomain>(JectivityAttr::NONE, PartialAttr::TOTAL,
+                                       move(d1), move(d2));
+}
+
 shared_ptr<TupleDomain> fakeTupleDomain(std::vector<AnyDomainRef> domains) {
     return make_shared<TupleDomain>(move(domains));
 }
@@ -36,6 +42,8 @@ typedef function<pair<AnyDomainRef, AnyExprRef>(json&, ParsedModel&)>
     ParseExprFunction;
 typedef function<AnyDomainRef(json&, ParsedModel&)> ParseDomainFunction;
 
+template <typename RetType, typename Constraint, typename Func>
+ExprRef<RetType> expect(Constraint&& constraint, Func&& func);
 template <typename Function, typename DefaultValue,
           typename ReturnType = typename Function::result_type>
 pair<bool, ReturnType> stringMatch(const vector<pair<string, Function>>& match,
@@ -92,10 +100,27 @@ AnyValRef toValRef(const AnyExprRef& op) {
         op);
 }
 
-Int parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel) {
-    return mpark::get<ValRef<IntValue>>(
-               toValRef(parseExpr(essenceExpr, parsedModel).second))
-        ->value;
+Int parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel,
+                    const string& errorMessage) {
+    try {
+        return mpark::get<ExprRef<IntView>>(
+                   parseExpr(essenceExpr, parsedModel).second)
+            ->view()
+            .value;
+    } catch (mpark::bad_variant_access) {
+        cerr << "Error: Expected int expression " << errorMessage << endl;
+        cerr << essenceExpr << endl;
+        abort();
+    }
+}
+
+Int parseValueAsInt(AnyExprRef expr, const string& errorMessage) {
+    try {
+        return mpark::get<ExprRef<IntView>>(expr)->view().value;
+    } catch (mpark::bad_variant_access) {
+        cerr << "Error: Expected int expression " << errorMessage << endl;
+        abort();
+    }
 }
 
 AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {
@@ -134,6 +159,150 @@ pair<shared_ptr<SetDomain>, ExprRef<SetView>> parseConstantSet(
         parseValue(essenceSetConstant[0], parsedModel).first);
 }
 
+void matchType(AnyExprRef& expr, AnyExprVec& vec) {
+    mpark::visit([&](auto& expr) { vec.emplace<ExprRefVec<viewType(expr)>>(); },
+                 expr);
+}
+
+void append(AnyExprVec& vec, AnyExprRef& expr) {
+    mpark::visit(
+        [&](auto& vec) {
+            vec.emplace_back(mpark::get<ExprRef<viewType(vec)>>(expr));
+        },
+        vec);
+}
+void updateDimensions(AnyExprRef preImage, DimensionVec& dimVec) {
+    string errorMessage =
+        "\nOnly supporting functions from int or tuple of int.";
+    mpark::visit(
+        overloaded(
+            [&](ExprRef<IntView>& expr) {
+                Int v = expr->view().value;
+                if (dimVec.empty()) {
+                    dimVec.emplace_back(v, v);
+                } else {
+                    dimVec.front().lower = min(dimVec.front().lower, v);
+                    dimVec.front().upper = max(dimVec.front().upper, v);
+                }
+            },
+            [&](ExprRef<TupleView>& tuple) {
+                if (dimVec.empty()) {
+                    for (auto& member : tuple->view().members) {
+                        Int v = parseValueAsInt(member, errorMessage);
+                        dimVec.emplace_back(v, v);
+                    }
+                } else {
+                    debug_code(
+                        assert(tuple->view().members.size() == dimVec.size()));
+                    for (size_t i = 0; i < tuple->view().members.size(); i++) {
+                        Int v = parseValueAsInt(tuple->view().members[i],
+                                                errorMessage);
+                        auto& dim = dimVec[i];
+                        dim.lower = min(dim.lower, v);
+                        dim.upper = max(dim.upper, v);
+                    }
+                }
+            },
+            [&](auto&) {
+                cerr << "Error: " << errorMessage << endl;
+                abort();
+            }),
+        preImage);
+}
+
+pair<AnyDomainRef, AnyDomainRef> parseDefinedAndRange(json& functionDomainExpr,
+                                                      ParsedModel& parsedModel,
+                                                      AnyExprVec& defined,
+                                                      AnyExprVec& range,
+                                                      DimensionVec& dimVec) {
+    pair<AnyDomainRef, AnyDomainRef> functionDomain(fakeIntDomain,
+                                                    fakeIntDomain);
+    bool first = true;
+    for (auto& mapping : functionDomainExpr) {
+        auto preImage = parseExpr(mapping[0], parsedModel);
+        auto image = parseExpr(mapping[1], parsedModel);
+        if (first) {
+            first = false;
+            matchType(preImage.second, defined);
+            matchType(image.second, range);
+            functionDomain = make_pair(preImage.first, image.first);
+        }
+        append(defined, preImage.second);
+        append(range, image.second);
+        updateDimensions(preImage.second, dimVec);
+    }
+    return functionDomain;
+}
+
+pair<shared_ptr<FunctionDomain>, ExprRef<FunctionView>> parseConstantFunction(
+    json& functionDomainExpr, ParsedModel& parsedModel) {
+    DimensionVec dimVec;
+    AnyExprVec defined;
+    AnyExprVec range;
+    pair<AnyDomainRef, AnyDomainRef> functionDomain = parseDefinedAndRange(
+        functionDomainExpr, parsedModel, defined, range, dimVec);
+    auto function = make<FunctionValue>();
+    mpark::visit(
+        [&](auto& defined, auto& range) {
+            if (range.empty()) {
+                cerr << "Not handling empty functions yet, sorry.\n";
+                cerr << functionDomainExpr << endl;
+                abort();
+            }
+            function->resetDimensions<viewType(range)>(dimVec);
+            for (size_t i = 0; i < defined.size(); i++) {
+                auto boolIndexPair =
+                    function->domainToIndex(defined[i]->view());
+                assert(boolIndexPair.first);
+                function->assignImage(boolIndexPair.second,
+                                      assumeAsValue(range[i]));
+            }
+        },
+        defined, range);
+    return make_pair(
+        fakeFunctionDomain(functionDomain.first, functionDomain.second),
+        function.asExpr());
+}
+
+pair<shared_ptr<TupleDomain>, ExprRef<TupleView>> parseConstantTuple(
+    json& tupleExpr, ParsedModel& parsedModel) {
+    auto tuple = make<TupleValue>();
+    vector<AnyDomainRef> tupleMemberDomains;
+    for (auto& memberExpr : tupleExpr) {
+        auto member = parseExpr(memberExpr, parsedModel);
+        tupleMemberDomains.emplace_back(member.first);
+        mpark::visit(
+            [&](auto& member) { tuple->addMember(assumeAsValue(member)); },
+            member.second);
+    }
+    return make_pair(fakeTupleDomain(move(tupleMemberDomains)), tuple.asExpr());
+}
+pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseConstantInt(json& intExpr,
+                                                               ParsedModel&) {
+    auto val = make<IntValue>();
+    val->value = intExpr;
+    return make_pair(fakeIntDomain, val.asExpr());
+}
+
+pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseConstantBool(
+    json& boolExpr, ParsedModel&) {
+    auto val = make<BoolValue>();
+    val->violation = (bool(boolExpr)) ? 0 : 1;
+    return make_pair(fakeBoolDomain, val.asExpr());
+}
+
+pair<AnyDomainRef, AnyExprRef> parseValueReference(json& essenceReference,
+                                                   ParsedModel& parsedModel) {
+    string referenceName = essenceReference[0]["Name"];
+    if (parsedModel.namedExprs.count(referenceName)) {
+        parsedModel.namedExprs.at(referenceName);
+    } else {
+        cerr << "Found reference to value with name \"" << referenceName
+             << "\" but this does not appear to be in scope.\n";
+    }
+    abort();
+}
+
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
     json& essenceExpr, ParsedModel& parsedModel) {
     if (essenceExpr.count("Constant")) {
@@ -142,45 +311,38 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
         return tryParseValue(essenceExpr["ConstantAbstract"], parsedModel);
     } else if (essenceExpr.count("AbstractLiteral")) {
         return tryParseValue(essenceExpr["AbstractLiteral"], parsedModel);
-    } else if (essenceExpr.count("ConstantInt")) {
-        auto val = make<IntValue>();
-        val->value = essenceExpr["ConstantInt"];
-        return make_pair(true, make_pair(fakeIntDomain, val.asExpr()));
-    } else if (essenceExpr.count("ConstantBool")) {
-        auto val = make<BoolValue>();
-        val->violation = (bool(essenceExpr["ConstantBool"])) ? 0 : 1;
-        return make_pair(true, make_pair(fakeBoolDomain, val.asExpr()));
-    } else if (essenceExpr.count("AbsLitSet")) {
-        return make_pair(
-            true, parseConstantSet(essenceExpr["AbsLitSet"], parsedModel));
-    } else if (essenceExpr.count("Reference")) {
-        auto& essenceReference = essenceExpr["Reference"];
-        string referenceName = essenceReference[0]["Name"];
-        if (parsedModel.namedExprs.count(referenceName)) {
-            return make_pair(true, parsedModel.namedExprs.at(referenceName));
-        } else {
-            cerr << "Found reference to value with name \"" << referenceName
-                 << "\" but this does not appear to be in scope.\n"
-                 << essenceExpr << endl;
-            abort();
-        }
     }
-    return make_pair(false,
-                     make_pair(AnyDomainRef(shared_ptr<IntDomain>(nullptr)),
-                               AnyExprRef(ExprRef<IntView>(nullptr))));
+
+    return stringMatch<ParseExprFunction>(
+        {
+            {"ConstantInt", parseConstantInt},
+            {"ConstantBool", parseConstantBool},
+            {"AbsLitSet", parseConstantSet},
+            {"AbsLitFunction", parseConstantFunction},
+            {"AbsLitTuple", parseConstantTuple},
+            {"Reference", parseValueReference},
+        },
+        make_pair(AnyDomainRef(fakeIntDomain),
+                  AnyExprRef(ExprRef<IntView>(nullptr))),
+        essenceExpr, parsedModel);
 }
 
 shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
                                      ParsedModel& parsedModel) {
     vector<pair<Int, Int>> ranges;
+    string errorMessage = "Within context of int domain";
+
     for (auto& rangeExpr : intDomainExpr) {
         Int from, to;
 
         if (rangeExpr.count("RangeBounded")) {
-            from = parseValueAsInt(rangeExpr["RangeBounded"][0], parsedModel);
-            to = parseValueAsInt(rangeExpr["RangeBounded"][1], parsedModel);
+            from = parseValueAsInt(rangeExpr["RangeBounded"][0], parsedModel,
+                                   errorMessage);
+            to = parseValueAsInt(rangeExpr["RangeBounded"][1], parsedModel,
+                                 errorMessage);
         } else if (rangeExpr.count("RangeSingle")) {
-            from = parseValueAsInt(rangeExpr["RangeSingle"], parsedModel);
+            from = parseValueAsInt(rangeExpr["RangeSingle"], parsedModel,
+                                   errorMessage);
             to = from;
         } else {
             cerr << "Unrecognised type of int range: " << rangeExpr << endl;
@@ -196,21 +358,23 @@ shared_ptr<BoolDomain> parseDomainBool(json&, ParsedModel&) {
 }
 
 SizeAttr parseSizeAttr(json& sizeAttrExpr, ParsedModel& parsedModel) {
+    string errorMessage = "within size attribute";
     if (sizeAttrExpr.count("SizeAttr_None")) {
         return noSize();
     } else if (sizeAttrExpr.count("SizeAttr_MinSize")) {
-        return minSize(
-            parseValueAsInt(sizeAttrExpr["SizeAttr_MinSize"], parsedModel));
+        return minSize(parseValueAsInt(sizeAttrExpr["SizeAttr_MinSize"],
+                                       parsedModel, errorMessage));
     } else if (sizeAttrExpr.count("SizeAttr_MaxSize")) {
-        return maxSize(
-            parseValueAsInt(sizeAttrExpr["SizeAttr_MaxSize"], parsedModel));
+        return maxSize(parseValueAsInt(sizeAttrExpr["SizeAttr_MaxSize"],
+                                       parsedModel, errorMessage));
     } else if (sizeAttrExpr.count("SizeAttr_Size")) {
-        return exactSize(
-            parseValueAsInt(sizeAttrExpr["SizeAttr_Size"], parsedModel));
+        return exactSize(parseValueAsInt(sizeAttrExpr["SizeAttr_Size"],
+                                         parsedModel, errorMessage));
     } else if (sizeAttrExpr.count("SizeAttr_MinMaxSize")) {
         auto& sizeRangeExpr = sizeAttrExpr["SizeAttr_MinMaxSize"];
-        return sizeRange(parseValueAsInt(sizeRangeExpr[0], parsedModel),
-                         parseValueAsInt(sizeRangeExpr[1], parsedModel));
+        return sizeRange(
+            parseValueAsInt(sizeRangeExpr[0], parsedModel, errorMessage),
+            parseValueAsInt(sizeRangeExpr[1], parsedModel, errorMessage));
     } else {
         cerr << "Could not parse this as a size attribute: " << sizeAttrExpr
              << endl;
@@ -282,6 +446,7 @@ pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
          {"DomainMSet", parseDomainMSet},
          {"DomainSequence", parseDomainSequence},
          {"DomainTuple", parseDomainTuple},
+
          {"DomainReference", parseDomainReference}},
         AnyDomainRef(fakeIntDomain), domainExpr, parsedModel);
 }
@@ -373,7 +538,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpSequenceIndex(
 pair<AnyDomainRef, AnyExprRef> parseOpTupleIndex(
     shared_ptr<TupleDomain>& tupleDomain, ExprRef<TupleView>& tuple,
     json& indexExpr, ParsedModel& parsedModel) {
-    UInt index = parseValueAsInt(indexExpr[0], parsedModel) - 1;
+    string errorMessage = "within tuple index expression.";
+    UInt index = parseValueAsInt(indexExpr[0], parsedModel, errorMessage) - 1;
     return mpark::visit(
         [&](auto& innerDomain) -> pair<AnyDomainRef, AnyExprRef> {
             typedef typename BaseType<decltype(innerDomain)>::element_type

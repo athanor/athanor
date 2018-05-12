@@ -22,7 +22,7 @@ HashType getValueHash<TupleView>(const TupleView& val) {
 
 template <>
 ostream& prettyPrint<TupleView>(ostream& os, const TupleView& v) {
-    os << "Tuple(";
+    os << "tuple(";
     bool first = true;
     for (auto& member : v.members) {
         if (first) {

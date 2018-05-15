@@ -268,14 +268,15 @@ pair<shared_ptr<TupleDomain>, ExprRef<TupleView>> parseConstantTuple(
     json& tupleExpr, ParsedModel& parsedModel) {
     auto tuple = make<TupleValue>();
     vector<AnyDomainRef> tupleMemberDomains;
+    vector<AnyExprRef> tupleMembers;
     for (auto& memberExpr : tupleExpr) {
         auto member = parseExpr(memberExpr, parsedModel);
         tupleMemberDomains.emplace_back(member.first);
-        mpark::visit(
-            [&](auto& member) { tuple->addMember(assumeAsValue(member)); },
-            member.second);
+        tupleMembers.push_back(member.second);
     }
-    return make_pair(fakeTupleDomain(move(tupleMemberDomains)), tuple.asExpr());
+
+    return make_pair(fakeTupleDomain(move(tupleMemberDomains)),
+                     OpMaker<OpTupleLit>::make(move(tupleMembers)));
 }
 pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseConstantInt(json& intExpr,
                                                                ParsedModel&) {

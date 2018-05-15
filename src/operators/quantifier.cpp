@@ -280,6 +280,9 @@ void Quantifier<ContainerType>::stopTriggering() {
 
 template <typename ContainerType>
 void Quantifier<ContainerType>::evaluate() {
+    if (!unrolledIterVals.empty()) {
+        return;
+    }
     unrolledIterVals.clear();
     silentClear();
     container->evaluate();

@@ -40,6 +40,8 @@ struct TupleView : public ExprInterface<TupleView> {
 
    public:
     inline void notifyPossibleMemberChange(UInt index) {
+        std::cout << "triggers: " << triggers.size() << std::endl;
+        this->dumpState(std::cout) << std::endl;
         visitTriggers([&](auto& t) { t->possibleMemberValueChange(index); },
                       triggers);
     }

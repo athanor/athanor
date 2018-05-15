@@ -251,4 +251,5 @@ void sequenceAssignRandomGen(const SequenceDomain& domain,
 
 const NeighbourhoodVec<SequenceDomain>
     NeighbourhoodGenList<SequenceDomain>::value = {
-        sequenceLiftSingleGen };
+        sequenceLiftSingleGen, sequenceAssignRandomGen, sequenceAddGen,
+        sequenceRemoveGen};

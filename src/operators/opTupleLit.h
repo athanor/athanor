@@ -4,7 +4,6 @@
 #include "types/tuple.h"
 
 struct OpTupleLit : public TupleView {
-    int v = 69;
     struct ExprTriggerBase {
         OpTupleLit* op;
         UInt index;

@@ -203,6 +203,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
                 membersImpl.clear();
             },
             members);
+        numberUndefined = 0;
     }
 
    public:

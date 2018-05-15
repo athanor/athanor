@@ -82,4 +82,13 @@ template <>
 struct OpMaker<OpIsDefined> {
     static ExprRef<BoolView> make(ExprRef<IntView> o);
 };
+template <typename View>
+struct OpFunctionImage;
+
+template <typename View>
+struct OpMaker<OpFunctionImage<View>> {
+    static ExprRef<View> make(ExprRef<FunctionView> function,
+                              AnyExprRef preImage);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

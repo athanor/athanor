@@ -295,12 +295,12 @@ pair<AnyDomainRef, AnyExprRef> parseValueReference(json& essenceReference,
                                                    ParsedModel& parsedModel) {
     string referenceName = essenceReference[0]["Name"];
     if (parsedModel.namedExprs.count(referenceName)) {
-        parsedModel.namedExprs.at(referenceName);
+        return parsedModel.namedExprs.at(referenceName);
     } else {
         cerr << "Found reference to value with name \"" << referenceName
              << "\" but this does not appear to be in scope.\n";
+        abort();
     }
-    abort();
 }
 
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
@@ -515,6 +515,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
             }),
         operand);
 }
+
 pair<AnyDomainRef, AnyExprRef> parseOpSequenceIndex(
     AnyDomainRef& innerDomain, ExprRef<SequenceView>& sequence, json& indexExpr,
     ParsedModel& parsedModel) {
@@ -531,6 +532,22 @@ pair<AnyDomainRef, AnyExprRef> parseOpSequenceIndex(
             return make_pair(innerDomain,
                              ExprRef<View>(OpMaker<OpSequenceIndex<View>>::make(
                                  sequence, index)));
+        },
+        innerDomain);
+}
+
+pair<AnyDomainRef, AnyExprRef> parseOpFunctionImage(
+    AnyDomainRef& innerDomain, ExprRef<FunctionView>& function,
+    json& preImageExpr, ParsedModel& parsedModel) {
+    auto preImage = parseExpr(preImageExpr[0], parsedModel).second;
+    return mpark::visit(
+        [&](auto& innerDomain) -> pair<AnyDomainRef, AnyExprRef> {
+            typedef typename BaseType<decltype(innerDomain)>::element_type
+                InnerDomainType;
+            typedef typename AssociatedViewType<
+                typename AssociatedValueType<InnerDomainType>::type>::type View;
+            return make_pair(innerDomain, OpMaker<OpFunctionImage<View>>::make(
+                                              function, preImage));
         },
         innerDomain);
 }
@@ -571,6 +588,14 @@ pair<AnyDomainRef, AnyExprRef> parseOpRelationProj(json& operandsExpr,
                     mpark::get<shared_ptr<TupleDomain>>(leftOperand.first);
                 return parseOpTupleIndex(tupleDomain, tuple, operandsExpr[1],
                                          parsedModel);
+            },
+            [&](ExprRef<FunctionView>& function)
+                -> pair<AnyDomainRef, AnyExprRef> {
+                auto& innerDomain =
+                    mpark::get<shared_ptr<FunctionDomain>>(leftOperand.first)
+                        ->to;
+                return parseOpFunctionImage(innerDomain, function,
+                                            operandsExpr[1], parsedModel);
             },
             [&](auto&& operand) -> pair<AnyDomainRef, AnyExprRef> {
                 cerr << "Error, not yet handling op relation projection with a "

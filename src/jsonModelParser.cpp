@@ -263,20 +263,46 @@ pair<shared_ptr<FunctionDomain>, ExprRef<FunctionView>> parseConstantFunction(
         fakeFunctionDomain(functionDomain.first, functionDomain.second),
         function.asExpr());
 }
+template <typename View,
+          typename Value = typename AssociatedValueType<View>::type>
+inline ValRef<Value> getIfConstValue(ExprRef<View>& expr) {
+    Value* value = dynamic_cast<Value*>(&(*expr));
+    if (value && value->container == &constantPool) {
+        return assumeAsValue(expr);
+    } else {
+        return ValRef<Value>(nullptr);
+    }
+}
 
 pair<shared_ptr<TupleDomain>, ExprRef<TupleView>> parseConstantTuple(
     json& tupleExpr, ParsedModel& parsedModel) {
     auto tuple = make<TupleValue>();
     vector<AnyDomainRef> tupleMemberDomains;
     vector<AnyExprRef> tupleMembers;
+    bool isConstantSoFar = true;
     for (auto& memberExpr : tupleExpr) {
         auto member = parseExpr(memberExpr, parsedModel);
+        if (isConstantSoFar) {
+            mpark::visit(
+                [&](auto& member) {
+                    auto val = getIfConstValue(member);
+                    if (val) {
+                        tuple->addMember(val);
+                    } else {
+                        isConstantSoFar = false;
+                    }
+                },
+                member.second);
+        }
+        if (!isConstantSoFar) {
+            tupleMembers.emplace_back(member.second);
+        }
         tupleMemberDomains.emplace_back(member.first);
-        tupleMembers.push_back(member.second);
     }
-
-    return make_pair(fakeTupleDomain(move(tupleMemberDomains)),
-                     OpMaker<OpTupleLit>::make(move(tupleMembers)));
+    auto returnTuple = (isConstantSoFar)
+                           ? tuple.asExpr()
+                           : OpMaker<OpTupleLit>::make(move(tupleMembers));
+    return make_pair(fakeTupleDomain(move(tupleMemberDomains)), returnTuple);
 }
 pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseConstantInt(json& intExpr,
                                                                ParsedModel&) {

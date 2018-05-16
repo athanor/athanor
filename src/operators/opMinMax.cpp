@@ -236,10 +236,14 @@ template <bool minMode>
 struct OpMaker<OpMinMax<minMode>> {
     static ExprRef<IntView> make(ExprRef<SequenceView>);
 };
+
 template <bool minMode>
 ExprRef<IntView> OpMaker<OpMinMax<minMode>>::make(ExprRef<SequenceView> o) {
     return make_shared<OpMinMax<minMode>>(move(o));
 }
 
 template struct OpMinMax<true>;
+template struct OpMaker<OpMinMax<true>>;
 template struct OpMinMax<false>;
+template struct OpMaker<OpMinMax<false>>;
+;

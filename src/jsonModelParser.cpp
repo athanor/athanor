@@ -879,7 +879,21 @@ auto makeVaradicOpParser(const Domain& domain) {
                 parseSequenceLikeExpr(essenceExpr, parsedModel).second));
     };
 }
-
+template <bool minMode>
+pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseOpMinMax(
+    json& operandExpr, ParsedModel& parsedModel) {
+    string message = "Only supporting min/max over sequence of ints.\n";
+    auto operand = parseSequenceLikeExpr(operandExpr, parsedModel);
+    shared_ptr<IntDomain>* intDomainTest =
+        mpark::get_if<shared_ptr<IntDomain>>(&(operand.first->inner));
+    if (intDomainTest) {
+        typedef OpMinMax<minMode> Op;
+        return make_pair(*intDomainTest, OpMaker<Op>::make(operand.second));
+    }
+    cerr << "Only supporting min/max over ints.\n";
+    cerr << operandExpr << endl;
+    abort();
+}
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     json& essenceExpr, ParsedModel& parsedModel) {
     if (essenceExpr.count("Op")) {
@@ -893,7 +907,9 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpSum", makeVaradicOpParser<IntView, OpSum>(fakeIntDomain)},
              {"MkOpProduct",
               makeVaradicOpParser<IntView, OpProd>(fakeIntDomain)},
-             {"MkOpRelationProj", parseOpRelationProj}
+             {"MkOpRelationProj", parseOpRelationProj},
+             {"MkOpMin", parseOpMinMax<true>},
+             {"MkOpMax", parseOpMinMax<false>}
 
             },
             make_pair(AnyDomainRef(fakeIntDomain),

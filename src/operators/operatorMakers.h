@@ -91,4 +91,14 @@ struct OpMaker<OpFunctionImage<View>> {
                               AnyExprRef preImage);
 };
 
+template <bool minMode>
+struct OpMinMax;
+typedef OpMinMax<true> OpMin;
+typedef OpMinMax<false> OpMax;
+
+template <bool minMode>
+struct OpMaker<OpMinMax<minMode>> {
+    static ExprRef<IntView> make(ExprRef<SequenceView>);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

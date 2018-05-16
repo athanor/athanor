@@ -5,7 +5,7 @@
 #include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-void OpSequenceLit::evaluate() {
+void OpSequenceLit::evaluateImpl() {
     numberUndefined = 0;
     mpark::visit(
         [&](auto& members) {

@@ -47,7 +47,7 @@ struct Iterator : public ExprInterface<View> {
     View& view() final;
     const View& view() const final;
 
-    void evaluate() final;
+    void evaluateImpl() final;
     void startTriggering() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren() {}

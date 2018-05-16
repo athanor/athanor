@@ -31,7 +31,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     SequenceMemberViewType& view() final;
     const SequenceMemberViewType& view() const final;
 
-    void evaluate() final;
+    void evaluateImpl() final;
     void startTriggering() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();

@@ -4,7 +4,7 @@
 #include "base/base.h"
 #include "operators/simpleOperator.h"
 template <typename View, typename OperandView, typename Derived>
-void SimpleBinaryOperator<View, OperandView, Derived>::evaluate() {
+void SimpleBinaryOperator<View, OperandView, Derived>::evaluateImpl() {
     left->evaluate();
     right->evaluate();
     bool defined = !(left->isUndefined() || right->isUndefined());
@@ -71,7 +71,7 @@ bool SimpleBinaryOperator<View, OperandView, Derived>::isUndefined() {
 }
 
 template <typename View, typename OperandView, typename Derived>
-void SimpleUnaryOperator<View, OperandView, Derived>::evaluate() {
+void SimpleUnaryOperator<View, OperandView, Derived>::evaluateImpl() {
     operand->evaluate();
     bool defined = !operand->isUndefined();
     this->setDefined(defined);

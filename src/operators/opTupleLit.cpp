@@ -5,7 +5,7 @@
 #include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-void OpTupleLit::evaluate() {
+void OpTupleLit::evaluateImpl() {
     for (auto& member : members) {
         mpark::visit([&](auto& member) { member->evaluate(); }, member);
     }

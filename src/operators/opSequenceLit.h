@@ -15,7 +15,7 @@ struct OpSequenceLit : public SequenceView {
     OpSequenceLit(const OpSequenceLit&) = delete;
     OpSequenceLit(OpSequenceLit&& other);
     ~OpSequenceLit() { this->stopTriggeringOnChildren(); }
-    void evaluate() final;
+    void evaluateImpl() final;
     void startTriggering() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();

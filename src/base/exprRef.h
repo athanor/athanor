@@ -36,11 +36,18 @@ struct Undefinable<BoolView> {
 };
 template <typename View>
 struct ExprInterface : public Undefinable<View> {
+    bool evaluated = false;
     typedef typename AssociatedTriggerType<View>::type TriggerType;
     virtual View& view();
     virtual const View& view() const;
     virtual void addTrigger(const std::shared_ptr<TriggerType>& trigger);
-    virtual void evaluate() = 0;
+    inline void evaluate() {
+        if (!evaluated) {
+            evaluated = true;
+            this->evaluateImpl();
+        }
+    }
+    virtual void evaluateImpl() = 0;
     virtual void startTriggering() = 0;
     virtual void stopTriggering() = 0;
     virtual void updateViolationDescription(UInt parentViolation,

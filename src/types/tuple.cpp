@@ -80,7 +80,7 @@ UInt getDomainSize<TupleDomain>(const TupleDomain& domain) {
     return total;
 }
 
-void evaluate(TupleValue&) {}
+void evaluateImpl(TupleValue&) {}
 void startTriggering(TupleValue&) {}
 void stopTriggering(TupleValue&) {}
 

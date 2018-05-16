@@ -47,7 +47,7 @@ void OpTupleIndex<TupleMemberViewType>::reevaluateDefined() {
 }
 
 template <typename TupleMemberViewType>
-void OpTupleIndex<TupleMemberViewType>::evaluate() {
+void OpTupleIndex<TupleMemberViewType>::evaluateImpl() {
     tupleOperand->evaluate();
     reevaluateDefined();
 }

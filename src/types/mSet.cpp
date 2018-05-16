@@ -94,7 +94,7 @@ void reset(MSetValue& val) {
     val.triggers.clear();
 }
 
-void evaluate(MSetValue&) {}
+void evaluateImpl(MSetValue&) {}
 void startTriggering(MSetValue&) {}
 void stopTriggering(MSetValue&) {}
 

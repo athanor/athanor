@@ -89,7 +89,7 @@ struct SimpleBinaryOperator : public View,
     }
     virtual ~SimpleBinaryOperator() { this->stopTriggeringOnChildren(); }
 
-    void evaluate() final;
+    void evaluateImpl() final;
     void startTriggering() final;
     void stopTriggeringOnChildren();
     void stopTriggering() final;
@@ -122,7 +122,7 @@ struct SimpleUnaryOperator : public View,
         setTriggerParent(&derived(), operandTrigger);
     }
     virtual ~SimpleUnaryOperator() { this->stopTriggeringOnChildren(); }
-    void evaluate() final;
+    void evaluateImpl() final;
     void startTriggering() final;
     void stopTriggeringOnChildren();
     void stopTriggering() final;

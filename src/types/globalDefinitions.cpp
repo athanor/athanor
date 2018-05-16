@@ -14,8 +14,10 @@ inline pair<bool, ViolationDescription&> registerViolations(
     const ValBase* val, const UInt violation, ViolationDescription& vioDesc);
 #define specialised(name)                                                  \
     template <>                                                            \
-    shared_ptr<name##Value> makeShared<name##Value>() {                    \
-        return make_shared<name##Value>();                                 \
+    ValRef<name##Value> make<name##Value>() {                              \
+        ValRef<name##Value> val(make_shared<name##Value>());               \
+        val->evaluated = true;                                             \
+        return val;                                                        \
     }                                                                      \
     const string TypeAsString<name##Value>::value = quote(name##Value);    \
     const string TypeAsString<name##Domain>::value = quote(name##Domain);  \
@@ -28,7 +30,7 @@ inline pair<bool, ViolationDescription&> registerViolations(
         return v;                                                          \
     }                                                                      \
                                                                            \
-    void name##Value::evaluate() {}                                        \
+    void name##Value::evaluateImpl() {}                                    \
     void name##Value::startTriggering() {}                                 \
     void name##Value::stopTriggering() {}                                  \
     void name##Value::updateViolationDescription(                          \

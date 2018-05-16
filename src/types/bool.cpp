@@ -44,7 +44,7 @@ void reset(BoolValue& val) {
     val.container = NULL;
 }
 
-void evaluate(BoolValue&) {}
+void evaluateImpl(BoolValue&) {}
 void startTriggering(BoolValue&) {}
 void stopTriggering(BoolValue&) {}
 

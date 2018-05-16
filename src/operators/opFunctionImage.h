@@ -34,7 +34,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     FunctionMemberViewType& view() final;
     const FunctionMemberViewType& view() const final;
 
-    void evaluate() final;
+    void evaluateImpl() final;
     void startTriggering() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();

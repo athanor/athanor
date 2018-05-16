@@ -55,7 +55,7 @@ void reset(IntValue& val) {
     val.container = NULL;
 }
 
-void evaluate(IntValue&) {}
+void evaluateImpl(IntValue&) {}
 void startTriggering(IntValue&) {}
 void stopTriggering(IntValue&) {}
 

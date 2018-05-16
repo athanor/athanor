@@ -77,7 +77,7 @@ void OpFunctionImage<FunctionMemberViewType>::reevaluate() {
 }
 
 template <typename FunctionMemberViewType>
-void OpFunctionImage<FunctionMemberViewType>::evaluate() {
+void OpFunctionImage<FunctionMemberViewType>::evaluateImpl() {
     functionOperand->evaluate();
     invoke(preImageOperand, evaluate());
     reevaluate();

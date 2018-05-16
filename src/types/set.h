@@ -353,7 +353,7 @@ struct SetValue : public SetView, public ValBase {
     }
 
     void printVarBases();
-    void evaluate() final;
+    void evaluateImpl() final;
     void startTriggering() final;
     void stopTriggering() final;
     void updateViolationDescription(UInt parentViolation,

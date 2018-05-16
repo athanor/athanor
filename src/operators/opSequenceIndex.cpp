@@ -61,7 +61,7 @@ void OpSequenceIndex<SequenceMemberViewType>::reevaluateDefined() {
 }
 
 template <typename SequenceMemberViewType>
-void OpSequenceIndex<SequenceMemberViewType>::evaluate() {
+void OpSequenceIndex<SequenceMemberViewType>::evaluateImpl() {
     sequenceOperand->evaluate();
     indexOperand->evaluate();
     if (indexOperand->isUndefined()) {

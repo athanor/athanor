@@ -153,7 +153,7 @@ UInt getDomainSize<FunctionDomain>(const FunctionDomain& domain) {
     todoImpl(domain);
 }
 
-void evaluate(FunctionValue&) {}
+void evaluateImpl(FunctionValue&) {}
 void startTriggering(FunctionValue&) {}
 void stopTriggering(FunctionValue&) {}
 

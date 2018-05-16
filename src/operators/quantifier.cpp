@@ -279,12 +279,9 @@ void Quantifier<ContainerType>::stopTriggering() {
 }
 
 template <typename ContainerType>
-void Quantifier<ContainerType>::evaluate() {
-    if (!unrolledIterVals.empty()) {
-        return;
-    }
-    unrolledIterVals.clear();
-    silentClear();
+void Quantifier<ContainerType>::evaluateImpl() {
+    debug_code(assert(unrolledIterVals.empty()));
+    debug_code(assert(this->numberElements() == 0));
     container->evaluate();
     InitialUnroller<ContainerType>::initialUnroll(*this);
 }

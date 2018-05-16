@@ -18,15 +18,8 @@ struct ValRef : public StandardSharedPtr<Value> {
     const ExprRef<View> asExpr() const;
 };
 
-template <typename T>
-std::shared_ptr<T> makeShared();
-
-template <typename T,
-          typename std::enable_if<IsValueType<T>::value, int>::type = 0>
-ValRef<T> make() {
-    return ValRef<T>(makeShared<T>());
-}
-
+template <typename Val>
+EnableIfValueAndReturn<Val, ValRef<Val>> make();
 // variant for values
 typedef Variantised<ValRef> AnyValRef;
 // variant for vector of values

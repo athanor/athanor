@@ -96,7 +96,7 @@ UInt getDomainSize<SequenceDomain>(const SequenceDomain& domain) {
     todoImpl(domain);
 }
 
-void evaluate(SequenceValue&) {}
+void evaluateImpl(SequenceValue&) {}
 void startTriggering(SequenceValue&) {}
 void stopTriggering(SequenceValue&) {}
 

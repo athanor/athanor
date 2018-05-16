@@ -24,7 +24,7 @@ const View& Iterator<View>::view() const {
 }
 
 template <typename View>
-void Iterator<View>::evaluate() {
+void Iterator<View>::evaluateImpl() {
     ref->evaluate();
 }
 

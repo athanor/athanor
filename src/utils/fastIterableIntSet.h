@@ -60,6 +60,7 @@ class FastIterableIntSet {
     inline auto end() const { return contents.cend(); }
     inline auto cend() const { return contents.cend(); }
     inline size_t size() const { return contents.size(); }
+    inline bool empty() const { return size() == 0; }
 
     inline void clear() {
         contents.clear();

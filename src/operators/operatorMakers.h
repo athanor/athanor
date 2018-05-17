@@ -100,5 +100,10 @@ template <bool minMode>
 struct OpMaker<OpMinMax<minMode>> {
     static ExprRef<IntView> make(ExprRef<SequenceView>);
 };
+struct IntRange;
+template <>
+struct OpMaker<IntRange> {
+    static ExprRef<SequenceView> make(ExprRef<IntView> l, ExprRef<IntView> r);
+};
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

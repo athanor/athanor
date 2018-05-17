@@ -40,6 +40,8 @@ shared_ptr<TupleDomain> fakeTupleDomain(std::vector<AnyDomainRef> domains) {
 ParsedModel::ParsedModel() : builder(make_unique<ModelBuilder>()) {}
 typedef function<pair<AnyDomainRef, AnyExprRef>(json&, ParsedModel&)>
     ParseExprFunction;
+typedef function<pair<AnyDomainRef, AnyExprRef>(json&, ParsedModel&)>
+    ParseDomainGeneratorFunction;
 typedef function<AnyDomainRef(json&, ParsedModel&)> ParseDomainFunction;
 
 template <typename RetType, typename Constraint, typename Func>
@@ -59,7 +61,8 @@ pair<bool, ReturnType> stringMatch(const vector<pair<string, Function>>& match,
     }
     return make_pair(false, defaultValue);
 }
-
+pair<AnyDomainRef, AnyExprRef> parseDomainGenerator(json& domainExpr,
+                                                    ParsedModel& parsedModel);
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
     json& essenceExpr, ParsedModel& parsedModel);
 pair<bool, AnyDomainRef> tryParseDomain(json& essenceExpr,
@@ -773,7 +776,10 @@ template <typename ContainerDomainType, typename Quantifier>
 AnyDomainRef addExprToQuantifier(
     json& comprExpr, shared_ptr<ContainerDomainType>& containerDomain,
     Quantifier& quantifier, ParsedModel& parsedModel) {
-    auto& generatorExpr = comprExpr[1][0]["Generator"]["GenInExpr"];
+    json& generatorParent = comprExpr[1][0]["Generator"];
+    json& generatorExpr = (generatorParent.count("GenInExpr"))
+                              ? generatorParent["GenInExpr"]
+                              : generatorParent["GenDomainNoRepr"];
     vector<string> variablesAddedToScope;
     mpark::visit(
         [&](auto& innerDomain) {
@@ -784,15 +790,25 @@ AnyDomainRef addExprToQuantifier(
                 InnerViewType;
 
             if (is_same<SequenceDomain, ContainerDomainType>::value) {
-                auto iterDomain = fakeTupleDomain({fakeIntDomain, innerDomain});
-                auto iter = ExprRef<TupleView>(
-                    quantifier->template newIterRef<TupleView>());
-                extractPatternMatchAndAddExprsToScope(
-                    generatorExpr[0], iterDomain, iter, parsedModel,
-                    variablesAddedToScope);
+                auto iterRef = quantifier->template newIterRef<TupleView>();
+                if (generatorParent.count("GenDomainNoRepr")) {
+                    auto iter =
+                        OpMaker<OpTupleIndex<InnerViewType>>::make(iterRef, 1);
+                    extractPatternMatchAndAddExprsToScope(
+                        generatorExpr[0], innerDomain, iter, parsedModel,
+                        variablesAddedToScope);
+                } else {
+                    auto iterDomain =
+                        fakeTupleDomain({fakeIntDomain, innerDomain});
+                    ExprRef<TupleView> iter(iterRef);
+                    extractPatternMatchAndAddExprsToScope(
+                        generatorExpr[0], iterDomain, iter, parsedModel,
+                        variablesAddedToScope);
+                }
             } else {
-                auto iter = ExprRef<InnerViewType>(
+                ExprRef<InnerViewType> iter(
                     quantifier->template newIterRef<InnerViewType>());
+
                 extractPatternMatchAndAddExprsToScope(
                     generatorExpr[0], innerDomain, iter, parsedModel,
                     variablesAddedToScope);
@@ -820,7 +836,10 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> buildQuant(
 
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
     json& comprExpr, ParsedModel& parsedModel) {
-    auto& generatorExpr = comprExpr[1][0]["Generator"]["GenInExpr"];
+    auto& generatorParent = comprExpr[1][0]["Generator"];
+    json& generatorExpr = (generatorParent.count("GenInExpr"))
+                              ? generatorParent["GenInExpr"]
+                              : generatorParent["GenDomainNoRepr"];
 
     auto errorHandler = [&](auto &&)
         -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
@@ -828,7 +847,10 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
              << generatorExpr << endl;
         abort();
     };
-    auto domainContainerPair = parseExpr(generatorExpr[1], parsedModel);
+    auto domainContainerPair =
+        (generatorParent.count("GenInExpr"))
+            ? parseExpr(generatorExpr[1], parsedModel)
+            : parseDomainGenerator(generatorExpr[1], parsedModel);
     return mpark::visit(
         overloaded(
             [&](ExprRef<SetView>& set)
@@ -926,6 +948,53 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     }
     return make_pair(false,
                      make_pair(fakeBoolDomain, ExprRef<BoolView>(nullptr)));
+}
+
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseDomainGeneratorInt(
+    json& intDomainExpr, ParsedModel& parsedModel) {
+    if (intDomainExpr.size() != 1) {
+        cerr << "Error: do not yet support unrolling (quantifying) over int "
+                "domains with holes in them.\n";
+        abort();
+    }
+    ExprRef<IntView> from(nullptr), to(nullptr);
+    auto errorFunc = [](auto&&) {
+        cerr << "Expected int returning expression when parsing an int domain "
+                "for unrolling.\n";
+    };
+    auto& rangeExpr = intDomainExpr[0];
+    if (rangeExpr.count("RangeBounded")) {
+        from = expect<IntView>(
+            parseExpr(rangeExpr["RangeBounded"][0], parsedModel).second,
+            errorFunc);
+        to = expect<IntView>(
+            parseExpr(rangeExpr["RangeBounded"][1], parsedModel).second,
+            errorFunc);
+    } else if (rangeExpr.count("RangeSingle")) {
+        from = expect<IntView>(
+            parseExpr(rangeExpr["RangeSingle"], parsedModel).second, errorFunc);
+        to = from;
+    } else {
+        cerr << "Unrecognised type of int range: " << rangeExpr << endl;
+        abort();
+    }
+    return make_pair(fakeSequenceDomain(fakeIntDomain),
+                     OpMaker<IntRange>::make(from, to));
+}
+
+pair<AnyDomainRef, AnyExprRef> parseDomainGenerator(json& domainExpr,
+                                                    ParsedModel& parsedModel) {
+    auto boolGeneratorPair = stringMatch<ParseDomainGeneratorFunction>(
+        {{"DomainInt", parseDomainGeneratorInt}},
+        make_pair(AnyDomainRef(fakeIntDomain), ExprRef<IntView>(nullptr)),
+        domainExpr, parsedModel);
+    if (boolGeneratorPair.first) {
+        return boolGeneratorPair.second;
+    } else {
+        cerr << "Error: do not yet support unrolling this domain.\n";
+        cerr << domainExpr << endl;
+        abort();
+    }
 }
 
 void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {

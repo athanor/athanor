@@ -72,10 +72,30 @@ struct SimpleBinaryOperator : public View,
 
    public:
     SimpleBinaryOperator(ExprRef<OperandView> left, ExprRef<OperandView> right)
-        : left(std::move(left)), right(std::move(right)) {}
+        : left(std::move(left)), right(std::move(right)) {
+        invokeSetInnerType<View>();
+    }
 
+    template <typename V,
+              typename std::enable_if<!std::is_same<BoolView, V>::value &&
+                                          !std::is_same<IntView, V>::value,
+                                      int>::type = 0>
+    void invokeSetInnerType() {
+        derived().setInnerType();
+    }
+
+    template <typename V,
+              typename std::enable_if<std::is_same<BoolView, V>::value ||
+                                          std::is_same<IntView, V>::value,
+                                      int>::type = 0>
+    void invokeSetInnerType() {
+        // bool and int have no inner type, do nothing
+    }
     auto& derived() { return *static_cast<Derived*>(this); }
-    const auto& derived() const { return *static_cast<const Derived*>(this); }
+
+    const auto& derived() const {
+        return *static_cast<const Derived*>(this);
+    }
     SimpleBinaryOperator(
         const SimpleBinaryOperator<View, OperandView, Derived>& other) = delete;
     SimpleBinaryOperator(
@@ -109,8 +129,25 @@ struct SimpleUnaryOperator : public View,
     std::shared_ptr<OperandTrigger> operandTrigger;
 
     SimpleUnaryOperator(ExprRef<OperandView> operand)
-        : operand(std::move(operand)) {}
+        : operand(std::move(operand)) {
+        invokeSetInnerType<View>();
+    }
 
+    template <typename V,
+              typename std::enable_if<!std::is_same<BoolView, V>::value &&
+                                          !std::is_same<IntView, V>::value,
+                                      int>::type = 0>
+    void invokeSetInnerType() {
+        derived().setInnerType();
+    }
+
+    template <typename V,
+              typename std::enable_if<std::is_same<BoolView, V>::value ||
+                                          std::is_same<IntView, V>::value,
+                                      int>::type = 0>
+    void invokeSetInnerType() {
+        // bool and int have no inner type, do nothing
+    }
     auto& derived() { return *static_cast<Derived*>(this); }
     const auto& derived() const { return *static_cast<const Derived*>(this); }
     SimpleUnaryOperator(

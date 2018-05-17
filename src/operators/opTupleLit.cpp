@@ -64,7 +64,7 @@ void OpTupleLit::startTriggering() {
 
 void OpTupleLit::stopTriggeringOnChildren() {
     if (!exprTriggers.empty()) {
-        for (size_t i = 0; i < triggers.size(); i++) {
+        for (size_t i = 0; i < exprTriggers.size(); i++) {
             auto& trigger = exprTriggers[i];
             mpark::visit(
                 [&](auto& member) {

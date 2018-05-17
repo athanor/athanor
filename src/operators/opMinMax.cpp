@@ -49,14 +49,22 @@ inline void updateMinValues(OpMinMax<minMode>& op, bool trigger) {
         }
     }
     if (op.minValueIndices.empty()) {
-        op.setDefined(false, trigger);
+        op.setDefined(false, false);
     } else if (!foundUndefined) {
-        op.setDefined(true, trigger);
-    } else {
+        op.setDefined(true, false);
+    }
+    if (!trigger) {
+        return;
+    }
+    if (!wasDefined && !op.isDefined()) {
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers);
+    } else if (wasDefined && !op.isDefined()) {
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op.triggers);
+    } else if (op.isDefined()) {
         swap(op.value, oldValue);
         op.changeValue([&]() {
             swap(op.value, oldValue);
-            return trigger && wasDefined;
+            return true;
         });
     }
 }

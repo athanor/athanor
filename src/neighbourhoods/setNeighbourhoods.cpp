@@ -10,7 +10,7 @@ static ViolationDescription emptyViolations;
 template <typename InnerDomainPtrType>
 void assignRandomValueInDomainImpl(const SetDomain& domain,
                                    const InnerDomainPtrType& innerDomainPtr,
-                                   SetValue& val) {
+                                   SetValue& val, StatsContainer& stats) {
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     size_t newNumberElements =
@@ -18,21 +18,23 @@ void assignRandomValueInDomainImpl(const SetDomain& domain,
     // clear set and populate with new random elements
     while (val.numberElements() > 0) {
         val.removeMember<InnerValueType>(val.numberElements() - 1);
+        ++stats.minorNodeCount;
     }
     while (newNumberElements > val.numberElements()) {
         auto newMember = constructValueFromDomain(*innerDomainPtr);
         do {
-            assignRandomValueInDomain(*innerDomainPtr, *newMember);
+            assignRandomValueInDomain(*innerDomainPtr, *newMember, stats);
         } while (!val.addMember(newMember));
     }
 }
 
 template <>
 void assignRandomValueInDomain<SetDomain>(const SetDomain& domain,
-                                          SetValue& val) {
+                                          SetValue& val,
+                                          StatsContainer& stats) {
     mpark::visit(
         [&](auto& innerDomainPtr) {
-            assignRandomValueInDomainImpl(domain, innerDomainPtr, val);
+            assignRandomValueInDomainImpl(domain, innerDomainPtr, val, stats);
         },
         domain.inner);
 }
@@ -65,8 +67,8 @@ void setAddGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
             debug_neighbourhood_action("Looking for value to add");
             bool success;
             do {
-                ++params.stats.minorNodeCount;
-                assignRandomValueInDomain(*innerDomainPtr, *newMember);
+                assignRandomValueInDomain(*innerDomainPtr, *newMember,
+                                          params.stats);
                 success = val.tryAddMember(newMember, [&]() {
                     return params.parentCheck(params.primary);
                 });
@@ -102,7 +104,6 @@ void setRemoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     neighbourhoods.emplace_back("setRemove", [&](NeighbourhoodParams& params) {
-        ++params.stats.minorNodeCount;
         auto& val = *mpark::get<ValRef<SetValue>>(params.primary);
         if (val.numberElements() == domain.sizeAttr.minSize) {
             ++params.stats.minorNodeCount;
@@ -114,6 +115,7 @@ void setRemoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
         bool success;
         debug_neighbourhood_action("Looking for value to remove");
         do {
+            ++params.stats.minorNodeCount;
             indexToRemove = globalRandom<size_t>(0, val.numberElements() - 1);
             std::pair<bool, ValRef<InnerValueType>> removeStatus =
                 val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
@@ -235,8 +237,7 @@ void setAssignRandomGen(const SetDomain& domain,
             newValue->container = val.container;
             bool success;
             do {
-                ++params.stats.minorNodeCount;
-                assignRandomValueInDomain(domain, *newValue);
+                assignRandomValueInDomain(domain, *newValue, params.stats);
                 success = val.tryAssignNewValue(*newValue, [&]() {
                     return params.parentCheck(params.primary);
                 });

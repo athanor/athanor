@@ -196,7 +196,7 @@ class HillClimber {
             if (valBase(var.second).container == &definedPool) {
                 continue;
             }
-            assignRandomValueInDomain(var.first, var.second);
+            assignRandomValueInDomain(var.first, var.second, stats);
         }
     }
 };

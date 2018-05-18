@@ -97,17 +97,20 @@ inline void generateNeighbourhoods(const AnyDomainRef domain,
 
 template <typename Domain>
 void assignRandomValueInDomain(const Domain& domain,
-                               typename AssociatedValueType<Domain>::type& val);
+                               typename AssociatedValueType<Domain>::type& val,
+                               StatsContainer& stats);
 template <typename T = int>
 inline void assignRandomValueInDomain(const AnyDomainRef& domain,
-                                      AnyValRef& val, T = 0) {
+                                      AnyValRef& val, StatsContainer& stats,
+                                      T = 0) {
     mpark::visit(
         [&](auto& domainImpl) {
             typedef typename BaseType<decltype(domainImpl)>::element_type
                 DomainType;
             typedef ValRef<typename AssociatedValueType<DomainType>::type>
                 ValueType;
-            assignRandomValueInDomain(*domainImpl, *mpark::get<ValueType>(val));
+            assignRandomValueInDomain(*domainImpl, *mpark::get<ValueType>(val),
+                                      stats);
         },
         domain);
 }

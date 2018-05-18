@@ -10,7 +10,7 @@ static ViolationDescription emptyViolations;
 template <typename InnerDomainPtrType>
 void assignRandomValueInDomainImpl(const SequenceDomain& domain,
                                    const InnerDomainPtrType& innerDomainPtr,
-                                   SequenceValue& val) {
+                                   SequenceValue& val, StatsContainer& stats) {
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     size_t newNumberElements =
@@ -18,20 +18,22 @@ void assignRandomValueInDomainImpl(const SequenceDomain& domain,
     // clear sequence and populate with new random elements
     while (val.numberElements() > 0) {
         val.removeMember<InnerValueType>(val.numberElements() - 1);
+        ++stats.minorNodeCount;
     }
     while (newNumberElements > val.numberElements()) {
         auto newMember = constructValueFromDomain(*innerDomainPtr);
-        assignRandomValueInDomain(*innerDomainPtr, *newMember);
+        assignRandomValueInDomain(*innerDomainPtr, *newMember, stats);
         val.addMember(val.numberElements(), newMember);
     }
 }
 
 template <>
 void assignRandomValueInDomain<SequenceDomain>(const SequenceDomain& domain,
-                                               SequenceValue& val) {
+                                               SequenceValue& val,
+                                               StatsContainer& stats) {
     mpark::visit(
         [&](auto& innerDomainPtr) {
-            assignRandomValueInDomainImpl(domain, innerDomainPtr, val);
+            assignRandomValueInDomainImpl(domain, innerDomainPtr, val, stats);
         },
         domain.inner);
 }
@@ -123,8 +125,8 @@ void sequenceAddGenImpl(const SequenceDomain& domain,
             debug_neighbourhood_action("Looking for value to add");
             bool success;
             do {
-                ++params.stats.minorNodeCount;
-                assignRandomValueInDomain(*innerDomainPtr, *newMember);
+                assignRandomValueInDomain(*innerDomainPtr, *newMember,
+                                          params.stats);
                 size_t indexOfNewMember =
                     globalRandom<UInt>(0, val.numberElements());
                 success = val.tryAddMember(indexOfNewMember, newMember, [&]() {
@@ -176,6 +178,7 @@ void sequenceRemoveGenImpl(const SequenceDomain& domain, InnerDomainPtrType&,
             bool success;
             debug_neighbourhood_action("Looking for value to remove");
             do {
+                ++params.stats.minorNodeCount;
                 indexToRemove =
                     globalRandom<size_t>(0, val.numberElements() - 1);
                 std::pair<bool, ValRef<InnerValueType>> removeStatus =
@@ -228,8 +231,7 @@ void sequenceAssignRandomGen(const SequenceDomain& domain,
             newValue->container = val.container;
             bool success;
             do {
-                ++params.stats.minorNodeCount;
-                assignRandomValueInDomain(domain, *newValue);
+                assignRandomValueInDomain(domain, *newValue, params.stats);
                 success = val.tryAssignNewValue(*newValue, [&]() {
                     return params.parentCheck(params.primary);
                 });

@@ -9,7 +9,8 @@ static ViolationDescription emptyViolations;
 
 template <>
 void assignRandomValueInDomain<TupleDomain>(const TupleDomain& domain,
-                                            TupleValue& val) {
+                                            TupleValue& val,
+                                            StatsContainer& stats) {
     // clear tuple and populate with new random elements
     val.members.clear();
 
@@ -17,7 +18,7 @@ void assignRandomValueInDomain<TupleDomain>(const TupleDomain& domain,
         mpark::visit(
             [&](auto& innerDomainPtr) {
                 auto newMember = constructValueFromDomain(*innerDomainPtr);
-                assignRandomValueInDomain(*innerDomainPtr, *newMember);
+                assignRandomValueInDomain(*innerDomainPtr, *newMember, stats);
                 val.addMember(newMember);
             },
             domain.inners[i]);

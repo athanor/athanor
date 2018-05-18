@@ -4,7 +4,8 @@
 #include "types/int.h"
 #include "utils/random.h"
 
-Int getRandomValueInDomain(const IntDomain& domain) {
+Int getRandomValueInDomain(const IntDomain& domain, StatsContainer& stats) {
+    ++stats.minorNodeCount;
     UInt randomDomainIndex =
         globalRandom<decltype(domain.domainSize)>(0, domain.domainSize - 1);
     for (auto& bound : domain.bounds) {
@@ -21,9 +22,10 @@ Int getRandomValueInDomain(const IntDomain& domain) {
 
 template <>
 void assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
-                                          IntValue& val) {
+                                          IntValue& val,
+                                          StatsContainer& stats) {
     val.changeValue([&]() {
-        val.value = getRandomValueInDomain(domain);
+        val.value = getRandomValueInDomain(domain, stats);
         return true;
     });
 }
@@ -40,9 +42,8 @@ void intAssignRandomGen(const IntDomain& domain,
             auto backup = val.value;
             bool success;
             do {
-                ++params.stats.minorNodeCount;
                 success = val.changeValue([&]() {
-                    val.value = getRandomValueInDomain(domain);
+                    val.value = getRandomValueInDomain(domain, params.stats);
                     if (params.parentCheck(params.primary)) {
                         return true;
                     } else {

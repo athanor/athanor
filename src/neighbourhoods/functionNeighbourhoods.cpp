@@ -9,7 +9,7 @@ static ViolationDescription emptyViolations;
 
 template <>
 void assignRandomValueInDomain<FunctionDomain>(const FunctionDomain&,
-                                               FunctionValue&) {
+                                               FunctionValue&, StatsContainer&) {
     todoImpl();
 }
 const NeighbourhoodVec<FunctionDomain>

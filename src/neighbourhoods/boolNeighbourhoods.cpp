@@ -3,13 +3,17 @@
 #include "types/bool.h"
 #include "utils/random.h"
 
-auto getRandomValueInDomain(const BoolDomain&) { return globalRandom(0, 1); }
+auto getRandomValueInDomain(const BoolDomain&, StatsContainer& stats) {
+    ++stats.minorNodeCount;
+    return globalRandom(0, 1);
+}
 
 template <>
 void assignRandomValueInDomain<BoolDomain>(const BoolDomain& domain,
-                                           BoolValue& val) {
+                                           BoolValue& val,
+                                           StatsContainer& stats) {
     val.changeValue([&]() {
-        val.violation = getRandomValueInDomain(domain);
+        val.violation = getRandomValueInDomain(domain, stats);
         return true;
     });
 }
@@ -27,9 +31,9 @@ void boolAssignRandomGen(const BoolDomain& domain,
                 "Assigning random value: original value is " << asView(val));
             bool success;
             do {
-                ++params.stats.minorNodeCount;
                 success = val.changeValue([&]() {
-                    val.violation = getRandomValueInDomain(domain);
+                    val.violation =
+                        getRandomValueInDomain(domain, params.stats);
                     return params.parentCheck(params.primary);
                 });
                 if (success) {

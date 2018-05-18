@@ -64,7 +64,7 @@ void Quantifier<ContainerType>::unroll(UInt index,
             // the expr template will not have been evaluated before.  If we are
             // instead copying from an already unrolled expr, it  need not be
             // evaluated, simply copy it and trigger the change in value.
-            bool evaluateExpr = members.empty() || !this->triggering();
+            bool evaluateExpr = members.empty();
             const ExprRef<ViewType>& oldValueOfIter =
                 (members.empty())
                     ? IterRef<ViewType>(nullptr)
@@ -72,21 +72,15 @@ void Quantifier<ContainerType>::unroll(UInt index,
                           ->getValue();
             ExprRef<viewType(members)> newMember =
                 exprToCopy->deepCopySelfForUnroll(exprToCopy, iterRef);
-            iterRef->changeValue(this->triggering() && !evaluateExpr,
-                                 oldValueOfIter, newView, [&]() {
-                                     if (evaluateExpr) {
-                                         newMember->evaluate();
-                                     }
-                                     if (this->triggering()) {
-                                         newMember->startTriggering();
-                                     }
-                                 });
+            iterRef->changeValue(!evaluateExpr, oldValueOfIter, newView, [&]() {
+                if (evaluateExpr) {
+                    newMember->evaluate();
+                }
+                newMember->startTriggering();
+            });
             unrolledIterVals.insert(unrolledIterVals.begin() + index, iterRef);
             this->addMemberAndNotify(index, newMember);
-            if (this->triggering()) {
-                this->startTriggeringOnExpr(index, newMember);
-            }
-
+            this->startTriggeringOnExpr(index, newMember);
         },
         members);
 }
@@ -233,12 +227,14 @@ void Quantifier<ContainerType>::stopTriggeringOnExpr(UInt oldIndex) {
 
 template <typename ContainerType>
 void Quantifier<ContainerType>::startTriggering() {
-    if (this->triggering()) {
+    if (!containerTrigger) {
+        containerTrigger = make_shared<ContainerTrigger<ContainerType>>(this);
+        container->addTrigger(containerTrigger);
+        container->startTriggering();
+    }
+    if (!exprTriggers.empty()) {
         return;
     }
-    containerTrigger = make_shared<ContainerTrigger<ContainerType>>(this);
-    container->addTrigger(containerTrigger);
-    container->startTriggering();
     mpark::visit(
         [&](auto& members) {
             for (size_t i = 0; i < members.size(); i++) {
@@ -254,6 +250,8 @@ void Quantifier<ContainerType>::stopTriggeringOnChildren() {
     if (containerTrigger) {
         deleteTrigger(containerTrigger);
         containerTrigger = nullptr;
+    }
+    if (!exprTriggers.empty()) {
         mpark::visit(
             [&](auto& expr) {
                 while (!exprTriggers.empty()) {

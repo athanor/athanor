@@ -258,4 +258,4 @@ void setAssignRandomGen(const SetDomain& domain,
 }
 
 const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::value = {
-    setLiftSingleGen, setAddGen, setRemoveGen, setAssignRandomGen};
+    setLiftSingleGen, setAddGen, setRemoveGen};

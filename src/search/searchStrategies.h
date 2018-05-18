@@ -190,7 +190,7 @@ class HillClimber {
             std::cout << "timeout\n";
             return true;
         }
-        if (stats.numberIterations - numberItersAtLastEvent > 40000) {
+        if (stats.numberIterations - numberItersAtLastEvent > 120000) {
             lastViolation = bestViolation + violationBackOff;
             std::cout << "Setting last violation to " << lastViolation
                       << std::endl;

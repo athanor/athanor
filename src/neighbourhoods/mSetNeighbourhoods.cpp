@@ -248,4 +248,4 @@ void mSetAssignRandomGen(const MSetDomain& domain,
 }
 
 const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::value = {
-    mSetLiftSingleGen, mSetAssignRandomGen, mSetAddGen, mSetRemoveGen};
+    mSetLiftSingleGen};

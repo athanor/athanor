@@ -31,7 +31,7 @@ struct StatsContainer {
         os << "Wall time: " << timeTaken.count() << std::endl;
         auto cpuTime =
             (double)(stats.endCpuTime - stats.startCpuTime) / CLOCKS_PER_SEC;
-        os << "CPU time: " << cpuTime << std::endl;
+        os << "CPU time: " << cpuTime;
         return os;
     }
 

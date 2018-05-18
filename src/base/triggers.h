@@ -7,7 +7,7 @@
 #include "utils/ignoreUnused.h"
 template <typename T>
 struct ExprRef;
-
+extern u_int64_t triggerEventCount;
 struct TriggerBase {
     bool active = true;
     virtual ~TriggerBase() {}
@@ -49,6 +49,7 @@ void visitTriggers(Visitor&& func,
     size_t triggerNullCount = 0;
     for (auto& trigger : triggers) {
         if (trigger && trigger->active) {
+            ++triggerEventCount;
             func(trigger);
         } else {
             ++triggerNullCount;

@@ -85,6 +85,7 @@ class HillClimber {
         : model(std::move(model)),
           selectionStrategy(this->model.neighbourhoods.size()) {}
     void search() {
+        triggerEventCount = 0;
         std::cout << "Neighbourhoods (" << model.neighbourhoods.size()
                   << "):\n";
         std::transform(model.neighbourhoods.begin(), model.neighbourhoods.end(),
@@ -128,7 +129,8 @@ class HillClimber {
                 NeighbourhoodResult(model, lastViolation));
         }
         stats.endTimer();
-        std::cout << stats << std::endl;
+        std::cout << stats << "\nTrigger event count " << triggerEventCount
+                  << "\n\n";
     }
 
     inline void newBestSolution() {
@@ -143,7 +145,8 @@ class HillClimber {
             std::cout << ", objective " << lastObjValue;
         }
         std::cout << std::endl;
-        std::cout << stats << std::endl;
+        std::cout << stats << "\nTrigger event count " << triggerEventCount
+                  << "\n\n";
         if (lastViolation == 0) {
             std::cout << "solution start\n";
         }

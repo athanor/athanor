@@ -4,7 +4,7 @@
 #include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-
+u_int64_t triggerEventCount = 0;
 UInt LARGE_VIOLATION = ((UInt)1) << ((sizeof(UInt) * 4) - 1);
 
 template <typename View>

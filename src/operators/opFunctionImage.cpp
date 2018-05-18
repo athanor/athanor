@@ -269,6 +269,7 @@ OpFunctionImage<FunctionMemberViewType>::deepCopySelfForUnroll(
             invoke_r(preImageOperand,
                      deepCopySelfForUnroll(preImageOperand, iterator),
                      AnyExprRef));
+    newOpFunctionImage->evaluated = this->evaluated;
     newOpFunctionImage->cachedIndex = cachedIndex;
     newOpFunctionImage->locallyDefined = locallyDefined;
     return newOpFunctionImage;

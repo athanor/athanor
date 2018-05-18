@@ -55,6 +55,7 @@ SimpleBinaryOperator<View, OperandView, Derived>::deepCopySelfForUnroll(
         right->deepCopySelfForUnroll(right, iterator));
     this->copyDefinedStatus(*newOp);
     derived().copy(*newOp);
+    newOp->evaluated = this->evaluated;
     return newOp;
 }
 
@@ -114,6 +115,7 @@ SimpleUnaryOperator<View, OperandView, Derived>::deepCopySelfForUnroll(
         operand->deepCopySelfForUnroll(operand, iterator));
     this->copyDefinedStatus(*newOp);
     derived().copy(*newOp);
+    newOp->evaluated = this->evaluated;
     return newOp;
 }
 

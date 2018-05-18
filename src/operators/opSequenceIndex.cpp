@@ -355,6 +355,7 @@ OpSequenceIndex<SequenceMemberViewType>::deepCopySelfForUnroll(
         make_shared<OpSequenceIndex<SequenceMemberViewType>>(
             sequenceOperand->deepCopySelfForUnroll(sequenceOperand, iterator),
             indexOperand->deepCopySelfForUnroll(indexOperand, iterator));
+    newOpSequenceIndex->evaluated = this->evaluated;
     newOpSequenceIndex->cachedIndex = cachedIndex;
     newOpSequenceIndex->defined = defined;
     newOpSequenceIndex->locallyDefined = locallyDefined;

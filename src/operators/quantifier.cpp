@@ -148,6 +148,7 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnroll(
         },
         this->expr);
     newQuantifier->containerDefined = containerDefined;
+    newQuantifier->evaluated = this->evaluated;
     return newQuantifier;
 }
 

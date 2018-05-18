@@ -105,6 +105,7 @@ ExprRef<TupleView> OpTupleLit::deepCopySelfForUnroll(
     }
     auto newOpTupleLit = make_shared<OpTupleLit>(move(newMembers));
     newOpTupleLit->numberUndefined = numberUndefined;
+    newOpTupleLit->evaluated = this->evaluated;
     return newOpTupleLit;
 }
 

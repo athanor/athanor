@@ -195,7 +195,7 @@ void OpProd::updateViolationDescription(UInt parentViolation,
 
 void OpProd::copy(OpProd& newOp) const {
     newOp.value = value;
-    newOp.evaluated = evaluated;
+    newOp.evaluated = this->evaluated;
 }
 
 std::ostream& OpProd::dumpState(std::ostream& os) const {

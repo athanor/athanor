@@ -193,7 +193,7 @@ void OpSum::updateViolationDescription(UInt parentViolation,
 
 void OpSum::copy(OpSum& newOp) const {
     newOp.value = value;
-    newOp.evaluated = evaluated;
+    newOp.evaluated = this->evaluated;
 }
 
 std::ostream& OpSum::dumpState(std::ostream& os) const {

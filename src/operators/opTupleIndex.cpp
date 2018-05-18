@@ -208,6 +208,7 @@ OpTupleIndex<TupleMemberViewType>::deepCopySelfForUnroll(
     auto newOpTupleIndex = make_shared<OpTupleIndex<TupleMemberViewType>>(
         tupleOperand->deepCopySelfForUnroll(tupleOperand, iterator), index);
     newOpTupleIndex->defined = defined;
+    newOpTupleIndex->evaluated = this->evaluated;
     return newOpTupleIndex;
 }
 

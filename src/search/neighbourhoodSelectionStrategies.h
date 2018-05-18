@@ -5,14 +5,9 @@
 #include <cassert>
 #include <vector>
 #include "search/model.h"
+#include "search/statsContainer.h"
 #include "search/violationDescription.h"
 #include "utils/random.h"
-struct NeighbourhoodResult {
-    Model& model;
-    UInt bestViolation;
-    NeighbourhoodResult(Model& model, UInt bestViolation)
-        : model(model), bestViolation(bestViolation) {}
-};
 class RandomNeighbourhoodSelection {
     const int numberNeighbourhoods;
 
@@ -51,7 +46,7 @@ class RandomNeighbourhoodWithViolation {
         }
         model.csp->updateViolationDescription(0, model.vioDesc);
     }
-    inline void reportResult(NeighbourhoodResult&& result) {
+    inline void reportResult(NeighbourhoodResult& result) {
         initialise(result.model);
     }
     inline int selectNeighbourhoodFromVarId(const Model& model, UInt varId) {

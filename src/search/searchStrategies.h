@@ -22,7 +22,7 @@ class HillClimber {
     Int bestObjValue;
     bool newBestValueFound = false;
     StatsContainer stats;
-    UInt numberNodesAtLastEvent;
+    UInt numberItersAtLastEvent;
 
     Int getDeltaObj(Int oldObj, Int newObj) {
         switch (model.optimiseMode) {
@@ -50,14 +50,14 @@ class HillClimber {
                               getDeltaObj(bestObjValue, newObjValue) > 0;
             if (solutionAllowed && model.csp->violation == 0) {
                 otherPhase = false;
-                numberNodesAtLastEvent = stats.majorNodeCount;
+                numberItersAtLastEvent = stats.numberIterations;
             }
         }
         if (!solutionAllowed) {
             return false;
         } else {
             if (deltaViolation > 0 || (deltaViolation == 0 && deltaObj > 0)) {
-                numberNodesAtLastEvent = stats.majorNodeCount;
+                numberItersAtLastEvent = stats.numberIterations;
             }
 
             lastViolation = model.csp->violation;
@@ -83,7 +83,8 @@ class HillClimber {
    public:
     HillClimber(Model model)
         : model(std::move(model)),
-          selectionStrategy(this->model.neighbourhoods.size()) {}
+          selectionStrategy(this->model.neighbourhoods.size()),
+          stats(this->model.neighbourhoods.size()) {}
     void search() {
         triggerEventCount = 0;
         std::cout << "Neighbourhoods (" << model.neighbourhoods.size()
@@ -109,7 +110,6 @@ class HillClimber {
         selectionStrategy.initialise(model);
         AcceptanceCallBack callback = [&]() { return this->acceptValue(); };
         while (!finished()) {
-            ++stats.majorNodeCount;
             int nextNeighbourhoodIndex =
                 selectionStrategy.nextNeighbourhood(model);
             Neighbourhood& neighbourhood =
@@ -124,18 +124,27 @@ class HillClimber {
             ParentCheckCallBack alwaysTrueFunc(alwaysTrue);
             NeighbourhoodParams params(callback, alwaysTrueFunc, 1, var.second,
                                        stats, model.vioDesc);
+            u_int64_t minorNodeCountAtStart = stats.minorNodeCount,
+                      triggerEventCountAtStart = triggerEventCount;
+            double cpuTimeAtStart = stats.getCpuTime();
             neighbourhood.apply(params);
-            selectionStrategy.reportResult(
-                NeighbourhoodResult(model, lastViolation));
+            NeighbourhoodResult result(
+                model, lastViolation, nextNeighbourhoodIndex,
+                stats.minorNodeCount - minorNodeCountAtStart,
+                triggerEventCount - triggerEventCountAtStart,
+                stats.getCpuTime() - cpuTimeAtStart);
+            stats.reportResult(result);
+            selectionStrategy.reportResult(result);
         }
         stats.endTimer();
         std::cout << stats << "\nTrigger event count " << triggerEventCount
                   << "\n\n";
+        printNeighbourhoodStats();
     }
 
     inline void newBestSolution() {
         violationBackOff = 1;
-        numberNodesAtLastEvent = stats.majorNodeCount;
+        numberItersAtLastEvent = stats.numberIterations;
         if (model.optimiseMode != OptimiseMode::NONE && lastViolation == 0) {
             std::cout << "Best solution: " << lastObjValue << " "
                       << stats.getCpuTime() << std::endl;
@@ -181,17 +190,17 @@ class HillClimber {
             std::cout << "timeout\n";
             return true;
         }
-        if (stats.majorNodeCount - numberNodesAtLastEvent > 40000) {
+        if (stats.numberIterations - numberItersAtLastEvent > 40000) {
             lastViolation = bestViolation + violationBackOff;
             std::cout << "Setting last violation to " << lastViolation
                       << std::endl;
             ++violationBackOff;
             otherPhase = true;
-            numberNodesAtLastEvent = stats.majorNodeCount;
+            numberItersAtLastEvent = stats.numberIterations;
         }
         return (model.optimiseMode == OptimiseMode::NONE &&
                 bestViolation == 0) ||
-               stats.majorNodeCount >= 30000000;
+               stats.numberIterations >= 30000000;
     }
 
     inline void assignRandomValueToVariables() {
@@ -200,6 +209,27 @@ class HillClimber {
                 continue;
             }
             assignRandomValueInDomain(var.first, var.second, stats);
+        }
+    }
+
+    void printNeighbourhoodStats() {
+        static const std::string indent = "    ";
+        std::cout << "---------------------\n";
+        for (size_t i = 0; i < model.neighbourhoods.size(); i++) {
+            std::cout << "Neighbourhood: " << model.neighbourhoods[i].name
+                      << std::endl;
+            std::cout << indent << "value,total,average\n";
+            std::cout << indent << "Number minor nodes,"
+                      << stats.nhMinorNodeCounts[i] << ","
+                      << stats.getAverage(stats.nhMinorNodeCounts[i], i)
+                      << std::endl;
+            std::cout << indent << "Number trigger events,"
+                      << stats.nhTriggerEventCounts[i] << ","
+                      << stats.getAverage(stats.nhTriggerEventCounts[i], i)
+                      << std::endl;
+            std::cout << indent << "Time," << stats.nhTotalCpuTimes[i] << ","
+                      << stats.getAverage(stats.nhTotalCpuTimes[i], i)
+                      << std::endl;
         }
     }
 };

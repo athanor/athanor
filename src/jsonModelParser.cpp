@@ -912,6 +912,14 @@ pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseOpMinMax(
     cerr << operandExpr << endl;
     abort();
 }
+
+pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseOpToInt(
+    json& expr, ParsedModel& parsedModel) {
+    auto boolExpr = expect<BoolView>(
+        parseExpr(expr, parsedModel).second,
+        [&](auto&) { cerr << "OpToInt requires a bool operand.\n"; });
+    return make_pair(fakeIntDomain, OpMaker<OpToInt>::make(boolExpr));
+}
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     json& essenceExpr, ParsedModel& parsedModel) {
     if (essenceExpr.count("Op")) {
@@ -927,9 +935,8 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
               makeVaradicOpParser<IntView, OpProd>(fakeIntDomain)},
              {"MkOpRelationProj", parseOpRelationProj},
              {"MkOpMin", parseOpMinMax<true>},
-             {"MkOpMax", parseOpMinMax<false>}
-
-            },
+             {"MkOpMax", parseOpMinMax<false>},
+             {"MkOpToInt", parseOpToInt}},
             make_pair(AnyDomainRef(fakeIntDomain),
                       AnyExprRef(ExprRef<IntView>(nullptr))),
             essenceExpr["Op"], parsedModel);

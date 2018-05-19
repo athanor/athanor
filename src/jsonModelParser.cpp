@@ -105,25 +105,21 @@ AnyValRef toValRef(const AnyExprRef& op) {
 
 Int parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel,
                     const string& errorMessage) {
-    try {
-        return mpark::get<ExprRef<IntView>>(
-                   parseExpr(essenceExpr, parsedModel).second)
-            ->view()
-            .value;
-    } catch (mpark::bad_variant_access) {
-        cerr << "Error: Expected int expression " << errorMessage << endl;
-        cerr << essenceExpr << endl;
-        abort();
-    }
+    auto intExpr = expect<IntView>(
+        parseExpr(essenceExpr, parsedModel).second, [&](auto&&) {
+            cerr << "Error: Expected int expression " << errorMessage << endl;
+            cerr << essenceExpr << endl;
+        });
+    intExpr->evaluate();
+    return intExpr->view().value;
 }
 
 Int parseValueAsInt(AnyExprRef expr, const string& errorMessage) {
-    try {
-        return mpark::get<ExprRef<IntView>>(expr)->view().value;
-    } catch (mpark::bad_variant_access) {
+    auto intExpr = expect<IntView>(expr, [&](auto&&) {
         cerr << "Error: Expected int expression " << errorMessage << endl;
-        abort();
-    }
+    });
+    intExpr->evaluate();
+    return intExpr->view().value;
 }
 
 AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {

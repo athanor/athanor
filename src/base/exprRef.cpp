@@ -16,10 +16,23 @@ const View& ExprInterface<View>::view() const {
     return *static_cast<const View*>(this);
 }
 
+template <typename View, typename Trigger>
+auto addAsMemberTrigger(View& view, const std::shared_ptr<Trigger>& trigger)
+    -> decltype(view.memberTriggers, void()) {
+    view.memberTriggers.emplace_back(trigger);
+}
+
+template <typename... Args>
+auto addAsMemberTrigger(Args&&...) {}
+
 template <typename View>
 void ExprInterface<View>::addTrigger(
-    const std::shared_ptr<typename ExprInterface<View>::TriggerType>& trigger) {
+    const std::shared_ptr<typename ExprInterface<View>::TriggerType>& trigger,
+    bool includeMembers) {
     this->view().triggers.emplace_back(trigger);
+    if (includeMembers) {
+        addAsMemberTrigger(this->view(), trigger);
+    }
 }
 
 HashType getValueHash(const AnyExprRef& ref) {

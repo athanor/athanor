@@ -80,16 +80,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
         return total;
     }
 
-    void addTrigger(const std::shared_ptr<SequenceTrigger>& trigger) final {
-        triggers.emplace_back(
-            std::static_pointer_cast<SequenceOuterTrigger>(trigger));
-        memberTriggers.emplace_back(
-            std::static_pointer_cast<SequenceMemberTrigger>(trigger));
-    }
-    void addOuterTrigger(const std::shared_ptr<SequenceOuterTrigger>& trigger) {
-        triggers.emplace_back(trigger);
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void addMember(size_t index, const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();

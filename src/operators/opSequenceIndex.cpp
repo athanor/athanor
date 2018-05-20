@@ -6,10 +6,10 @@ using namespace std;
 
 template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::addTrigger(
-    const shared_ptr<SequenceMemberTriggerType>& trigger) {
+    const shared_ptr<SequenceMemberTriggerType>& trigger, bool includeMembers) {
     triggers.emplace_back(getTriggerBase(trigger));
     if (locallyDefined) {
-        getMember()->addTrigger(trigger);
+        getMember()->addTrigger(trigger, includeMembers);
     }
 }
 
@@ -232,7 +232,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         auto trigger = make_shared<
             OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger>(
             op);
-        op->sequenceOperand->addTrigger(trigger);
+        op->sequenceOperand->addTrigger(trigger, false);
         op->sequenceTrigger = trigger;
     }
 
@@ -312,7 +312,7 @@ void OpSequenceIndex<SequenceMemberViewType>::startTriggering() {
             OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger>(
             this);
         indexOperand->addTrigger(indexTrigger);
-        sequenceOperand->addTrigger(sequenceTrigger);
+        sequenceOperand->addTrigger(sequenceTrigger, false);
         indexOperand->startTriggering();
         sequenceOperand->startTriggering();
     }

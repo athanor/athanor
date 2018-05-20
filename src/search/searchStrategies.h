@@ -95,10 +95,11 @@ class HillClimber {
 
         stats.startTimer();
         assignRandomValueToVariables();
+        evaluateAndStartTriggeringDefinedExpressions();
         model.csp->evaluate();
+        model.csp->startTriggering();
         lastViolation = model.csp->violation;
         bestViolation = lastViolation;
-        model.csp->startTriggering();
 
         if (model.optimiseMode != OptimiseMode::NONE) {
             model.objective->evaluate();
@@ -212,6 +213,16 @@ class HillClimber {
         }
     }
 
+    inline void evaluateAndStartTriggeringDefinedExpressions() {
+        for (auto& nameExprPair : model.definingExpressions) {
+            mpark::visit(
+                [&](auto& expr) {
+                    expr->evaluate();
+                    expr->startTriggering();
+                },
+                nameExprPair.second);
+        }
+    }
     void printNeighbourhoodStats() {
         static const std::string indent = "    ";
         std::cout << "---------------------\n";

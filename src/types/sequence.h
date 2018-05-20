@@ -28,14 +28,14 @@ struct SequenceDomain {
         }
     }
 };
+
 struct SequenceView;
-struct SequenceTrigger : public virtual TriggerBase {
+
+struct SequenceOuterTrigger : public virtual TriggerBase {
     virtual void valueRemoved(
         UInt index, const AnyExprRef& removedValueindexOfRemovedValue) = 0;
     virtual void valueAdded(UInt indexOfRemovedValue,
                             const AnyExprRef& member) = 0;
-    virtual void possibleSubsequenceChange(UInt startIndex, UInt endIndex) = 0;
-    virtual void subsequenceChanged(UInt startIndex, UInt endIndex) = 0;
     virtual void beginSwaps() = 0;
     virtual void positionsSwapped(UInt index1, UInt index2) = 0;
     virtual void endSwaps() = 0;
@@ -43,10 +43,18 @@ struct SequenceTrigger : public virtual TriggerBase {
     virtual void memberHasBecomeDefined(UInt) = 0;
 };
 
+struct SequenceMemberTrigger : public virtual TriggerBase {
+    virtual void possibleSubsequenceChange(UInt startIndex, UInt endIndex) = 0;
+    virtual void subsequenceChanged(UInt startIndex, UInt endIndex) = 0;
+};
+
+struct SequenceTrigger : public virtual SequenceOuterTrigger,
+                         public virtual SequenceMemberTrigger {};
 struct SequenceView : public ExprInterface<SequenceView> {
     friend SequenceValue;
     AnyExprVec members;
-    std::vector<std::shared_ptr<SequenceTrigger>> triggers;
+    std::vector<std::shared_ptr<SequenceOuterTrigger>> triggers;
+    std::vector<std::shared_ptr<SequenceMemberTrigger>> memberTriggers;
     SimpleCache<HashType> cachedHashTotal;
     HashType hashOfPossibleChange;
     UInt numberUndefined = 0;
@@ -70,6 +78,16 @@ struct SequenceView : public ExprInterface<SequenceView> {
             total += calcMemberHash(i, getMembers<InnerViewType>()[i]);
         }
         return total;
+    }
+
+    void addTrigger(const std::shared_ptr<SequenceTrigger>& trigger) final {
+        triggers.emplace_back(
+            std::static_pointer_cast<SequenceOuterTrigger>(trigger));
+        memberTriggers.emplace_back(
+            std::static_pointer_cast<SequenceMemberTrigger>(trigger));
+    }
+    void addOuterTrigger(const std::shared_ptr<SequenceOuterTrigger>& trigger) {
+        triggers.emplace_back(trigger);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -146,7 +164,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
         debug_code(assertValidState());
         visitTriggers(
             [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
-            triggers);
+            memberTriggers);
     }
     inline void notifyPossibleSequenceValueChange() {
         visitTriggers([](auto& t) { t->possibleValueChange(); }, triggers);
@@ -238,7 +256,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
             [&](auto& t) {
                 t->possibleSubsequenceChange(startIndex, endIndex);
             },
-            triggers);
+            memberTriggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

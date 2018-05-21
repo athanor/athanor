@@ -28,6 +28,7 @@ struct OpMinMax
     std::ostream& dumpState(std::ostream& os) const final;
 
     bool compare(Int u, Int v);
+    bool optimiseImpl();
 };
 typedef OpMinMax<true> OpMin;
 typedef OpMinMax<false> OpMax;

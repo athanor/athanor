@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include <unordered_map>
+#include "operators/flatten.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
@@ -202,6 +203,8 @@ std::ostream& OpProd::dumpState(std::ostream& os) const {
     os << "OpProd: value=" << value << endl;
     return operand->dumpState(os);
 }
+
+bool OpProd::optimiseImpl() { return flatten<IntView>(*this); }
 template <typename Op>
 struct OpMaker;
 

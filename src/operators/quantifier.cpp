@@ -322,6 +322,10 @@ bool Quantifier<ContainerType>::isUndefined() {
     return this->numberUndefined > 0 || !containerDefined;
 }
 
+template <typename ContainerType>
+bool Quantifier<ContainerType>::optimise() {
+    return mpark::visit([&](auto& expr) { return expr->optimise(); }, expr);
+}
 template <>
 struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
     Quantifier<SetView>* op;

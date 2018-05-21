@@ -70,6 +70,31 @@ template <typename View, typename OperandView, typename Derived>
 bool SimpleBinaryOperator<View, OperandView, Derived>::isUndefined() {
     return !this->isDefined();
 }
+template <typename View, typename OperandView, typename Derived>
+bool SimpleBinaryOperator<View, OperandView, Derived>::optimiseImpl() {
+    return false;
+}
+
+template <typename View, typename OperandView, typename Derived>
+bool SimpleBinaryOperator<View, OperandView, Derived>::optimise() {
+    bool changeMade = false, first = true;
+    while (true) {
+        bool tempChangeMade = left->optimise();
+        changeMade |= tempChangeMade;
+        tempChangeMade |= right->optimise();
+        changeMade |= tempChangeMade;
+        if (first || tempChangeMade) {
+            first = false;
+            tempChangeMade = derived().optimiseImpl();
+            changeMade |= tempChangeMade;
+            if (tempChangeMade) {
+                continue;
+            }
+        }
+        break;
+    }
+    return changeMade;
+}
 
 template <typename View, typename OperandView, typename Derived>
 void SimpleUnaryOperator<View, OperandView, Derived>::evaluateImpl() {
@@ -128,5 +153,27 @@ void SimpleUnaryOperator<View, OperandView, Derived>::findAndReplaceSelf(
 template <typename View, typename OperandView, typename Derived>
 bool SimpleUnaryOperator<View, OperandView, Derived>::isUndefined() {
     return !this->isDefined();
+}
+template <typename View, typename OperandView, typename Derived>
+bool SimpleUnaryOperator<View, OperandView, Derived>::optimiseImpl() {
+    return false;
+}
+template <typename View, typename OperandView, typename Derived>
+bool SimpleUnaryOperator<View, OperandView, Derived>::optimise() {
+    bool changeMade = false, first = true;
+    while (true) {
+        bool tempChangeMade = operand->optimise();
+        changeMade |= tempChangeMade;
+        if (first || tempChangeMade) {
+            first = false;
+            tempChangeMade = derived().optimiseImpl();
+            changeMade |= tempChangeMade;
+            if (tempChangeMade) {
+                continue;
+            }
+        }
+        break;
+    }
+    return changeMade;
 }
 #endif /* SRC_OPERATORS_SIMPLEOPERATOR_HPP_ */

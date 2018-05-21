@@ -43,7 +43,8 @@ struct Iterator : public ExprInterface<View> {
     Iterator(const Iterator<View>&) = delete;
     Iterator(Iterator<View>&& other);
     ~Iterator() { this->stopTriggeringOnChildren(); }
-    void addTrigger(const std::shared_ptr<TriggerType>& trigger, bool includeMembers) final;
+    void addTrigger(const std::shared_ptr<TriggerType>& trigger,
+                    bool includeMembers) final;
     View& view() final;
     const View& view() const final;
 
@@ -59,6 +60,7 @@ struct Iterator : public ExprInterface<View> {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
+    bool optimise() final;
 };
 
 template <typename T>

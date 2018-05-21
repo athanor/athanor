@@ -46,7 +46,8 @@ inline pair<bool, ViolationDescription&> registerViolations(
     }                                                                      \
                                                                            \
     void name##Value::findAndReplaceSelf(const FindAndReplaceFunction&) {} \
-    bool name##Value::isUndefined() { return false; }
+    bool name##Value::isUndefined() { return false; }                      \
+    bool name##Value::optimise() { return false; }
 
 buildForAllTypes(specialised, )
 #undef specialised

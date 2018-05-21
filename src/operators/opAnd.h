@@ -30,6 +30,7 @@ struct OpAnd : public SimpleUnaryOperator<BoolView, SequenceView, OpAnd> {
                                     ViolationDescription& vioDesc) final;
     void copy(OpAnd& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    bool optimiseImpl();
 };
 
 #endif /* SRC_OPERATORS_OPAND_H_ */

@@ -64,6 +64,7 @@ struct Quantifier : public SequenceView {
     void stopTriggeringOnExpr(UInt oldIndex);
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
+    bool optimise();
 };
 
 #endif /* SRC_OPERATORS_QUANTIFIER_H_ */

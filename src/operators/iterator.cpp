@@ -86,6 +86,11 @@ bool Iterator<View>::isUndefined() {
     return ref->isUndefined();
 }
 
+template <typename View>
+bool Iterator<View>::optimise() {
+    return ref && ref->optimise();
+}
+
 std::ostream& operator<<(std::ostream& os, const AnyIterRef& ref) {
     mpark::visit([&](auto& ref) { ref->dumpState(os); }, ref);
     return os;

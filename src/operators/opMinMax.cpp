@@ -2,6 +2,7 @@
 #include "operators/opMinMax.h"
 #include <algorithm>
 #include <cassert>
+#include "operators/flatten.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
@@ -235,6 +236,11 @@ std::ostream& OpMinMax<minMode>::dumpState(std::ostream& os) const {
     sort(sortedOperands.begin(), sortedOperands.end());
     os << "Min ValuessIndices: " << sortedOperands << endl;
     return this->operand->dumpState(os);
+}
+
+template <bool minMode>
+bool OpMinMax<minMode>::optimiseImpl() {
+    flatten<IntView>(*this);
 }
 
 template <typename Op>

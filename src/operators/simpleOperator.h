@@ -93,9 +93,7 @@ struct SimpleBinaryOperator : public View,
     }
     auto& derived() { return *static_cast<Derived*>(this); }
 
-    const auto& derived() const {
-        return *static_cast<const Derived*>(this);
-    }
+    const auto& derived() const { return *static_cast<const Derived*>(this); }
     SimpleBinaryOperator(
         const SimpleBinaryOperator<View, OperandView, Derived>& other) = delete;
     SimpleBinaryOperator(
@@ -117,6 +115,8 @@ struct SimpleBinaryOperator : public View,
                                         const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
     bool isUndefined();
+    bool optimiseImpl();
+    bool optimise() final;
 };
 
 template <typename View, typename OperandView, typename Derived>
@@ -167,6 +167,8 @@ struct SimpleUnaryOperator : public View,
                                         const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
     bool isUndefined();
+    bool optimiseImpl();
+    bool optimise() final;
 };
 
 #endif /* SRC_OPERATORS_SIMPLEOPERATOR_H_ */

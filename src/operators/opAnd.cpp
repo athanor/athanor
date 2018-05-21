@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include <unordered_map>
+#include "operators/flatten.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
@@ -155,6 +156,8 @@ std::ostream& OpAnd::dumpState(std::ostream& os) const {
     os << "Violating indices: " << sortedViolatingOperands << endl;
     return operand->dumpState(os);
 }
+
+bool OpAnd::optimiseImpl() { return flatten<BoolView>(*this); }
 
 template <typename Op>
 struct OpMaker;

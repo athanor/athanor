@@ -133,6 +133,16 @@ void OpTupleLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
 }
 
 bool OpTupleLit::isUndefined() { return numberUndefined > 0; }
+
+bool OpTupleLit::optimise() {
+    bool changeMade = false;
+    for (auto& member : members) {
+        mpark::visit([&](auto& member) { changeMade |= member->optimise(); },
+                     member);
+    }
+    return changeMade;
+}
+
 template <typename Op>
 struct OpMaker;
 

@@ -383,6 +383,14 @@ template <typename SequenceMemberViewType>
 bool OpSequenceIndex<SequenceMemberViewType>::isUndefined() {
     return !defined;
 }
+
+template <typename SequenceMemberViewType>
+bool OpSequenceIndex<SequenceMemberViewType>::optimise() {
+    bool changeMade = sequenceOperand->optimise();
+    changeMade |= indexOperand->optimise();
+    return changeMade;
+}
+
 template <typename Op>
 struct OpMaker;
 

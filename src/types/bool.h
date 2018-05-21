@@ -41,6 +41,7 @@ struct BoolValue : public BoolView, ValBase {
 
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
+    bool optimise() final;
 };
 
 template <typename Child>

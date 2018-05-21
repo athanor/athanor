@@ -231,6 +231,12 @@ template <typename TupleMemberViewType>
 bool OpTupleIndex<TupleMemberViewType>::isUndefined() {
     return !defined;
 }
+
+template <typename TupleMemberViewType>
+bool OpTupleIndex<TupleMemberViewType>::optimise() {
+    return tupleOperand->optimise();
+}
+
 template <typename Op>
 struct OpMaker;
 

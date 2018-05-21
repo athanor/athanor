@@ -38,6 +38,7 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
+    bool optimise() final;
     ExprRef<TupleMemberViewType>& getMember();
     const ExprRef<TupleMemberViewType>& getMember() const;
     void reevaluateDefined();

@@ -58,6 +58,7 @@ struct ExprInterface : public Undefinable<View> {
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
+    virtual bool optimise() = 0;
 };
 
 template <typename View>

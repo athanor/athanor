@@ -300,6 +300,14 @@ template <typename FunctionMemberViewType>
 bool OpFunctionImage<FunctionMemberViewType>::isUndefined() {
     return !locallyDefined;
 }
+
+template <typename FunctionMemberViewType>
+bool OpFunctionImage<FunctionMemberViewType>::optimise() {
+    bool changeMade = false;
+    changeMade |= functionOperand->optimise();
+    changeMade |= invoke(preImageOperand, optimise());
+    return changeMade;
+}
 template <typename Op>
 struct OpMaker;
 

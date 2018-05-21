@@ -178,6 +178,17 @@ void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         members);
 }
 bool OpSequenceLit::isUndefined() { return this->numberUndefined > 0; }
+bool OpSequenceLit::optimise() {
+    bool changeMade = false;
+    mpark::visit(
+        [&](auto& members) {
+            for (auto& member : members) {
+                changeMade |= member->optimise();
+            }
+        },
+        this->members);
+    return changeMade;
+}
 template <typename Op>
 struct OpMaker;
 

@@ -50,6 +50,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     ExprRef<FunctionMemberViewType>& getMember();
     const ExprRef<FunctionMemberViewType>& getMember() const;
     void reevaluate();
+    bool optimise() final;
 };
 
 #endif /* SRC_OPERATORS_OPFUNCTIONIMAGE_H_ */

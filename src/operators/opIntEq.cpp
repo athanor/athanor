@@ -19,6 +19,7 @@ ostream& OpIntEq::dumpState(ostream& os) const {
     right->dumpState(os);
     return os;
 }
+
 template <typename Op>
 struct OpMaker;
 

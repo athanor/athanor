@@ -21,6 +21,7 @@ struct OpProd : public SimpleUnaryOperator<IntView, SequenceView, OpProd> {
                                     ViolationDescription& vioDesc) final;
     void copy(OpProd& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    bool optimiseImpl();
 };
 
 #endif /* SRC_OPERATORS_OPPROD_H_ */

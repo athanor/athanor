@@ -28,6 +28,7 @@ struct OpTupleLit : public TupleView {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined() final;
+    bool optimise() final;
 };
 
 #endif /* SRC_OPERATORS_OPTUPLELIT_H_ */

@@ -2,6 +2,7 @@
 #include "operators/opOr.h"
 #include <algorithm>
 #include <cassert>
+#include "operators/flatten.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
@@ -168,6 +169,7 @@ std::ostream& OpOr::dumpState(std::ostream& os) const {
     return operand->dumpState(os);
 }
 
+bool OpOr::optimiseImpl() { return flatten<BoolView>(*this); }
 template <typename Op>
 struct OpMaker;
 

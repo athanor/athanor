@@ -24,6 +24,8 @@ struct OpOr : public SimpleUnaryOperator<BoolView, SequenceView, OpOr> {
                                     ViolationDescription& vioDesc) final;
     void copy(OpOr& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+
+    bool optimiseImpl();
 };
 
 #endif /* SRC_OPERATORS_OPOR_H_ */

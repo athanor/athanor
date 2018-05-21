@@ -22,6 +22,7 @@ struct OpSum : public SimpleUnaryOperator<IntView, SequenceView, OpSum> {
                                     ViolationDescription& vioDesc) final;
     void copy(OpSum& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    bool optimiseImpl();
 };
 
 #endif /* SRC_OPERATORS_OPSUM_H_ */

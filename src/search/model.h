@@ -73,6 +73,7 @@ class ModelBuilder {
             std::make_shared<OpSequenceLit>(move(constraints)));
         for (size_t i = 0; i < model.variables.size(); ++i) {
             if (valBase(model.variables[i].second).container == &definedPool) {
+                model.varNeighbourhoodMapping.emplace_back();
                 continue;
             }
             auto& domain = model.variables[i].first;
@@ -89,6 +90,10 @@ class ModelBuilder {
         }
         assert(model.neighbourhoods.size() > 0);
         handleVarsToBeDefined();
+        model.csp->optimise();
+        if (model.optimiseMode != OptimiseMode::NONE) {
+            model.objective->optimise();
+        }
         return std::move(model);
     }
     template <typename View,
@@ -107,12 +112,12 @@ class ModelBuilder {
         OpIntEq* opIntEq;
         if ((opIntEq = dynamic_cast<OpIntEq*>(eqExprTester)) != NULL) {
             ValRef<IntValue> definedVar = getIfNonConstValue(opIntEq->left);
-            if (definedVar) {
+            if (definedVar && valBase(definedVar).container != &definedPool) {
                 define(definedVar, opIntEq->right);
                 return true;
             }
             definedVar = getIfNonConstValue(opIntEq->right);
-            if (definedVar) {
+            if (definedVar && valBase(definedVar).container != &definedPool) {
                 define(definedVar, opIntEq->left);
                 return true;
             }

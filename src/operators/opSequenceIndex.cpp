@@ -385,9 +385,9 @@ bool OpSequenceIndex<SequenceMemberViewType>::isUndefined() {
 }
 
 template <typename SequenceMemberViewType>
-bool OpSequenceIndex<SequenceMemberViewType>::optimise() {
-    bool changeMade = sequenceOperand->optimise();
-    changeMade |= indexOperand->optimise();
+bool OpSequenceIndex<SequenceMemberViewType>::optimise(PathExtension path) {
+    bool changeMade = sequenceOperand->optimise(path.extend(sequenceOperand));
+    changeMade |= indexOperand->optimise(path.extend(indexOperand));
     return changeMade;
 }
 

@@ -302,10 +302,11 @@ bool OpFunctionImage<FunctionMemberViewType>::isUndefined() {
 }
 
 template <typename FunctionMemberViewType>
-bool OpFunctionImage<FunctionMemberViewType>::optimise() {
+bool OpFunctionImage<FunctionMemberViewType>::optimise(PathExtension path) {
     bool changeMade = false;
-    changeMade |= functionOperand->optimise();
-    changeMade |= invoke(preImageOperand, optimise());
+    changeMade |= functionOperand->optimise(path.extend( functionOperand));
+    changeMade |=
+        invoke(preImageOperand, optimise(path.extend( preImageOperand)));
     return changeMade;
 }
 template <typename Op>

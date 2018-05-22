@@ -87,8 +87,8 @@ bool Iterator<View>::isUndefined() {
 }
 
 template <typename View>
-bool Iterator<View>::optimise() {
-    return ref && ref->optimise();
+bool Iterator<View>::optimise(PathExtension path) {
+    return ref && ref->optimise(path.extend(ref));
 }
 
 std::ostream& operator<<(std::ostream& os, const AnyIterRef& ref) {

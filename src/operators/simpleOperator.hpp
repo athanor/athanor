@@ -76,12 +76,12 @@ bool SimpleBinaryOperator<View, OperandView, Derived>::optimiseImpl() {
 }
 
 template <typename View, typename OperandView, typename Derived>
-bool SimpleBinaryOperator<View, OperandView, Derived>::optimise() {
+bool SimpleBinaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
     bool changeMade = false, first = true;
     while (true) {
-        bool tempChangeMade = left->optimise();
+        bool tempChangeMade = left->optimise(path.extend(left));
         changeMade |= tempChangeMade;
-        tempChangeMade |= right->optimise();
+        tempChangeMade |= right->optimise(path.extend(right));
         changeMade |= tempChangeMade;
         if (first || tempChangeMade) {
             first = false;
@@ -159,10 +159,10 @@ bool SimpleUnaryOperator<View, OperandView, Derived>::optimiseImpl() {
     return false;
 }
 template <typename View, typename OperandView, typename Derived>
-bool SimpleUnaryOperator<View, OperandView, Derived>::optimise() {
+bool SimpleUnaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
     bool changeMade = false, first = true;
     while (true) {
-        bool tempChangeMade = operand->optimise();
+        bool tempChangeMade = operand->optimise(path.extend(operand));
         changeMade |= tempChangeMade;
         if (first || tempChangeMade) {
             first = false;

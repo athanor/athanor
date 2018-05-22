@@ -34,6 +34,8 @@ template <>
 struct Undefinable<BoolView> {
     inline bool isUndefined() { return false; }
 };
+
+struct PathExtension;
 template <typename View>
 struct ExprInterface : public Undefinable<View> {
     bool evaluated = false;
@@ -58,7 +60,7 @@ struct ExprInterface : public Undefinable<View> {
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
-    virtual bool optimise() = 0;
+    virtual bool optimise(PathExtension path) = 0;
 };
 
 template <typename View>
@@ -84,6 +86,7 @@ template <typename T>
 inline std::ostream& operator<<(std::ostream& os, const ExprRef<T>& ref) {
     return prettyPrint(os, ref->view());
 }
+
 HashType getValueHash(const AnyExprRef& ref);
 std::ostream& prettyPrint(std::ostream& os, const AnyExprRef& expr);
 
@@ -99,6 +102,28 @@ inline ExprRef<T> findAndReplace(ExprRef<T>& expr,
     }
 }
 
+struct PathExtension {
+    PathExtension* parent;
+    AnyExprRef expr;
+
+   private:
+    template <typename T>
+    PathExtension(PathExtension* parent, T& expr)
+        : parent(parent), expr(expr) {}
+
+   public:
+    template <typename T>
+    PathExtension extend(T& expr) {
+        return PathExtension(this, expr);
+    }
+    template <typename T>
+    static PathExtension begin(T& expr) {
+        return PathExtension(NULL, expr);
+    }
+};
+
+template <typename Op, typename View>
+bool isInstanceOf(const ExprRef<View>&);
 extern UInt LARGE_VIOLATION;
 
 #endif /* SRC_BASE_EXPRREF_H_ */

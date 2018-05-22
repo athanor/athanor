@@ -47,7 +47,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     ExprRef<SequenceMemberViewType>& getMember();
     const ExprRef<SequenceMemberViewType>& getMember() const;
     void reevaluateDefined();
-    bool optimise() final;
+    bool optimise(PathExtension path) final;
 };
 
 #endif /* SRC_OPERATORS_OPSEQUENCEINDEX_H_ */

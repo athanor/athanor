@@ -322,7 +322,7 @@ struct MSetValue : public MSetView, public ValBase {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
-    bool optimise() final;
+    bool optimise(PathExtension) final;
 };
 
 template <typename Child>

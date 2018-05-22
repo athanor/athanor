@@ -116,7 +116,7 @@ struct SimpleBinaryOperator : public View,
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
     bool isUndefined();
     bool optimiseImpl();
-    bool optimise() final;
+    bool optimise(PathExtension path) final;
 };
 
 template <typename View, typename OperandView, typename Derived>
@@ -168,7 +168,7 @@ struct SimpleUnaryOperator : public View,
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
     bool isUndefined();
     bool optimiseImpl();
-    bool optimise() final;
+    bool optimise(PathExtension path) final;
 };
 
 #endif /* SRC_OPERATORS_SIMPLEOPERATOR_H_ */

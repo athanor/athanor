@@ -90,9 +90,10 @@ class ModelBuilder {
         }
         assert(model.neighbourhoods.size() > 0);
         handleVarsToBeDefined();
-        model.csp->optimise();
+        ExprRef<BoolView> cspExpr(model.csp);
+        model.csp->optimise(PathExtension::begin(cspExpr));
         if (model.optimiseMode != OptimiseMode::NONE) {
-            model.objective->optimise();
+            model.objective->optimise(PathExtension::begin(model.objective));
         }
         return std::move(model);
     }

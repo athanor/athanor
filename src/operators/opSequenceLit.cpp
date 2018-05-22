@@ -178,12 +178,12 @@ void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         members);
 }
 bool OpSequenceLit::isUndefined() { return this->numberUndefined > 0; }
-bool OpSequenceLit::optimise() {
+bool OpSequenceLit::optimise(PathExtension path) {
     bool changeMade = false;
     mpark::visit(
         [&](auto& members) {
             for (auto& member : members) {
-                changeMade |= member->optimise();
+                changeMade |= member->optimise(path.extend(member));
             }
         },
         this->members);

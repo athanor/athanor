@@ -240,7 +240,7 @@ std::ostream& OpMinMax<minMode>::dumpState(std::ostream& os) const {
 
 template <bool minMode>
 bool OpMinMax<minMode>::optimiseImpl() {
-    flatten<IntView>(*this);
+    return flatten<IntView>(*this);
 }
 
 template <typename Op>

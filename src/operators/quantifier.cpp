@@ -323,8 +323,8 @@ bool Quantifier<ContainerType>::isUndefined() {
 }
 
 template <typename ContainerType>
-bool Quantifier<ContainerType>::optimise() {
-    return mpark::visit([&](auto& expr) { return expr->optimise(); }, expr);
+bool Quantifier<ContainerType>::optimise(PathExtension path) {
+    return mpark::visit([&](auto& expr) { return expr->optimise(path.extend(expr)); }, expr);
 }
 template <>
 struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {

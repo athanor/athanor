@@ -233,8 +233,8 @@ bool OpTupleIndex<TupleMemberViewType>::isUndefined() {
 }
 
 template <typename TupleMemberViewType>
-bool OpTupleIndex<TupleMemberViewType>::optimise() {
-    return tupleOperand->optimise();
+bool OpTupleIndex<TupleMemberViewType>::optimise(PathExtension path) {
+    return tupleOperand->optimise(path.extend(tupleOperand));
 }
 
 template <typename Op>

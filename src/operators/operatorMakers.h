@@ -122,4 +122,10 @@ struct OpMaker<OpLessEq> {
     static ExprRef<BoolView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
 
+struct OpMinus;
+template <>
+struct OpMaker<OpMinus> {
+    static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

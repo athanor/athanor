@@ -507,6 +507,18 @@ pair<AnyDomainRef, AnyExprRef> parseOpMod(json& modExpr,
     return make_pair(fakeIntDomain,
                      OpMaker<OpMod>::make(move(left), move(right)));
 }
+pair<AnyDomainRef, AnyExprRef> parseOpMinus(json& modExpr,
+                                            ParsedModel& parsedModel) {
+    string errorMessage = "Expected int returning expression within Op mod: ";
+    ExprRef<IntView> left =
+        expect<IntView>(parseExpr(modExpr[0], parsedModel).second,
+                        [&](auto&&) { cerr << errorMessage << modExpr[0]; });
+    ExprRef<IntView> right =
+        expect<IntView>(parseExpr(modExpr[1], parsedModel).second,
+                        [&](auto&&) { cerr << errorMessage << modExpr[1]; });
+    return make_pair(fakeIntDomain,
+                     OpMaker<OpMinus>::make(move(left), move(right)));
+}
 
 pair<AnyDomainRef, AnyExprRef> parseOpSubsetEq(json& subsetExpr,
                                                ParsedModel& parsedModel) {
@@ -951,6 +963,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpLt", parseOpLess},
              {"MkOpLeq", parseOpLessEq},
              {"MkOpMod", parseOpMod},
+             {"MkOpMinus", parseOpMinus},
              {"MkOpTwoBars", parseOpTwoBars},
              {"MkOpSubsetEq", parseOpSubsetEq},
              {"MkOpAnd", makeVaradicOpParser<BoolView, OpAnd>(fakeBoolDomain)},

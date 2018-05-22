@@ -9,7 +9,7 @@ void IntRange::reevaluate() {
     cachedLower = left->view().value;
     cachedUpper = right->view().value;
     this->silentClear();
-    for (Int i = cachedLower; i <= cachedUpper; i++) {
+    for (Int i = lower(); i <= upper(); i++) {
         auto val = make<IntValue>();
         val->value = i;
         this->addMember(this->numberElements(), val.asExpr());
@@ -57,7 +57,7 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
         while (op->cachedLower > newLower) {
             --op->cachedLower;
             auto val = make<IntValue>();
-            val->value = op->cachedLower;
+            val->value = op->lower();
             if (trigger) {
                 op->addMemberAndNotify(0, val.asExpr());
             } else {
@@ -78,7 +78,7 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
         while (op->cachedUpper < newUpper) {
             ++op->cachedUpper;
             auto val = make<IntValue>();
-            val->value = op->cachedUpper;
+            val->value = op->upper();
             if (trigger) {
                 op->addMemberAndNotify(op->numberElements(), val.asExpr());
             } else {
@@ -122,7 +122,11 @@ void IntRange::updateViolationDescription(UInt parentViolation,
     right->updateViolationDescription(parentViolation, vioDesc);
 }
 
-void IntRange::copy(IntRange& newOp) const { newOp.members = this->members; }
+void IntRange::copy(IntRange& newOp) const {
+    newOp.members = this->members;
+    newOp.lowerExclusive = lowerExclusive;
+    newOp.upperExclusive = upperExclusive;
+}
 
 ostream& IntRange::dumpState(ostream& os) const {
     os << "IntRange(\nleft: ";
@@ -138,10 +142,15 @@ template <typename Op>
 struct OpMaker;
 template <>
 struct OpMaker<IntRange> {
-    static ExprRef<SequenceView> make(ExprRef<IntView> l, ExprRef<IntView> r);
+    static ExprRef<SequenceView> make(ExprRef<IntView> l, ExprRef<IntView> r,
+                                      bool lowerExclusive = false,
+                                      bool upperExclusive = false);
 };
 
 ExprRef<SequenceView> OpMaker<IntRange>::make(ExprRef<IntView> l,
-                                              ExprRef<IntView> r) {
-    return make_shared<IntRange>(move(l), move(r));
+                                              ExprRef<IntView> r,
+                                              bool lowerExclusive,
+                                              bool upperExclusive) {
+    return make_shared<IntRange>(move(l), move(r), lowerExclusive,
+                                 upperExclusive);
 }

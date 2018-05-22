@@ -111,5 +111,15 @@ template <>
 struct OpMaker<OpToInt> {
     static ExprRef<IntView> make(ExprRef<BoolView> o);
 };
+struct OpLess;
+template <>
+struct OpMaker<OpLess> {
+    static ExprRef<BoolView> make(ExprRef<IntView> l, ExprRef<IntView> r);
+};
+struct OpLessEq;
+template <>
+struct OpMaker<OpLessEq> {
+    static ExprRef<BoolView> make(ExprRef<IntView> l, ExprRef<IntView> r);
+};
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

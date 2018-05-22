@@ -669,6 +669,29 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
         left);
 }
 
+pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLess(
+    json& expr, ParsedModel& parsedModel) {
+    auto errorFunc = [&](auto&&) {
+        cerr << "Expected int within op less\n" << expr << endl;
+    };
+    auto left =
+        expect<IntView>(parseExpr(expr[0], parsedModel).second, errorFunc);
+    auto right =
+        expect<IntView>(parseExpr(expr[1], parsedModel).second, errorFunc);
+    return make_pair(fakeBoolDomain, OpMaker<OpLess>::make(left, right));
+}
+
+pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLessEq(
+    json& expr, ParsedModel& parsedModel) {
+    auto errorFunc = [&](auto&&) {
+        cerr << "Expected int within op less eq\n" << expr << endl;
+    };
+    auto left =
+        expect<IntView>(parseExpr(expr[0], parsedModel).second, errorFunc);
+    auto right =
+        expect<IntView>(parseExpr(expr[1], parsedModel).second, errorFunc);
+    return make_pair(fakeBoolDomain, OpMaker<OpLessEq>::make(left, right));
+}
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseConstantMatrix(
     json& matrixExpr, ParsedModel& parsedModel) {
     if (matrixExpr[1].size() == 0) {
@@ -925,6 +948,8 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     if (essenceExpr.count("Op")) {
         auto boolExprPair = stringMatch<ParseExprFunction>(
             {{"MkOpEq", parseOpEq},
+             {"MkOpLt", parseOpLess},
+             {"MkOpLeq", parseOpLessEq},
              {"MkOpMod", parseOpMod},
              {"MkOpTwoBars", parseOpTwoBars},
              {"MkOpSubsetEq", parseOpSubsetEq},
@@ -956,13 +981,15 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseDomainGeneratorInt(
     json& intDomainExpr, ParsedModel& parsedModel) {
     if (intDomainExpr.size() != 1) {
-        cerr << "Error: do not yet support unrolling (quantifying) over int "
+        cerr << "Error: do not yet support unrolling (quantifying) "
+                "over int "
                 "domains with holes in them.\n";
         abort();
     }
     ExprRef<IntView> from(nullptr), to(nullptr);
     auto errorFunc = [](auto&&) {
-        cerr << "Expected int returning expression when parsing an int domain "
+        cerr << "Expected int returning expression when parsing an int "
+                "domain "
                 "for unrolling.\n";
     };
     auto& rangeExpr = intDomainExpr[0];
@@ -1033,7 +1060,8 @@ void parseExprs(json& suchThat, ParsedModel& parsedModel) {
     for (auto& op : suchThat) {
         ExprRef<BoolView> constraint =
             expect<BoolView>(parseExpr(op, parsedModel).second, [&](auto&&) {
-                cerr << "Expected Bool returning constraint within such that: "
+                cerr << "Expected Bool returning constraint within "
+                        "such that: "
                      << op << endl;
             });
         parsedModel.builder->addConstraint(constraint);

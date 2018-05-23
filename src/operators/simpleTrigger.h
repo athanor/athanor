@@ -15,6 +15,9 @@ struct SimpleBinaryTrigger
     SimpleBinaryTrigger(Op* op) : op(op) {}
     inline void adapterPossibleValueChange() {}
     inline void adapterValueChanged() {
+        if (!op->isDefined() || !op->allOperandsAreDefined()) {
+            return;
+        }
         op->changeValue([&]() {
             op->reevaluate();
             return true;
@@ -43,9 +46,9 @@ struct SimpleBinaryTrigger
         op->rightTrigger = newTrigger;
     }
 
-    void adapterHasBecomeUndefined()  { op->setDefined(false, true); }
+    void adapterHasBecomeUndefined() { op->setDefined(false, true); }
 
-    void adapterHasBecomeDefined()  {
+    void adapterHasBecomeDefined() {
         if ((isLeftTrigger && !op->right->isUndefined()) ||
             (!isLeftTrigger && !op->left->isUndefined())) {
             op->setDefined(true, true);
@@ -75,7 +78,7 @@ struct SimpleUnaryTrigger
         op->operandTrigger = newTrigger;
     }
 
-    void adapterHasBecomeUndefined()  { op->setDefined(false, true); }
+    void adapterHasBecomeUndefined() { op->setDefined(false, true); }
 
     void adapterHasBecomeDefined() { op->setDefined(true, true); }
 };

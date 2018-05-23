@@ -28,10 +28,13 @@ struct DefinedContainer {
     void copyDefinedStatus(DefinedContainer<View, Derived>& other) const {
         other.defined = defined;
     }
+    inline bool allOperandsAreDefined() { return isDefined(); }
 };
 template <typename Derived>
 struct DefinedContainer<BoolView, Derived> {
+    bool allOperandsDefined = false;
     void setDefined(bool defined, bool triggerChange = false) {
+        allOperandsDefined = defined;
         if (defined) {
             if (triggerChange) {
                 static_cast<Derived&>(*this).changeValue([&]() {
@@ -53,7 +56,10 @@ struct DefinedContainer<BoolView, Derived> {
         }
     }
     bool isDefined() { return true; }
-    void copyDefinedStatus(DefinedContainer<BoolView, Derived>&) const {}
+    void copyDefinedStatus(DefinedContainer<BoolView, Derived>& other) const {
+        other.allOperandsDefined = allOperandsDefined;
+    }
+    inline bool allOperandsAreDefined() { return allOperandsDefined; }
 };
 
 template <typename Derived>

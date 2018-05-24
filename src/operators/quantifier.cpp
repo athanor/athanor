@@ -10,6 +10,7 @@
 #include "operators/opSequenceLit.h"
 #include "operators/opSum.h"
 #include "operators/opToInt.h"
+#include "operators/opTupleIndex.h"
 #include "operators/opTupleLit.h"
 #include "types/allTypes.h"
 
@@ -398,9 +399,13 @@ ExprRefVec<IntView>* getIfSequenceLit(ExprRef<SequenceView>& operand) {
     return NULL;
 }
 
-bool isIterRefWithId(ExprRef<IntView>& operand, u_int64_t quantId) {
-    auto iterTest = dynamic_cast<IterRef<IntView>*>(&(*operand));
-    return iterTest && (*iterTest)->id == quantId;
+bool isMatchingIterRef(ExprRef<IntView>& operand, u_int64_t quantId) {
+    auto tupleIndexTest = dynamic_cast<OpTupleIndex<IntView>*>(&(*operand));
+    if (tupleIndexTest) {
+        auto tupleIterTest = dynamic_cast<Iterator<TupleView>*>(&(*operand));
+        return tupleIterTest && tupleIterTest->id == quantId;
+    }
+    return false;
 }
 
 void appendLimits(
@@ -408,22 +413,22 @@ void appendLimits(
     ExprRef<BoolView>& condition, u_int64_t quantId) {
     auto opLessEqTest = dynamic_cast<OpLessEq*>(&(*condition));
     if (opLessEqTest) {
-        if (isIterRefWithId(opLessEqTest->left, quantId)) {
+        if (isMatchingIterRef(opLessEqTest->left, quantId)) {
             lowerAndUpperLimits.second.emplace_back(opLessEqTest->right);
-        } else if (isIterRefWithId(opLessEqTest->right, quantId)) {
+        } else if (isMatchingIterRef(opLessEqTest->right, quantId)) {
             lowerAndUpperLimits.first.emplace_back(opLessEqTest->left);
         }
         return;
     }
     auto opLessTest = dynamic_cast<OpLess*>(&(*condition));
     if (opLessTest) {
-        if (isIterRefWithId(opLessTest->left, quantId)) {
+        if (isMatchingIterRef(opLessTest->left, quantId)) {
             auto val = make<IntValue>();
             val->value = 1;
             auto upperLimit =
                 OpMaker<OpMinus>::make(opLessTest->right, val.asExpr());
             lowerAndUpperLimits.second.emplace_back(upperLimit);
-        } else if (isIterRefWithId(opLessTest->right, quantId)) {
+        } else if (isMatchingIterRef(opLessTest->right, quantId)) {
             auto val = make<IntValue>();
             val->value = 1;
             auto lowerLimit = OpMaker<OpSum>::make(OpMaker<OpSequenceLit>::make(

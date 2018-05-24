@@ -1,8 +1,50 @@
 #include "operators/quantifier.h"
 
 #include <vector>
+#include "operators/intRange.h"
+#include "operators/opAnd.h"
+#include "operators/opIntEq.h"
+#include "operators/opLess.h"
+#include "operators/opLessEq.h"
+#include "operators/opProd.h"
+#include "operators/opSequenceLit.h"
+#include "operators/opSum.h"
+#include "operators/opToInt.h"
 #include "operators/opTupleLit.h"
 #include "types/allTypes.h"
+
+template <typename Op>
+struct OpMaker;
+template <>
+struct OpMaker<OpTupleLit> {
+    static ExprRef<TupleView> make(std::vector<AnyExprRef> members);
+};
+template <bool minMode>
+struct OpMinMax;
+typedef OpMinMax<true> OpMin;
+typedef OpMinMax<false> OpMax;
+
+template <bool minMode>
+struct OpMaker<OpMinMax<minMode>> {
+    static ExprRef<IntView> make(ExprRef<SequenceView>);
+};
+
+struct OpSequenceLit;
+template <>
+struct OpMaker<OpSequenceLit> {
+    static ExprRef<SequenceView> make(AnyExprVec members);
+};
+struct OpSum;
+template <>
+struct OpMaker<OpSum> {
+    static ExprRef<IntView> make(ExprRef<SequenceView>);
+};
+struct OpMinus;
+template <>
+struct OpMaker<OpMinus> {
+    static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
+};
+
 using namespace std;
 template <typename ContainerType>
 struct InitialUnroller;
@@ -324,7 +366,119 @@ bool Quantifier<ContainerType>::isUndefined() {
 
 template <typename ContainerType>
 bool Quantifier<ContainerType>::optimise(PathExtension path) {
-    return mpark::visit([&](auto& expr) { return expr->optimise(path.extend(expr)); }, expr);
+    bool changeMade = container->optimise(path.extend(container));
+    mpark::visit(overloaded(
+                     [&](ExprRef<IntView>& expr) {
+                         changeMade |= expr->optimise(path.extend(expr));
+                         changeMade |=
+                             optimiseIfOpSumParentWithZeroingCondition(
+                                 *this, expr, path);
+                     },
+                     [&](auto& expr) {
+                         changeMade |= expr->optimise(path.extend(expr));
+                     }),
+                 expr);
+    return changeMade;
+}
+
+bool isOpSum(const AnyExprRef& expr) {
+    auto intExprTest = mpark::get_if<ExprRef<IntView>>(&expr);
+    if (intExprTest) {
+        return dynamic_cast<OpSum*>(&(**intExprTest)) != NULL;
+    }
+    return false;
+}
+
+template <typename View>
+ExprRefVec<IntView>* getIfSequenceLit(ExprRef<SequenceView>& operand) {
+    auto opSequenceLitTest = dynamic_cast<OpSequenceLit*>(&(*operand));
+    if (opSequenceLitTest) {
+        return &opSequenceLitTest->template getMembers<View>();
+    }
+    return NULL;
+}
+
+bool isIterRefWithId(ExprRef<IntView>& operand, u_int64_t quantId) {
+    auto iterTest = dynamic_cast<IterRef<IntView>*>(&(*operand));
+    return iterTest && (*iterTest)->id == quantId;
+}
+
+void appendLimits(
+    pair<ExprRefVec<IntView>, ExprRefVec<IntView>>& lowerAndUpperLimits,
+    ExprRef<BoolView>& condition, u_int64_t quantId) {
+    auto opLessEqTest = dynamic_cast<OpLessEq*>(&(*condition));
+    if (opLessEqTest) {
+        if (isIterRefWithId(opLessEqTest->left, quantId)) {
+            lowerAndUpperLimits.second.emplace_back(opLessEqTest->right);
+        } else if (isIterRefWithId(opLessEqTest->right, quantId)) {
+            lowerAndUpperLimits.first.emplace_back(opLessEqTest->left);
+        }
+        return;
+    }
+    auto opLessTest = dynamic_cast<OpLess*>(&(*condition));
+    if (opLessTest) {
+        if (isIterRefWithId(opLessTest->left, quantId)) {
+            auto val = make<IntValue>();
+            val->value = 1;
+            auto upperLimit =
+                OpMaker<OpMinus>::make(opLessTest->right, val.asExpr());
+            lowerAndUpperLimits.second.emplace_back(upperLimit);
+        } else if (isIterRefWithId(opLessTest->right, quantId)) {
+            auto val = make<IntValue>();
+            val->value = 1;
+            auto lowerLimit = OpMaker<OpSum>::make(OpMaker<OpSequenceLit>::make(
+                ExprRefVec<IntView>({opLessTest->left, val.asExpr()})));
+            lowerAndUpperLimits.first.emplace_back(lowerLimit);
+        }
+        return;
+    }
+}
+pair<ExprRefVec<IntView>, ExprRefVec<IntView>> collectLowerAndUpperLimits(
+    ExprRefVec<IntView>& opProdOperands, u_int64_t quantId) {
+    pair<ExprRefVec<IntView>, ExprRefVec<IntView>> lowerAndUpperLimits;
+    for (auto& operand : opProdOperands) {
+        auto opToIntTest = dynamic_cast<OpToInt*>(&(*operand));
+        if (opToIntTest) {
+            appendLimits(lowerAndUpperLimits, opToIntTest->operand, quantId);
+        }
+    }
+    return lowerAndUpperLimits;
+}
+template <typename Quantifier>
+bool optimiseIfOpSumParentWithZeroingCondition(Quantifier& quant,
+                                               ExprRef<IntView>& expr,
+                                               PathExtension& path) {
+    if (path.parent == NULL || !isOpSum(path.parent->expr)) {
+        return false;
+    }
+    IntRange* intRangeTest = dynamic_cast<IntRange*>(&(*(quant.container)));
+    if (!intRangeTest) {
+        return false;
+    }
+    auto opProdTest = dynamic_cast<OpProd*>(&(*expr));
+    if (!opProdTest) {
+        return false;
+    }
+    ExprRefVec<IntView>* opProdOperands =
+        getIfSequenceLit<IntView>(opProdTest->operand);
+    if (!opProdOperands) {
+        return false;
+    }
+    auto pairOfVec = collectLowerAndUpperLimits(*opProdOperands, quant.quantId);
+    bool changeMade = false;
+    if (!pairOfVec.second.empty()) {
+        pairOfVec.second.emplace_back(intRangeTest->right);
+        intRangeTest->right = OpMaker<OpMax>::make(
+            OpMaker<OpSequenceLit>::make(move(pairOfVec.second)));
+        changeMade = true;
+    }
+    if (!pairOfVec.first.empty()) {
+        pairOfVec.first.emplace_back(intRangeTest->left);
+        intRangeTest->left = OpMaker<OpMin>::make(
+            OpMaker<OpSequenceLit>::make(move(pairOfVec.first)));
+        changeMade = true;
+    }
+    return true;
 }
 template <>
 struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
@@ -503,13 +657,6 @@ struct InitialUnroller<MSetView> {
             },
             quantifier.container->view().members);
     }
-};
-
-template <typename Op>
-struct OpMaker;
-template <>
-struct OpMaker<OpTupleLit> {
-    static ExprRef<TupleView> make(std::vector<AnyExprRef> members);
 };
 
 template <>

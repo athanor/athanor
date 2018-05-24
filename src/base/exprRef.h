@@ -123,7 +123,9 @@ struct PathExtension {
 };
 
 template <typename Op, typename View>
-bool isInstanceOf(const ExprRef<View>&);
+inline bool isInstanceOf(const ExprRef<View>&) {
+    return false;
+}
 extern UInt LARGE_VIOLATION;
 
 #endif /* SRC_BASE_EXPRREF_H_ */

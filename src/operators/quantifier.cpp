@@ -368,14 +368,18 @@ bool Quantifier<ContainerType>::isUndefined() {
 template <typename ContainerType>
 bool Quantifier<ContainerType>::optimise(PathExtension path) {
     bool changeMade = container->optimise(path.extend(container));
+    changeMade |= (static_cast<bool>(condition) &&
+                   condition->optimise(path.extend(condition)));
     mpark::visit(overloaded(
                      [&](ExprRef<IntView>& expr) {
                          changeMade |= expr->optimise(path.extend(expr));
-                         bool optForOpSum =
+                         bool optimised =
                              optimiseIfOpSumParentWithZeroingCondition(
                                  *this, expr, path);
-                         changeMade |= optForOpSum;
-                         if (optForOpSum) {
+                         changeMade |= optimised;
+                         optimised = optimiseIfIntRangeWithConditions(*this);
+                         changeMade |= optimised;
+                         if (optimised) {
                              container->optimise(path.extend(container));
                              expr->optimise(path.extend(expr));
                          }
@@ -384,6 +388,12 @@ bool Quantifier<ContainerType>::optimise(PathExtension path) {
                          changeMade |= expr->optimise(path.extend(expr));
                      }),
                  expr);
+    if (condition) {
+        cerr << "Error, for the moment, not supporting conditions on "
+                "quantifiers unless they can be optimised into the an integer "
+                "range.\n";
+        abort();
+    }
     return changeMade;
 }
 
@@ -457,6 +467,7 @@ pair<ExprRefVec<IntView>, ExprRefVec<IntView>> collectLowerAndUpperLimits(
     }
     return lowerAndUpperLimits;
 }
+
 template <typename Quantifier>
 bool optimiseIfOpSumParentWithZeroingCondition(Quantifier& quant,
                                                ExprRef<IntView>& expr,
@@ -477,22 +488,76 @@ bool optimiseIfOpSumParentWithZeroingCondition(Quantifier& quant,
     if (!opProdOperands) {
         return false;
     }
-    auto pairOfVec = collectLowerAndUpperLimits(*opProdOperands, quant.quantId);
+    auto lowerAndUpperLimits =
+        collectLowerAndUpperLimits(*opProdOperands, quant.quantId);
     bool changeMade = false;
-    if (!pairOfVec.second.empty()) {
-        pairOfVec.second.emplace_back(intRangeTest->right);
+    if (!lowerAndUpperLimits.second.empty()) {
+        lowerAndUpperLimits.second.emplace_back(intRangeTest->right);
         intRangeTest->right = OpMaker<OpMin>::make(
-            OpMaker<OpSequenceLit>::make(move(pairOfVec.second)));
+            OpMaker<OpSequenceLit>::make(move(lowerAndUpperLimits.second)));
         changeMade = true;
     }
-    if (!pairOfVec.first.empty()) {
-        pairOfVec.first.emplace_back(intRangeTest->left);
+    if (!lowerAndUpperLimits.first.empty()) {
+        lowerAndUpperLimits.first.emplace_back(intRangeTest->left);
         intRangeTest->left = OpMaker<OpMax>::make(
-            OpMaker<OpSequenceLit>::make(move(pairOfVec.first)));
+            OpMaker<OpSequenceLit>::make(move(lowerAndUpperLimits.first)));
         changeMade = true;
     }
     return true;
 }
+
+bool appendLimitsFromOpAndCondition(
+    pair<ExprRefVec<IntView>, ExprRefVec<IntView>>& lowerAndUpperLimits,
+    ExprRef<BoolView>& condition, u_int64_t quantId) {
+    auto opAndTest = dynamic_cast<OpAnd*>(&(*condition));
+    if (!opAndTest) {
+        return false;
+    }
+    auto opSequenceLitTest =
+        dynamic_cast<OpSequenceLit*>(&(*(opAndTest->operand)));
+    if (!opSequenceLitTest) {
+        return false;
+    }
+    for (auto& member : opSequenceLitTest->template getMembers<BoolView>()) {
+        if (!appendLimits(lowerAndUpperLimits, member, quantId)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+template <typename Quantifier>
+bool optimiseIfIntRangeWithConditions(Quantifier& quant) {
+    IntRange* intRangeTest = dynamic_cast<IntRange*>(&(*(quant.container)));
+    if (!intRangeTest) {
+        return false;
+    }
+    if (!quant.condition) {
+        return false;
+    }
+    pair<ExprRefVec<IntView>, ExprRefVec<IntView>> lowerAndUpperLimits;
+    if (!appendLimits(lowerAndUpperLimits, quant.condition, quant.quantId) &&
+        !appendLimitsFromOpAndCondition(lowerAndUpperLimits, quant.condition,
+                                        quant.quantId)) {
+        return false;
+    }
+    quant.condition = nullptr;
+    bool changeMade = false;
+    if (!lowerAndUpperLimits.second.empty()) {
+        lowerAndUpperLimits.second.emplace_back(intRangeTest->right);
+        intRangeTest->right = OpMaker<OpMin>::make(
+            OpMaker<OpSequenceLit>::make(move(lowerAndUpperLimits.second)));
+        changeMade = true;
+    }
+    if (!lowerAndUpperLimits.first.empty()) {
+        lowerAndUpperLimits.first.emplace_back(intRangeTest->left);
+        intRangeTest->left = OpMaker<OpMax>::make(
+            OpMaker<OpSequenceLit>::make(move(lowerAndUpperLimits.first)));
+        changeMade = true;
+    }
+    return true;
+}
+
 template <>
 struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
     Quantifier<SetView>* op;

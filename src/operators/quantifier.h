@@ -22,6 +22,7 @@ struct Quantifier : public SequenceView {
     const int quantId;
     ExprRef<ContainerType> container;
     AnyExprRef expr = ExprRef<BoolView>(nullptr);
+    ExprRef<BoolView> condition = nullptr;
     bool containerDefined = true;
     std::vector<AnyIterRef> unrolledIterVals;
     std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
@@ -37,6 +38,9 @@ struct Quantifier : public SequenceView {
             expr);
     }
 
+    inline void setCondition(const ExprRef<BoolView>& condition) {
+        this->condition = condition;
+    }
     ~Quantifier() { this->stopTriggeringOnChildren(); }
     void evaluateImpl() final;
     void startTriggering() final;

@@ -848,6 +848,23 @@ AnyDomainRef addExprToQuantifier(
         (containerDomain->inner));
     auto expr = parseExpr(comprExpr[0], parsedModel);
     quantifier->setExpression(expr.second);
+    vector<ExprRef<BoolView>> conditions;
+    for (auto& expr : comprExpr[1]) {
+        if (expr.count("Condition")) {
+            auto parsedCondition = expect<BoolView>(
+                parseExpr(expr["Condition"], parsedModel).second, [&](auto&&) {
+                    cerr << "Conitions for quantifiers must be bool "
+                            "returning.\n";
+                });
+            conditions.emplace_back(parsedCondition);
+        }
+    }
+    if (conditions.size() > 1) {
+        quantifier->setCondition(OpMaker<OpAnd>::make(
+            OpMaker<OpSequenceLit>::make(move(conditions))));
+    } else if (conditions.size() == 1) {
+        quantifier->setCondition(conditions[0]);
+    }
     for (auto& varName : variablesAddedToScope) {
         parsedModel.namedExprs.erase(varName);
     }

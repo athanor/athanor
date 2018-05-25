@@ -371,9 +371,14 @@ bool Quantifier<ContainerType>::optimise(PathExtension path) {
     mpark::visit(overloaded(
                      [&](ExprRef<IntView>& expr) {
                          changeMade |= expr->optimise(path.extend(expr));
-                         changeMade |=
+                         bool optForOpSum =
                              optimiseIfOpSumParentWithZeroingCondition(
                                  *this, expr, path);
+                         changeMade |= optForOpSum;
+                         if (optForOpSum) {
+                             container->optimise(path.extend(container));
+                             expr->optimise(path.extend(expr));
+                         }
                      },
                      [&](auto& expr) {
                          changeMade |= expr->optimise(path.extend(expr));
@@ -390,35 +395,29 @@ bool isOpSum(const AnyExprRef& expr) {
     return false;
 }
 
-template <typename View>
-ExprRefVec<IntView>* getIfSequenceLit(ExprRef<SequenceView>& operand) {
-    auto opSequenceLitTest = dynamic_cast<OpSequenceLit*>(&(*operand));
-    if (opSequenceLitTest) {
-        return &opSequenceLitTest->template getMembers<View>();
-    }
-    return NULL;
-}
-
 bool isMatchingIterRef(ExprRef<IntView>& operand, u_int64_t quantId) {
     auto tupleIndexTest = dynamic_cast<OpTupleIndex<IntView>*>(&(*operand));
     if (tupleIndexTest) {
-        auto tupleIterTest = dynamic_cast<Iterator<TupleView>*>(&(*operand));
+        auto tupleIterTest = dynamic_cast<Iterator<TupleView>*>(
+            &(*(tupleIndexTest->tupleOperand)));
         return tupleIterTest && tupleIterTest->id == quantId;
     }
     return false;
 }
 
-void appendLimits(
+bool appendLimits(
     pair<ExprRefVec<IntView>, ExprRefVec<IntView>>& lowerAndUpperLimits,
     ExprRef<BoolView>& condition, u_int64_t quantId) {
     auto opLessEqTest = dynamic_cast<OpLessEq*>(&(*condition));
     if (opLessEqTest) {
         if (isMatchingIterRef(opLessEqTest->left, quantId)) {
             lowerAndUpperLimits.second.emplace_back(opLessEqTest->right);
+            return true;
         } else if (isMatchingIterRef(opLessEqTest->right, quantId)) {
             lowerAndUpperLimits.first.emplace_back(opLessEqTest->left);
+            return true;
         }
-        return;
+        return false;
     }
     auto opLessTest = dynamic_cast<OpLess*>(&(*condition));
     if (opLessTest) {
@@ -428,23 +427,32 @@ void appendLimits(
             auto upperLimit =
                 OpMaker<OpMinus>::make(opLessTest->right, val.asExpr());
             lowerAndUpperLimits.second.emplace_back(upperLimit);
+            return true;
         } else if (isMatchingIterRef(opLessTest->right, quantId)) {
             auto val = make<IntValue>();
             val->value = 1;
             auto lowerLimit = OpMaker<OpSum>::make(OpMaker<OpSequenceLit>::make(
                 ExprRefVec<IntView>({opLessTest->left, val.asExpr()})));
             lowerAndUpperLimits.first.emplace_back(lowerLimit);
+            return true;
         }
-        return;
+        return false;
     }
+    return false;
 }
 pair<ExprRefVec<IntView>, ExprRefVec<IntView>> collectLowerAndUpperLimits(
-    ExprRefVec<IntView>& opProdOperands, u_int64_t quantId) {
+    OpSequenceLit& opProdOperands, u_int64_t quantId) {
     pair<ExprRefVec<IntView>, ExprRefVec<IntView>> lowerAndUpperLimits;
-    for (auto& operand : opProdOperands) {
+    auto& members = opProdOperands.getMembers<IntView>();
+    size_t i = 0;
+    while (i < members.size()) {
+        auto& operand = members[i];
         auto opToIntTest = dynamic_cast<OpToInt*>(&(*operand));
-        if (opToIntTest) {
-            appendLimits(lowerAndUpperLimits, opToIntTest->operand, quantId);
+        if (opToIntTest &&
+            appendLimits(lowerAndUpperLimits, opToIntTest->operand, quantId)) {
+            opProdOperands.removeMember<IntView>(i);
+        } else {
+            i++;
         }
     }
     return lowerAndUpperLimits;
@@ -464,8 +472,8 @@ bool optimiseIfOpSumParentWithZeroingCondition(Quantifier& quant,
     if (!opProdTest) {
         return false;
     }
-    ExprRefVec<IntView>* opProdOperands =
-        getIfSequenceLit<IntView>(opProdTest->operand);
+    auto opProdOperands =
+        dynamic_cast<OpSequenceLit*>(&(*(opProdTest->operand)));
     if (!opProdOperands) {
         return false;
     }
@@ -473,13 +481,13 @@ bool optimiseIfOpSumParentWithZeroingCondition(Quantifier& quant,
     bool changeMade = false;
     if (!pairOfVec.second.empty()) {
         pairOfVec.second.emplace_back(intRangeTest->right);
-        intRangeTest->right = OpMaker<OpMax>::make(
+        intRangeTest->right = OpMaker<OpMin>::make(
             OpMaker<OpSequenceLit>::make(move(pairOfVec.second)));
         changeMade = true;
     }
     if (!pairOfVec.first.empty()) {
         pairOfVec.first.emplace_back(intRangeTest->left);
-        intRangeTest->left = OpMaker<OpMin>::make(
+        intRangeTest->left = OpMaker<OpMax>::make(
             OpMaker<OpSequenceLit>::make(move(pairOfVec.first)));
         changeMade = true;
     }

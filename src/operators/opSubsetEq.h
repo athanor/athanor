@@ -15,8 +15,8 @@ struct OpSubsetEq : public SimpleBinaryOperator<BoolView, SetView, OpSubsetEq> {
                                OpSubsetEq>::SimpleBinaryOperator;
 
     void reevaluate();
-    void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription& vioDesc) final;
+    void updateVarViolations(UInt parentViolation,
+                                    ViolationContainer& vioDesc) final;
     void copy(OpSubsetEq& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
 };

@@ -13,8 +13,8 @@ struct OperatorTrates<OpMinus> {
 struct OpMinus : public SimpleBinaryOperator<IntView, IntView, OpMinus> {
     using SimpleBinaryOperator<IntView, IntView, OpMinus>::SimpleBinaryOperator;
     void reevaluate();
-    void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription& vioDesc) final;
+    void updateVarViolations(UInt parentViolation,
+                                    ViolationContainer& vioDesc) final;
     void copy(OpMinus& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
 };

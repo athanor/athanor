@@ -22,7 +22,7 @@ template <typename T>
 using ExprRefVecMaker = ExprRefVec<typename AssociatedViewType<T>::type>;
 typedef Variantised<ExprRefVecMaker> AnyExprVec;
 
-class ViolationDescription;
+class ViolationContainer;
 typedef std::function<std::pair<bool, AnyExprRef>(AnyExprRef)>
     FindAndReplaceFunction;
 
@@ -53,8 +53,8 @@ struct ExprInterface : public Undefinable<View> {
     virtual void evaluateImpl() = 0;
     virtual void startTriggering() = 0;
     virtual void stopTriggering() = 0;
-    virtual void updateViolationDescription(UInt parentViolation,
-                                            ViolationDescription&) = 0;
+    virtual void updateVarViolations(UInt parentViolation,
+                                            ViolationContainer&) = 0;
     virtual ExprRef<View> deepCopySelfForUnroll(
         const ExprRef<View>& self, const AnyIterRef& iterator) const = 0;
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;

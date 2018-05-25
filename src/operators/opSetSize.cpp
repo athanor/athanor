@@ -7,9 +7,9 @@
 using namespace std;
 
 void OpSetSize::reevaluate() { value = operand->view().numberElements(); }
-void OpSetSize::updateViolationDescription(UInt parentViolation,
-                                           ViolationDescription& vioDesc) {
-    operand->updateViolationDescription(parentViolation, vioDesc);
+void OpSetSize::updateVarViolations(UInt parentViolation,
+                                           ViolationContainer& vioDesc) {
+    operand->updateVarViolations(parentViolation, vioDesc);
 }
 
 void OpSetSize::copy(OpSetSize& newOp) const { newOp.value = value; }

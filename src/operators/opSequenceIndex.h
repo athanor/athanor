@@ -36,8 +36,8 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     void stopTriggering() final;
     void stopTriggeringOnChildren();
 
-    void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription&) final;
+    void updateVarViolations(UInt parentViolation,
+                                    ViolationContainer&) final;
     ExprRef<SequenceMemberViewType> deepCopySelfForUnroll(
         const ExprRef<SequenceMemberViewType>& self,
         const AnyIterRef& iterator) const final;

@@ -90,7 +90,7 @@ void OpTupleLit::stopTriggering() {
     }
 }
 
-void OpTupleLit::updateViolationDescription(UInt, ViolationDescription&) {}
+void OpTupleLit::updateVarViolations(UInt, ViolationContainer&) {}
 
 ExprRef<TupleView> OpTupleLit::deepCopySelfForUnroll(
     const ExprRef<TupleView>&, const AnyIterRef& iterator) const {

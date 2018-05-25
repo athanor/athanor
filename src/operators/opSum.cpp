@@ -185,10 +185,10 @@ void OpSum::reevaluate() {
     evaluated = true;
 }
 
-void OpSum::updateViolationDescription(UInt parentViolation,
-                                       ViolationDescription& vioDesc) {
+void OpSum::updateVarViolations(UInt parentViolation,
+                                       ViolationContainer& vioDesc) {
     for (auto& operandChild : operand->view().getMembers<IntView>()) {
-        operandChild->updateViolationDescription(parentViolation, vioDesc);
+        operandChild->updateVarViolations(parentViolation, vioDesc);
     }
 }
 

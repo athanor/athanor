@@ -116,10 +116,10 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
     }
 };
 
-void IntRange::updateViolationDescription(UInt parentViolation,
-                                          ViolationDescription& vioDesc) {
-    left->updateViolationDescription(parentViolation, vioDesc);
-    right->updateViolationDescription(parentViolation, vioDesc);
+void IntRange::updateVarViolations(UInt parentViolation,
+                                          ViolationContainer& vioDesc) {
+    left->updateVarViolations(parentViolation, vioDesc);
+    right->updateVarViolations(parentViolation, vioDesc);
 }
 
 void IntRange::copy(IntRange& newOp) const {

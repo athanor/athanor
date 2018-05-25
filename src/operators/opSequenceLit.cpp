@@ -127,7 +127,7 @@ void OpSequenceLit::stopTriggering() {
     }
 }
 
-void OpSequenceLit::updateViolationDescription(UInt, ViolationDescription&) {}
+void OpSequenceLit::updateVarViolations(UInt, ViolationContainer&) {}
 
 ExprRef<SequenceView> OpSequenceLit::deepCopySelfForUnroll(
     const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {

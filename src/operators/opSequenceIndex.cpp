@@ -337,13 +337,13 @@ void OpSequenceIndex<SequenceMemberViewType>::stopTriggering() {
 }
 
 template <typename SequenceMemberViewType>
-void OpSequenceIndex<SequenceMemberViewType>::updateViolationDescription(
-    UInt parentViolation, ViolationDescription& vioDesc) {
-    indexOperand->updateViolationDescription(parentViolation, vioDesc);
+void OpSequenceIndex<SequenceMemberViewType>::updateVarViolations(
+    UInt parentViolation, ViolationContainer& vioDesc) {
+    indexOperand->updateVarViolations(parentViolation, vioDesc);
     if (defined) {
-        getMember()->updateViolationDescription(parentViolation, vioDesc);
+        getMember()->updateVarViolations(parentViolation, vioDesc);
     } else {
-        sequenceOperand->updateViolationDescription(parentViolation, vioDesc);
+        sequenceOperand->updateVarViolations(parentViolation, vioDesc);
     }
 }
 

@@ -6,7 +6,7 @@
 #include "search/neighbourhoodSelectionStrategies.h"
 #include "search/statsContainer.h"
 #include "types/allTypes.h"
-void dumpVarViolations(const ViolationDescription& vioDesc);
+void dumpVarViolations(const ViolationContainer& vioDesc);
 extern bool sigIntActivated, sigAlarmActivated;
 inline bool alwaysTrue(const AnyValRef&) { return true; }
 
@@ -249,7 +249,7 @@ class HillClimber {
     }
 };
 
-void dumpVarViolations(const ViolationDescription& vioDesc) {
+void dumpVarViolations(const ViolationContainer& vioDesc) {
     auto sortedVars = vioDesc.getVarsWithViolation();
     std::sort(sortedVars.begin(), sortedVars.end());
     for (auto& var : sortedVars) {

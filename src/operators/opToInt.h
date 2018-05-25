@@ -14,8 +14,8 @@ struct OpToInt : public SimpleUnaryOperator<IntView, BoolView, OpToInt> {
     using SimpleUnaryOperator<IntView, BoolView, OpToInt>::SimpleUnaryOperator;
 
     void reevaluate();
-    void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription& vioDesc) final;
+    void updateVarViolations(UInt parentViolation,
+                                    ViolationContainer& vioDesc) final;
     void copy(OpToInt& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
 };

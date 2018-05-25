@@ -134,12 +134,12 @@ void OpAnd::reevaluate() {
     }
 }
 
-void OpAnd::updateViolationDescription(const UInt,
-                                       ViolationDescription& vioDesc) {
+void OpAnd::updateVarViolations(const UInt,
+                                       ViolationContainer& vioDesc) {
     for (size_t violatingOperandIndex : violatingOperands) {
         operand->view()
             .getMembers<BoolView>()[violatingOperandIndex]
-            ->updateViolationDescription(violation, vioDesc);
+            ->updateVarViolations(violation, vioDesc);
     }
 }
 

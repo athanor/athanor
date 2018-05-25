@@ -3,15 +3,15 @@
  * using macros to do the specialisation to avoid having to include this file,
  * which includes all the types */
 #include <utility>
-#include "search/violationDescription.h"
+#include "search/violationContainer.h"
 #include "types/allTypes.h"
 #define quote(x) #x
 using namespace std;
 bool currentlyProcessingDelayedTriggerStack = false;
 vector<shared_ptr<DelayedTrigger>> delayedTriggerStack;
 
-inline pair<bool, ViolationDescription&> registerViolations(
-    const ValBase* val, const UInt violation, ViolationDescription& vioDesc);
+inline pair<bool, ViolationContainer&> registerViolations(
+    const ValBase* val, const UInt violation, ViolationContainer& vioDesc);
 #define specialised(name)                                                  \
     template <>                                                            \
     ValRef<name##Value> make<name##Value>() {                              \
@@ -33,8 +33,8 @@ inline pair<bool, ViolationDescription&> registerViolations(
     void name##Value::evaluateImpl() {}                                    \
     void name##Value::startTriggering() {}                                 \
     void name##Value::stopTriggering() {}                                  \
-    void name##Value::updateViolationDescription(                          \
-        UInt parentViolation, ViolationDescription& vioDesc) {             \
+    void name##Value::updateVarViolations(                          \
+        UInt parentViolation, ViolationContainer& vioDesc) {             \
         registerViolations(this, parentViolation, vioDesc);                \
     }                                                                      \
     ExprRef<name##View> name##Value::deepCopySelfForUnroll(                \
@@ -54,23 +54,23 @@ buildForAllTypes(specialised, )
 
     vector<shared_ptr<DelayedTrigger>> emptyEndOfTriggerQueue;
 
-inline pair<bool, ViolationDescription&> registerViolations(
-    const ValBase* val, const UInt violation, ViolationDescription& vioDesc) {
+inline pair<bool, ViolationContainer&> registerViolations(
+    const ValBase* val, const UInt violation, ViolationContainer& vioDesc) {
     if (val->container == &constantPool) {
-        return pair<bool, ViolationDescription&>(false, vioDesc);
+        return pair<bool, ViolationContainer&>(false, vioDesc);
     }
     if (val->container == NULL) {
         vioDesc.addViolation(val->id, violation);
-        return pair<bool, ViolationDescription&>(true, vioDesc);
+        return pair<bool, ViolationContainer&>(true, vioDesc);
     } else {
         auto boolVioDescPair =
             registerViolations(val->container, violation, vioDesc);
-        ViolationDescription& parentVioDesc = boolVioDescPair.second;
+        ViolationContainer& parentVioDesc = boolVioDescPair.second;
         if (boolVioDescPair.first) {
-            ViolationDescription& childVioDesc =
+            ViolationContainer& childVioDesc =
                 parentVioDesc.childViolations(val->container->id);
             childVioDesc.addViolation(val->id, violation);
-            return pair<bool, ViolationDescription&>(true, childVioDesc);
+            return pair<bool, ViolationContainer&>(true, childVioDesc);
         } else {
             return boolVioDescPair;
         }

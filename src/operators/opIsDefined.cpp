@@ -6,10 +6,10 @@
 using namespace std;
 
 void OpIsDefined::reevaluate() { violation = 0; }
-void OpIsDefined::updateViolationDescription(UInt,
-                                             ViolationDescription& vioDesc) {
+void OpIsDefined::updateVarViolations(UInt,
+                                             ViolationContainer& vioDesc) {
     if (violation > 0) {
-        operand->updateViolationDescription(violation, vioDesc);
+        operand->updateVarViolations(violation, vioDesc);
     }
 }
 

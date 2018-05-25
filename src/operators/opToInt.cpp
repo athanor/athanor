@@ -7,9 +7,9 @@
 using namespace std;
 
 void OpToInt::reevaluate() { value = (operand->view().violation == 0) ? 1 : 0; }
-void OpToInt::updateViolationDescription(UInt parentViolation,
-                                         ViolationDescription& vioDesc) {
-    operand->updateViolationDescription(parentViolation, vioDesc);
+void OpToInt::updateVarViolations(UInt parentViolation,
+                                         ViolationContainer& vioDesc) {
+    operand->updateVarViolations(parentViolation, vioDesc);
 }
 
 void OpToInt::copy(OpToInt& newOp) const { newOp.value = value; }

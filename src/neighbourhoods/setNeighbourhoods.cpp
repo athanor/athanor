@@ -5,7 +5,7 @@
 #include "utils/random.h"
 
 using namespace std;
-static ViolationDescription emptyViolations;
+static ViolationContainer emptyViolations;
 
 template <typename InnerDomainPtrType>
 void assignRandomValueInDomainImpl(const SetDomain& domain,
@@ -170,7 +170,7 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                     ++params.stats.minorNodeCount;
                     return;
                 }
-                ViolationDescription& vioDescAtThisLevel =
+                ViolationContainer& vioDescAtThisLevel =
                     params.vioDesc.hasChildViolation(val.id)
                         ? params.vioDesc.childViolations(val.id)
                         : emptyViolations;

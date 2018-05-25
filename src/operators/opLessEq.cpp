@@ -6,9 +6,9 @@ void OpLessEq::reevaluate() {
     violation = abs(min<Int>(diff, 0));
 }
 
-void OpLessEq::updateViolationDescription(UInt, ViolationDescription& vioDesc) {
-    left->updateViolationDescription(violation, vioDesc);
-    right->updateViolationDescription(violation, vioDesc);
+void OpLessEq::updateVarViolations(UInt, ViolationContainer& vioDesc) {
+    left->updateVarViolations(violation, vioDesc);
+    right->updateVarViolations(violation, vioDesc);
 }
 
 void OpLessEq::copy(OpLessEq& newOp) const { newOp.violation = violation; }

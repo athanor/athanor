@@ -30,8 +30,8 @@ struct IntRange : public SimpleBinaryOperator<SequenceView, IntView, IntRange> {
 
     void setInnerType() { this->members.emplace<ExprRefVec<IntView>>(); }
     void reevaluate();
-    void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription& vioDesc) final;
+    void updateVarViolations(UInt parentViolation,
+                                    ViolationContainer& vioDesc) final;
     void copy(IntRange& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
 };

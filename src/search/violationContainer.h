@@ -1,6 +1,6 @@
 
-#ifndef SRC_SEARCH_VIOLATIONDESCRIPTION_H_
-#define SRC_SEARCH_VIOLATIONDESCRIPTION_H_
+#ifndef SRC_SEARCH_VIOLATIONCONTAINER_H_
+#define SRC_SEARCH_VIOLATIONCONTAINER_H_
 #include <iostream>
 #include <memory>
 #include <unordered_map>
@@ -9,15 +9,15 @@
 #include "base/intSize.h"
 #include "utils/random.h"
 
-class ViolationDescription {
+class ViolationContainer {
     UInt totalViolation = 0;
     std::vector<UInt> varViolations;
     std::vector<UInt> varsWithViolation;
-    std::unordered_map<UInt, std::unique_ptr<ViolationDescription>>
+    std::unordered_map<UInt, std::unique_ptr<ViolationContainer>>
         _childViolations;
 
    public:
-    ViolationDescription(const UInt numberVariables = 0)
+    ViolationContainer(const UInt numberVariables = 0)
         : varViolations(numberVariables, 0) {}
     inline void addViolation(UInt id, UInt violation) {
         if (id >= varViolations.size()) {
@@ -47,14 +47,14 @@ class ViolationDescription {
     }
 
     inline UInt getTotalViolation() const { return totalViolation; }
-    inline ViolationDescription& childViolations(UInt id) {
+    inline ViolationContainer& childViolations(UInt id) {
         auto& ptr = _childViolations[id];
         if (!ptr) {
-            ptr = std::make_unique<ViolationDescription>();
+            ptr = std::make_unique<ViolationContainer>();
         }
         return *ptr;
     }
-    inline const ViolationDescription& childViolations(UInt id) const {
+    inline const ViolationContainer& childViolations(UInt id) const {
         return *_childViolations.at(id);
     }
     inline bool hasChildViolation(UInt id) const {
@@ -82,4 +82,4 @@ class ViolationDescription {
     }
 };
 
-#endif /* SRC_SEARCH_VIOLATIONDESCRIPTION_H_ */
+#endif /* SRC_SEARCH_VIOLATIONCONTAINER_H_ */

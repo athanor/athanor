@@ -6,7 +6,7 @@
 #include <vector>
 #include "search/model.h"
 #include "search/statsContainer.h"
-#include "search/violationDescription.h"
+#include "search/violationContainer.h"
 #include "utils/random.h"
 class RandomNeighbourhoodSelection {
     const int numberNeighbourhoods;
@@ -44,7 +44,7 @@ class RandomNeighbourhoodWithViolation {
         if (model.csp->violation == 0) {
             return;
         }
-        model.csp->updateViolationDescription(0, model.vioDesc);
+        model.csp->updateVarViolations(0, model.vioDesc);
     }
     inline void reportResult(NeighbourhoodResult& result) {
         initialise(result.model);
@@ -120,7 +120,7 @@ class InteractiveNeighbourhoodSelector {
         if (model.csp->violation == 0) {
             return;
         }
-        model.csp->updateViolationDescription(0, model.vioDesc);
+        model.csp->updateVarViolations(0, model.vioDesc);
     }
     inline void reportResult(NeighbourhoodResult&& result) {
         initialise(result.model);

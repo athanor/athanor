@@ -5,7 +5,7 @@
 #include "utils/random.h"
 
 using namespace std;
-static ViolationDescription emptyViolations;
+static ViolationContainer emptyViolations;
 
 template <>
 void assignRandomValueInDomain<FunctionDomain>(const FunctionDomain&,

@@ -314,8 +314,8 @@ struct MSetValue : public MSetView, public ValBase {
     void evaluateImpl() final;
     void startTriggering() final;
     void stopTriggering() final;
-    void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription&) final;
+    void updateVarViolations(UInt parentViolation,
+                                    ViolationContainer&) final;
     ExprRef<MSetView> deepCopySelfForUnroll(
         const ExprRef<MSetView>&, const AnyIterRef& iterator) const final;
 

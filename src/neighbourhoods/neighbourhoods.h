@@ -6,7 +6,7 @@
 #include "base/base.h"
 #include "common/common.h"
 #include "search/statsContainer.h"
-#include "search/violationDescription.h"
+#include "search/violationContainer.h"
 
 #define debug_neighbourhood_action(x) debug_log(x)
 
@@ -20,11 +20,11 @@ struct NeighbourhoodParams {
     const int parentCheckTryLimit;
     AnyValRef& primary;
     StatsContainer& stats;
-    ViolationDescription& vioDesc;
+    ViolationContainer& vioDesc;
     NeighbourhoodParams(const AcceptanceCallBack& changeAccepted,
                         const ParentCheckCallBack& parentCheck,
                         const int parentCheckTryLimit, AnyValRef& primary,
-                        StatsContainer& stats, ViolationDescription& vioDesc)
+                        StatsContainer& stats, ViolationContainer& vioDesc)
         : changeAccepted(changeAccepted),
           parentCheck(parentCheck),
           parentCheckTryLimit(parentCheckTryLimit),

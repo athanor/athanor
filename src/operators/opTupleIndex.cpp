@@ -192,12 +192,12 @@ void OpTupleIndex<TupleMemberViewType>::stopTriggering() {
 }
 
 template <typename TupleMemberViewType>
-void OpTupleIndex<TupleMemberViewType>::updateViolationDescription(
-    UInt parentViolation, ViolationDescription& vioDesc) {
+void OpTupleIndex<TupleMemberViewType>::updateVarViolations(
+    UInt parentViolation, ViolationContainer& vioDesc) {
     if (defined) {
-        getMember()->updateViolationDescription(parentViolation, vioDesc);
+        getMember()->updateVarViolations(parentViolation, vioDesc);
     } else {
-        tupleOperand->updateViolationDescription(parentViolation, vioDesc);
+        tupleOperand->updateVarViolations(parentViolation, vioDesc);
     }
 }
 

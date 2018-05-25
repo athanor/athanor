@@ -211,15 +211,15 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
 };
 
 template <bool minMode>
-void OpMinMax<minMode>::updateViolationDescription(
-    UInt parentViolation, ViolationDescription& vioDesc) {
+void OpMinMax<minMode>::updateVarViolations(
+    UInt parentViolation, ViolationContainer& vioDesc) {
     if (this->operand->isUndefined()) {
-        this->operand->updateViolationDescription(parentViolation, vioDesc);
+        this->operand->updateVarViolations(parentViolation, vioDesc);
         return;
     }
     for (auto& operandChild :
          this->operand->view().template getMembers<IntView>()) {
-        operandChild->updateViolationDescription(parentViolation, vioDesc);
+        operandChild->updateVarViolations(parentViolation, vioDesc);
     }
 }
 

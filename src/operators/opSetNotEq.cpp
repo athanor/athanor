@@ -10,10 +10,10 @@ void OpSetNotEq::reevaluate() {
         (left->view().cachedHashTotal == right->view().cachedHashTotal) ? 1 : 0;
 }
 
-void OpSetNotEq::updateViolationDescription(UInt,
-                                            ViolationDescription& vioDesc) {
-    left->updateViolationDescription(violation, vioDesc);
-    right->updateViolationDescription(violation, vioDesc);
+void OpSetNotEq::updateVarViolations(UInt,
+                                            ViolationContainer& vioDesc) {
+    left->updateVarViolations(violation, vioDesc);
+    right->updateVarViolations(violation, vioDesc);
 }
 
 void OpSetNotEq::copy(OpSetNotEq& newOp) const { newOp.violation = violation; }

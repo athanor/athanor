@@ -148,8 +148,8 @@ struct FunctionValue : public FunctionView, public ValBase {
     void evaluateImpl() final;
     void startTriggering() final;
     void stopTriggering() final;
-    void updateViolationDescription(UInt parentViolation,
-                                    ViolationDescription&) final;
+    void updateVarViolations(UInt parentViolation,
+                                    ViolationContainer&) final;
     ExprRef<FunctionView> deepCopySelfForUnroll(
         const ExprRef<FunctionView>&, const AnyIterRef& iterator) const final;
 

@@ -11,7 +11,7 @@
 #include "operators/opAnd.h"
 #include "operators/opIntEq.h"
 #include "operators/opSequenceLit.h"
-#include "search/violationDescription.h"
+#include "search/violationContainer.h"
 #include "types/allTypes.h"
 extern ValBase definedPool;
 class ModelBuilder;
@@ -26,7 +26,7 @@ struct Model {
     std::shared_ptr<OpAnd> csp = nullptr;
     ExprRef<IntView> objective = make<IntValue>().asExpr();
     OptimiseMode optimiseMode = OptimiseMode::NONE;
-    ViolationDescription vioDesc;
+    ViolationContainer vioDesc;
     std::unordered_map<size_t, AnyExprRef> definingExpressions;
 
    private:

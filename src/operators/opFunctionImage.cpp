@@ -248,14 +248,14 @@ void OpFunctionImage<FunctionMemberViewType>::stopTriggering() {
 }
 
 template <typename FunctionMemberViewType>
-void OpFunctionImage<FunctionMemberViewType>::updateViolationDescription(
-    UInt parentViolation, ViolationDescription& vioDesc) {
+void OpFunctionImage<FunctionMemberViewType>::updateVarViolations(
+    UInt parentViolation, ViolationContainer& vioDesc) {
     invoke(preImageOperand,
-           updateViolationDescription(parentViolation, vioDesc));
+           updateVarViolations(parentViolation, vioDesc));
     if (locallyDefined) {
-        getMember()->updateViolationDescription(parentViolation, vioDesc);
+        getMember()->updateVarViolations(parentViolation, vioDesc);
     } else {
-        functionOperand->updateViolationDescription(parentViolation, vioDesc);
+        functionOperand->updateVarViolations(parentViolation, vioDesc);
     }
 }
 

@@ -92,6 +92,11 @@ class ModelBuilder {
         handleVarsToBeDefined();
         ExprRef<BoolView> cspExpr(model.csp);
         model.csp->optimise(PathExtension::begin(cspExpr));
+        for (auto& nameExprPair : model.definingExpressions) {
+            mpark::visit(
+                [&](auto& expr) { expr->optimise(PathExtension::begin(expr)); },
+                nameExprPair.second);
+        }
         if (model.optimiseMode != OptimiseMode::NONE) {
             model.objective->optimise(PathExtension::begin(model.objective));
         }

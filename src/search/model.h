@@ -1,6 +1,7 @@
 #ifndef SRC_SEARCH_MODEL_H_
 #define SRC_SEARCH_MODEL_H_
 #include <algorithm>
+#include <chrono>
 #include "operators/operatorMakers.h"
 
 #include <cassert>
@@ -66,6 +67,7 @@ class ModelBuilder {
         model.optimiseMode = mode;
     }
     Model build() {
+        std::clock_t startBuildTime = std::clock();
         if (model.optimiseMode != OptimiseMode::NONE) {
             addConstraint(OpMaker<OpIsDefined>::make(model.objective));
         }
@@ -100,6 +102,10 @@ class ModelBuilder {
         if (model.optimiseMode != OptimiseMode::NONE) {
             model.objective->optimise(PathExtension::begin(model.objective));
         }
+        std::clock_t endBuildTime = std::clock();
+        std::cout << "Model build time: "
+                  << ((double)(endBuildTime - startBuildTime) / CLOCKS_PER_SEC)
+                  << std::endl;
         return std::move(model);
     }
     template <typename View,

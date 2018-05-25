@@ -230,6 +230,10 @@ class HillClimber {
             std::cout << "Neighbourhood: " << model.neighbourhoods[i].name
                       << std::endl;
             std::cout << indent << "value,total,average\n";
+            std::cout << indent << "Number activations,"
+                      << stats.nhActivationCounts[i] << ","
+                      << ((stats.nhActivationCounts[i] == 0) ? 0 : 1)
+                      << std::endl;
             std::cout << indent << "Number minor nodes,"
                       << stats.nhMinorNodeCounts[i] << ","
                       << stats.getAverage(stats.nhMinorNodeCounts[i], i)

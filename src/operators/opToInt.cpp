@@ -14,10 +14,10 @@ void OpToInt::updateVarViolations(const ViolationContext& vioContext,
     if (intVioContextTest) {
         if ((intVioContextTest->reason ==
                  IntViolationContext::Reason::TOO_LARGE &&
-             value == 1) ||
+             value == 0) ||
             (intVioContextTest->reason ==
                  IntViolationContext::Reason::TOO_SMALL &&
-             value == 0)) {
+             value == 1)) {
             return;
         }
     }

@@ -26,8 +26,8 @@ struct OpAnd : public SimpleUnaryOperator<BoolView, SequenceView, OpAnd> {
     }
 
     void reevaluate();
-    void updateVarViolations(UInt parentViolation,
-                                    ViolationContainer& vioDesc) final;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer& vioDesc) final;
     void copy(OpAnd& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
     bool optimiseImpl();

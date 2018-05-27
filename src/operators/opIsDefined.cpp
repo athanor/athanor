@@ -6,8 +6,8 @@
 using namespace std;
 
 void OpIsDefined::reevaluate() { violation = 0; }
-void OpIsDefined::updateVarViolations(UInt,
-                                             ViolationContainer& vioDesc) {
+void OpIsDefined::updateVarViolations(const ViolationContext&,
+                                      ViolationContainer& vioDesc) {
     if (violation > 0) {
         operand->updateVarViolations(violation, vioDesc);
     }

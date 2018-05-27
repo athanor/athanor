@@ -7,7 +7,7 @@
 #include <utility>
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
-struct AnyIterRef;
+
 template <typename View>
 struct ExprRef;
 
@@ -21,10 +21,13 @@ using ExprRefVec = std::vector<ExprRef<InnerExprType>>;
 template <typename T>
 using ExprRefVecMaker = ExprRefVec<typename AssociatedViewType<T>::type>;
 typedef Variantised<ExprRefVecMaker> AnyExprVec;
-
 class ViolationContainer;
+
 typedef std::function<std::pair<bool, AnyExprRef>(AnyExprRef)>
     FindAndReplaceFunction;
+struct AnyIterRef;
+struct PathExtension;
+struct ViolationContext;
 
 template <typename View>
 struct Undefinable {
@@ -35,7 +38,6 @@ struct Undefinable<BoolView> {
     inline bool isUndefined() { return false; }
 };
 
-struct PathExtension;
 template <typename View>
 struct ExprInterface : public Undefinable<View> {
     bool evaluated = false;
@@ -53,8 +55,8 @@ struct ExprInterface : public Undefinable<View> {
     virtual void evaluateImpl() = 0;
     virtual void startTriggering() = 0;
     virtual void stopTriggering() = 0;
-    virtual void updateVarViolations(UInt parentViolation,
-                                            ViolationContainer&) = 0;
+    virtual void updateVarViolations(const ViolationContext& vioContext,
+                                     ViolationContainer&) = 0;
     virtual ExprRef<View> deepCopySelfForUnroll(
         const ExprRef<View>& self, const AnyIterRef& iterator) const = 0;
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
@@ -63,6 +65,11 @@ struct ExprInterface : public Undefinable<View> {
     virtual bool optimise(PathExtension path) = 0;
 };
 
+struct ViolationContext {
+    UInt parentViolation;
+    ViolationContext(UInt parentViolation) : parentViolation(parentViolation) {}
+    virtual ~ViolationContext() {}
+};
 template <typename View>
 struct ExprRef : public StandardSharedPtr<ExprInterface<View>> {
     using StandardSharedPtr<ExprInterface<View>>::StandardSharedPtr;
@@ -102,6 +109,11 @@ inline ExprRef<T> findAndReplace(ExprRef<T>& expr,
     }
 }
 
+template <typename Op, typename View>
+inline bool isInstanceOf(const ExprRef<View>&) {
+    return false;
+}
+
 struct PathExtension {
     PathExtension* parent;
     AnyExprRef expr;
@@ -122,10 +134,6 @@ struct PathExtension {
     }
 };
 
-template <typename Op, typename View>
-inline bool isInstanceOf(const ExprRef<View>&) {
-    return false;
-}
 extern UInt LARGE_VIOLATION;
 
 #endif /* SRC_BASE_EXPRREF_H_ */

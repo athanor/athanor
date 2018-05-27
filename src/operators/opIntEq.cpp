@@ -5,9 +5,28 @@ void OpIntEq::reevaluate() {
     violation = abs(left->view().value - right->view().value);
 }
 
-void OpIntEq::updateVarViolations(UInt, ViolationContainer& vioDesc) {
-    left->updateVarViolations(violation, vioDesc);
-    right->updateVarViolations(violation, vioDesc);
+void OpIntEq::updateVarViolations(const ViolationContext&,
+                                  ViolationContainer& vioDesc) {
+    if (violation == 0) {
+        return;
+    } else if (allOperandsAreDefined()) {
+        Int diff = left->view().value - right->view().value;
+        left->updateVarViolations(
+            IntViolationContext(
+                violation,
+                ((diff > 0) ? IntViolationContext::Reason::TOO_LARGE
+                            : IntViolationContext::Reason::TOO_SMALL)),
+            vioDesc);
+        right->updateVarViolations(
+            IntViolationContext(
+                violation,
+                ((diff < 0) ? IntViolationContext::Reason::TOO_LARGE
+                            : IntViolationContext::Reason::TOO_SMALL)),
+            vioDesc);
+    } else {
+        left->updateVarViolations(violation, vioDesc);
+        right->updateVarViolations(violation, vioDesc);
+    }
 }
 
 void OpIntEq::copy(OpIntEq& newOp) const { newOp.violation = violation; }

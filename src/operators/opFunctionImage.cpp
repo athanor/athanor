@@ -249,13 +249,12 @@ void OpFunctionImage<FunctionMemberViewType>::stopTriggering() {
 
 template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::updateVarViolations(
-    UInt parentViolation, ViolationContainer& vioDesc) {
-    invoke(preImageOperand,
-           updateVarViolations(parentViolation, vioDesc));
+    const ViolationContext& vioContext, ViolationContainer& vioDesc) {
+    invoke(preImageOperand, updateVarViolations(vioContext, vioDesc));
     if (locallyDefined) {
-        getMember()->updateVarViolations(parentViolation, vioDesc);
+        getMember()->updateVarViolations(vioContext, vioDesc);
     } else {
-        functionOperand->updateVarViolations(parentViolation, vioDesc);
+        functionOperand->updateVarViolations(vioContext, vioDesc);
     }
 }
 
@@ -304,9 +303,9 @@ bool OpFunctionImage<FunctionMemberViewType>::isUndefined() {
 template <typename FunctionMemberViewType>
 bool OpFunctionImage<FunctionMemberViewType>::optimise(PathExtension path) {
     bool changeMade = false;
-    changeMade |= functionOperand->optimise(path.extend( functionOperand));
+    changeMade |= functionOperand->optimise(path.extend(functionOperand));
     changeMade |=
-        invoke(preImageOperand, optimise(path.extend( preImageOperand)));
+        invoke(preImageOperand, optimise(path.extend(preImageOperand)));
     return changeMade;
 }
 template <typename Op>

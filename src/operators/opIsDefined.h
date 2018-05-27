@@ -16,8 +16,8 @@ struct OpIsDefined
                               OpIsDefined>::SimpleUnaryOperator;
 
     void reevaluate();
-    void updateVarViolations(UInt parentViolation,
-                                    ViolationContainer& vioDesc) final;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer& vioDesc) final;
     void copy(OpIsDefined& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
 };

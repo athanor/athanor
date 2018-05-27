@@ -57,5 +57,4 @@ void saveMemory(std::shared_ptr<T>& ref) {
 //    }
 //}
 
-
 #endif /* SRC_UTILS_CACHEDSHAREDPTR_H_ */

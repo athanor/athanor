@@ -21,8 +21,8 @@ struct OpTupleLit : public TupleView {
     void startTriggering() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();
-    void updateVarViolations(UInt parentViolation,
-                                    ViolationContainer&) final;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer&) final;
     ExprRef<TupleView> deepCopySelfForUnroll(
         const ExprRef<TupleView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;

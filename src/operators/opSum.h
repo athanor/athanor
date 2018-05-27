@@ -18,8 +18,8 @@ struct OpSum : public SimpleUnaryOperator<IntView, SequenceView, OpSum> {
                               OpSum>::SimpleUnaryOperator;
 
     void reevaluate();
-    void updateVarViolations(UInt parentViolation,
-                                    ViolationContainer& vioDesc) final;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer& vioDesc) final;
     void copy(OpSum& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
     bool optimiseImpl();

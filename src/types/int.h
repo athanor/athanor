@@ -48,8 +48,8 @@ struct IntValue : public IntView, ValBase {
     void evaluateImpl() final;
     void startTriggering() final;
     void stopTriggering() final;
-    void updateVarViolations(UInt parentViolation,
-                                    ViolationContainer&) final;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer&) final;
     ExprRef<IntView> deepCopySelfForUnroll(
         const ExprRef<IntView>&, const AnyIterRef& iterator) const final;
 
@@ -62,4 +62,11 @@ struct IntValue : public IntView, ValBase {
 template <typename Child>
 struct ChangeTriggerAdapter<IntTrigger, Child>
     : public ChangeTriggerAdapterBase<IntTrigger, Child> {};
+
+struct IntViolationContext : public ViolationContext {
+    enum class Reason { TOO_LARGE, TOO_SMALL };
+    Reason reason;
+    IntViolationContext(UInt parentViolation, Reason reason)
+        : ViolationContext(parentViolation), reason(reason) {}
+};
 #endif /* SRC_TYPES_INT_H_ */

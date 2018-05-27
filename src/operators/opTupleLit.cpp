@@ -90,7 +90,8 @@ void OpTupleLit::stopTriggering() {
     }
 }
 
-void OpTupleLit::updateVarViolations(UInt, ViolationContainer&) {}
+void OpTupleLit::updateVarViolations(const ViolationContext&,
+                                     ViolationContainer&) {}
 
 ExprRef<TupleView> OpTupleLit::deepCopySelfForUnroll(
     const ExprRef<TupleView>&, const AnyIterRef& iterator) const {
@@ -137,8 +138,11 @@ bool OpTupleLit::isUndefined() { return numberUndefined > 0; }
 bool OpTupleLit::optimise(PathExtension path) {
     bool changeMade = false;
     for (auto& member : members) {
-        mpark::visit([&](auto& member) { changeMade |= member->optimise(path.extend(member)); },
-                     member);
+        mpark::visit(
+            [&](auto& member) {
+                changeMade |= member->optimise(path.extend(member));
+            },
+            member);
     }
     return changeMade;
 }

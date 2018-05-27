@@ -30,8 +30,8 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
     void stopTriggering() final;
     void stopTriggeringOnChildren();
 
-    void updateVarViolations(UInt parentViolation,
-                                    ViolationContainer&) final;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer&) final;
     ExprRef<TupleMemberViewType> deepCopySelfForUnroll(
         const ExprRef<TupleMemberViewType>& self,
         const AnyIterRef& iterator) const final;

@@ -30,4 +30,4 @@ class hash<tuple<Ty...> > {
         return seed;
     }
 };
-}
+}  // namespace std

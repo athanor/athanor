@@ -46,8 +46,8 @@ struct Quantifier : public SequenceView {
     void startTriggering() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();
-    void updateVarViolations(UInt parentViolation,
-                                    ViolationContainer&) final;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer&) final;
     ExprRef<SequenceView> deepCopySelfForUnroll(
         const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;

@@ -420,8 +420,8 @@ struct SequenceValue : public SequenceView, public ValBase {
     void evaluateImpl() final;
     void startTriggering() final;
     void stopTriggering() final;
-    void updateVarViolations(UInt parentViolation,
-                                    ViolationContainer&) final;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer&) final;
     ExprRef<SequenceView> deepCopySelfForUnroll(
         const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
 

@@ -13,12 +13,11 @@ struct OperatorTrates<OpLess> {
     typedef SimpleBinaryTrigger<OpLess, IntTrigger, false> RightTrigger;
 };
 struct OpLess : public SimpleBinaryOperator<BoolView, IntView, OpLess> {
-    using SimpleBinaryOperator<BoolView, IntView,
-                               OpLess>::SimpleBinaryOperator;
+    using SimpleBinaryOperator<BoolView, IntView, OpLess>::SimpleBinaryOperator;
 
     void reevaluate();
-    void updateVarViolations(UInt parentViolation,
-                                    ViolationContainer& vioDesc) final;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer& vioDesc) final;
     void copy(OpLess& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
 };

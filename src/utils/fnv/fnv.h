@@ -78,14 +78,12 @@
 
 #include <sys/types.h>
 
-#define FNV_VERSION "5.0.2"	/* @(#) FNV Version */
-
+#define FNV_VERSION "5.0.2" /* @(#) FNV Version */
 
 /*
  * 32 bit FNV-0 hash type
  */
 typedef u_int32_t Fnv32_t;
-
 
 /*
  * 32 bit FNV-0 zero initial basis
@@ -94,7 +92,6 @@ typedef u_int32_t Fnv32_t;
  * the FNV-1 hash and initial basis instead.
  */
 #define FNV0_32_INIT ((Fnv32_t)0)
-
 
 /*
  * 32 bit FNV-1 and FNV-1a non-zero initial basis
@@ -111,24 +108,21 @@ typedef u_int32_t Fnv32_t;
 #define FNV1_32_INIT ((Fnv32_t)0x811c9dc5)
 #define FNV1_32A_INIT FNV1_32_INIT
 
-
 /*
  * determine how 64 bit unsigned values are represented
  */
 #include "longlong.h"
-
 
 /*
  * 64 bit FNV-0 hash
  */
 #if defined(HAVE_64BIT_LONG_LONG)
 typedef u_int64_t Fnv64_t;
-#else /* HAVE_64BIT_LONG_LONG */
+#else  /* HAVE_64BIT_LONG_LONG */
 typedef struct {
     u_int32_t w32[2]; /* w32[0] is low order, w32[1] is high order word */
 } Fnv64_t;
 #endif /* HAVE_64BIT_LONG_LONG */
-
 
 /*
  * 64 bit FNV-0 zero initial basis
@@ -142,7 +136,6 @@ typedef struct {
 extern const Fnv64_t fnv0_64_init;
 #define FNV0_64_INIT (fnv0_64_init)
 #endif /* HAVE_64BIT_LONG_LONG */
-
 
 /*
  * 64 bit FNV-1 non-zero initial basis
@@ -166,53 +159,50 @@ extern const Fnv64_t fnv1a_64_init;
 #define FNV1A_64_INIT (fnv1a_64_init)
 #endif /* HAVE_64BIT_LONG_LONG */
 
-
 /*
  * hash types
  */
 enum fnv_type {
-    FNV_NONE = 0,	/* invalid FNV hash type */
-    FNV0_32 = 1,	/* FNV-0 32 bit hash */
-    FNV1_32 = 2,	/* FNV-1 32 bit hash */
-    FNV1a_32 = 3,	/* FNV-1a 32 bit hash */
-    FNV0_64 = 4,	/* FNV-0 64 bit hash */
-    FNV1_64 = 5,	/* FNV-1 64 bit hash */
-    FNV1a_64 = 6,	/* FNV-1a 64 bit hash */
+    FNV_NONE = 0, /* invalid FNV hash type */
+    FNV0_32 = 1,  /* FNV-0 32 bit hash */
+    FNV1_32 = 2,  /* FNV-1 32 bit hash */
+    FNV1a_32 = 3, /* FNV-1a 32 bit hash */
+    FNV0_64 = 4,  /* FNV-0 64 bit hash */
+    FNV1_64 = 5,  /* FNV-1 64 bit hash */
+    FNV1a_64 = 6, /* FNV-1a 64 bit hash */
 };
-
 
 /*
  * these test vectors are used as part o the FNV test suite
  */
 struct test_vector {
-    void *buf;		/* start of test vector buffer */
-    int len;		/* length of test vector */
+    void *buf; /* start of test vector buffer */
+    int len;   /* length of test vector */
 };
 struct fnv0_32_test_vector {
-    struct test_vector *test;	/* test vector buffer to hash */
-    Fnv32_t fnv0_32;		/* expected FNV-0 32 bit hash value */
+    struct test_vector *test; /* test vector buffer to hash */
+    Fnv32_t fnv0_32;          /* expected FNV-0 32 bit hash value */
 };
 struct fnv1_32_test_vector {
-    struct test_vector *test;	/* test vector buffer to hash */
-    Fnv32_t fnv1_32;		/* expected FNV-1 32 bit hash value */
+    struct test_vector *test; /* test vector buffer to hash */
+    Fnv32_t fnv1_32;          /* expected FNV-1 32 bit hash value */
 };
 struct fnv1a_32_test_vector {
-    struct test_vector *test;	/* test vector buffer to hash */
-    Fnv32_t fnv1a_32;		/* expected FNV-1a 32 bit hash value */
+    struct test_vector *test; /* test vector buffer to hash */
+    Fnv32_t fnv1a_32;         /* expected FNV-1a 32 bit hash value */
 };
 struct fnv0_64_test_vector {
-    struct test_vector *test;	/* test vector buffer to hash */
-    Fnv64_t fnv0_64;		/* expected FNV-0 64 bit hash value */
+    struct test_vector *test; /* test vector buffer to hash */
+    Fnv64_t fnv0_64;          /* expected FNV-0 64 bit hash value */
 };
 struct fnv1_64_test_vector {
-    struct test_vector *test;	/* test vector buffer to hash */
-    Fnv64_t fnv1_64;		/* expected FNV-1 64 bit hash value */
+    struct test_vector *test; /* test vector buffer to hash */
+    Fnv64_t fnv1_64;          /* expected FNV-1 64 bit hash value */
 };
 struct fnv1a_64_test_vector {
-    struct test_vector *test;	/* test vector buffer to hash */
-    Fnv64_t fnv1a_64;		/* expected FNV-1a 64 bit hash value */
+    struct test_vector *test; /* test vector buffer to hash */
+    Fnv64_t fnv1a_64;         /* expected FNV-1a 64 bit hash value */
 };
-
 
 /*
  * external functions
@@ -244,6 +234,5 @@ extern struct fnv1a_64_test_vector fnv1a_64_vector[];
 extern void unknown_hash_type(char *prog, enum fnv_type type, int code);
 extern void print_fnv32(Fnv32_t hval, Fnv32_t mask, int verbose, char *arg);
 extern void print_fnv64(Fnv64_t hval, Fnv64_t mask, int verbose, char *arg);
-
 
 #endif /* __FNV_H__ */

@@ -350,8 +350,8 @@ ostream& Quantifier<ContainerType>::dumpState(ostream& os) const {
 }
 
 template <typename ContainerType>
-void Quantifier<ContainerType>::updateVarViolations(
-    UInt, ViolationContainer&) {}
+void Quantifier<ContainerType>::updateVarViolations(const ViolationContext&,
+                                                    ViolationContainer&) {}
 
 template <typename ContainerType>
 void Quantifier<ContainerType>::findAndReplaceSelf(

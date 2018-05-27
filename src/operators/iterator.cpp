@@ -46,9 +46,9 @@ void Iterator<View>::stopTriggering() {
     ref->stopTriggering();
 }
 template <typename View>
-void Iterator<View>::updateVarViolations(UInt parentViolation,
-                                                ViolationContainer& vioDesc) {
-    ref->updateVarViolations(parentViolation, vioDesc);
+void Iterator<View>::updateVarViolations(const ViolationContext& vioContext,
+                                         ViolationContainer& vioDesc) {
+    ref->updateVarViolations(vioContext, vioDesc);
 }
 
 template <typename View>

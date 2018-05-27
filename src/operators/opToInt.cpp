@@ -7,9 +7,21 @@
 using namespace std;
 
 void OpToInt::reevaluate() { value = (operand->view().violation == 0) ? 1 : 0; }
-void OpToInt::updateVarViolations(UInt parentViolation,
-                                         ViolationContainer& vioDesc) {
-    operand->updateVarViolations(parentViolation, vioDesc);
+void OpToInt::updateVarViolations(const ViolationContext& vioContext,
+                                  ViolationContainer& vioDesc) {
+    const IntViolationContext* intVioContextTest =
+        dynamic_cast<const IntViolationContext*>(&vioContext);
+    if (intVioContextTest) {
+        if ((intVioContextTest->reason ==
+                 IntViolationContext::Reason::TOO_LARGE &&
+             value == 1) ||
+            (intVioContextTest->reason ==
+                 IntViolationContext::Reason::TOO_SMALL &&
+             value == 0)) {
+            return;
+        }
+    }
+    operand->updateVarViolations(vioContext, vioDesc);
 }
 
 void OpToInt::copy(OpToInt& newOp) const { newOp.value = value; }

@@ -10,8 +10,8 @@ void OpSetNotEq::reevaluate() {
         (left->view().cachedHashTotal == right->view().cachedHashTotal) ? 1 : 0;
 }
 
-void OpSetNotEq::updateVarViolations(UInt,
-                                            ViolationContainer& vioDesc) {
+void OpSetNotEq::updateVarViolations(const ViolationContext&,
+                                     ViolationContainer& vioDesc) {
     left->updateVarViolations(violation, vioDesc);
     right->updateVarViolations(violation, vioDesc);
 }

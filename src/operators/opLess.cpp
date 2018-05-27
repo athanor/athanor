@@ -6,11 +6,24 @@ void OpLess::reevaluate() {
     violation = abs(min<Int>(diff, 0));
 }
 
-void OpLess::updateVarViolations(UInt, ViolationContainer& vioDesc) {
-    left->updateVarViolations(violation, vioDesc);
-    right->updateVarViolations(violation, vioDesc);
+void OpLess::updateVarViolations(const ViolationContext&,
+                                 ViolationContainer& vioDesc) {
+    if (violation == 0) {
+        return;
+    } else if (allOperandsAreDefined()) {
+        left->updateVarViolations(
+            IntViolationContext(violation,
+                                IntViolationContext::Reason::TOO_LARGE),
+            vioDesc);
+        right->updateVarViolations(
+            IntViolationContext(violation,
+                                IntViolationContext::Reason::TOO_SMALL),
+            vioDesc);
+    } else {
+        left->updateVarViolations(violation, vioDesc);
+        right->updateVarViolations(violation, vioDesc);
+    }
 }
-
 void OpLess::copy(OpLess& newOp) const { newOp.violation = violation; }
 
 ostream& OpLess::dumpState(ostream& os) const {

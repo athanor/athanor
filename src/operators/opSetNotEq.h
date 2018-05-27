@@ -16,8 +16,8 @@ struct OpSetNotEq : public SimpleBinaryOperator<BoolView, SetView, OpSetNotEq> {
                                OpSetNotEq>::SimpleBinaryOperator;
 
     void reevaluate();
-    void updateVarViolations(UInt parentViolation,
-                                    ViolationContainer& vioDesc) final;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer& vioDesc) final;
     void copy(OpSetNotEq& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
 };

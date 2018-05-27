@@ -148,8 +148,8 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
     void memberHasBecomeDefined(UInt) final { shouldNotBeCalledPanic; }
 };
 
-void OpOr::updateVarViolations(const UInt,
-                                      ViolationContainer& vioDesc) {
+void OpOr::updateVarViolations(const ViolationContext&,
+                               ViolationContainer& vioDesc) {
     for (auto& operandChild : operand->view().getMembers<BoolView>()) {
         operandChild->updateVarViolations(violation, vioDesc);
     }

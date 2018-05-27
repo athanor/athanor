@@ -17,8 +17,8 @@ struct OpProd : public SimpleUnaryOperator<IntView, SequenceView, OpProd> {
     using SimpleUnaryOperator<IntView, SequenceView,
                               OpProd>::SimpleUnaryOperator;
     void reevaluate();
-    void updateVarViolations(UInt parentViolation,
-                                    ViolationContainer& vioDesc) final;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer& vioDesc) final;
     void copy(OpProd& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
     bool optimiseImpl();

@@ -38,7 +38,7 @@ struct SetTrigger : public virtual TriggerBase {
 };
 struct SetView : public ExprInterface<SetView> {
     friend SetValue;
-    std::unordered_map<UInt, UInt> hashIndexMap;
+    std::unordered_map<HashType, UInt> hashIndexMap;
     AnyExprVec members;
     HashType cachedHashTotal = 0;
     HashType hashOfPossibleChange;

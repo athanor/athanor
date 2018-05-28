@@ -239,6 +239,7 @@ void sequencePositionsSwapGenImpl(const SequenceDomain& domain,
             bool success;
             UInt index1, index2;
             do {
+                ++params.stats.minorNodeCount;
                 index1 = globalRandom<UInt>(0, val.numberElements() - 2);
                 index2 =
                     globalRandom<UInt>(index1 + 1, val.numberElements() - 1);

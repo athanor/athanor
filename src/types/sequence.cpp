@@ -87,6 +87,7 @@ void matchInnerType(const SequenceDomain& domain, SequenceValue& target) {
             target.setInnerType<typename AssociatedViewType<
                 typename AssociatedValueType<typename BaseType<decltype(
                     innerDomainImpl)>::element_type>::type>::type>();
+            target.injective = domain.injective;
         },
         domain.inner);
 }

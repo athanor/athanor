@@ -24,6 +24,8 @@ void assignRandomValueInDomainImpl(const SequenceDomain& domain,
         auto newMember = constructValueFromDomain(*innerDomainPtr);
         assignRandomValueInDomain(*innerDomainPtr, *newMember, stats);
         val.addMember(val.numberElements(), newMember);
+        // add member may reject elements, not to worry, while loop will simply
+        // continue
     }
 }
 
@@ -216,6 +218,60 @@ void sequenceRemoveGen(const SequenceDomain& domain,
         domain.inner);
 }
 
+template <typename InnerDomainPtrType>
+void sequencePositionsSwapGenImpl(const SequenceDomain& domain,
+                                  InnerDomainPtrType& innerDomainPtr,
+                                  std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+
+    neighbourhoods.emplace_back(
+        "sequencePositionsSwap",
+        [&domain, &innerDomainPtr](NeighbourhoodParams& params) {
+            auto& val = *mpark::get<ValRef<SequenceValue>>(params.primary);
+            if (val.numberElements() < 2) {
+                ++params.stats.minorNodeCount;
+                return;
+            }
+            int numberTries = 0;
+            const int tryLimit = params.parentCheckTryLimit;
+            debug_neighbourhood_action("Looking for indices to swap");
+            bool success;
+            UInt index1, index2;
+            do {
+                index1 = globalRandom<UInt>(0, val.numberElements() - 2);
+                index2 =
+                    globalRandom<UInt>(index1 + 1, val.numberElements() - 1);
+                success = val.trySwapPositions<InnerValueType>(
+                    index1, index2,
+                    [&]() { return params.parentCheck(params.primary); });
+            } while (!success && ++numberTries < tryLimit);
+            if (!success) {
+                debug_neighbourhood_action(
+                    "Couldn't find positions to swap, number tries="
+                    << tryLimit);
+                return;
+            }
+            debug_neighbourhood_action(
+                "positions swapped: " << index1 << " and " << index2);
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                val.trySwapPositions<InnerValueType>(index1, index2,
+                                                     []() { return true; });
+            }
+        });
+}
+
+void sequencePositionsSwapGen(const SequenceDomain& domain,
+                              std::vector<Neighbourhood>& neighbourhoods) {
+    mpark::visit(
+        [&](const auto& innerDomainPtr) {
+            sequencePositionsSwapGenImpl(domain, innerDomainPtr,
+                                         neighbourhoods);
+        },
+        domain.inner);
+}
+
 void sequenceAssignRandomGen(const SequenceDomain& domain,
                              std::vector<Neighbourhood>& neighbourhoods) {
     neighbourhoods.emplace_back(
@@ -253,4 +309,5 @@ void sequenceAssignRandomGen(const SequenceDomain& domain,
 
 const NeighbourhoodVec<SequenceDomain>
     NeighbourhoodGenList<SequenceDomain>::value = {
-        sequenceLiftSingleGen, sequenceAddGen, sequenceRemoveGen};
+        sequenceLiftSingleGen, sequenceAddGen, sequenceRemoveGen,
+        sequencePositionsSwapGen};

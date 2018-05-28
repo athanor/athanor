@@ -431,14 +431,17 @@ shared_ptr<MSetDomain> parseDomainMSet(json& mSetDomainExpr,
 shared_ptr<SequenceDomain> parseDomainSequence(json& sequenceDomainExpr,
                                                ParsedModel& parsedModel) {
     SizeAttr sizeAttr = parseSizeAttr(sequenceDomainExpr[1][0], parsedModel);
-    if (sequenceDomainExpr[1][1] != "JectivityAttr_None") {
-        cerr << "Error: for the moment, given attribute must be "
-                "JectivityAttr_None.  This is not handled yet: "
+    if (sequenceDomainExpr[1][1] == "JectivityAttr_None") {
+        return make_shared<SequenceDomain>(
+            sizeAttr, parseDomain(sequenceDomainExpr[2], parsedModel));
+    } else if (sequenceDomainExpr[1][1] == "JectivityAttr_Injective") {
+        return make_shared<SequenceDomain>(
+            sizeAttr, parseDomain(sequenceDomainExpr[2], parsedModel), true);
+    } else {
+        cerr << "Not sure what this attribute for domain sequence is:\n"
              << sequenceDomainExpr[1][1] << endl;
         abort();
     }
-    return make_shared<SequenceDomain>(
-        sizeAttr, parseDomain(sequenceDomainExpr[2], parsedModel));
 }
 
 shared_ptr<TupleDomain> parseDomainTuple(json& tupleDomainExpr,

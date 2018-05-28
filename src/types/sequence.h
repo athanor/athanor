@@ -11,10 +11,13 @@
 struct SequenceDomain {
     SizeAttr sizeAttr;
     AnyDomainRef inner;
+    bool injective;
     template <typename DomainType>
-    SequenceDomain(SizeAttr sizeAttr, DomainType&& inner)
+    SequenceDomain(SizeAttr sizeAttr, DomainType&& inner,
+                   bool injective = false)
         : sizeAttr(sizeAttr),
-          inner(makeAnyDomainRef(std::forward<DomainType>(inner))) {
+          inner(makeAnyDomainRef(std::forward<DomainType>(inner))),
+          injective(injective) {
         checkMaxSize();
     }
 
@@ -53,9 +56,11 @@ struct SequenceTrigger : public virtual SequenceOuterTrigger,
 struct SequenceView : public ExprInterface<SequenceView> {
     friend SequenceValue;
     AnyExprVec members;
-    std::vector<std::shared_ptr<SequenceOuterTrigger>> triggers;
     std::vector<std::shared_ptr<SequenceMemberTrigger>> memberTriggers;
+    std::vector<std::shared_ptr<SequenceOuterTrigger>> triggers;
     SimpleCache<HashType> cachedHashTotal;
+    std::unordered_set<HashType> memberHashes;
+    bool injective = false;
     HashType hashOfPossibleChange;
     UInt numberUndefined = 0;
     debug_code(bool posSequenceValueChangeCalled = false);
@@ -81,7 +86,15 @@ struct SequenceView : public ExprInterface<SequenceView> {
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void addMember(size_t index, const ExprRef<InnerViewType>& member) {
+    inline bool addMember(size_t index, const ExprRef<InnerViewType>& member) {
+        if (injective) {
+            HashType newMemberHash = getValueHash(member);
+            if (memberHashes.count(newMemberHash)) {
+                return false;
+            } else {
+                memberHashes.insert(newMemberHash);
+            }
+        }
         auto& members = getMembers<InnerViewType>();
         members.insert(members.begin() + index, member);
         bool memberUndefined = member->isUndefined();
@@ -96,6 +109,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
             numberUndefined++;
         }
         debug_code(assertValidState());
+        return true;
     }
 
     inline void notifyMemberAdded(size_t index, const AnyExprRef& newMember) {
@@ -113,6 +127,12 @@ struct SequenceView : public ExprInterface<SequenceView> {
         debug_code(assert(index < members.size()));
         ExprRef<InnerViewType> removedMember = std::move(members[index]);
         members.erase(members.begin() + index);
+        if (injective) {
+            bool deleted =
+                memberHashes.erase(getValueHash(removedMember->view()));
+            static_cast<void>(deleted);
+            debug_code(assert(deleted));
+        }
         if (index == members.size()) {
             cachedHashTotal.applyIfValid([&](auto& value) {
                 value -= this->calcMemberHash(index, removedMember);
@@ -133,6 +153,24 @@ struct SequenceView : public ExprInterface<SequenceView> {
 
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueRemoved(index, removedMember); },
+                      triggers);
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void swapPositions(UInt index1, UInt index2) {
+        auto& members = getMembers<InnerViewType>();
+        std::swap(members[index1], members[index2]);
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            value -= this->calcMemberHash(index1, members[index2]);
+            value -= this->calcMemberHash(index2, members[index1]);
+            value += this->calcMemberHash(index1, members[index1]);
+            value += this->calcMemberHash(index2, members[index2]);
+        });
+        debug_code(assertValidState());
+    }
+
+    inline void notifyPositionsSwapped(UInt index1, UInt index2) {
+        visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
                       triggers);
     }
 
@@ -170,17 +208,8 @@ struct SequenceView : public ExprInterface<SequenceView> {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void swapAndNotify(UInt index1, UInt index2) {
-        auto& members = getMembers<InnerViewType>();
-        std::swap(members[index1], members[index2]);
-        cachedHashTotal.applyIfValid([&](auto& value) {
-            value -= this->calcMemberHash(index1, members[index2]);
-            value -= this->calcMemberHash(index2, members[index1]);
-            value += this->calcMemberHash(index1, members[index1]);
-            value += this->calcMemberHash(index2, members[index2]);
-        });
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
-                      triggers);
+        swapPositions<InnerViewType>(index1, index2);
+        notifyPositionsSwapped(index1, index2);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -218,11 +247,15 @@ struct SequenceView : public ExprInterface<SequenceView> {
     SequenceView() {}
     SequenceView(AnyExprVec members) : members(std::move(members)) {}
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void addMemberAndNotify(UInt index,
+    inline bool addMemberAndNotify(UInt index,
                                    const ExprRef<InnerViewType>& member) {
         notifyPossibleSequenceValueChange();
-        addMember(index, member);
-        notifyMemberAdded(index, getMembers<InnerViewType>().back());
+        if (addMember(index, member)) {
+            notifyMemberAdded(index, getMembers<InnerViewType>().back());
+            return true;
+        } else {
+            return false;
+        }
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -307,11 +340,15 @@ struct SequenceValue : public SequenceView, public ValBase {
     }
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline void addMember(UInt index, const ValRef<InnerValueType>& member) {
-        SequenceView::addMember(index, member.asExpr());
-        valBase(*member).container = this;
-        reassignIndicesToEnd<InnerValueType>(index);
-        debug_code(assertValidVarBases());
+    inline bool addMember(UInt index, const ValRef<InnerValueType>& member) {
+        if (SequenceView::addMember(index, member.asExpr())) {
+            valBase(*member).container = this;
+            reassignIndicesToEnd<InnerValueType>(index);
+            debug_code(assertValidVarBases());
+            return true;
+        } else {
+            return false;
+        }
     }
 
     template <typename InnerValueType, typename Func,
@@ -319,7 +356,10 @@ struct SequenceValue : public SequenceView, public ValBase {
     inline bool tryAddMember(UInt index, const ValRef<InnerValueType>& member,
                              Func&& func) {
         notifyPossibleSequenceValueChange();
-        SequenceView::addMember(index, member.asExpr());
+        bool added = SequenceView::addMember(index, member.asExpr());
+        if (!added) {
+            return false;
+        }
         if (func()) {
             valBase(*member).container = this;
             reassignIndicesToEnd<InnerValueType>(index);
@@ -374,10 +414,25 @@ struct SequenceValue : public SequenceView, public ValBase {
             typename AssociatedViewType<InnerValueType>::type>(start, end);
     }
 
-    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline void swapAndNotify(UInt index1, UInt index2) {
-        return SequenceView::swapAndNotify<
-            typename AssociatedViewType<InnerValueType>::type>(index1, index2);
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
+    inline bool trySwapPositions(UInt index1, UInt index2, Func&& func) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        notifyBeginSwaps();
+        SequenceView::swapPositions<InnerViewType>(index1, index2);
+        if (func()) {
+            auto& members = getMembers<InnerViewType>();
+            valBase(*assumeAsValue(members[index1])).id = index1;
+            valBase(*assumeAsValue(members[index2])).id = index2;
+            SequenceView::notifyPositionsSwapped(index1, index2);
+            debug_code(assertValidVarBases());
+            notifyEndSwaps();
+            return true;
+        } else {
+            SequenceView::swapPositions<InnerViewType>(index1, index2);
+            notifyEndSwaps();
+            return false;
+        }
     }
 
     template <typename InnerValueType, typename Func,

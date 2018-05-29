@@ -69,11 +69,16 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                         : globalRandom<UInt>(0, val.numberElements() - 1);
                 val.notifyPossibleSubsequenceChange<InnerValueType>(
                     indexToChange, indexToChange + 1);
-                ParentCheckCallBack parentCheck = [&](const AnyValRef&) {
-                    return val.trySubsequenceChange<InnerValueType>(
-                        indexToChange, indexToChange + 1,
-                        [&]() { return params.parentCheck(params.primary); });
-                };
+                ParentCheckCallBack parentCheck =
+                    [&](const AnyValRef& newValue) {
+                        HashType newHash = getValueHash(newValue);
+                        return !val.memberHashes.count(newHash) &&
+                               val.trySubsequenceChange<InnerValueType>(
+                                   indexToChange, indexToChange + 1, [&]() {
+                                       return params.parentCheck(
+                                           params.primary);
+                                   });
+                    };
                 bool requiresRevert = false;
                 AnyValRef changingMember =
                     val.member<InnerValueType>(indexToChange);

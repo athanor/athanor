@@ -32,6 +32,11 @@ struct SequenceDomain {
     }
 };
 
+// sequence calls getValueHash on ExprRef<T> so neeed to forward declare the
+// specialisation
+template <>
+HashType getValueHash<SequenceView>(const SequenceView& val);
+;
 struct SequenceView;
 
 struct SequenceOuterTrigger : public virtual TriggerBase {
@@ -62,6 +67,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
     std::unordered_set<HashType> memberHashes;
     bool injective = false;
     HashType hashOfPossibleChange;
+    std::vector<HashType> hashOfMembersToBeChanged;
     UInt numberUndefined = 0;
     debug_code(bool posSequenceValueChangeCalled = false);
 
@@ -183,6 +189,23 @@ struct SequenceView : public ExprInterface<SequenceView> {
             value -= hashOfPossibleChange;
             value += newHash;
         });
+        if (injective) {
+            debug_code(assert(!hashOfMembersToBeChanged.empty()));
+            for (auto& hash : hashOfMembersToBeChanged) {
+                bool deleted = memberHashes.erase(hash);
+                static_cast<void>(deleted);
+                debug_code(assert(deleted));
+            }
+            auto& members = getMembers<InnerViewType>();
+            for (size_t i = startIndex; i < endIndex; i++) {
+                HashType hash = getValueHash(members[i]->view());
+                hashOfMembersToBeChanged.push_back(hash);
+                // they are pushed back just in case they are changed again
+                bool added = memberHashes.insert(hash).second;
+                static_cast<void>(added);
+                debug_code(assert(added));
+            }
+        }
         debug_code(assertValidState());
         return newHash;
     }
@@ -275,6 +298,14 @@ struct SequenceView : public ExprInterface<SequenceView> {
             hashOfPossibleChange =
                 calcSubsequenceHash<InnerViewType>(startIndex, endIndex);
         }
+        if (injective) {
+            auto& members = getMembers<InnerViewType>();
+            hashOfMembersToBeChanged.clear();
+            for (size_t i = startIndex; i < endIndex; i++) {
+                hashOfMembersToBeChanged.push_back(
+                    getValueHash(members[i]->view()));
+            }
+        }
         visitTriggers(
             [&](auto& t) {
                 t->possibleSubsequenceChange(startIndex, endIndex);
@@ -292,10 +323,14 @@ struct SequenceView : public ExprInterface<SequenceView> {
         }
         notifySubsequenceChanged(startIndex, endIndex);
     }
+
     inline void notifyEntireSequenceChange() {
         debug_code(assert(posSequenceValueChangeCalled);
                    posSequenceValueChangeCalled = false);
         cachedHashTotal.invalidate();
+        if (injective) {
+            repopulateMemberHashes();
+        }
         visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
     }
     inline void initFrom(SequenceView&) {
@@ -319,6 +354,18 @@ struct SequenceView : public ExprInterface<SequenceView> {
                             members);
     }
     void assertValidState();
+
+   private:
+    void repopulateMemberHashes() {
+        memberHashes.clear();
+        mpark::visit(
+            [&](auto& members) {
+                for (auto& member : members) {
+                    memberHashes.insert(getValueHash(member->view()));
+                }
+            },
+            members);
+    }
 };
 
 struct SequenceValue : public SequenceView, public ValBase {

@@ -94,6 +94,18 @@ struct SequenceView : public ExprInterface<SequenceView> {
         return total;
     }
 
+    template <typename Func>
+    void visitAllMemberTriggersInRange(Func&& func, size_t startIndex,
+                                       size_t endIndex) {
+        visitTriggers(func, allMemberTriggers);
+        for (size_t i = startIndex; i < endIndex; i++) {
+            if (i >= singleMemberTriggers.size()) {
+                break;
+            }
+            visitTriggers(func, singleMemberTriggers[i]);
+        }
+    }
+
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool addMember(size_t index, const ExprRef<InnerViewType>& member) {
         if (injective) {
@@ -116,6 +128,10 @@ struct SequenceView : public ExprInterface<SequenceView> {
         }
         if (memberUndefined) {
             numberUndefined++;
+        }
+        if (index < singleMemberTriggers.size()) {
+            singleMemberTriggers.insert(singleMemberTriggers.begin() + index,
+                                        {});
         }
         debug_code(assertValidState());
         return true;
@@ -152,6 +168,9 @@ struct SequenceView : public ExprInterface<SequenceView> {
         if (removedMember->isUndefined()) {
             numberUndefined--;
         }
+        if (index < singleMemberTriggers.size()) {
+            singleMemberTriggers.erase(singleMemberTriggers.begin() + index);
+        }
         return removedMember;
     }
 
@@ -181,6 +200,16 @@ struct SequenceView : public ExprInterface<SequenceView> {
     inline void notifyPositionsSwapped(UInt index1, UInt index2) {
         visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
                       allMemberTriggers);
+        if (index1 >= singleMemberTriggers.size()) {
+            return;
+        }
+        visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
+                      singleMemberTriggers[index1]);
+        if (index2 >= singleMemberTriggers.size()) {
+            return;
+        }
+        visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
+                      singleMemberTriggers[index2]);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -216,9 +245,9 @@ struct SequenceView : public ExprInterface<SequenceView> {
     inline void notifySubsequenceChanged(UInt startIndex, UInt endIndex) {
         ignoreUnused(startIndex, endIndex);
         debug_code(assertValidState());
-        visitTriggers(
+        visitAllMemberTriggersInRange(
             [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
-            allMemberTriggers);
+            startIndex, endIndex);
     }
     inline void notifyPossibleSequenceValueChange() {
         visitTriggers([](auto& t) { t->possibleValueChange(); }, triggers);
@@ -309,11 +338,11 @@ struct SequenceView : public ExprInterface<SequenceView> {
                     getValueHash(members[i]->view()));
             }
         }
-        visitTriggers(
+        visitAllMemberTriggersInRange(
             [&](auto& t) {
                 t->possibleSubsequenceChange(startIndex, endIndex);
             },
-            allMemberTriggers);
+            startIndex, endIndex);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

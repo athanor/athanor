@@ -17,9 +17,17 @@ const View& ExprInterface<View>::view() const {
 }
 
 template <typename View, typename Trigger>
-auto addAsMemberTrigger(View& view, const std::shared_ptr<Trigger>& trigger)
-    -> decltype(view.memberTriggers, void()) {
-    view.memberTriggers.emplace_back(trigger);
+auto addAsMemberTrigger(View& view, const std::shared_ptr<Trigger>& trigger,
+                        Int memberIndex)
+    -> decltype(view.allMemberTriggers, void()) {
+    if (memberIndex == -1) {
+        view.allMemberTriggers.emplace_back(trigger);
+    } else {
+        if ((Int)view.singleMemberTriggers.size() <= memberIndex) {
+            view.singleMemberTriggers.resize(memberIndex + 1);
+        }
+        view.singleMemberTriggers[memberIndex].emplace_back(trigger);
+    }
 }
 
 template <typename... Args>
@@ -28,10 +36,10 @@ auto addAsMemberTrigger(Args&&...) {}
 template <typename View>
 void ExprInterface<View>::addTrigger(
     const std::shared_ptr<typename ExprInterface<View>::TriggerType>& trigger,
-    bool includeMembers) {
+    bool includeMembers, Int memberIndex) {
     this->view().triggers.emplace_back(trigger);
     if (includeMembers) {
-        addAsMemberTrigger(this->view(), trigger);
+        addAsMemberTrigger(this->view(), trigger, memberIndex);
     }
 }
 

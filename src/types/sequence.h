@@ -44,9 +44,6 @@ struct SequenceOuterTrigger : public virtual TriggerBase {
         UInt index, const AnyExprRef& removedValueindexOfRemovedValue) = 0;
     virtual void valueAdded(UInt indexOfRemovedValue,
                             const AnyExprRef& member) = 0;
-    virtual void beginSwaps() = 0;
-    virtual void positionsSwapped(UInt index1, UInt index2) = 0;
-    virtual void endSwaps() = 0;
     virtual void memberHasBecomeUndefined(UInt) = 0;
     virtual void memberHasBecomeDefined(UInt) = 0;
 };
@@ -54,6 +51,9 @@ struct SequenceOuterTrigger : public virtual TriggerBase {
 struct SequenceMemberTrigger : public virtual TriggerBase {
     virtual void possibleSubsequenceChange(UInt startIndex, UInt endIndex) = 0;
     virtual void subsequenceChanged(UInt startIndex, UInt endIndex) = 0;
+    virtual void beginSwaps() = 0;
+    virtual void positionsSwapped(UInt index1, UInt index2) = 0;
+    virtual void endSwaps() = 0;
 };
 
 struct SequenceTrigger : public virtual SequenceOuterTrigger,
@@ -61,8 +61,11 @@ struct SequenceTrigger : public virtual SequenceOuterTrigger,
 struct SequenceView : public ExprInterface<SequenceView> {
     friend SequenceValue;
     AnyExprVec members;
-    std::vector<std::shared_ptr<SequenceMemberTrigger>> memberTriggers;
     std::vector<std::shared_ptr<SequenceOuterTrigger>> triggers;
+
+    std::vector<std::shared_ptr<SequenceMemberTrigger>> allMemberTriggers;
+    std::vector<std::vector<std::shared_ptr<SequenceMemberTrigger>>>
+        singleMemberTriggers;
     SimpleCache<HashType> cachedHashTotal;
     std::unordered_set<HashType> memberHashes;
     bool injective = false;
@@ -177,7 +180,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
 
     inline void notifyPositionsSwapped(UInt index1, UInt index2) {
         visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
-                      triggers);
+                      allMemberTriggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -215,7 +218,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
         debug_code(assertValidState());
         visitTriggers(
             [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
-            memberTriggers);
+            allMemberTriggers);
     }
     inline void notifyPossibleSequenceValueChange() {
         visitTriggers([](auto& t) { t->possibleValueChange(); }, triggers);
@@ -223,10 +226,10 @@ struct SequenceView : public ExprInterface<SequenceView> {
     }
 
     inline void notifyBeginSwaps() {
-        visitTriggers([&](auto& t) { t->beginSwaps(); }, triggers);
+        visitTriggers([&](auto& t) { t->beginSwaps(); }, allMemberTriggers);
     }
     inline void notifyEndSwaps() {
-        visitTriggers([&](auto& t) { t->endSwaps(); }, triggers);
+        visitTriggers([&](auto& t) { t->endSwaps(); }, allMemberTriggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -310,7 +313,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
             [&](auto& t) {
                 t->possibleSubsequenceChange(startIndex, endIndex);
             },
-            memberTriggers);
+            allMemberTriggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

@@ -45,7 +45,7 @@ struct ExprInterface : public Undefinable<View> {
     virtual View& view();
     virtual const View& view() const;
     virtual void addTrigger(const std::shared_ptr<TriggerType>& trigger,
-                            bool includeMembers = true);
+                            bool includeMembers = true, Int memberIndex = -1);
     inline void evaluate() {
         if (!evaluated) {
             evaluated = true;

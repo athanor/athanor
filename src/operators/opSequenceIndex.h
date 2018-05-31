@@ -50,7 +50,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     void reevaluateDefined();
     bool optimise(PathExtension path) final;
 
-    void reattachSequenceMemberTrigger();
+    void reattachSequenceMemberTrigger(bool deleteFirst = true);
 };
 
 #endif /* SRC_OPERATORS_OPSEQUENCEINDEX_H_ */

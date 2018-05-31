@@ -316,8 +316,11 @@ struct OpSequenceIndex<SequenceMemberViewType>::IndexTrigger
 };
 
 template <typename SequenceMemberViewType>
-void OpSequenceIndex<SequenceMemberViewType>::reattachSequenceMemberTrigger() {
-    deleteTrigger(sequenceMemberTrigger);
+void OpSequenceIndex<SequenceMemberViewType>::reattachSequenceMemberTrigger(
+    bool deleteFirst) {
+    if (deleteFirst) {
+        deleteTrigger(sequenceMemberTrigger);
+    }
     sequenceMemberTrigger = make_shared<SequenceOperandTrigger>(this);
     sequenceOperand->addTrigger(sequenceMemberTrigger, true, cachedIndex);
 }
@@ -333,7 +336,7 @@ void OpSequenceIndex<SequenceMemberViewType>::startTriggering() {
             this);
         indexOperand->addTrigger(indexTrigger);
         sequenceOperand->addTrigger(sequenceTrigger, false);
-        reattachSequenceMemberTrigger();
+        reattachSequenceMemberTrigger(false);
         indexOperand->startTriggering();
         sequenceOperand->startTriggering();
     }

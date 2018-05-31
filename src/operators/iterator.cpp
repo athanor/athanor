@@ -8,10 +8,10 @@ using namespace std;
 template <typename View>
 void Iterator<View>::addTrigger(
     const shared_ptr<typename Iterator<View>::TriggerType>& trigger,
-    bool includeMembers) {
+    bool includeMembers, Int memberIndex) {
     auto otherTrigger = trigger;
     triggers.emplace_back(getTriggerBase(otherTrigger));
-    ref->addTrigger(trigger, includeMembers);
+    ref->addTrigger(trigger, includeMembers, memberIndex);
 }
 
 template <typename View>

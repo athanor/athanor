@@ -6,10 +6,11 @@ using namespace std;
 
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::addTrigger(
-    const shared_ptr<TupleMemberTriggerType>& trigger, bool includeMembers) {
+    const shared_ptr<TupleMemberTriggerType>& trigger, bool includeMembers,
+    Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));
     if (!tupleOperand->isUndefined()) {
-        getMember()->addTrigger(trigger, includeMembers);
+        getMember()->addTrigger(trigger, includeMembers, memberIndex);
     }
 }
 

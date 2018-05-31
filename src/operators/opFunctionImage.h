@@ -30,7 +30,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     OpFunctionImage(OpFunctionImage<FunctionMemberViewType>&& other);
     ~OpFunctionImage() { this->stopTriggeringOnChildren(); }
     void addTrigger(const std::shared_ptr<FunctionMemberTriggerType>& trigger,
-                    bool includeMembers) final;
+                    bool includeMembers, Int memberIndex) final;
     FunctionMemberViewType& view() final;
     const FunctionMemberViewType& view() const final;
 

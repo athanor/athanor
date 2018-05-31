@@ -12,10 +12,11 @@ using namespace std;
 
 template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::addTrigger(
-    const shared_ptr<FunctionMemberTriggerType>& trigger, bool includeMembers) {
+    const shared_ptr<FunctionMemberTriggerType>& trigger, bool includeMembers,
+    Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));
     if (locallyDefined) {
-        getMember()->addTrigger(trigger, includeMembers);
+        getMember()->addTrigger(trigger, includeMembers, memberIndex);
     }
 }
 

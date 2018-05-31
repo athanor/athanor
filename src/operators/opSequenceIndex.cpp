@@ -6,10 +6,11 @@ using namespace std;
 
 template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::addTrigger(
-    const shared_ptr<SequenceMemberTriggerType>& trigger, bool includeMembers) {
+    const shared_ptr<SequenceMemberTriggerType>& trigger, bool includeMembers,
+    Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));
     if (locallyDefined) {
-        getMember()->addTrigger(trigger, includeMembers);
+        getMember()->addTrigger(trigger, includeMembers, memberIndex);
     }
 }
 
@@ -84,11 +85,16 @@ OpSequenceIndex<SequenceMemberViewType>::OpSequenceIndex(
       defined(move(other.defined)),
       locallyDefined(move(other.locallyDefined)),
       sequenceTrigger(move(other.sequenceTrigger)),
+      sequenceMemberTrigger(move(other.sequenceMemberTrigger)),
       indexTrigger(move(other.indexTrigger)) {
     setTriggerParent(this, indexTrigger, sequenceTrigger);
 }
+
 template <typename SequenceMemberViewType>
 struct OpSequenceIndexTriggerBase {
+    typedef
+        typename OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
+            SequenceOperandTrigger;
     OpSequenceIndex<SequenceMemberViewType>* op;
     OpSequenceIndexTriggerBase(OpSequenceIndex<SequenceMemberViewType>* op)
         : op(op) {}
@@ -110,7 +116,11 @@ struct OpSequenceIndexTriggerBase {
         } else {
             return !op->defined;
         }
+        if (!wasDefined && op->locallyDefined) {
+            op->reattachSequenceMemberTrigger();
+        }
     }
+
     inline void hasBecomeUndefinedBase() {
         op->locallyDefined = false;
         if (!op->defined) {
@@ -124,6 +134,7 @@ struct OpSequenceIndexTriggerBase {
         if (!op->defined) {
             return;
         }
+        op->reattachSequenceMemberTrigger();
         visitTriggers(
             [&](auto& t) {
                 t->hasBecomeDefined();
@@ -203,9 +214,9 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         if (!op->locallyDefined) {
             return;
         }
-        if (((Int)index1 != op->cachedIndex &&
-             (Int)index2 != op->cachedIndex) ||
-            index1 == index2) {
+        debug_code(assert((Int)index1 == op->cachedIndex ||
+                          (Int)index2 == op->cachedIndex));
+        if (index1 == index2) {
             return;
         }
         if ((Int)index1 != op->cachedIndex) {
@@ -229,10 +240,11 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
 
     void reattachTrigger() final {
         deleteTrigger(op->sequenceTrigger);
-        auto trigger = make_shared<
-            OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger>(
-            op);
+        auto trigger = make_shared<SequenceOperandTrigger>(op);
         op->sequenceOperand->addTrigger(trigger, false);
+        if (op->locallyDefined) {
+            op->reattachSequenceMemberTrigger();
+        }
         op->sequenceTrigger = trigger;
     }
 
@@ -277,6 +289,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::IndexTrigger
     void valueChanged() final {
         op->cachedIndex = op->indexOperand->view().value - 1;
         if (!eventForwardedAsDefinednessChange()) {
+            op->reattachSequenceMemberTrigger();
             visitTriggers(
                 [&](auto& t) {
                     t->valueChanged();
@@ -303,6 +316,13 @@ struct OpSequenceIndex<SequenceMemberViewType>::IndexTrigger
 };
 
 template <typename SequenceMemberViewType>
+void OpSequenceIndex<SequenceMemberViewType>::reattachSequenceMemberTrigger() {
+    deleteTrigger(sequenceMemberTrigger);
+    sequenceMemberTrigger = make_shared<SequenceOperandTrigger>(this);
+    sequenceOperand->addTrigger(sequenceMemberTrigger, true, cachedIndex);
+}
+
+template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::startTriggering() {
     if (!indexTrigger) {
         indexTrigger =
@@ -313,6 +333,7 @@ void OpSequenceIndex<SequenceMemberViewType>::startTriggering() {
             this);
         indexOperand->addTrigger(indexTrigger);
         sequenceOperand->addTrigger(sequenceTrigger, false);
+        reattachSequenceMemberTrigger();
         indexOperand->startTriggering();
         sequenceOperand->startTriggering();
     }
@@ -323,10 +344,13 @@ void OpSequenceIndex<SequenceMemberViewType>::stopTriggeringOnChildren() {
     if (indexTrigger) {
         deleteTrigger(indexTrigger);
         deleteTrigger(sequenceTrigger);
+        deleteTrigger(sequenceMemberTrigger);
         indexTrigger = nullptr;
         sequenceTrigger = nullptr;
+        sequenceMemberTrigger = nullptr;
     }
 }
+
 template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::stopTriggering() {
     if (indexTrigger) {

@@ -18,6 +18,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     bool defined = false;
     bool locallyDefined = false;
     std::shared_ptr<SequenceOperandTrigger> sequenceTrigger;
+    std::shared_ptr<SequenceOperandTrigger> sequenceMemberTrigger;
     std::shared_ptr<IndexTrigger> indexTrigger;
     OpSequenceIndex(ExprRef<SequenceView> sequenceOperand,
                     ExprRef<IntView> indexOperand)
@@ -27,7 +28,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     OpSequenceIndex(OpSequenceIndex<SequenceMemberViewType>&& other);
     ~OpSequenceIndex() { this->stopTriggeringOnChildren(); }
     void addTrigger(const std::shared_ptr<SequenceMemberTriggerType>& trigger,
-                    bool includeMembers) final;
+                    bool includeMembers, Int memberIndex) final;
     SequenceMemberViewType& view() final;
     const SequenceMemberViewType& view() const final;
 
@@ -48,6 +49,8 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     const ExprRef<SequenceMemberViewType>& getMember() const;
     void reevaluateDefined();
     bool optimise(PathExtension path) final;
+
+    void reattachSequenceMemberTrigger();
 };
 
 #endif /* SRC_OPERATORS_OPSEQUENCEINDEX_H_ */

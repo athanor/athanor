@@ -3,6 +3,7 @@
 #include <cassert>
 #include <unordered_map>
 #include "operators/flatten.h"
+#include "operators/previousValueCache.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
@@ -11,7 +12,7 @@ using OperandsSequenceTrigger = OperatorTrates<OpSum>::OperandsSequenceTrigger;
 class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
    public:
     Int previousValue;
-    unordered_map<UInt, Int> previousValues;
+    PreviousValueCache<Int> previousValues;
     OpSum* op;
     OperandsSequenceTrigger(OpSum* op) : op(op) {}
     void valueAdded(UInt, const AnyExprRef& exprIn) final {
@@ -34,6 +35,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     void valueRemoved(UInt, const AnyExprRef& exprIn) final {
+        previousValues.clear();
         if (!op->evaluated) {
             return;
         }
@@ -53,7 +55,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         });
     }
 
-    inline void beginSwaps() final {}
+    inline void beginSwaps() final { previousValues.clear(); }
     inline void endSwaps() final {}
     inline void positionsSwapped(UInt, UInt) {}
 
@@ -72,7 +74,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         }
 
         if (endIndex - startIndex == 1) {
-            previousValues[startIndex] = getValueCatchUndef(startIndex);
+            previousValues.store(startIndex, getValueCatchUndef(startIndex));
             return;
         }
 
@@ -83,23 +85,23 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
+        debug_log("subsequence changed " << startIndex << "," << endIndex);
         if (!op->evaluated) {
             return;
         }
 
         Int newValue = 0;
+        for (size_t i = startIndex; i < endIndex; i++) {
+            newValue += getValueCatchUndef(i);
+        }
         Int valueToRemove;
         if (endIndex - startIndex == 1) {
-            debug_code(assert(previousValues.count(startIndex)));
-            valueToRemove = previousValues[startIndex];
-            previousValues.erase(startIndex);
+            valueToRemove = previousValues.getAndSet(startIndex, newValue);
+            ;
         } else {
             valueToRemove = previousValue;
         }
 
-        for (size_t i = startIndex; i < endIndex; i++) {
-            newValue += getValueCatchUndef(i);
-        }
         if (!op->isDefined()) {
             op->value -= valueToRemove;
             op->value += newValue;
@@ -113,6 +115,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     }
     void possibleValueChange() final {}
     void valueChanged() final {
+        previousValues.clear();
         if (!op->isDefined()) {
             op->reevaluate();
             if (op->isDefined()) {
@@ -138,15 +141,17 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         op->operand->addTrigger(trigger);
         op->operandTrigger = trigger;
     }
-    void hasBecomeUndefined() final { op->setDefined(false, true); }
+    void hasBecomeUndefined() final {
+        previousValues.clear();
+        op->setDefined(false, true);
+    }
     void hasBecomeDefined() final { op->setDefined(true, true); }
 
     void memberHasBecomeUndefined(UInt index) {
         if (!op->evaluated) {
             return;
         }
-        debug_code(assert(previousValues.count(index)));
-        op->value -= previousValues[index];
+        op->value -= previousValues.get(index);
         if (op->operand->view().numberUndefined == 1) {
             op->setDefined(false, false);
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },

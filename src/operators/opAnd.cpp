@@ -3,6 +3,7 @@
 #include <cassert>
 #include <unordered_map>
 #include "operators/flatten.h"
+#include "operators/previousValueCache.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
@@ -10,11 +11,12 @@ using namespace std;
 using OperandsSequenceTrigger = OperatorTrates<OpAnd>::OperandsSequenceTrigger;
 class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
    public:
-    unordered_map<UInt, UInt> previousViolations;
+    PreviousValueCache<UInt> previousViolations;
     UInt previousViolation;
     OpAnd* op;
     OperandsSequenceTrigger(OpAnd* op) : op(op) {}
     void valueAdded(UInt index, const AnyExprRef& exprIn) final {
+        previousViolations.clear();
         auto& expr = mpark::get<ExprRef<BoolView>>(exprIn);
         shiftIndicesUp(index, op->operand->view().numberElements(),
                        op->violatingOperands);
@@ -29,6 +31,7 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     void valueRemoved(UInt index, const AnyExprRef& exprIn) final {
+        previousViolations.clear();
         const auto& expr = mpark::get<ExprRef<BoolView>>(exprIn);
         UInt violationOfRemovedExpr = expr->view().violation;
         debug_code(assert((op->violatingOperands.count(index) &&
@@ -44,8 +47,8 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
         });
     }
 
-    inline void beginSwaps() final {}
-    inline void endSwaps() final {}
+    inline void beginSwaps() final { previousViolations.clear(); }
+    inline void endSwaps() final { previousViolations.clear(); }
     inline void positionsSwapped(UInt index1, UInt index2) {
         if (op->violatingOperands.count(index1)) {
             if (!op->violatingOperands.count(index2)) {
@@ -62,11 +65,11 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
     inline void possibleSubsequenceChange(UInt startIndex,
                                           UInt endIndex) final {
         if (endIndex - startIndex == 1) {
-            previousViolations[startIndex] =
-                op->operand->view()
-                    .getMembers<BoolView>()[startIndex]
-                    ->view()
-                    .violation;
+            previousViolations.store(startIndex,
+                                     op->operand->view()
+                                         .getMembers<BoolView>()[startIndex]
+                                         ->view()
+                                         .violation);
             return;
         }
         previousViolation = 0;
@@ -77,14 +80,6 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         UInt newViolation = 0;
-        UInt violationToRemove;
-        if (endIndex - startIndex == 1) {
-            debug_code(assert(previousViolations.count(startIndex)));
-            violationToRemove = previousViolations[startIndex];
-            previousViolations.erase(startIndex);
-        } else {
-            violationToRemove = previousViolation;
-        }
         for (size_t i = startIndex; i < endIndex; i++) {
             UInt operandViolation =
                 op->operand->view().getMembers<BoolView>()[i]->view().violation;
@@ -95,6 +90,14 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
                 op->violatingOperands.erase(i);
             }
         }
+        UInt violationToRemove;
+        if (endIndex - startIndex == 1) {
+            violationToRemove =
+                previousViolations.getAndSet(startIndex, newViolation);
+        } else {
+            violationToRemove = previousViolation;
+        }
+
         op->changeValue([&]() {
             op->violation -= violationToRemove;
             op->violation += newViolation;
@@ -104,6 +107,7 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
 
     void possibleValueChange() final {}
     void valueChanged() final {
+        previousViolations.clear();
         op->changeValue([&]() {
             op->reevaluate();
             return true;
@@ -117,7 +121,10 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
         op->operandTrigger = trigger;
     }
 
-    void hasBecomeUndefined() final { op->setDefined(false, true); }
+    void hasBecomeUndefined() final {
+        previousViolations.clear();
+        op->setDefined(false, true);
+    }
     void hasBecomeDefined() final { op->setDefined(true, true); }
     void memberHasBecomeUndefined(UInt) final { shouldNotBeCalledPanic; }
     void memberHasBecomeDefined(UInt) final { shouldNotBeCalledPanic; }

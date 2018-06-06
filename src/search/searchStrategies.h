@@ -8,6 +8,7 @@
 #include "types/allTypes.h"
 void dumpVarViolations(const ViolationContainer& vioDesc);
 extern bool sigIntActivated, sigAlarmActivated;
+extern u_int64_t iterationLimit;
 inline bool alwaysTrue(const AnyValRef&) { return true; }
 
 template <typename NeighbourhoodSelectionStrategy>
@@ -189,6 +190,10 @@ class HillClimber {
         }
         if (sigAlarmActivated) {
             std::cout << "timeout\n";
+            return true;
+        }
+        if (iterationLimit != 0 && stats.numberIterations >= iterationLimit) {
+            std::cout << "iteration limit reached\n";
             return true;
         }
         if (stats.numberIterations - numberItersAtLastEvent > 120000) {

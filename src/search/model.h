@@ -121,8 +121,8 @@ class ModelBuilder {
 
     inline bool constraintHandledByDefine(ExprRef<BoolView>& constraint) {
         BoolView* eqExprTester = &(constraint->view());
-        OpIntEq* opIntEq;
-        if ((opIntEq = dynamic_cast<OpIntEq*>(eqExprTester)) != NULL) {
+        OpIntEq* opIntEq = dynamic_cast<OpIntEq*>(eqExprTester);
+        if (opIntEq != NULL) {
             ValRef<IntValue> definedVar = getIfNonConstValue(opIntEq->left);
             if (definedVar && valBase(definedVar).container != &definedPool) {
                 define(definedVar, opIntEq->right);
@@ -151,6 +151,13 @@ class ModelBuilder {
                 var, model.definingExpressions.at(valBase(var).id));
             model.csp->operand = findAndReplace(model.csp->operand, func);
             model.objective = findAndReplace(model.objective, func);
+            for (auto& varIdExprPair : model.definingExpressions) {
+                if (varIdExprPair.first != valBase(var).id) {
+                    mpark::visit(
+                        [&](auto& expr) { expr = findAndReplace(expr, func); },
+                        varIdExprPair.second);
+                }
+            }
         }
     }
 

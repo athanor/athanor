@@ -24,23 +24,15 @@ template <typename TriggerType>
 struct ExprTrigger
     : public OpSequenceLit::ExprTriggerBase,
       public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>> {
+    typedef typename AssociatedViewType<TriggerType>::type View;
     using ExprTriggerBase::ExprTriggerBase;
     void adapterPossibleValueChange() {
-        mpark::visit(
-            [&](auto& members) {
-                this->op->template notifyPossibleSubsequenceChange<viewType(
-                    members)>(this->index, this->index + 1);
-            },
-            this->op->members);
+        this->op->template notifyPossibleSubsequenceChange<View>(
+            this->index, this->index + 1);
     }
     void adapterValueChanged() {
-        mpark::visit(
-            [&](auto& members) {
-                this->op
-                    ->template changeSubsequenceAndNotify<viewType(members)>(
-                        this->index, this->index + 1);
-            },
-            this->op->members);
+        this->op->template changeSubsequenceAndNotify<View>(this->index,
+                                                            this->index + 1);
     }
 
     void reattachTrigger() final {
@@ -53,20 +45,13 @@ struct ExprTrigger
     }
 
     void adapterHasBecomeDefined() {
-        mpark::visit(
-            [&](auto& members) {
-                op->template notifyMemberDefined<viewType(members)>(index);
-            },
-            op->members);
+        op->template notifyMemberDefined<View>(index);
     }
+
     void adapterHasBecomeUndefined() {
-        mpark::visit(
-            [&](auto& members) {
-                op->template notifyMemberUndefined<viewType(members)>(index);
-            },
-            op->members);
+        op->template notifyMemberUndefined<View>(index);
     }
-};
+};  // namespace
 }  // namespace
 OpSequenceLit::OpSequenceLit(OpSequenceLit&& other)
     : SequenceView(std::move(other)),

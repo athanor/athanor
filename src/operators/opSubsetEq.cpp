@@ -7,8 +7,8 @@ using namespace std;
 
 void OpSubsetEq::reevaluate() {
     violation = 0;
-    for (auto& hashIndexPair : left->view().hashIndexMap) {
-        violation += !right->view().hashIndexMap.count(hashIndexPair.first);
+    for (auto& hash : left->view().memberHashes) {
+        violation += !right->view().memberHashes.count(hash);
     }
 }
 
@@ -20,7 +20,7 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
    public:
     LeftTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(UInt, HashType hash) final {
-        if (!op->right->view().hashIndexMap.count(hash)) {
+        if (!op->right->view().memberHashes.count(hash)) {
             op->changeValue([&]() {
                 --op->violation;
                 return true;
@@ -30,7 +30,7 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
 
     inline void valueAdded(const AnyExprRef& member) final {
         HashType hash = getValueHash(member);
-        if (!op->right->view().hashIndexMap.count(hash)) {
+        if (!op->right->view().memberHashes.count(hash)) {
             op->changeValue([&]() {
                 ++op->violation;
                 return true;
@@ -70,7 +70,7 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
 
     RightTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemoved(UInt, HashType hash) final {
-        if (op->left->view().hashIndexMap.count(hash)) {
+        if (op->left->view().memberHashes.count(hash)) {
             op->changeValue([&]() {
                 ++op->violation;
                 return true;
@@ -80,7 +80,7 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
 
     inline void valueAdded(const AnyExprRef& member) final {
         HashType hash = getValueHash(member);
-        if (op->left->view().hashIndexMap.count(hash)) {
+        if (op->left->view().memberHashes.count(hash)) {
             op->changeValue([&]() {
                 --op->violation;
                 return true;

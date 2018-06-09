@@ -50,7 +50,7 @@ void deepCopyImpl(const SetValue& src,
         }
     }
     for (auto& member : srcMemnersImpl) {
-        if (!target.hashIndexMap.count(getValueHash(member->view()))) {
+        if (!target.memberHashes.count(getValueHash(member->view()))) {
             target.addMember(deepCopy(*assumeAsValue(member)));
         }
     }
@@ -107,18 +107,13 @@ void reset(SetValue& val) {
 }
 
 template <typename InnerViewType>
-void normaliseImpl(SetValue& val, ExprRefVec<InnerViewType>& valMembersImpl) {
+void normaliseImpl(SetValue&, ExprRefVec<InnerViewType>& valMembersImpl) {
     for (auto& v : valMembersImpl) {
         normalise(*assumeAsValue(v));
     }
     sort(valMembersImpl.begin(), valMembersImpl.end(), [](auto& u, auto& v) {
         return smallerValue(*assumeAsValue(u), *assumeAsValue(v));
     });
-
-    for (size_t i = 0; i < valMembersImpl.size(); i++) {
-        auto& member = valMembersImpl[i];
-        val.hashIndexMap[getValueHash(member->view())] = i;
-    }
 }
 
 template <>
@@ -188,8 +183,8 @@ void SetView::assertValidState() {
             std::unordered_set<UInt> seenHashes;
             bool success = true;
             UInt calculatedTotal = 0;
-            if (hashIndexMap.size() != valMembersImpl.size()) {
-                cerr << "hashIndexMap and members differ in size.\n";
+            if (memberHashes.size() != valMembersImpl.size()) {
+                cerr << "memberHashes and members differ in size.\n";
                 success = false;
             } else {
                 for (size_t i = 0; i < valMembersImpl.size(); i++) {
@@ -201,18 +196,10 @@ void SetView::assertValidState() {
                         success = false;
                         break;
                     }
-                    if (!(hashIndexMap.count(memberHash))) {
+                    if (!(memberHashes.count(memberHash))) {
                         cerr << "Error: member " << member->view()
                              << " has no corresponding hash in "
-                                "hashIndexMap.\n";
-                        success = false;
-                        break;
-                    }
-                    if (hashIndexMap.at(memberHash) != i) {
-                        cerr << "Error: member " << member->view()
-                             << "  is at index " << i
-                             << " but the hashIndexMap says it should be at "
-                             << hashIndexMap.at(memberHash) << endl;
+                                "memberHashes.\n";
                         success = false;
                         break;
                     }
@@ -229,7 +216,7 @@ void SetView::assertValidState() {
             }
             if (!success) {
                 cerr << "Members: " << valMembersImpl << endl;
-                cerr << "memberHashes: " << hashIndexMap << endl;
+                cerr << "memberHashes: " << memberHashes << endl;
                 assert(false);
             }
         },
@@ -258,7 +245,7 @@ void SetValue::assertValidVarBases() {
             }
             if (!success) {
                 cerr << "Members: " << valMembersImpl << endl;
-                cerr << "memberHashes: " << hashIndexMap << endl;
+                cerr << "memberHashes: " << memberHashes << endl;
                 this->printVarBases();
                 assert(false);
             }

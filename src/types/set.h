@@ -38,7 +38,7 @@ struct SetTrigger : public virtual TriggerBase {
 };
 struct SetView : public ExprInterface<SetView> {
     friend SetValue;
-    std::unordered_map<HashType, UInt> hashIndexMap;
+    std::unordered_set<HashType> memberHashes;
     AnyExprVec members;
     HashType cachedHashTotal = 0;
     HashType hashOfPossibleChange;
@@ -54,9 +54,9 @@ struct SetView : public ExprInterface<SetView> {
         }
 
         HashType hash = getValueHash(member->view());
-        debug_code(assert(!hashIndexMap.count(hash)));
+        debug_code(assert(!memberHashes.count(hash)));
         members.emplace_back(member);
-        hashIndexMap.emplace(hash, members.size() - 1);
+        memberHashes.insert(hash);
         cachedHashTotal += mix(hash);
         debug_code(assertValidState());
         return true;
@@ -75,17 +75,12 @@ struct SetView : public ExprInterface<SetView> {
         debug_code(assert(index < members.size()));
 
         HashType hash = getValueHash(members[index]->view());
-        debug_code(assert(hashIndexMap.count(hash)));
-        hashIndexMap.erase(hash);
+        debug_code(assert(memberHashes.count(hash)));
+        memberHashes.erase(hash);
         cachedHashTotal -= mix(hash);
         auto removedMember = std::move(members[index]);
         members[index] = std::move(members.back());
         members.pop_back();
-        if (index < members.size()) {
-            debug_code(assert(
-                hashIndexMap.count(getValueHash(members[index]->view()))));
-            hashIndexMap[getValueHash(members[index]->view())] = index;
-        }
         return removedMember;
     }
 
@@ -103,9 +98,9 @@ struct SetView : public ExprInterface<SetView> {
         auto& members = getMembers<InnerViewType>();
         HashType newHash = getValueHash(members[index]->view());
         if (newHash != oldHash) {
-            debug_code(assert(!hashIndexMap.count(newHash)));
-            hashIndexMap[newHash] = hashIndexMap[oldHash];
-            hashIndexMap.erase(oldHash);
+            debug_code(assert(!memberHashes.count(newHash)));
+            memberHashes.erase(oldHash);
+            memberHashes.insert(newHash);
             cachedHashTotal -= mix(oldHash);
             cachedHashTotal += mix(newHash);
         }
@@ -125,7 +120,7 @@ struct SetView : public ExprInterface<SetView> {
         mpark::visit(
             [&](auto& membersImpl) {
                 cachedHashTotal = 0;
-                hashIndexMap.clear();
+                memberHashes.clear();
                 membersImpl.clear();
 
             },
@@ -188,12 +183,6 @@ struct SetView : public ExprInterface<SetView> {
         visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
     }
 
-    inline void initFrom(SetView& other) {
-        hashIndexMap = other.hashIndexMap;
-        members = other.members;
-        cachedHashTotal = other.cachedHashTotal;
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
         return mpark::get<ExprRefVec<InnerViewType>>(members);
@@ -210,10 +199,10 @@ struct SetView : public ExprInterface<SetView> {
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool containsMember(const InnerViewType& member) const {
-        return hashIndexMap.count(getValueHash(member));
+        return memberHashes.count(getValueHash(member));
     }
 
-    inline UInt numberElements() const { return hashIndexMap.size(); }
+    inline UInt numberElements() const { return memberHashes.size(); }
     void assertValidState();
 };
 
@@ -294,9 +283,7 @@ struct SetValue : public SetView, public ValBase {
             SetView::addMember<InnerViewType>(removedMember.asExpr());
             auto& members = getMembers<InnerViewType>();
             std::swap(members[index], members.back());
-            hashIndexMap[getValueHash(members[index]->view())] = index;
-            hashIndexMap[getValueHash(members.back()->view())] =
-                members.size() - 1;
+            memberHashes.insert(getValueHash(members[index]->view()));
             debug_code(assertValidState());
             debug_code(assertValidVarBases());
             return std::make_pair(false, ValRef<InnerValueType>(nullptr));
@@ -321,8 +308,8 @@ struct SetValue : public SetView, public ValBase {
             return true;
         } else {
             if (oldHash != hashOfPossibleChange) {
-                hashIndexMap[oldHash] = hashIndexMap[hashOfPossibleChange];
-                hashIndexMap.erase(hashOfPossibleChange);
+                memberHashes.insert(oldHash);
+                memberHashes.erase(hashOfPossibleChange);
                 cachedHashTotal -= mix(hashOfPossibleChange);
                 cachedHashTotal += mix(oldHash);
                 hashOfPossibleChange = oldHash;

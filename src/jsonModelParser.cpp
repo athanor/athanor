@@ -132,6 +132,36 @@ AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {
     }
 }
 
+pair<shared_ptr<SetDomain>, ExprRef<SetView>> parseOpSetLit(
+    json& setExpr, ParsedModel& parsedModel) {
+    if (setExpr.size() == 0) {
+        cerr << "Not sure how to work out type of empty setyet, will handle "
+                "this later.";
+        todoImpl();
+    }
+    AnyExprVec newSetMembers;
+    AnyDomainRef innerDomain = fakeIntDomain;
+    bool first = true;
+    for (auto& elementExpr : setExpr) {
+        auto expr = parseExpr(elementExpr, parsedModel);
+        if (first) {
+            innerDomain = expr.first;
+        }
+        mpark::visit(
+            [&](auto& member) {
+                if (first) {
+                    newSetMembers.emplace<ExprRefVec<viewType(member)>>();
+                }
+                mpark::get<ExprRefVec<viewType(member)>>(newSetMembers)
+                    .emplace_back(move(member));
+            },
+            expr.second);
+        first = false;
+    }
+    return make_pair(fakeSetDomain(innerDomain),
+                     OpMaker<OpSetLit>::make(move(newSetMembers)));
+}
+
 pair<shared_ptr<SetDomain>, ExprRef<SetView>> parseConstantSet(
     json& essenceSetConstant, ParsedModel& parsedModel) {
     ValRef<SetValue> val = make<SetValue>();
@@ -975,6 +1005,7 @@ pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseOpToInt(
         [&](auto&) { cerr << "OpToInt requires a bool operand.\n"; });
     return make_pair(fakeIntDomain, OpMaker<OpToInt>::make(boolExpr));
 }
+
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     json& essenceExpr, ParsedModel& parsedModel) {
     if (essenceExpr.count("Op")) {

@@ -15,6 +15,7 @@ class FastIterableIntSet {
         : minElement(minElement),
           elementIndexes((maxElement + 1) - minElement, NOT_PRESENT) {}
 
+    FastIterableIntSet() : FastIterableIntSet(0, 0) {}
     inline void increaseMaxElement(size_t maxElement) {
         if ((maxElement + 1) - minElement < elementIndexes.size()) {
             return;

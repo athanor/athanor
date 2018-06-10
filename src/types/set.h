@@ -45,7 +45,6 @@ struct SetView : public ExprInterface<SetView> {
     std::vector<std::shared_ptr<SetTrigger>> triggers;
     debug_code(bool posSetValueChangeCalled = false);
 
-   private:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool addMember(const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();

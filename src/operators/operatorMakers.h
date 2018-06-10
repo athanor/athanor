@@ -129,5 +129,10 @@ template <>
 struct OpMaker<OpMinus> {
     static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
+struct OpSetLit;
+template <>
+struct OpMaker<OpSetLit> {
+    static ExprRef<SetView> make(AnyExprVec operands);
+};
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

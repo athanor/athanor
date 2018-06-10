@@ -52,7 +52,7 @@ void Iterator<View>::updateVarViolations(const ViolationContext& vioContext,
 }
 
 template <typename View>
-ExprRef<View> Iterator<View>::deepCopySelfForUnroll(
+ExprRef<View> Iterator<View>::deepCopySelfForUnrollImpl(
     const ExprRef<View>& self, const AnyIterRef& iterator) const {
     const auto iteratorPtr =
         mpark::get_if<IterRef<View>>(&iterator.asVariant());

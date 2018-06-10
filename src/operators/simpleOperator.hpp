@@ -48,14 +48,13 @@ void SimpleBinaryOperator<View, OperandView, Derived>::stopTriggering() {
 
 template <typename View, typename OperandView, typename Derived>
 ExprRef<View>
-SimpleBinaryOperator<View, OperandView, Derived>::deepCopySelfForUnroll(
+SimpleBinaryOperator<View, OperandView, Derived>::deepCopySelfForUnrollImpl(
     const ExprRef<View>&, const AnyIterRef& iterator) const {
     auto newOp = std::make_shared<Derived>(
         left->deepCopySelfForUnroll(left, iterator),
         right->deepCopySelfForUnroll(right, iterator));
     this->copyDefinedStatus(*newOp);
     derived().copy(*newOp);
-    newOp->evaluated = this->evaluated;
     return newOp;
 }
 
@@ -135,13 +134,12 @@ void SimpleUnaryOperator<View, OperandView, Derived>::stopTriggering() {
 
 template <typename View, typename OperandView, typename Derived>
 ExprRef<View>
-SimpleUnaryOperator<View, OperandView, Derived>::deepCopySelfForUnroll(
+SimpleUnaryOperator<View, OperandView, Derived>::deepCopySelfForUnrollImpl(
     const ExprRef<View>&, const AnyIterRef& iterator) const {
     auto newOp = std::make_shared<Derived>(
         operand->deepCopySelfForUnroll(operand, iterator));
     this->copyDefinedStatus(*newOp);
     derived().copy(*newOp);
-    newOp->evaluated = this->evaluated;
     return newOp;
 }
 

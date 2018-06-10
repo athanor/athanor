@@ -16,7 +16,8 @@ struct OperatorTrates<OpSum> {
 struct OpSum : public SimpleUnaryOperator<IntView, SequenceView, OpSum> {
     using SimpleUnaryOperator<IntView, SequenceView,
                               OpSum>::SimpleUnaryOperator;
-
+    bool evaluationComplete = false;
+    OpSum(OpSum&& other);
     void reevaluate();
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer& vioDesc) final;

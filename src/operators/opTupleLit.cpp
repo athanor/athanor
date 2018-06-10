@@ -93,7 +93,7 @@ void OpTupleLit::stopTriggering() {
 void OpTupleLit::updateVarViolations(const ViolationContext&,
                                      ViolationContainer&) {}
 
-ExprRef<TupleView> OpTupleLit::deepCopySelfForUnroll(
+ExprRef<TupleView> OpTupleLit::deepCopySelfForUnrollImpl(
     const ExprRef<TupleView>&, const AnyIterRef& iterator) const {
     vector<AnyExprRef> newMembers;
     for (auto& member : members) {
@@ -106,7 +106,6 @@ ExprRef<TupleView> OpTupleLit::deepCopySelfForUnroll(
     }
     auto newOpTupleLit = make_shared<OpTupleLit>(move(newMembers));
     newOpTupleLit->numberUndefined = numberUndefined;
-    newOpTupleLit->evaluated = this->evaluated;
     return newOpTupleLit;
 }
 

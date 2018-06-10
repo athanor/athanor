@@ -556,7 +556,7 @@ struct SequenceValue : public SequenceView, public ValBase {
     void stopTriggering() final;
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer&) final;
-    ExprRef<SequenceView> deepCopySelfForUnroll(
+    ExprRef<SequenceView> deepCopySelfForUnrollImpl(
         const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;

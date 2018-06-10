@@ -164,7 +164,7 @@ void Quantifier<ContainerType>::roll(UInt index) {
 }
 
 template <typename ContainerType>
-ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnroll(
+ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnrollImpl(
     const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
     auto newQuantifier = make_shared<Quantifier<ContainerType>>(
         container->deepCopySelfForUnroll(container, iterator), quantId);
@@ -185,7 +185,6 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnroll(
         },
         this->expr);
     newQuantifier->containerDefined = containerDefined;
-    newQuantifier->evaluated = this->evaluated;
     return newQuantifier;
 }
 

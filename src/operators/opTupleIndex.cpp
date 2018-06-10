@@ -204,12 +204,12 @@ void OpTupleIndex<TupleMemberViewType>::updateVarViolations(
 
 template <typename TupleMemberViewType>
 ExprRef<TupleMemberViewType>
-OpTupleIndex<TupleMemberViewType>::deepCopySelfForUnroll(
+OpTupleIndex<TupleMemberViewType>::deepCopySelfForUnrollImpl(
     const ExprRef<TupleMemberViewType>&, const AnyIterRef& iterator) const {
     auto newOpTupleIndex = make_shared<OpTupleIndex<TupleMemberViewType>>(
         tupleOperand->deepCopySelfForUnroll(tupleOperand, iterator), index);
     newOpTupleIndex->defined = defined;
-    newOpTupleIndex->evaluated = this->evaluated;
+
     return newOpTupleIndex;
 }
 

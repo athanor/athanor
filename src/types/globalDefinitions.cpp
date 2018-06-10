@@ -16,7 +16,7 @@ inline pair<bool, ViolationContainer&> registerViolations(
     template <>                                                               \
     ValRef<name##Value> make<name##Value>() {                                 \
         ValRef<name##Value> val(make_shared<name##Value>());                  \
-        val->evaluated = true;                                                \
+        val->setEvaluated(true);                                              \
         return val;                                                           \
     }                                                                         \
     const string TypeAsString<name##Value>::value = quote(name##Value);       \
@@ -37,7 +37,7 @@ inline pair<bool, ViolationContainer&> registerViolations(
                                           ViolationContainer& vioDesc) {      \
         registerViolations(this, vioContext.parentViolation, vioDesc);        \
     }                                                                         \
-    ExprRef<name##View> name##Value::deepCopySelfForUnroll(                   \
+    ExprRef<name##View> name##Value::deepCopySelfForUnrollImpl(               \
         const ExprRef<name##View>& self, const AnyIterRef&) const {           \
         return self;                                                          \
     }                                                                         \

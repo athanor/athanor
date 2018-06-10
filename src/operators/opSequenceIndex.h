@@ -39,7 +39,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
 
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer&) final;
-    ExprRef<SequenceMemberViewType> deepCopySelfForUnroll(
+    ExprRef<SequenceMemberViewType> deepCopySelfForUnrollImpl(
         const ExprRef<SequenceMemberViewType>& self,
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;

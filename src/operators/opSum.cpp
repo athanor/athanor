@@ -9,6 +9,9 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 using OperandsSequenceTrigger = OperatorTrates<OpSum>::OperandsSequenceTrigger;
+OpSum::OpSum(OpSum&& other)
+    : SimpleUnaryOperator<IntView, SequenceView, OpSum>(std::move(other)),
+      evaluationComplete(std::move(other.evaluationComplete)) {}
 class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
    public:
     Int previousValue;
@@ -16,7 +19,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     OpSum* op;
     OperandsSequenceTrigger(OpSum* op) : op(op) {}
     void valueAdded(UInt, const AnyExprRef& exprIn) final {
-        if (!op->evaluated) {
+        if (!op->evaluationComplete) {
             return;
         }
         auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
@@ -36,7 +39,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
 
     void valueRemoved(UInt, const AnyExprRef& exprIn) final {
         previousValues.clear();
-        if (!op->evaluated) {
+        if (!op->evaluationComplete) {
             return;
         }
 
@@ -69,7 +72,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
 
     inline void possibleSubsequenceChange(UInt startIndex,
                                           UInt endIndex) final {
-        if (!op->evaluated) {
+        if (!op->evaluationComplete) {
             return;
         }
 
@@ -86,7 +89,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
 
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         debug_log("subsequence changed " << startIndex << "," << endIndex);
-        if (!op->evaluated) {
+        if (!op->evaluationComplete) {
             return;
         }
 
@@ -148,7 +151,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     void hasBecomeDefined() final { op->setDefined(true, true); }
 
     void memberHasBecomeUndefined(UInt index) {
-        if (!op->evaluated) {
+        if (!op->evaluationComplete) {
             return;
         }
         op->value -= previousValues.get(index);
@@ -160,7 +163,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     void memberHasBecomeDefined(UInt index) {
-        if (!op->evaluated) {
+        if (!op->evaluationComplete) {
             if (op->operand->view().numberUndefined == 0) {
                 op->setDefined(true, true);
             }
@@ -187,7 +190,7 @@ void OpSum::reevaluate() {
             value += operandChild->view().value;
         }
     }
-    evaluated = true;
+    evaluationComplete = true;
 }
 
 void OpSum::updateVarViolations(const ViolationContext& vioContext,
@@ -199,7 +202,7 @@ void OpSum::updateVarViolations(const ViolationContext& vioContext,
 
 void OpSum::copy(OpSum& newOp) const {
     newOp.value = value;
-    newOp.evaluated = this->evaluated;
+    newOp.evaluationComplete = this->evaluationComplete;
 }
 
 std::ostream& OpSum::dumpState(std::ostream& os) const {

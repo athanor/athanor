@@ -32,7 +32,7 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
 
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer&) final;
-    ExprRef<TupleMemberViewType> deepCopySelfForUnroll(
+    ExprRef<TupleMemberViewType> deepCopySelfForUnrollImpl(
         const ExprRef<TupleMemberViewType>& self,
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;

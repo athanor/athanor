@@ -41,7 +41,7 @@ struct OpSetLit : public SetView {
     void stopTriggeringOnChildren();
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer&) final;
-    ExprRef<SetView> deepCopySelfForUnroll(
+    ExprRef<SetView> deepCopySelfForUnrollImpl(
         const ExprRef<SetView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;

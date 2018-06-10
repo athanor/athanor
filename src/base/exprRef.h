@@ -1,4 +1,3 @@
-
 #ifndef SRC_BASE_EXPRREF_H_
 #define SRC_BASE_EXPRREF_H_
 #include <functional>
@@ -40,15 +39,27 @@ struct Undefinable<BoolView> {
 
 template <typename View>
 struct ExprInterface : public Undefinable<View> {
-    bool evaluated = false;
+    char flags = 0;
     typedef typename AssociatedTriggerType<View>::type TriggerType;
+
+    inline bool isEvaluated() { return flags & 1; }
+    inline void setEvaluated(bool set) {
+        flags &= ~((char)1);
+        flags |= set;
+    }
+    inline bool isConstant() { return flags & 2; }
+    inline void setConstant(bool set) {
+        flags &= ~((char)2);
+        flags |= ((char)set) << 1;
+    }
+
     virtual View& view();
     virtual const View& view() const;
     virtual void addTrigger(const std::shared_ptr<TriggerType>& trigger,
                             bool includeMembers = true, Int memberIndex = -1);
     inline void evaluate() {
-        if (!evaluated) {
-            evaluated = true;
+        if (!isEvaluated()) {
+            setEvaluated(true);
             this->evaluateImpl();
         }
     }
@@ -57,7 +68,17 @@ struct ExprInterface : public Undefinable<View> {
     virtual void stopTriggering() = 0;
     virtual void updateVarViolations(const ViolationContext& vioContext,
                                      ViolationContainer&) = 0;
-    virtual ExprRef<View> deepCopySelfForUnroll(
+    inline ExprRef<View> deepCopySelfForUnroll(const ExprRef<View>& self,
+                                               const AnyIterRef& iterator) {
+        if (isConstant()) {
+            return self;
+        }
+
+        ExprRef<View> copy = deepCopySelfForUnroll(self, iterator);
+        copy->flags = flags;
+        return copy;
+    }
+    virtual ExprRef<View> deepCopySelfForUnrollImpl(
         const ExprRef<View>& self, const AnyIterRef& iterator) const = 0;
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
 

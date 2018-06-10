@@ -150,7 +150,7 @@ struct FunctionValue : public FunctionView, public ValBase {
     void stopTriggering() final;
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer&) final;
-    ExprRef<FunctionView> deepCopySelfForUnroll(
+    ExprRef<FunctionView> deepCopySelfForUnrollImpl(
         const ExprRef<FunctionView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;

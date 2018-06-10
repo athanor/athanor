@@ -16,6 +16,8 @@ struct OperatorTrates<OpProd> {
 struct OpProd : public SimpleUnaryOperator<IntView, SequenceView, OpProd> {
     using SimpleUnaryOperator<IntView, SequenceView,
                               OpProd>::SimpleUnaryOperator;
+    bool evaluationComplete = false;
+    OpProd(OpProd&& other);
     void reevaluate();
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer& vioDesc) final;

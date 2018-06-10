@@ -41,7 +41,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
 
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer&) final;
-    ExprRef<FunctionMemberViewType> deepCopySelfForUnroll(
+    ExprRef<FunctionMemberViewType> deepCopySelfForUnrollImpl(
         const ExprRef<FunctionMemberViewType>& self,
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;

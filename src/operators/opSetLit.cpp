@@ -254,7 +254,7 @@ void OpSetLit::updateVarViolations(const ViolationContext& context,
         operands);
 }
 
-ExprRef<SetView> OpSetLit::deepCopySelfForUnroll(
+ExprRef<SetView> OpSetLit::deepCopySelfForUnrollImpl(
     const ExprRef<SetView>&, const AnyIterRef& iterator) const {
     AnyExprVec newOperands;
     mpark::visit(
@@ -270,7 +270,6 @@ ExprRef<SetView> OpSetLit::deepCopySelfForUnroll(
 
     auto newOpSetLit = make_shared<OpSetLit>(move(newOperands));
     newOpSetLit->numberUndefined = numberUndefined;
-    newOpSetLit->evaluated = this->evaluated;
     return newOpSetLit;
 }
 

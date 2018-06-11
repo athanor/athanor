@@ -74,7 +74,7 @@ struct ExprInterface : public Undefinable<View> {
             return self;
         }
 
-        ExprRef<View> copy = deepCopySelfForUnroll(self, iterator);
+        ExprRef<View> copy = deepCopySelfForUnrollImpl(self, iterator);
         copy->flags = flags;
         return copy;
     }

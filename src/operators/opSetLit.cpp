@@ -46,7 +46,9 @@ struct ExprTrigger
     auto& getOperands() { return mpark::get<ExprRefVec<View>>(op->operands); }
 
     void adapterPossibleValueChange() {
-        op->template notifyPossibleMemberChange<View>(index);
+        if (index < op->numberElements()) {
+            op->template notifyPossibleMemberChange<View>(index);
+        }
         previousHash = getValueHash(getOperands()[index]->view());
     }
 

@@ -89,6 +89,11 @@ class ModelBuilder {
             std::iota(model.varNeighbourhoodMapping.back().begin(),
                       model.varNeighbourhoodMapping.back().end(),
                       previousNumberNeighbourhoods);
+            for (auto iter = model.neighbourhoods.begin() +
+                             previousNumberNeighbourhoods;
+                 iter != model.neighbourhoods.end(); ++iter) {
+                iter->name = model.variableNames[i] + "_" + iter->name;
+            }
         }
         assert(model.neighbourhoods.size() > 0);
         handleVarsToBeDefined();

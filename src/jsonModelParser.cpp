@@ -129,6 +129,7 @@ pair<shared_ptr<SetDomain>, ExprRef<SetView>> parseOpSetLit(
     }
     AnyExprVec newSetMembers;
     AnyDomainRef innerDomain = fakeIntDomain;
+    bool constant = true;
     bool first = true;
     for (auto& elementExpr : setExpr) {
         auto expr = parseExpr(elementExpr, parsedModel);
@@ -140,40 +141,17 @@ pair<shared_ptr<SetDomain>, ExprRef<SetView>> parseOpSetLit(
                 if (first) {
                     newSetMembers.emplace<ExprRefVec<viewType(member)>>();
                 }
+                constant &= member->isConstant();
+
                 mpark::get<ExprRefVec<viewType(member)>>(newSetMembers)
                     .emplace_back(move(member));
-            },
+                            },
             expr.second);
         first = false;
     }
-    return make_pair(fakeSetDomain(innerDomain),
-                     OpMaker<OpSetLit>::make(move(newSetMembers)));
-}
-
-pair<shared_ptr<SetDomain>, ExprRef<SetView>> parseConstantSet(
-    json& essenceSetConstant, ParsedModel& parsedModel) {
-    ValRef<SetValue> val = make<SetValue>();
-    if (essenceSetConstant.size() == 0) {
-        val->setInnerType<IntView>();
-        cerr << "Not sure how to work out type of empty set yet, will handle "
-                "this later.";
-        todoImpl();
-    }
-    return mpark::visit(
-        [&](auto&& innerDomain) {
-            typedef typename AssociatedValueType<typename BaseType<decltype(
-                innerDomain)>::element_type>::type InnerValueType;
-            val->setInnerType<
-                typename AssociatedViewType<InnerValueType>::type>();
-            for (size_t i = 0; i < essenceSetConstant.size(); ++i) {
-                val->addMember(mpark::get<ValRef<InnerValueType>>(toValRef(
-                    parseExpr(essenceSetConstant[i], parsedModel).second)));
-            }
-            return make_pair(make_shared<SetDomain>(
-                                 exactSize(val->numberElements()), innerDomain),
-                             val.asExpr());
-        },
-        parseExpr(essenceSetConstant[0], parsedModel).first);
+    auto set = OpMaker<OpSetLit>::make(move(newSetMembers));
+    set->setConstant(constant);
+    return make_pair(fakeSetDomain(innerDomain), set);
 }
 
 void matchType(AnyExprRef& expr, AnyExprVec& vec) {
@@ -250,7 +228,7 @@ pair<AnyDomainRef, AnyDomainRef> parseDefinedAndRange(json& functionDomainExpr,
     }
     return functionDomain;
 }
-
+// will not work with expressions
 pair<shared_ptr<FunctionDomain>, ExprRef<FunctionView>> parseConstantFunction(
     json& functionDomainExpr, ParsedModel& parsedModel) {
     DimensionVec dimVec;
@@ -259,6 +237,7 @@ pair<shared_ptr<FunctionDomain>, ExprRef<FunctionView>> parseConstantFunction(
     pair<AnyDomainRef, AnyDomainRef> functionDomain = parseDefinedAndRange(
         functionDomainExpr, parsedModel, defined, range, dimVec);
     auto function = make<FunctionValue>();
+    function->setConstant(true);
     mpark::visit(
         [&](auto& defined, auto& range) {
             if (range.empty()) {
@@ -268,6 +247,11 @@ pair<shared_ptr<FunctionDomain>, ExprRef<FunctionView>> parseConstantFunction(
             }
             function->resetDimensions<viewType(range)>(dimVec);
             for (size_t i = 0; i < defined.size(); i++) {
+                if (!defined[i]->isConstant() || !range[i]->isConstant()) {
+                    cerr << "At the moment, only handling constant function "
+                            "literals.\n";
+                    abort();
+                }
                 auto boolIndexPair =
                     function->domainToIndex(defined[i]->view());
                 assert(boolIndexPair.first);
@@ -291,40 +275,27 @@ inline ValRef<Value> getIfConstValue(ExprRef<View>& expr) {
     }
 }
 
-pair<shared_ptr<TupleDomain>, ExprRef<TupleView>> parseConstantTuple(
+pair<shared_ptr<TupleDomain>, ExprRef<TupleView>> parseOpTupleLit(
     json& tupleExpr, ParsedModel& parsedModel) {
-    auto tuple = make<TupleValue>();
+    bool constant = true;
     vector<AnyDomainRef> tupleMemberDomains;
     vector<AnyExprRef> tupleMembers;
-    bool isConstantSoFar = true;
     for (auto& memberExpr : tupleExpr) {
         auto member = parseExpr(memberExpr, parsedModel);
-        if (isConstantSoFar) {
-            mpark::visit(
-                [&](auto& member) {
-                    auto val = getIfConstValue(member);
-                    if (val) {
-                        tuple->addMember(val);
-                    } else {
-                        isConstantSoFar = false;
-                    }
-                },
-                member.second);
-        }
-        if (!isConstantSoFar) {
-            tupleMembers.emplace_back(member.second);
-        }
         tupleMemberDomains.emplace_back(member.first);
+        tupleMembers.emplace_back(member.second);
+        mpark::visit([&](auto& member) { constant &= member->isConstant(); },
+                     member.second);
     }
-    auto returnTuple = (isConstantSoFar)
-                           ? tuple.asExpr()
-                           : OpMaker<OpTupleLit>::make(move(tupleMembers));
-    return make_pair(fakeTupleDomain(move(tupleMemberDomains)), returnTuple);
+    auto tuple = OpMaker<OpTupleLit>::make(move(tupleMembers));
+    tuple->setConstant(constant);
+    return make_pair(fakeTupleDomain(move(tupleMemberDomains)), tuple);
 }
 pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseConstantInt(json& intExpr,
                                                                ParsedModel&) {
     auto val = make<IntValue>();
     val->value = intExpr;
+    val->setConstant(true);
     return make_pair(fakeIntDomain, val.asExpr());
 }
 
@@ -332,6 +303,7 @@ pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseConstantBool(
     json& boolExpr, ParsedModel&) {
     auto val = make<BoolValue>();
     val->violation = (bool(boolExpr)) ? 0 : 1;
+    val->setConstant(true);
     return make_pair(fakeBoolDomain, val.asExpr());
 }
 
@@ -984,9 +956,9 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
         return stringMatch<ParseExprFunction>(
             {{"ConstantInt", parseConstantInt},
              {"ConstantBool", parseConstantBool},
-             {"AbsLitSet", parseConstantSet},
+             {"AbsLitSet", parseOpSetLit},
              {"AbsLitFunction", parseConstantFunction},
-             {"AbsLitTuple", parseConstantTuple},
+             {"AbsLitTuple", parseOpTupleLit},
              {"Reference", parseValueReference},
              {"MkOpEq", parseOpEq},
              {"MkOpLt", parseOpLess},

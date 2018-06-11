@@ -5,7 +5,7 @@
 using namespace std;
 
 template <typename TupleMemberViewType>
-void OpTupleIndex<TupleMemberViewType>::addTrigger(
+void OpTupleIndex<TupleMemberViewType>::addTriggerImpl(
     const shared_ptr<TupleMemberTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));

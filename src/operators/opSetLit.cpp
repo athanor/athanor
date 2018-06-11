@@ -10,6 +10,7 @@ void OpSetLit::evaluateImpl() {
     numberUndefined = 0;
     mpark::visit(
         [&](auto& operands) {
+            this->members.emplace<ExprRefVec<viewType(operands)>>();
             size_t startIndex = 0, endIndex = operands.size() - 1;
             while (startIndex <= endIndex) {
                 auto& operand = operands[startIndex];

@@ -11,7 +11,7 @@ using namespace std;
     mpark::visit([&](auto& expr) -> ret { return expr->func; }, expr)
 
 template <typename FunctionMemberViewType>
-void OpFunctionImage<FunctionMemberViewType>::addTrigger(
+void OpFunctionImage<FunctionMemberViewType>::addTriggerImpl(
     const shared_ptr<FunctionMemberTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));

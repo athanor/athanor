@@ -6,7 +6,7 @@
 using namespace std;
 
 template <typename View>
-void Iterator<View>::addTrigger(
+void Iterator<View>::addTriggerImpl(
     const shared_ptr<typename Iterator<View>::TriggerType>& trigger,
     bool includeMembers, Int memberIndex) {
     auto otherTrigger = trigger;

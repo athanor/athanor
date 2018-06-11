@@ -27,7 +27,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     OpSequenceIndex(const OpSequenceIndex<SequenceMemberViewType>&) = delete;
     OpSequenceIndex(OpSequenceIndex<SequenceMemberViewType>&& other);
     ~OpSequenceIndex() { this->stopTriggeringOnChildren(); }
-    void addTrigger(const std::shared_ptr<SequenceMemberTriggerType>& trigger,
+    void addTriggerImpl(const std::shared_ptr<SequenceMemberTriggerType>& trigger,
                     bool includeMembers, Int memberIndex) final;
     SequenceMemberViewType& view() final;
     const SequenceMemberViewType& view() const final;

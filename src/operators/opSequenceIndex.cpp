@@ -5,7 +5,7 @@
 using namespace std;
 
 template <typename SequenceMemberViewType>
-void OpSequenceIndex<SequenceMemberViewType>::addTrigger(
+void OpSequenceIndex<SequenceMemberViewType>::addTriggerImpl(
     const shared_ptr<SequenceMemberTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));

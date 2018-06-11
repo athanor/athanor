@@ -56,7 +56,7 @@ void reset(IntValue& val) {
 }
 
 void evaluateImpl(IntValue&) {}
-void startTriggering(IntValue&) {}
+void startTriggeringImpl(IntValue&) {}
 void stopTriggering(IntValue&) {}
 
 template <>

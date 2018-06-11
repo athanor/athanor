@@ -94,7 +94,7 @@ void reset(MSetValue& val) {
 }
 
 void evaluateImpl(MSetValue&) {}
-void startTriggering(MSetValue&) {}
+void startTriggeringImpl(MSetValue&) {}
 void stopTriggering(MSetValue&) {}
 
 template <typename InnerViewType>

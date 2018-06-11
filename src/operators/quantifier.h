@@ -43,7 +43,7 @@ struct Quantifier : public SequenceView {
     }
     ~Quantifier() { this->stopTriggeringOnChildren(); }
     void evaluateImpl() final;
-    void startTriggering() final;
+    void startTriggeringImpl() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();
     void updateVarViolations(const ViolationContext& vioContext,

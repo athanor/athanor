@@ -42,7 +42,7 @@ OpTupleLit::OpTupleLit(OpTupleLit&& other)
     setTriggerParent(this, exprTriggers);
 }
 
-void OpTupleLit::startTriggering() {
+void OpTupleLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {
         for (size_t i = 0; i < members.size(); i++) {
             mpark::visit(

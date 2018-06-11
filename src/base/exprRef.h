@@ -71,7 +71,12 @@ struct ExprInterface : public Undefinable<View> {
         }
     }
     virtual void evaluateImpl() = 0;
-    virtual void startTriggering() = 0;
+    void startTriggering() {
+        if (!isConstant()) {
+            this->startTriggeringImpl();
+        }
+    }
+    virtual void startTriggeringImpl() = 0;
     virtual void stopTriggering() = 0;
     virtual void updateVarViolations(const ViolationContext& vioContext,
                                      ViolationContainer&) = 0;

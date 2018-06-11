@@ -206,7 +206,7 @@ struct PreImageTrigger
 };
 
 template <typename FunctionMemberViewType>
-void OpFunctionImage<FunctionMemberViewType>::startTriggering() {
+void OpFunctionImage<FunctionMemberViewType>::startTriggeringImpl() {
     if (!preImageTrigger) {
         mpark::visit(
             [&](auto& preImageOperand) {

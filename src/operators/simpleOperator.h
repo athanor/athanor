@@ -112,7 +112,7 @@ struct SimpleBinaryOperator : public View,
     virtual ~SimpleBinaryOperator() { this->stopTriggeringOnChildren(); }
 
     void evaluateImpl() final;
-    void startTriggering() final;
+    void startTriggeringImpl() final;
     void stopTriggeringOnChildren();
     void stopTriggering() final;
     ExprRef<View> deepCopySelfForUnrollImpl(
@@ -162,7 +162,7 @@ struct SimpleUnaryOperator : public View,
     }
     virtual ~SimpleUnaryOperator() { this->stopTriggeringOnChildren(); }
     void evaluateImpl() final;
-    void startTriggering() final;
+    void startTriggeringImpl() final;
     void stopTriggeringOnChildren();
     void stopTriggering() final;
     ExprRef<View> deepCopySelfForUnrollImpl(

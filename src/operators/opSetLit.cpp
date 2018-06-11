@@ -197,7 +197,7 @@ OpSetLit::OpSetLit(OpSetLit&& other)
     setTriggerParent(this, exprTriggers);
 }
 
-void OpSetLit::startTriggering() {
+void OpSetLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {
         mpark::visit(
             [&](auto& operands) {

@@ -268,7 +268,7 @@ void Quantifier<ContainerType>::stopTriggeringOnExpr(UInt oldIndex) {
 }
 
 template <typename ContainerType>
-void Quantifier<ContainerType>::startTriggering() {
+void Quantifier<ContainerType>::startTriggeringImpl() {
     if (!containerTrigger) {
         containerTrigger = make_shared<ContainerTrigger<ContainerType>>(this);
         container->addTrigger(containerTrigger);

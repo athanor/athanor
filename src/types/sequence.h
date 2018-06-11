@@ -552,7 +552,7 @@ struct SequenceValue : public SequenceView, public ValBase {
 
     void printVarBases();
     void evaluateImpl() final;
-    void startTriggering() final;
+    void startTriggeringImpl() final;
     void stopTriggering() final;
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer&) final;

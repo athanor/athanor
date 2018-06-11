@@ -37,7 +37,7 @@ Iterator<View>::Iterator(Iterator<View>&& other)
       ref(move(other.ref)) {}
 
 template <typename View>
-void Iterator<View>::startTriggering() {
+void Iterator<View>::startTriggeringImpl() {
     ref->startTriggering();
 }
 

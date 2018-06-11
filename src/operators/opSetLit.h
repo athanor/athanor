@@ -36,7 +36,7 @@ struct OpSetLit : public SetView {
         }
     }
     void evaluateImpl() final;
-    void startTriggering() final;
+    void startTriggeringImpl() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();
     void updateVarViolations(const ViolationContext& vioContext,

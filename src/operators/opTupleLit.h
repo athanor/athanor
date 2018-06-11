@@ -18,7 +18,7 @@ struct OpTupleLit : public TupleView {
     OpTupleLit(OpTupleLit&& other);
     ~OpTupleLit() { this->stopTriggeringOnChildren(); }
     void evaluateImpl() final;
-    void startTriggering() final;
+    void startTriggeringImpl() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();
     void updateVarViolations(const ViolationContext& vioContext,

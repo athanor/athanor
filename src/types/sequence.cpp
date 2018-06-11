@@ -98,7 +98,7 @@ UInt getDomainSize<SequenceDomain>(const SequenceDomain& domain) {
 }
 
 void evaluateImpl(SequenceValue&) {}
-void startTriggering(SequenceValue&) {}
+void startTriggeringImpl(SequenceValue&) {}
 void stopTriggering(SequenceValue&) {}
 
 template <typename InnerViewType>

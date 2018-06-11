@@ -30,7 +30,7 @@ struct BoolView : public ExprInterface<BoolView> {
 
 struct BoolValue : public BoolView, ValBase {
     void evaluateImpl() final;
-    void startTriggering() final;
+    void startTriggeringImpl() final;
     void stopTriggering() final;
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer&) final;

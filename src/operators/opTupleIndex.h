@@ -26,7 +26,7 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
     const TupleMemberViewType& view() const final;
 
     void evaluateImpl() final;
-    void startTriggering() final;
+    void startTriggeringImpl() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();
 

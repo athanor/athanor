@@ -167,7 +167,7 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
 };
 
 template <typename TupleMemberViewType>
-void OpTupleIndex<TupleMemberViewType>::startTriggering() {
+void OpTupleIndex<TupleMemberViewType>::startTriggeringImpl() {
     if (!tupleTrigger) {
         tupleTrigger =
             make_shared<OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger>(

@@ -46,7 +46,7 @@ struct IntView : public ExprInterface<IntView> {
 
 struct IntValue : public IntView, ValBase {
     void evaluateImpl() final;
-    void startTriggering() final;
+    void startTriggeringImpl() final;
     void stopTriggering() final;
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer&) final;

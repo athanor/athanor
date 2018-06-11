@@ -59,7 +59,7 @@ OpSequenceLit::OpSequenceLit(OpSequenceLit&& other)
     setTriggerParent(this, exprTriggers);
 }
 
-void OpSequenceLit::startTriggering() {
+void OpSequenceLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {
         mpark::visit(
             [&](auto& members) {

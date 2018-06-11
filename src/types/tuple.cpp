@@ -81,7 +81,7 @@ UInt getDomainSize<TupleDomain>(const TupleDomain& domain) {
 }
 
 void evaluateImpl(TupleValue&) {}
-void startTriggering(TupleValue&) {}
+void startTriggeringImpl(TupleValue&) {}
 void stopTriggering(TupleValue&) {}
 
 template <>

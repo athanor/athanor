@@ -15,7 +15,7 @@ void SimpleBinaryOperator<View, OperandView, Derived>::evaluateImpl() {
 }
 
 template <typename View, typename OperandView, typename Derived>
-void SimpleBinaryOperator<View, OperandView, Derived>::startTriggering() {
+void SimpleBinaryOperator<View, OperandView, Derived>::startTriggeringImpl() {
     if (!leftTrigger) {
         leftTrigger = std::make_shared<LeftTrigger>(&derived());
         rightTrigger = std::make_shared<RightTrigger>(&derived());
@@ -107,7 +107,7 @@ void SimpleUnaryOperator<View, OperandView, Derived>::evaluateImpl() {
 }
 
 template <typename View, typename OperandView, typename Derived>
-void SimpleUnaryOperator<View, OperandView, Derived>::startTriggering() {
+void SimpleUnaryOperator<View, OperandView, Derived>::startTriggeringImpl() {
     if (!operandTrigger) {
         operandTrigger = std::make_shared<OperandTrigger>(&derived());
         operand->addTrigger(operandTrigger);

@@ -326,7 +326,7 @@ void OpSequenceIndex<SequenceMemberViewType>::reattachSequenceMemberTrigger(
 }
 
 template <typename SequenceMemberViewType>
-void OpSequenceIndex<SequenceMemberViewType>::startTriggering() {
+void OpSequenceIndex<SequenceMemberViewType>::startTriggeringImpl() {
     if (!indexTrigger) {
         indexTrigger =
             make_shared<OpSequenceIndex<SequenceMemberViewType>::IndexTrigger>(

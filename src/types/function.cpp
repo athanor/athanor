@@ -154,7 +154,7 @@ UInt getDomainSize<FunctionDomain>(const FunctionDomain& domain) {
 }
 
 void evaluateImpl(FunctionValue&) {}
-void startTriggering(FunctionValue&) {}
+void startTriggeringImpl(FunctionValue&) {}
 void stopTriggering(FunctionValue&) {}
 
 template <typename InnerViewType>

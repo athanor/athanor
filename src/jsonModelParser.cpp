@@ -63,8 +63,7 @@ pair<bool, ReturnType> stringMatch(const vector<pair<string, Function>>& match,
 }
 pair<AnyDomainRef, AnyExprRef> parseDomainGenerator(json& domainExpr,
                                                     ParsedModel& parsedModel);
-pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
-    json& essenceExpr, ParsedModel& parsedModel);
+
 pair<bool, AnyDomainRef> tryParseDomain(json& essenceExpr,
                                         ParsedModel& parsedModel);
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
@@ -77,17 +76,6 @@ pair<AnyDomainRef, AnyExprRef> parseExpr(json& essenceExpr,
         return move(boolConstraintPair.second);
     } else {
         cerr << "Failed to parse expression: " << essenceExpr << endl;
-        abort();
-    }
-}
-
-pair<AnyDomainRef, AnyExprRef> parseValue(json& essenceExpr,
-                                          ParsedModel& parsedModel) {
-    auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
-    if (boolValuePair.first) {
-        return move(boolValuePair.second);
-    } else {
-        cerr << "Failed to parse value: " << essenceExpr << endl;
         abort();
     }
 }
@@ -185,7 +173,7 @@ pair<shared_ptr<SetDomain>, ExprRef<SetView>> parseConstantSet(
                                  exactSize(val->numberElements()), innerDomain),
                              val.asExpr());
         },
-        parseValue(essenceSetConstant[0], parsedModel).first);
+        parseExpr(essenceSetConstant[0], parsedModel).first);
 }
 
 void matchType(AnyExprRef& expr, AnyExprVec& vec) {
@@ -357,30 +345,6 @@ pair<AnyDomainRef, AnyExprRef> parseValueReference(json& essenceReference,
              << "\" but this does not appear to be in scope.\n";
         abort();
     }
-}
-
-pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseValue(
-    json& essenceExpr, ParsedModel& parsedModel) {
-    if (essenceExpr.count("Constant")) {
-        return tryParseValue(essenceExpr["Constant"], parsedModel);
-    } else if (essenceExpr.count("ConstantAbstract")) {
-        return tryParseValue(essenceExpr["ConstantAbstract"], parsedModel);
-    } else if (essenceExpr.count("AbstractLiteral")) {
-        return tryParseValue(essenceExpr["AbstractLiteral"], parsedModel);
-    }
-
-    return stringMatch<ParseExprFunction>(
-        {
-            {"ConstantInt", parseConstantInt},
-            {"ConstantBool", parseConstantBool},
-            {"AbsLitSet", parseConstantSet},
-            {"AbsLitFunction", parseConstantFunction},
-            {"AbsLitTuple", parseConstantTuple},
-            {"Reference", parseValueReference},
-        },
-        make_pair(AnyDomainRef(fakeIntDomain),
-                  AnyExprRef(ExprRef<IntView>(nullptr))),
-        essenceExpr, parsedModel);
 }
 
 shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
@@ -1008,9 +972,23 @@ pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseOpToInt(
 
 pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     json& essenceExpr, ParsedModel& parsedModel) {
-    if (essenceExpr.count("Op")) {
-        auto boolExprPair = stringMatch<ParseExprFunction>(
-            {{"MkOpEq", parseOpEq},
+    if (essenceExpr.count("Constant")) {
+        return tryParseExpr(essenceExpr["Constant"], parsedModel);
+    } else if (essenceExpr.count("ConstantAbstract")) {
+        return tryParseExpr(essenceExpr["ConstantAbstract"], parsedModel);
+    } else if (essenceExpr.count("AbstractLiteral")) {
+        return tryParseExpr(essenceExpr["AbstractLiteral"], parsedModel);
+    } else if (essenceExpr.count("Op")) {
+        return tryParseExpr(essenceExpr["Op"], parsedModel);
+    } else {
+        return stringMatch<ParseExprFunction>(
+            {{"ConstantInt", parseConstantInt},
+             {"ConstantBool", parseConstantBool},
+             {"AbsLitSet", parseConstantSet},
+             {"AbsLitFunction", parseConstantFunction},
+             {"AbsLitTuple", parseConstantTuple},
+             {"Reference", parseValueReference},
+             {"MkOpEq", parseOpEq},
              {"MkOpLt", parseOpLess},
              {"MkOpLeq", parseOpLessEq},
              {"MkOpMod", parseOpMod},
@@ -1028,18 +1006,8 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpToInt", parseOpToInt}},
             make_pair(AnyDomainRef(fakeIntDomain),
                       AnyExprRef(ExprRef<IntView>(nullptr))),
-            essenceExpr["Op"], parsedModel);
-        if (boolExprPair.first) {
-            return boolExprPair;
-        }
+            essenceExpr, parsedModel);
     }
-
-    auto boolValuePair = tryParseValue(essenceExpr, parsedModel);
-    if (boolValuePair.first) {
-        return boolValuePair;
-    }
-    return make_pair(false,
-                     make_pair(fakeBoolDomain, ExprRef<BoolView>(nullptr)));
 }
 
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseDomainGeneratorInt(
@@ -1093,7 +1061,7 @@ pair<AnyDomainRef, AnyExprRef> parseDomainGenerator(json& domainExpr,
 
 void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
     string lettingName = lettingArray[0]["Name"];
-    auto boolValuePair = tryParseValue(lettingArray[1], parsedModel);
+    auto boolValuePair = tryParseExpr(lettingArray[1], parsedModel);
     if (boolValuePair.first) {
         parsedModel.namedExprs.emplace(lettingName, boolValuePair.second);
         return;

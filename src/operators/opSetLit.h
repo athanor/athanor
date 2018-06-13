@@ -35,6 +35,31 @@ struct OpSetLit : public SetView {
             return std::make_pair(true, *indices.begin());
         }
     }
+
+    template <typename OperandView>
+    void swapHashes(size_t index1, size_t index2) {
+        if (index1 == index2) {
+            return;
+        }
+        auto& operands = mpark::get<ExprRefVec<OperandView>>(this->operands);
+        bool operand1Defined = !operands[index1]->isUndefined();
+        bool operand2Defined = !operands[index2]->isUndefined();
+        HashType operand1Hash, operand2Hash;
+        if (operand1Defined) {
+            operand1Hash = getValueHash(operands[index1]->view());
+            removeHash(operand1Hash, index1);
+        }
+        if (operand2Defined) {
+            operand2Hash = getValueHash(operands[index2]->view());
+            removeHash(operand2Hash, index2);
+        }
+        if (operand1Defined) {
+            addHash(operand1Hash, index2);
+        }
+        if (operand2Defined) {
+            addHash(operand2Hash, index1);
+        }
+    }
     void evaluateImpl() final;
     void startTriggeringImpl() final;
     void stopTriggering() final;
@@ -47,6 +72,7 @@ struct OpSetLit : public SetView {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined() final;
     bool optimise(PathExtension path) final;
+    void assertValidHashes();
 };
 
 #endif /* SRC_OPERATORS_OPSETLIT_H_ */

@@ -5,6 +5,12 @@
 #include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
+ostream& operator<<(ostream& os, const FastIterableIntSet& set);
+ostream& operator<<(ostream& os, const FastIterableIntSet& set) {
+    containerToArrayString(os, set, ",");
+    return os;
+}
+
 void OpSetLit::evaluateImpl() {
     debug_code(assert(exprTriggers.empty()));
     numberUndefined = 0;
@@ -21,12 +27,73 @@ void OpSetLit::evaluateImpl() {
                     --endIndex;
                 } else if (memberHashes.count(getValueHash(operand->view()))) {
                     swap(operands[startIndex], operands[endIndex]);
+                    this->addHash(getValueHash(operands[endIndex]->view()),
+                                  endIndex);
                     --endIndex;
                 } else {
                     this->addMember(operand);
                     this->addHash(getValueHash(operand->view()), startIndex);
                     ++startIndex;
                 }
+            }
+        },
+        operands);
+    debug_code(assertValidHashes());
+}
+
+void OpSetLit::assertValidHashes() {
+    debug_log(hashIndicesMap);
+    size_t sumOfIndexSetSizes = 0;
+    size_t numberUndefined = 0;
+    bool success = true;
+    mpark::visit(
+        [&](auto& operands) {
+            for (size_t i = 0; i < operands.size(); i++) {
+                auto& operand = operands[i];
+                if (operand->isUndefined()) {
+                    ++numberUndefined;
+                    continue;
+                }
+                HashType hash = getValueHash(operand->view());
+                auto iter = hashIndicesMap.find(hash);
+                if (iter == hashIndicesMap.end()) {
+                    success = false;
+                    cerr << "Error, hash " << hash << " of operand ";
+                    operand->dumpState(cerr);
+                    cerr << " maps to no index set.\n";
+                    break;
+                }
+                if (!iter->second.count(i)) {
+                    success = false;
+                    operand->dumpState(cerr << "error: operand: ")
+                        << " with hash " << hash
+                        << " maps to an index set not containing the operand "
+                           "index "
+                        << i << endl;
+                    cerr << iter->second << endl;
+                    break;
+                }
+            }
+            if (success) {
+                for (const auto& hashIndicesPair : hashIndicesMap) {
+                    sumOfIndexSetSizes += hashIndicesPair.second.size();
+                }
+                if (sumOfIndexSetSizes + numberUndefined != operands.size()) {
+                    success = false;
+                    cerr << "numberUndefined(" << numberUndefined
+                         << ") + sumOfIndexSetSizes(" << sumOfIndexSetSizes
+                         << ") should = operands.size(" << operands.size()
+                         << ")\n";
+                }
+            }
+            if (!success) {
+                cerr << "HashIndicesMap: " << hashIndicesMap << endl;
+                cerr << "operands:";
+                for (auto& operand : operands) {
+                    operand->dumpState(cerr << "\n");
+                }
+                cerr << endl;
+                abort();
             }
         },
         operands);
@@ -46,6 +113,7 @@ struct ExprTrigger
     auto& getOperands() { return mpark::get<ExprRefVec<View>>(op->operands); }
 
     void adapterPossibleValueChange() {
+        debug_code(op->assertValidHashes());
         if (index < op->numberElements()) {
             op->template notifyPossibleMemberChange<View>(index);
         }
@@ -53,6 +121,7 @@ struct ExprTrigger
     }
 
     void swapOperands(size_t index1, size_t index2) {
+        op->swapHashes<View>(index1, index2);
         swap(getOperands()[index1], getOperands()[index2]);
         swap(op->exprTriggers[index1], op->exprTriggers[index2]);
         swap(op->exprTriggers[index1]->index, op->exprTriggers[index2]->index);
@@ -68,7 +137,8 @@ struct ExprTrigger
         swapOperands(this->index, newIndex);
     }
 
-    auto manualRemoveOperandFromSetView() {
+    auto manualRemoveOperandFromSetView(HashType newHash,
+                                        bool operandIsStillDefined) {
         op->notifyPossibleSetValueChange();
         auto& members = op->getMembers<View>();
         op->memberHashes.erase(previousHash);
@@ -77,6 +147,9 @@ struct ExprTrigger
         members.pop_back();
         op->notifyMemberRemoved(index, previousHash);
         auto otherOperandWithSameValue = op->removeHash(previousHash, index);
+        if (operandIsStillDefined) {
+            op->addHash(newHash, index);
+        }
         swapWithOtherOperand(op->numberElements());
         return otherOperandWithSameValue;
     }
@@ -99,9 +172,12 @@ struct ExprTrigger
                 // this operand was not in the set view, now it has a unique
                 // value, it must be added
                 op->addMemberAndNotify(getOperands()[index]);
+                op->removeHash(previousHash, index);
+                op->addHash(newHash, index);
                 // now move the operand and trigger into the same index as the
                 // newly added element to the set view
-                swapWithOtherOperand(op->numberElements() - 1);
+                size_t newIndex = op->numberElements() - 1;
+                swapWithOtherOperand(newIndex);
             } else {
                 // this operand was not being used in the set view, it still
                 // can't be as its there is already an operand with its new
@@ -129,7 +205,8 @@ struct ExprTrigger
                 // operand is in set view and now changed to a value of another
                 // operand in the set,  will remove this one
                 auto otherOperandWithSameValue =
-                    manualRemoveOperandFromSetView();
+                    manualRemoveOperandFromSetView(newHash, true);
+                ;
                 // however, if other operand has the old value,  it's put back
                 // in
                 if (otherOperandWithSameValue.first) {
@@ -159,6 +236,7 @@ struct ExprTrigger
             // this operand was not in the set view, now it has a unique value,
             // it must be added
             op->addMemberAndNotify(getOperands()[index]);
+            op->addHash(newHash, index);
             // now move the operand and trigger into the same index as the newly
             // added element to the set view
             swapWithOtherOperand(op->numberElements() - 1);
@@ -177,7 +255,8 @@ struct ExprTrigger
             op->removeHash(previousHash, index);
         } else {
             // operand was being used in the set view, remove it
-            auto otherOperandWithSameValue = manualRemoveOperandFromSetView();
+            auto otherOperandWithSameValue =
+                manualRemoveOperandFromSetView(0, false);
             // if other operands had the old value, add them in
             if (otherOperandWithSameValue.first) {
                 op->addMemberAndNotify(

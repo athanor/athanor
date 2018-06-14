@@ -30,11 +30,12 @@ void assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
     });
 }
 
-void intAssignRandomGen(const IntDomain& domain,
+void intAssignRandomGen(const IntDomain& domain, int numberValsRequired,
                         std::vector<Neighbourhood>& neighbourhoods) {
     neighbourhoods.emplace_back(
-        "intAssignRandom", [&domain](NeighbourhoodParams& params) {
-            auto& val = *mpark::get<ValRef<IntValue>>(params.primary);
+        "intAssignRandom", numberValsRequired,
+        [&domain](NeighbourhoodParams& params) {
+            auto& val = *(params.getVals<IntValue>().front());
             int numberTries = 0;
             const int tryLimit = params.parentCheckTryLimit;
             debug_neighbourhood_action(
@@ -44,7 +45,7 @@ void intAssignRandomGen(const IntDomain& domain,
             do {
                 success = val.changeValue([&]() {
                     val.value = getRandomValueInDomain(domain, params.stats);
-                    if (params.parentCheck(params.primary)) {
+                    if (params.parentCheck(params.vals)) {
                         return true;
                     } else {
                         val.value = backup;
@@ -71,4 +72,4 @@ void intAssignRandomGen(const IntDomain& domain,
 }
 
 const NeighbourhoodVec<IntDomain> NeighbourhoodGenList<IntDomain>::value = {
-    intAssignRandomGen};
+    {1, intAssignRandomGen}};

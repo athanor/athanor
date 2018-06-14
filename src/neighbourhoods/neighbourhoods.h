@@ -1,4 +1,5 @@
 
+
 #ifndef SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_
 #define SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_
 #include <functional>
@@ -12,85 +13,84 @@
 
 typedef std::function<bool()> AcceptanceCallBack;
 
-typedef std::function<bool(const AnyValRef& newValue)> ParentCheckCallBack;
+typedef std::function<bool(const AnyValVec& newValue)> ParentCheckCallBack;
 
 struct NeighbourhoodParams {
     const AcceptanceCallBack& changeAccepted;
     const ParentCheckCallBack& parentCheck;
     const int parentCheckTryLimit;
-    AnyValRef& primary;
+    AnyValVec& vals;
     StatsContainer& stats;
     ViolationContainer& vioDesc;
     NeighbourhoodParams(const AcceptanceCallBack& changeAccepted,
                         const ParentCheckCallBack& parentCheck,
-                        const int parentCheckTryLimit, AnyValRef& primary,
+                        const int parentCheckTryLimit, AnyValVec& vals,
                         StatsContainer& stats, ViolationContainer& vioDesc)
         : changeAccepted(changeAccepted),
           parentCheck(parentCheck),
           parentCheckTryLimit(parentCheckTryLimit),
-          primary(primary),
+          vals(vals),
           stats(stats),
           vioDesc(vioDesc) {}
+
+    template <typename Val>
+    ValRefVec<Val>& getVals() {
+        return mpark::get<ValRefVec<Val>>(vals);
+    }
 };
 
 struct Neighbourhood {
     typedef std::function<void(NeighbourhoodParams&)> ApplyFunc;
     std::string name;
+    int numberValsRequired;
     ApplyFunc apply;
-    Neighbourhood(std::string&& name, ApplyFunc&& apply)
-        : name(std::move(name)), apply(std::move(apply)) {}
+    Neighbourhood(std::string name, int numberValsRequired, ApplyFunc apply)
+        : name(std::move(name)),
+          numberValsRequired(numberValsRequired),
+          apply(std::move(apply)) {}
 };
 
 template <typename Domain>
-using NeighbourhoodGenerator = void (*)(const Domain&,
-                                        std::vector<Neighbourhood>&);
+using GeneratorFunc = void (*)(const Domain&, int, std::vector<Neighbourhood>&);
 
 template <typename Domain>
-struct MultiInstanceNeighbourhoodGenerator {
-    const int numberInstances;
-    NeighbourhoodGenerator<Domain> generator;
+struct NeighbourhoodGenerator {
+    int numberValsRequired;
+    GeneratorFunc<Domain> generate;
 };
 
 template <typename Domain>
 using NeighbourhoodVec = std::vector<NeighbourhoodGenerator<Domain>>;
 
-template <typename Domain>
-using MultiInstanceNeighbourhoodVec =
-    std::vector<MultiInstanceNeighbourhoodGenerator<Domain>>;
-
 template <typename DomainType>
 struct NeighbourhoodGenList;
 
-template <typename DomainType>
-struct MultiInstanceNeighbourhoodGenList;
-
-#define makeGeneratorDecls(name)                                        \
-    template <>                                                         \
-    struct NeighbourhoodGenList<name##Domain> {                         \
-        static const NeighbourhoodVec<name##Domain> value;              \
-    };                                                                  \
-    template <>                                                         \
-    struct MultiInstanceNeighbourhoodGenList<name##Domain> {            \
-        static const MultiInstanceNeighbourhoodVec<name##Domain> value; \
+#define makeGeneratorDecls(name)                           \
+    template <>                                            \
+    struct NeighbourhoodGenList<name##Domain> {            \
+        static const NeighbourhoodVec<name##Domain> value; \
     };
-
 buildForAllTypes(makeGeneratorDecls, )
 #undef makeGeneratorDecls
     template <typename DomainPtrType>
     inline void generateNeighbourhoodsImpl(
-        const DomainPtrType& domainImpl,
+        int maxNumberVals, const DomainPtrType& domainImpl,
         std::vector<Neighbourhood>& neighbourhoods) {
     for (auto& generator :
          NeighbourhoodGenList<typename DomainPtrType::element_type>::value) {
-        generator(*domainImpl, neighbourhoods);
+        if (generator.numberValsRequired <= maxNumberVals) {
+            generator.generate(*domainImpl, generator.numberValsRequired,
+                               neighbourhoods);
+        }
     }
 }
 
-inline void generateNeighbourhoods(const AnyDomainRef domain,
+inline void generateNeighbourhoods(int maxNumberVals, const AnyDomainRef domain,
                                    std::vector<Neighbourhood>& neighbourhoods) {
     mpark::visit(
         [&](auto& domainImpl) {
-            generateNeighbourhoodsImpl(domainImpl, neighbourhoods);
+            generateNeighbourhoodsImpl(maxNumberVals, domainImpl,
+                                       neighbourhoods);
         },
         domain);
 }

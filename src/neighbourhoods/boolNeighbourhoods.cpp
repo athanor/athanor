@@ -18,11 +18,12 @@ void assignRandomValueInDomain<BoolDomain>(const BoolDomain& domain,
     });
 }
 
-void boolAssignRandomGen(const BoolDomain& domain,
+void boolAssignRandomGen(const BoolDomain& domain, int numberValsRequired,
                          std::vector<Neighbourhood>& neighbourhoods) {
     neighbourhoods.emplace_back(
-        "boolAssignRandom", [&domain](NeighbourhoodParams& params) {
-            auto val = *mpark::get<ValRef<BoolValue>>(params.primary);
+        "boolAssignRandom", numberValsRequired,
+        [&domain](NeighbourhoodParams& params) {
+            auto val = *(params.getVals<BoolValue>().front());
             int numberTries = 0;
             const int tryLimit = params.parentCheckTryLimit;
             auto backup = val.violation;
@@ -34,7 +35,7 @@ void boolAssignRandomGen(const BoolDomain& domain,
                 success = val.changeValue([&]() {
                     val.violation =
                         getRandomValueInDomain(domain, params.stats);
-                    return params.parentCheck(params.primary);
+                    return params.parentCheck(params.vals);
                 });
                 if (success) {
                     debug_neighbourhood_action("New value is " << asView(val));
@@ -56,4 +57,4 @@ void boolAssignRandomGen(const BoolDomain& domain,
 }
 
 const NeighbourhoodVec<BoolDomain> NeighbourhoodGenList<BoolDomain>::value = {
-    boolAssignRandomGen};
+    {1, boolAssignRandomGen}};

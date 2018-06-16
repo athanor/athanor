@@ -46,15 +46,17 @@ inline int getTryLimit(UInt numberMembers, UInt domainSize) {
 }
 template <typename InnerDomainPtrType>
 void setAddGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
+                   int numberValsRequired,
                    std::vector<Neighbourhood>& neighbourhoods) {
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     UInt innerDomainSize = getDomainSize(domain.inner);
 
     neighbourhoods.emplace_back(
-        "setAdd", [innerDomainSize, &domain,
-                   &innerDomainPtr](NeighbourhoodParams& params) {
-            auto& val = *mpark::get<ValRef<SetValue>>(params.primary);
+        "setAdd", numberValsRequired,
+        [innerDomainSize, &domain,
+         &innerDomainPtr](NeighbourhoodParams& params) {
+            auto& val = *(params.getVals<SetValue>().front());
             if (val.numberElements() == domain.sizeAttr.maxSize) {
                 ++params.stats.minorNodeCount;
                 return;
@@ -70,7 +72,7 @@ void setAddGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
                 assignRandomValueInDomain(*innerDomainPtr, *newMember,
                                           params.stats);
                 success = val.tryAddMember(newMember, [&]() {
-                    return params.parentCheck(params.primary);
+                    return params.parentCheck(params.vals);
                 });
             } while (!success && ++numberTries < tryLimit);
             if (!success) {
@@ -86,67 +88,73 @@ void setAddGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
             }
         });
 }
-void setAddGen(const SetDomain& domain,
+void setAddGen(const SetDomain& domain, int numberValsRequired,
                std::vector<Neighbourhood>& neighbourhoods) {
     if (domain.sizeAttr.sizeType == SizeAttr::SizeAttrType::EXACT_SIZE) {
         return;
     }
     mpark::visit(
         [&](const auto& innerDomainPtr) {
-            setAddGenImpl(domain, innerDomainPtr, neighbourhoods);
+            setAddGenImpl(domain, innerDomainPtr, numberValsRequired,
+                          neighbourhoods);
         },
         domain.inner);
 }
 
 template <typename InnerDomainPtrType>
 void setRemoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
+                      int numberValsRequired,
                       std::vector<Neighbourhood>& neighbourhoods) {
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
-    neighbourhoods.emplace_back("setRemove", [&](NeighbourhoodParams& params) {
-        auto& val = *mpark::get<ValRef<SetValue>>(params.primary);
-        if (val.numberElements() == domain.sizeAttr.minSize) {
-            ++params.stats.minorNodeCount;
-            return;
-        }
-        size_t indexToRemove;
-        int numberTries = 0;
-        ValRef<InnerValueType> removedMember(nullptr);
-        bool success;
-        debug_neighbourhood_action("Looking for value to remove");
-        do {
-            ++params.stats.minorNodeCount;
-            indexToRemove = globalRandom<size_t>(0, val.numberElements() - 1);
-            std::pair<bool, ValRef<InnerValueType>> removeStatus =
-                val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
-                    return params.parentCheck(params.primary);
-                });
-            success = removeStatus.first;
-            if (success) {
-                removedMember = std::move(removeStatus.second);
-                debug_neighbourhood_action("Removed " << removedMember);
+    neighbourhoods.emplace_back(
+        "setRemove", numberValsRequired, [&](NeighbourhoodParams& params) {
+            auto& val = *(params.getVals<SetValue>().front());
+            if (val.numberElements() == domain.sizeAttr.minSize) {
+                ++params.stats.minorNodeCount;
+                return;
             }
-        } while (!success && ++numberTries < params.parentCheckTryLimit);
-        if (!success) {
-            debug_neighbourhood_action(
-                "Couldn't find value, number tries=" << numberTries);
-            return;
-        }
-        if (!params.changeAccepted()) {
-            debug_neighbourhood_action("Change rejected");
-            val.tryAddMember(std::move(removedMember), []() { return true; });
-        }
-    });
+            size_t indexToRemove;
+            int numberTries = 0;
+            ValRef<InnerValueType> removedMember(nullptr);
+            bool success;
+            debug_neighbourhood_action("Looking for value to remove");
+            do {
+                ++params.stats.minorNodeCount;
+                indexToRemove =
+                    globalRandom<size_t>(0, val.numberElements() - 1);
+                std::pair<bool, ValRef<InnerValueType>> removeStatus =
+                    val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
+                        return params.parentCheck(params.vals);
+                    });
+                success = removeStatus.first;
+                if (success) {
+                    removedMember = std::move(removeStatus.second);
+                    debug_neighbourhood_action("Removed " << removedMember);
+                }
+            } while (!success && ++numberTries < params.parentCheckTryLimit);
+            if (!success) {
+                debug_neighbourhood_action(
+                    "Couldn't find value, number tries=" << numberTries);
+                return;
+            }
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                val.tryAddMember(std::move(removedMember),
+                                 []() { return true; });
+            }
+        });
 }
 
-void setRemoveGen(const SetDomain& domain,
+void setRemoveGen(const SetDomain& domain, int numberValsRequired,
                   std::vector<Neighbourhood>& neighbourhoods) {
     if (domain.sizeAttr.sizeType == SizeAttr::SizeAttrType::EXACT_SIZE) {
         return;
     }
     mpark::visit(
         [&](const auto& innerDomainPtr) {
-            setRemoveGenImpl(domain, innerDomainPtr, neighbourhoods);
+            setRemoveGenImpl(domain, innerDomainPtr, numberValsRequired,
+                             neighbourhoods);
         },
         domain.inner);
 }
@@ -154,18 +162,19 @@ void setRemoveGen(const SetDomain& domain,
 template <typename InnerDomainPtrType>
 void setLiftSingleGenImpl(const SetDomain& domain,
                           const InnerDomainPtrType& innerDomainPtr,
+                          int numberValsRequired,
                           std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
-    generateNeighbourhoods(domain.inner, innerDomainNeighbourhoods);
+    generateNeighbourhoods(1, domain.inner, innerDomainNeighbourhoods);
     UInt innerDomainSize = getDomainSize(domain.inner);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
         neighbourhoods.emplace_back(
-            "setLiftSingle_" + innerNh.name,
+            "setLiftSingle_" + innerNh.name, numberValsRequired,
             [innerNhApply{std::move(innerNh.apply)}, innerDomainSize, &domain,
              &innerDomainPtr](NeighbourhoodParams& params) {
-                auto& val = *mpark::get<ValRef<SetValue>>(params.primary);
+                auto& val = *(params.getVals<SetValue>().front());
                 if (val.numberElements() == 0) {
                     ++params.stats.minorNodeCount;
                     return;
@@ -180,18 +189,17 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                         : globalRandom<UInt>(0, val.numberElements() - 1);
                 val.notifyPossibleMemberChange<InnerValueType>(indexToChange);
                 ParentCheckCallBack parentCheck =
-                    [&](const AnyValRef& newValue) {
-                        HashType newHash = getValueHash(newValue);
+                    [&](const AnyValVec& newValue) {
+                        HashType newHash = getValueHash(
+                            mpark::get<ValRefVec<InnerValueType>>(newValue)
+                                .front());
                         return !val.memberHashes.count(newHash) &&
                                val.tryMemberChange<InnerValueType>(
                                    indexToChange, [&]() {
-                                       return params.parentCheck(
-                                           params.primary);
+                                       return params.parentCheck(params.vals);
                                    });
                     };
                 bool requiresRevert = false;
-                AnyValRef changingMember =
-                    val.member<InnerValueType>(indexToChange);
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
                     if (requiresRevert) {
@@ -200,10 +208,15 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                     }
                     return !requiresRevert;
                 };
+                AnyValVec changingMembers;
+                auto& changingMembersImpl =
+                    changingMembers.emplace<ValRefVec<InnerValueType>>();
+                changingMembersImpl.emplace_back(
+                    val.member<InnerValueType>(indexToChange));
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck,
                     getTryLimit(val.numberElements(), innerDomainSize),
-                    changingMember, params.stats, vioDescAtThisLevel);
+                    changingMembers, params.stats, vioDescAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMemberChange<InnerValueType>(indexToChange,
@@ -213,20 +226,22 @@ void setLiftSingleGenImpl(const SetDomain& domain,
     }
 }
 
-void setLiftSingleGen(const SetDomain& domain,
+void setLiftSingleGen(const SetDomain& domain, int numberValsRequired,
                       std::vector<Neighbourhood>& neighbourhoods) {
     mpark::visit(
         [&](const auto& innerDomainPtr) {
-            setLiftSingleGenImpl(domain, innerDomainPtr, neighbourhoods);
+            setLiftSingleGenImpl(domain, innerDomainPtr, numberValsRequired,
+                                 neighbourhoods);
         },
         domain.inner);
 }
 
-void setAssignRandomGen(const SetDomain& domain,
+void setAssignRandomGen(const SetDomain& domain, int numberValsRequired,
                         std::vector<Neighbourhood>& neighbourhoods) {
     neighbourhoods.emplace_back(
-        "setAssignRandom", [&domain](NeighbourhoodParams& params) {
-            auto& val = *mpark::get<ValRef<SetValue>>(params.primary);
+        "setAssignRandom", numberValsRequired,
+        [&domain](NeighbourhoodParams& params) {
+            auto& val = *(params.getVals<SetValue>().front());
             int numberTries = 0;
             const int tryLimit = params.parentCheckTryLimit;
             debug_neighbourhood_action(
@@ -239,7 +254,7 @@ void setAssignRandomGen(const SetDomain& domain,
             do {
                 assignRandomValueInDomain(domain, *newValue, params.stats);
                 success = val.tryAssignNewValue(*newValue, [&]() {
-                    return params.parentCheck(params.primary);
+                    return params.parentCheck(params.vals);
                 });
                 if (success) {
                     debug_neighbourhood_action("New value is " << asView(val));
@@ -258,4 +273,4 @@ void setAssignRandomGen(const SetDomain& domain,
 }
 
 const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::value = {
-    setLiftSingleGen, setAddGen, setRemoveGen};
+    {1, setLiftSingleGen}, {1, setAddGen}, {1, setRemoveGen}};

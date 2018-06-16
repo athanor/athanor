@@ -78,7 +78,8 @@ buildForAllTypes(makeGeneratorDecls, )
         std::vector<Neighbourhood>& neighbourhoods) {
     for (auto& generator :
          NeighbourhoodGenList<typename DomainPtrType::element_type>::value) {
-        if (generator.numberValsRequired <= maxNumberVals) {
+        if (maxNumberVals == 0 ||
+            generator.numberValsRequired <= maxNumberVals) {
             generator.generate(*domainImpl, generator.numberValsRequired,
                                neighbourhoods);
         }

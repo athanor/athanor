@@ -80,7 +80,7 @@ class ModelBuilder {
             }
             auto& domain = model.variables[i].first;
             size_t previousNumberNeighbourhoods = model.neighbourhoods.size();
-            generateNeighbourhoods(domain, model.neighbourhoods);
+            generateNeighbourhoods(1, domain, model.neighbourhoods);
             model.neighbourhoodVarMapping.insert(
                 model.neighbourhoodVarMapping.end(),
                 model.neighbourhoods.size() - previousNumberNeighbourhoods, i);

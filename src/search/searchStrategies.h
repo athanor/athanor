@@ -9,7 +9,7 @@
 void dumpVarViolations(const ViolationContainer& vioDesc);
 extern bool sigIntActivated, sigAlarmActivated;
 extern u_int64_t iterationLimit;
-inline bool alwaysTrue(const AnyValRef&) { return true; }
+inline bool alwaysTrue(const AnyValVec&) { return true; }
 
 template <typename NeighbourhoodSelectionStrategy>
 class HillClimber {
@@ -86,6 +86,16 @@ class HillClimber {
         : model(std::move(model)),
           selectionStrategy(this->model.neighbourhoods.size()),
           stats(this->model.neighbourhoods.size()) {}
+
+    auto makeVecFrom(AnyValRef& val) {
+        return mpark::visit(
+            [](auto& val) -> AnyValVec {
+                ValRefVec<valType(val)> vec;
+                vec.emplace_back(val);
+                return vec;
+            },
+            val);
+    }
     void search() {
         triggerEventCount = 0;
         std::cout << "Neighbourhoods (" << model.neighbourhoods.size()
@@ -124,8 +134,9 @@ class HillClimber {
                 model.variables
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
             ParentCheckCallBack alwaysTrueFunc(alwaysTrue);
-            NeighbourhoodParams params(callback, alwaysTrueFunc, 1, var.second,
-                                       stats, model.vioDesc);
+            auto changingVariables = makeVecFrom(var.second);
+            NeighbourhoodParams params(callback, alwaysTrueFunc, 1,
+                                       changingVariables, stats, model.vioDesc);
             u_int64_t minorNodeCountAtStart = stats.minorNodeCount,
                       triggerEventCountAtStart = triggerEventCount;
             double cpuTimeAtStart = stats.getCpuTime();

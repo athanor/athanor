@@ -57,6 +57,7 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
     void reattachTrigger() final {
         auto trigger = make_shared<OperandTrigger>(op);
         deleteTrigger(op->operandTrigger);
+        this->op->operand->addTrigger(trigger);
         op->operandTrigger = move(trigger);
     }
     void valueAdded(const AnyExprRef&) final {

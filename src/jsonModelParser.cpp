@@ -503,6 +503,17 @@ pair<AnyDomainRef, AnyExprRef> parseOpPower(json& powerExpr,
                      OpMaker<OpPower>::make(move(left), move(right)));
 }
 
+pair<AnyDomainRef, AnyExprRef> parseOpIn(json& inExpr,
+                                            ParsedModel& parsedModel) {
+    AnyExprRef expr =
+        parseExpr(inExpr[0], parsedModel).second;
+    auto setOperand =
+        expect<SetView>(parseExpr(inExpr[1], parsedModel).second,
+                        [&](auto&&) { cerr << "OpIn expects a set on the right.\n" << inExpr; });
+    return make_pair(fakeBoolDomain,
+                     OpMaker<OpIn>::make(move(expr), move(setOperand)));
+}
+
 pair<AnyDomainRef, AnyExprRef> parseOpSubsetEq(json& subsetExpr,
                                                ParsedModel& parsedModel) {
     string errorMessage =
@@ -1012,6 +1023,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpEq", parseOpEq},
              {"MkOpLt", parseOpLess},
              {"MkOpLeq", parseOpLessEq},
+             {"MkOpIn", parseOpIn},
              {"MkOpMod", parseOpMod},
              {"MkOpMinus", parseOpMinus},
              {"MkOpPow", parseOpPower},

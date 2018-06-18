@@ -146,5 +146,10 @@ template <>
 struct OpMaker<OpPower> {
     static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
+struct OpIn;
+template <>
+struct OpMaker<OpIn> {
+    static ExprRef<BoolView> make(AnyExprRef expr, ExprRef<SetView> setOperand);
+};
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

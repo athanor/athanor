@@ -71,6 +71,14 @@ struct OpMaker<OpTupleIndex<View>> {
     static ExprRef<View> make(ExprRef<TupleView> tuple, UInt index);
 };
 
+template <typename View>
+struct OpSetIndexInternal;
+
+template <typename View>
+struct OpMaker<OpSetIndexInternal<View>> {
+    static ExprRef<View> make(ExprRef<SetView> set, UInt index);
+};
+
 struct OpTupleLit;
 template <>
 struct OpMaker<OpTupleLit> {

@@ -758,6 +758,14 @@ ExprRef<View> makeTupleIndexFromDomain(shared_ptr<Domain>&,
     return OpMaker<OpTupleIndex<View>>::make(expr, index);
 }
 
+template <typename Domain,
+          typename View = typename AssociatedViewType<
+              typename AssociatedValueType<Domain>::type>::type>
+ExprRef<View> makeSetIndexFromDomain(shared_ptr<Domain>&,
+                                       ExprRef<SetView>& expr, UInt index) {
+    return OpMaker<OpSetIndexInternal<View>>::make(expr, index);
+}
+
 template <typename DomainType, typename ViewType,
           EnableIfDomainMatchesView<DomainType, ViewType> = 0>
 void extractPatternMatchAndAddExprsToScope(
@@ -772,9 +780,7 @@ void extractPatternMatchAndAddExprsToScope(
     } else if (patternExpr.count("AbsPatTuple")) {
         overloaded(
             [&](auto&, auto&) {
-                cerr << "Error, trying to pattern match from something that is "
-                        "not "
-                        "a tuple.\n";
+                cerr << "Error, Found tuple pattern, but in this context expected a different expression.\n";
                 cerr << "Found domain: " << *domain << endl;
                 cerr << "Expr: " << patternExpr << endl;
                 abort();
@@ -794,6 +800,30 @@ void extractPatternMatchAndAddExprsToScope(
                         },
                         domain->inners[i]);
                 }
+            })(domain, expr);
+    } else if (patternExpr.count("AbsPatSet")) {
+        overloaded(
+            [&](auto&, auto&) {
+                cerr << "Error, found set pattern, but did not expect a set pattern in this context\n";
+                cerr << "Found domain: " << *domain << endl;
+                cerr << "Expr: " << patternExpr << endl;
+                abort();
+            },
+            [&](const shared_ptr<SetDomain>& domain,
+                ExprRef<SetView>& expr) {
+                json& setMatchExpr = patternExpr["AbsPatSet"];
+                mpark::visit(
+                    [&](auto& innerDomain) {
+
+                for (size_t i = 0; i < setMatchExpr.size(); i++) {
+                            auto setIndexExpr =
+                                makeSetIndexFromDomain(innerDomain, expr, i);
+                            extractPatternMatchAndAddExprsToScope(
+                                setMatchExpr[i], innerDomain, setIndexExpr,
+                                parsedModel, variablesAddedToScope);
+                }
+                },
+                domain->inner);
             })(domain, expr);
     }
 }

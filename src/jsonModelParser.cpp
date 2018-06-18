@@ -689,6 +689,27 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
         left);
 }
 
+pair<AnyDomainRef, AnyExprRef> parseOpNotEq(json& operandsExpr,
+                                            ParsedModel& parsedModel) {
+    AnyExprRef left = parseExpr(operandsExpr[0], parsedModel).second;
+    AnyExprRef right = parseExpr(operandsExpr[1], parsedModel).second;
+    return mpark::visit(
+        [&](auto& left) {
+            auto errorHandler = [&](auto&&) {
+                cerr << "Expected right operand to be of same type as left, "
+                        "i.e. "
+                     << TypeAsString<typename AssociatedValueType<viewType(
+                            left)>::type>::value
+                     << endl;
+            };
+            typedef viewType(left) View;
+            return make_pair(fakeBoolDomain,
+                             OpMaker<OpNotEq<View>>::make(
+                                 left, expect<View>(right, errorHandler)));
+        },
+        left);
+}
+
 pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLess(
     json& expr, ParsedModel& parsedModel) {
     auto errorFunc = [&](auto&&) {
@@ -1089,6 +1110,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"Comprehension", parseComprehension},
              {"MkOpEq", parseOpEq},
              {"MkOpLt", parseOpLess},
+             {"MkOpNeq", parseOpNotEq},
              {"MkOpLeq", parseOpLessEq},
              {"MkOpImply", parseOpImplies},
              {"MkOpIn", parseOpIn},

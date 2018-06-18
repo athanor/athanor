@@ -35,10 +35,12 @@ template <>
 struct OpMaker<OpSequenceLit> {
     static ExprRef<SequenceView> make(AnyExprVec members);
 };
-struct OpSetNotEq;
-template <>
-struct OpMaker<OpSetNotEq> {
-    static ExprRef<BoolView> make(ExprRef<SetView> l, ExprRef<SetView> r);
+template <typename OperandView>
+struct OpNotEq;
+template <typename OperandView>
+struct OpMaker<OpNotEq<OperandView>> {
+    static ExprRef<BoolView> make(ExprRef<OperandView> l,
+                                  ExprRef<OperandView> r);
 };
 struct OpSetSize;
 template <>

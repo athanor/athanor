@@ -1090,7 +1090,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpEq", parseOpEq},
              {"MkOpLt", parseOpLess},
              {"MkOpLeq", parseOpLessEq},
-             {"MkOpImplies", parseOpImplies},
+             {"MkOpImply", parseOpImplies},
              {"MkOpIn", parseOpIn},
              {"MkOpMod", parseOpMod},
              {"MkOpMinus", parseOpMinus},

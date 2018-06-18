@@ -921,21 +921,60 @@ auto makeVaradicOpParser(const Domain& domain) {
     };
 }
 
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> quantifyOver(
+    shared_ptr<SetDomain>& domain, ExprRef<SetView>& expr) {
+    auto quant = make_shared<Quantifier<SetView>>(expr);
+    return mpark::visit(
+        [&](auto& innerDomain)
+            -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
+            typedef typename AssociatedValueType<typename BaseType<decltype(
+                innerDomain)>::element_type>::type InnerValueType;
+            typedef
+                typename AssociatedViewType<InnerValueType>::type InnerViewType;
+            quant->setExpression(
+                ExprRef<InnerViewType>(quant->newIterRef<InnerViewType>()));
+            return make_pair(fakeSequenceDomain(innerDomain), quant);
+        },
+        domain->inner);
+}
+
+template <typename Func>
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> toSequence(
+    pair<AnyDomainRef, AnyExprRef> parsedExpr, Func&& errorFunc) {
+    return mpark::visit(
+        overloaded(
+            [&](shared_ptr<SequenceDomain>& domain) {
+                return make_pair(domain, mpark::get<ExprRef<SequenceView>>(
+                                             parsedExpr.second));
+            },
+            [&](shared_ptr<SetDomain>& domain) {
+                return quantifyOver(
+                    domain, mpark::get<ExprRef<SetView>>(parsedExpr.second));
+            },
+            [&](auto& domain)
+                -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
+                typedef typename AssociatedValueType<typename BaseType<decltype(
+                    domain)>::element_type>::type ValueType;
+                cerr << "Unexpected type: " << TypeAsString<ValueType>::value
+                     << endl;
+                errorFunc();
+                abort();
+            }),
+        parsedExpr.first);
+}
+
 template <bool minMode>
 pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseOpMinMax(
     json& operandExpr, ParsedModel& parsedModel) {
     string message = "Only supporting min/max over sequence of ints.\n";
-    auto parsedExpr = parseExpr(operandExpr, parsedModel);
-    auto operand = expect<SequenceView>(parsedExpr.second, [&](auto&&) {
-        cerr << "Expected sequence returning expression in op min/max.\n"
-             << operandExpr << endl;
+    auto parsedExpr = toSequence(parseExpr(operandExpr, parsedModel), [&]() {
+        cerr << "in context of op min/max.\n" << operandExpr << endl;
     });
-    auto domain = mpark::get<shared_ptr<SequenceDomain>>(parsedExpr.first);
     shared_ptr<IntDomain>* intDomainTest =
-        mpark::get_if<shared_ptr<IntDomain>>(&(domain->inner));
+        mpark::get_if<shared_ptr<IntDomain>>(&(parsedExpr.first->inner));
     if (intDomainTest) {
         typedef OpMinMax<minMode> Op;
-        return make_pair(*intDomainTest, OpMaker<Op>::make(operand));
+        return make_pair(*intDomainTest, OpMaker<Op>::make(parsedExpr.second));
     }
     cerr << "Only supporting min/max over ints.\n";
     cerr << operandExpr << endl;

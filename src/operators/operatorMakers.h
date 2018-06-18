@@ -135,4 +135,10 @@ struct OpMaker<OpSetLit> {
     static ExprRef<SetView> make(AnyExprVec operands);
 };
 
+struct OpPowerSet;
+template <>
+struct OpMaker<OpPowerSet> {
+    static ExprRef<SetView> make(ExprRef<SetView> o, int sizeLimit);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

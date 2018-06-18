@@ -146,7 +146,7 @@ struct OpMaker<OpSetLit> {
 struct OpPowerSet;
 template <>
 struct OpMaker<OpPowerSet> {
-    static ExprRef<SetView> make(ExprRef<SetView> o, int sizeLimit);
+    static ExprRef<SetView> make(ExprRef<SetView> o);
 };
 
 struct OpPower;

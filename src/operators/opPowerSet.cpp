@@ -91,9 +91,9 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpPowerSet> {
-    static ExprRef<SetView> make(ExprRef<SetView> o, int sizeLimit);
+    static ExprRef<SetView> make(ExprRef<SetView> o);
 };
 
-ExprRef<SetView> OpMaker<OpPowerSet>::make(ExprRef<SetView> o, int sizeLimit) {
-    return make_shared<OpPowerSet>(move(o), sizeLimit);
+ExprRef<SetView> OpMaker<OpPowerSet>::make(ExprRef<SetView> o) {
+    return make_shared<OpPowerSet>(move(o));
 }

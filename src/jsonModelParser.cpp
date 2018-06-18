@@ -1,6 +1,7 @@
 #include "jsonModelParser.h"
 #include <functional>
 #include <iostream>
+#include "operators/opPowerSet.h"
 #include <json.hpp>
 #include <unordered_map>
 #include <utility>
@@ -528,6 +529,19 @@ pair<AnyDomainRef, AnyExprRef> parseOpSubsetEq(json& subsetExpr,
                      OpMaker<OpSubsetEq>::make(move(left), move(right)));
 }
 
+pair<AnyDomainRef, AnyExprRef> parseOpPowerSet(json& powerSetExpr,
+                                               ParsedModel& parsedModel) {
+    string errorMessage =
+        "Expected set returning expression within Op PowerSet: ";
+    auto parsedExpr = parseExpr(powerSetExpr, parsedModel);
+    auto  operand =
+        expect<SetView>(parsedExpr.second,
+                        [&](auto&&) { cerr << errorMessage << powerSetExpr << endl; });
+auto& domain = mpark::get<shared_ptr<SetDomain>>(parsedExpr.first);
+    return make_pair(fakeSetDomain(fakeSetDomain(domain->inner)),
+                     OpMaker<OpPowerSet>::make(move(operand)));
+}
+
 pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
                                               ParsedModel& parsedModel) {
     AnyExprRef operand = parseExpr(operandExpr, parsedModel).second;
@@ -844,7 +858,7 @@ AnyDomainRef addExprToQuantifier(
             typedef typename AssociatedViewType<
                 typename AssociatedValueType<InnerDomainType>::type>::type
                 InnerViewType;
-
+            OpPowerSet* powerSetTest;
             if (is_same<SequenceDomain, ContainerDomainType>::value) {
                 auto iterRef = quantifier->template newIterRef<TupleView>();
                 if (generatorParent.count("GenDomainNoRepr")) {
@@ -861,6 +875,15 @@ AnyDomainRef addExprToQuantifier(
                         generatorExpr[0], iterDomain, iter, parsedModel,
                         variablesAddedToScope);
                 }
+            } else if (is_same<SetDomain, ContainerDomainType>::value && (powerSetTest = dynamic_cast<OpPowerSet*>(&(*(quantifier->container)))) != NULL) {
+                auto iterRef = quantifier->template newIterRef<SetView>();
+                    auto iterDomain =
+                        fakeSetDomain(fakeSetDomain(innerDomain));
+                    ExprRef<SetView> iter(iterRef);
+                    extractPatternMatchAndAddExprsToScope(
+                        generatorExpr[0], iterDomain, iter, parsedModel,
+                        variablesAddedToScope);
+                    powerSetTest->sizeLimit = generatorExpr[0]["AbsPatSet"].size();
             } else {
                 ExprRef<InnerViewType> iter(
                     quantifier->template newIterRef<InnerViewType>());
@@ -1058,6 +1081,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpMinus", parseOpMinus},
              {"MkOpPow", parseOpPower},
              {"MkOpTwoBars", parseOpTwoBars},
+             {"MkOpPowerSet", parseOpPowerSet},
              {"MkOpSubsetEq", parseOpSubsetEq},
              {"MkOpAnd", makeVaradicOpParser<BoolView, OpAnd>(fakeBoolDomain)},
              {"MkOpOr", makeVaradicOpParser<BoolView, OpOr>(fakeBoolDomain)},

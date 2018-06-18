@@ -687,10 +687,11 @@ pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLessEq(
         expect<IntView>(parseExpr(expr[1], parsedModel).second, errorFunc);
     return make_pair(fakeBoolDomain, OpMaker<OpLessEq>::make(left, right));
 }
-pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseConstantMatrix(
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseOpSequenceLit(
     json& matrixExpr, ParsedModel& parsedModel) {
     if (matrixExpr[1].size() == 0) {
-        cerr << "Not sure how to work out type of empty matrixyet, will handle "
+        cerr << "Not sure how to work out type of empty matrix or sequence "
+                "yet, will handle "
                 "this later.";
         todoImpl();
     }
@@ -906,42 +907,35 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
         domainContainerPair.second);
 }
 
-pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseSequenceLikeExpr(
-    json& expr, ParsedModel& parsedModel) {
-    if (expr.count("AbstractLiteral")) {
-        if (expr["AbstractLiteral"].count("AbsLitMatrix")) {
-            return parseConstantMatrix(expr["AbstractLiteral"]["AbsLitMatrix"],
-                                       parsedModel);
-        }
-    } else if (expr.count("Comprehension")) {
-        return parseComprehension(expr["Comprehension"], parsedModel);
-    }
-    cerr << "Not sure how to parse this type within the context of an "
-            "argument list, expected constant matrix or quantifier.\n"
-         << expr << endl;
-    abort();
-}
-
 template <typename View, typename Op, typename Domain>
 auto makeVaradicOpParser(const Domain& domain) {
     return [&](json& essenceExpr,
                ParsedModel& parsedModel) -> pair<AnyDomainRef, AnyExprRef> {
-        return make_pair(
-            domain,
-            OpMaker<Op>::make(
-                parseSequenceLikeExpr(essenceExpr, parsedModel).second));
+        auto sequence = expect<SequenceView>(
+            parseExpr(essenceExpr, parsedModel).second, [&](auto&&) {
+                cerr << "In the context of parsing arguments to a function, "
+                        "requires matrix/sequence/quantifier.\n"
+                     << essenceExpr << endl;
+            });
+        return make_pair(domain, OpMaker<Op>::make(sequence));
     };
 }
+
 template <bool minMode>
 pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseOpMinMax(
     json& operandExpr, ParsedModel& parsedModel) {
     string message = "Only supporting min/max over sequence of ints.\n";
-    auto operand = parseSequenceLikeExpr(operandExpr, parsedModel);
+    auto parsedExpr = parseExpr(operandExpr, parsedModel);
+    auto operand = expect<SequenceView>(parsedExpr.second, [&](auto&&) {
+        cerr << "Expected sequence returning expression in op min/max.\n"
+             << operandExpr << endl;
+    });
+    auto domain = mpark::get<shared_ptr<SequenceDomain>>(parsedExpr.first);
     shared_ptr<IntDomain>* intDomainTest =
-        mpark::get_if<shared_ptr<IntDomain>>(&(operand.first->inner));
+        mpark::get_if<shared_ptr<IntDomain>>(&(domain->inner));
     if (intDomainTest) {
         typedef OpMinMax<minMode> Op;
-        return make_pair(*intDomainTest, OpMaker<Op>::make(operand.second));
+        return make_pair(*intDomainTest, OpMaker<Op>::make(operand));
     }
     cerr << "Only supporting min/max over ints.\n";
     cerr << operandExpr << endl;
@@ -971,9 +965,11 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
             {{"ConstantInt", parseConstantInt},
              {"ConstantBool", parseConstantBool},
              {"AbsLitSet", parseOpSetLit},
+             {"AbsLitMatrix", parseOpSequenceLit},
              {"AbsLitFunction", parseConstantFunction},
              {"AbsLitTuple", parseOpTupleLit},
              {"Reference", parseValueReference},
+             {"Comprehension", parseComprehension},
              {"MkOpEq", parseOpEq},
              {"MkOpLt", parseOpLess},
              {"MkOpLeq", parseOpLessEq},

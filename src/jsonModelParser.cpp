@@ -145,7 +145,7 @@ pair<shared_ptr<SetDomain>, ExprRef<SetView>> parseOpSetLit(
 
                 mpark::get<ExprRefVec<viewType(member)>>(newSetMembers)
                     .emplace_back(move(member));
-                            },
+            },
             expr.second);
         first = false;
     }
@@ -476,17 +476,31 @@ pair<AnyDomainRef, AnyExprRef> parseOpMod(json& modExpr,
     return make_pair(fakeIntDomain,
                      OpMaker<OpMod>::make(move(left), move(right)));
 }
-pair<AnyDomainRef, AnyExprRef> parseOpMinus(json& modExpr,
+
+pair<AnyDomainRef, AnyExprRef> parseOpMinus(json& minusExpr,
                                             ParsedModel& parsedModel) {
-    string errorMessage = "Expected int returning expression within Op mod: ";
+    string errorMessage = "Expected int returning expression within Op minus: ";
     ExprRef<IntView> left =
-        expect<IntView>(parseExpr(modExpr[0], parsedModel).second,
-                        [&](auto&&) { cerr << errorMessage << modExpr[0]; });
+        expect<IntView>(parseExpr(minusExpr[0], parsedModel).second,
+                        [&](auto&&) { cerr << errorMessage << minusExpr[0]; });
     ExprRef<IntView> right =
-        expect<IntView>(parseExpr(modExpr[1], parsedModel).second,
-                        [&](auto&&) { cerr << errorMessage << modExpr[1]; });
+        expect<IntView>(parseExpr(minusExpr[1], parsedModel).second,
+                        [&](auto&&) { cerr << errorMessage << minusExpr[1]; });
     return make_pair(fakeIntDomain,
                      OpMaker<OpMinus>::make(move(left), move(right)));
+}
+
+pair<AnyDomainRef, AnyExprRef> parseOpPower(json& powerExpr,
+                                            ParsedModel& parsedModel) {
+    string errorMessage = "Expected int returning expression within Op power: ";
+    ExprRef<IntView> left =
+        expect<IntView>(parseExpr(powerExpr[0], parsedModel).second,
+                        [&](auto&&) { cerr << errorMessage << powerExpr[0]; });
+    ExprRef<IntView> right =
+        expect<IntView>(parseExpr(powerExpr[1], parsedModel).second,
+                        [&](auto&&) { cerr << errorMessage << powerExpr[1]; });
+    return make_pair(fakeIntDomain,
+                     OpMaker<OpPower>::make(move(left), move(right)));
 }
 
 pair<AnyDomainRef, AnyExprRef> parseOpSubsetEq(json& subsetExpr,
@@ -965,6 +979,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpLeq", parseOpLessEq},
              {"MkOpMod", parseOpMod},
              {"MkOpMinus", parseOpMinus},
+             {"MkOpPow", parseOpPower},
              {"MkOpTwoBars", parseOpTwoBars},
              {"MkOpSubsetEq", parseOpSubsetEq},
              {"MkOpAnd", makeVaradicOpParser<BoolView, OpAnd>(fakeBoolDomain)},

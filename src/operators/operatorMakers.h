@@ -141,4 +141,10 @@ struct OpMaker<OpPowerSet> {
     static ExprRef<SetView> make(ExprRef<SetView> o, int sizeLimit);
 };
 
+struct OpPower;
+template <>
+struct OpMaker<OpPower> {
+    static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

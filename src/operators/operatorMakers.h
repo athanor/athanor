@@ -159,5 +159,10 @@ template <>
 struct OpMaker<OpIn> {
     static ExprRef<BoolView> make(AnyExprRef expr, ExprRef<SetView> setOperand);
 };
+struct OpImplies;
+template <>
+struct OpMaker<OpImplies> {
+    static ExprRef<BoolView> make(ExprRef<BoolView> l, ExprRef<BoolView> r);
+};
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

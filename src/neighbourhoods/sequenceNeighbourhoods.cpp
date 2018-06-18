@@ -70,23 +70,23 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                         : globalRandom<UInt>(0, val.numberElements() - 1);
                 val.notifyPossibleSubsequenceChange<InnerValueType>(
                     indexToChange, indexToChange + 1);
-                ParentCheckCallBack parentCheck = [&](const AnyValVec&
-                                                          newValue) {
-                    HashType newHash = getValueHash(
-                        mpark::get<ValRefVec<InnerValueType>>(newValue)
-                            .front());
-                    return !val.memberHashes.count(newHash) &&
-                           val.trySubsequenceChange<InnerValueType>(
-                               indexToChange, indexToChange + 1, [&]() {
-                                   return params.parentCheck(params.vals);
-                               });
-                };
+                ParentCheckCallBack parentCheck =
+                    [&](const AnyValVec& newValue) {
+                        HashType newHash = getValueHash(
+                            mpark::get<ValRefVec<InnerValueType>>(newValue)
+                                .front());
+                        return !val.memberHashes.count(newHash) &&
+                               val.trySubsequenceChange<InnerValueType>(
+                                   indexToChange, indexToChange + 1, [&]() {
+                                       return params.parentCheck(params.vals);
+                                   });
+                    };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
                     if (requiresRevert) {
-                        val.notifyPossibleSubsequenceChange<
-                            InnerValueType>(indexToChange, indexToChange + 1);
+                        val.notifyPossibleSubsequenceChange<InnerValueType>(
+                            indexToChange, indexToChange + 1);
                     }
                     return !requiresRevert;
                 };
@@ -145,9 +145,9 @@ void sequenceAddGenImpl(const SequenceDomain& domain,
                                           params.stats);
                 size_t indexOfNewMember =
                     globalRandom<UInt>(0, val.numberElements());
-                success = val.tryAddMember(
-                    indexOfNewMember, newMember,
-                    [&]() { return params.parentCheck(params.vals); });
+                success = val.tryAddMember(indexOfNewMember, newMember, [&]() {
+                    return params.parentCheck(params.vals);
+                });
             } while (!success && ++numberTries < tryLimit);
             if (!success) {
                 debug_neighbourhood_action(
@@ -157,8 +157,8 @@ void sequenceAddGenImpl(const SequenceDomain& domain,
             debug_neighbourhood_action("Added value: " << newMember);
             if (!params.changeAccepted()) {
                 debug_neighbourhood_action("Change rejected");
-                val.tryRemoveMember<InnerValueType>(
-                    val.numberElements() - 1, []() { return true; });
+                val.tryRemoveMember<InnerValueType>(val.numberElements() - 1,
+                                                    []() { return true; });
             }
         });
 }
@@ -200,9 +200,9 @@ void sequenceRemoveGenImpl(const SequenceDomain& domain, InnerDomainPtrType&,
                 indexToRemove =
                     globalRandom<size_t>(0, val.numberElements() - 1);
                 std::pair<bool, ValRef<InnerValueType>> removeStatus =
-                    val.tryRemoveMember<InnerValueType>(
-                        indexToRemove,
-                        [&]() { return params.parentCheck(params.vals); });
+                    val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
+                        return params.parentCheck(params.vals);
+                    });
                 success = removeStatus.first;
                 if (success) {
                     removedMember = std::move(removeStatus.second);
@@ -216,9 +216,8 @@ void sequenceRemoveGenImpl(const SequenceDomain& domain, InnerDomainPtrType&,
             }
             if (!params.changeAccepted()) {
                 debug_neighbourhood_action("Change rejected");
-                val.tryAddMember(indexToRemove,
-                                          std::move(removedMember),
-                                          []() { return true; });
+                val.tryAddMember(indexToRemove, std::move(removedMember),
+                                 []() { return true; });
             }
         });
 }
@@ -276,8 +275,8 @@ void sequencePositionsSwapGenImpl(const SequenceDomain& domain,
                 "positions swapped: " << index1 << " and " << index2);
             if (!params.changeAccepted()) {
                 debug_neighbourhood_action("Change rejected");
-                val.trySwapPositions<InnerValueType>(
-                    index1, index2, []() { return true; });
+                val.trySwapPositions<InnerValueType>(index1, index2,
+                                                     []() { return true; });
             }
         });
 }

@@ -1,11 +1,11 @@
 #include "jsonModelParser.h"
 #include <functional>
 #include <iostream>
-#include "operators/opPowerSet.h"
 #include <json.hpp>
 #include <unordered_map>
 #include <utility>
 #include "common/common.h"
+#include "operators/opPowerSet.h"
 #include "operators/operatorMakers.h"
 #include "operators/quantifier.h"
 #include "search/model.h"
@@ -505,12 +505,12 @@ pair<AnyDomainRef, AnyExprRef> parseOpPower(json& powerExpr,
 }
 
 pair<AnyDomainRef, AnyExprRef> parseOpIn(json& inExpr,
-                                            ParsedModel& parsedModel) {
-    AnyExprRef expr =
-        parseExpr(inExpr[0], parsedModel).second;
+                                         ParsedModel& parsedModel) {
+    AnyExprRef expr = parseExpr(inExpr[0], parsedModel).second;
     auto setOperand =
-        expect<SetView>(parseExpr(inExpr[1], parsedModel).second,
-                        [&](auto&&) { cerr << "OpIn expects a set on the right.\n" << inExpr; });
+        expect<SetView>(parseExpr(inExpr[1], parsedModel).second, [&](auto&&) {
+            cerr << "OpIn expects a set on the right.\n" << inExpr;
+        });
     return make_pair(fakeBoolDomain,
                      OpMaker<OpIn>::make(move(expr), move(setOperand)));
 }
@@ -534,10 +534,10 @@ pair<AnyDomainRef, AnyExprRef> parseOpPowerSet(json& powerSetExpr,
     string errorMessage =
         "Expected set returning expression within Op PowerSet: ";
     auto parsedExpr = parseExpr(powerSetExpr, parsedModel);
-    auto  operand =
-        expect<SetView>(parsedExpr.second,
-                        [&](auto&&) { cerr << errorMessage << powerSetExpr << endl; });
-auto& domain = mpark::get<shared_ptr<SetDomain>>(parsedExpr.first);
+    auto operand = expect<SetView>(parsedExpr.second, [&](auto&&) {
+        cerr << errorMessage << powerSetExpr << endl;
+    });
+    auto& domain = mpark::get<shared_ptr<SetDomain>>(parsedExpr.first);
     return make_pair(fakeSetDomain(fakeSetDomain(domain->inner)),
                      OpMaker<OpPowerSet>::make(move(operand)));
 }
@@ -701,6 +701,18 @@ pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLess(
     return make_pair(fakeBoolDomain, OpMaker<OpLess>::make(left, right));
 }
 
+pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpImplies(
+    json& expr, ParsedModel& parsedModel) {
+    auto errorFunc = [&](auto&&) {
+        cerr << "Expected bool within OpImplies less\n" << expr << endl;
+    };
+    auto left =
+        expect<BoolView>(parseExpr(expr[0], parsedModel).second, errorFunc);
+    auto right =
+        expect<BoolView>(parseExpr(expr[1], parsedModel).second, errorFunc);
+    return make_pair(fakeBoolDomain, OpMaker<OpImplies>::make(left, right));
+}
+
 pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLessEq(
     json& expr, ParsedModel& parsedModel) {
     auto errorFunc = [&](auto&&) {
@@ -776,7 +788,7 @@ template <typename Domain,
           typename View = typename AssociatedViewType<
               typename AssociatedValueType<Domain>::type>::type>
 ExprRef<View> makeSetIndexFromDomain(shared_ptr<Domain>&,
-                                       ExprRef<SetView>& expr, UInt index) {
+                                     ExprRef<SetView>& expr, UInt index) {
     return OpMaker<OpSetIndexInternal<View>>::make(expr, index);
 }
 
@@ -794,7 +806,8 @@ void extractPatternMatchAndAddExprsToScope(
     } else if (patternExpr.count("AbsPatTuple")) {
         overloaded(
             [&](auto&, auto&) {
-                cerr << "Error, Found tuple pattern, but in this context expected a different expression.\n";
+                cerr << "Error, Found tuple pattern, but in this context "
+                        "expected a different expression.\n";
                 cerr << "Found domain: " << *domain << endl;
                 cerr << "Expr: " << patternExpr << endl;
                 abort();
@@ -818,26 +831,26 @@ void extractPatternMatchAndAddExprsToScope(
     } else if (patternExpr.count("AbsPatSet")) {
         overloaded(
             [&](auto&, auto&) {
-                cerr << "Error, found set pattern, but did not expect a set pattern in this context\n";
+                cerr << "Error, found set pattern, but did not expect a set "
+                        "pattern in this context\n";
                 cerr << "Found domain: " << *domain << endl;
                 cerr << "Expr: " << patternExpr << endl;
                 abort();
             },
-            [&](const shared_ptr<SetDomain>& domain,
-                ExprRef<SetView>& expr) {
+            [&](const shared_ptr<SetDomain>& domain, ExprRef<SetView>& expr) {
                 json& setMatchExpr = patternExpr["AbsPatSet"];
                 mpark::visit(
                     [&](auto& innerDomain) {
 
-                for (size_t i = 0; i < setMatchExpr.size(); i++) {
+                        for (size_t i = 0; i < setMatchExpr.size(); i++) {
                             auto setIndexExpr =
                                 makeSetIndexFromDomain(innerDomain, expr, i);
                             extractPatternMatchAndAddExprsToScope(
                                 setMatchExpr[i], innerDomain, setIndexExpr,
                                 parsedModel, variablesAddedToScope);
-                }
-                },
-                domain->inner);
+                        }
+                    },
+                    domain->inner);
             })(domain, expr);
     }
 }
@@ -875,15 +888,16 @@ AnyDomainRef addExprToQuantifier(
                         generatorExpr[0], iterDomain, iter, parsedModel,
                         variablesAddedToScope);
                 }
-            } else if (is_same<SetDomain, ContainerDomainType>::value && (powerSetTest = dynamic_cast<OpPowerSet*>(&(*(quantifier->container)))) != NULL) {
+            } else if (is_same<SetDomain, ContainerDomainType>::value &&
+                       (powerSetTest = dynamic_cast<OpPowerSet*>(
+                            &(*(quantifier->container)))) != NULL) {
                 auto iterRef = quantifier->template newIterRef<SetView>();
-                    auto iterDomain =
-                        fakeSetDomain(fakeSetDomain(innerDomain));
-                    ExprRef<SetView> iter(iterRef);
-                    extractPatternMatchAndAddExprsToScope(
-                        generatorExpr[0], iterDomain, iter, parsedModel,
-                        variablesAddedToScope);
-                    powerSetTest->sizeLimit = generatorExpr[0]["AbsPatSet"].size();
+                auto iterDomain = fakeSetDomain(fakeSetDomain(innerDomain));
+                ExprRef<SetView> iter(iterRef);
+                extractPatternMatchAndAddExprsToScope(
+                    generatorExpr[0], iterDomain, iter, parsedModel,
+                    variablesAddedToScope);
+                powerSetTest->sizeLimit = generatorExpr[0]["AbsPatSet"].size();
             } else {
                 ExprRef<InnerViewType> iter(
                     quantifier->template newIterRef<InnerViewType>());
@@ -1076,6 +1090,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpEq", parseOpEq},
              {"MkOpLt", parseOpLess},
              {"MkOpLeq", parseOpLessEq},
+             {"MkOpImplies", parseOpImplies},
              {"MkOpIn", parseOpIn},
              {"MkOpMod", parseOpMod},
              {"MkOpMinus", parseOpMinus},

@@ -44,7 +44,7 @@ struct Iterator : public ExprInterface<View> {
     Iterator(Iterator<View>&& other);
     ~Iterator() { this->stopTriggeringOnChildren(); }
     void addTriggerImpl(const std::shared_ptr<TriggerType>& trigger,
-                    bool includeMembers, Int memberIndex) final;
+                        bool includeMembers, Int memberIndex) final;
     View& view() final;
     const View& view() const final;
 
@@ -55,8 +55,8 @@ struct Iterator : public ExprInterface<View> {
 
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer&) final;
-    ExprRef<View> deepCopySelfForUnrollImpl(const ExprRef<View>& self,
-                                        const AnyIterRef& iterator) const final;
+    ExprRef<View> deepCopySelfForUnrollImpl(
+        const ExprRef<View>& self, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();

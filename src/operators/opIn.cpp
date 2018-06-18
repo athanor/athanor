@@ -114,24 +114,24 @@ void OpIn::stopTriggering() {
     if (exprTrigger) {
         stopTriggeringOnChildren();
         invoke(expr, expr->stopTriggering());
-        setOperand
-->stopTriggering();    }
+        setOperand->stopTriggering();
+    }
 }
 
-void OpIn::updateVarViolations(const ViolationContext& ,
-                               ViolationContainer&  vioDesc) {
+void OpIn::updateVarViolations(const ViolationContext&,
+                               ViolationContainer& vioDesc) {
     if (violation == 0) {
         return;
     } else {
-        invoke(expr,expr->updateVarViolations(violation, vioDesc));
+        invoke(expr, expr->updateVarViolations(violation, vioDesc));
         setOperand->updateVarViolations(violation, vioDesc);
     }
 }
 
-ExprRef<BoolView>  OpIn::deepCopySelfForUnrollImpl(const ExprRef<BoolView>&,
-                                        const AnyIterRef& iterator) const {
+ExprRef<BoolView> OpIn::deepCopySelfForUnrollImpl(
+    const ExprRef<BoolView>&, const AnyIterRef& iterator) const {
     auto newOpIn = make_shared<OpIn>(
-        invoke_r(expr,expr->deepCopySelfForUnroll(expr, iterator), AnyExprRef),
+        invoke_r(expr, expr->deepCopySelfForUnroll(expr, iterator), AnyExprRef),
         setOperand->deepCopySelfForUnroll(setOperand, iterator));
     newOpIn->violation = violation;
     return newOpIn;
@@ -139,14 +139,14 @@ ExprRef<BoolView>  OpIn::deepCopySelfForUnrollImpl(const ExprRef<BoolView>&,
 
 std::ostream& OpIn::dumpState(std::ostream& os) const {
     os << "opIn(expr=";
-    invoke_r(expr,expr->dumpState(os),ostream&) << ",\n";
+    invoke_r(expr, expr->dumpState(os), ostream&) << ",\n";
     os << "setOperand=";
     setOperand->dumpState(os);
     return os;
 }
 
 void OpIn::findAndReplaceSelf(const FindAndReplaceFunction& func) {
-    invoke(expr,expr->findAndReplaceSelf(func));
+    invoke(expr, expr->findAndReplaceSelf(func));
     setOperand->findAndReplaceSelf(func);
 }
 
@@ -156,7 +156,7 @@ bool OpIn::optimise(PathExtension path) {
     changeMade |= setOperand->optimise(path.extend(setOperand));
     return changeMade;
 }
-template<typename Op>
+template <typename Op>
 struct OpMaker;
 
 template <>
@@ -164,7 +164,7 @@ struct OpMaker<OpIn> {
     static ExprRef<BoolView> make(AnyExprRef expr, ExprRef<SetView> setOperand);
 };
 
-ExprRef<BoolView> OpMaker<OpIn>::make(AnyExprRef expr, ExprRef<SetView> setOperand) {
+ExprRef<BoolView> OpMaker<OpIn>::make(AnyExprRef expr,
+                                      ExprRef<SetView> setOperand) {
     return make_shared<OpIn>(move(expr), move(setOperand));
 }
-

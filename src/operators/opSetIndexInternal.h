@@ -20,7 +20,7 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     OpSetIndexInternal(OpSetIndexInternal<SetMemberViewType>&& other);
     ~OpSetIndexInternal() { this->stopTriggeringOnChildren(); }
     void addTriggerImpl(const std::shared_ptr<SetMemberTriggerType>& trigger,
-                    bool includeMembers, Int memberIndex) final;
+                        bool includeMembers, Int memberIndex) final;
     SetMemberViewType& view() final;
     const SetMemberViewType& view() const final;
 

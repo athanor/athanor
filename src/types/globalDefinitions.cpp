@@ -31,7 +31,7 @@ inline pair<bool, ViolationContainer&> registerViolations(
     }                                                                         \
                                                                               \
     void name##Value::evaluateImpl() {}                                       \
-    void name##Value::startTriggeringImpl() {}                                    \
+    void name##Value::startTriggeringImpl() {}                                \
     void name##Value::stopTriggering() {}                                     \
     void name##Value::updateVarViolations(const ViolationContext& vioContext, \
                                           ViolationContainer& vioDesc) {      \

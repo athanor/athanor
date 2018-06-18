@@ -19,22 +19,19 @@ ExprRef<SetMemberViewType>& OpSetIndexInternal<SetMemberViewType>::getMember() {
     debug_code(assert(!setOperand->isUndefined()));
     auto& members = setOperand->view().getMembers<SetMemberViewType>();
     debug_code(assert(index < members.size()));
-    auto& member =
-        members[index];
+    auto& member = members[index];
     return member;
 }
 
-
 template <typename SetMemberViewType>
-const ExprRef<SetMemberViewType>& OpSetIndexInternal<SetMemberViewType>::getMember() const {
+const ExprRef<SetMemberViewType>&
+OpSetIndexInternal<SetMemberViewType>::getMember() const {
     debug_code(assert(!setOperand->isUndefined()));
     const auto& members = setOperand->view().getMembers<SetMemberViewType>();
     debug_code(assert(index < members.size()));
-    const auto& member =
-        members[index];
+    const auto& member = members[index];
     return member;
 }
-
 
 template <typename SetMemberViewType>
 SetMemberViewType& OpSetIndexInternal<SetMemberViewType>::view() {
@@ -47,7 +44,9 @@ const SetMemberViewType& OpSetIndexInternal<SetMemberViewType>::view() const {
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::reevaluateDefined() {
-    defined = !setOperand->isUndefined() && index < setOperand->view().numberElements() && !getMember()->isUndefined();
+    defined = !setOperand->isUndefined() &&
+              index < setOperand->view().numberElements() &&
+              !getMember()->isUndefined();
 }
 
 template <typename SetMemberViewType>
@@ -145,31 +144,29 @@ struct OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger
 
     void reattachTrigger() final {
         deleteTrigger(op->setTrigger);
-        auto trigger =
-            make_shared<OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger>(
-                op);
+        auto trigger = make_shared<
+            OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger>(op);
         op->setOperand->addTrigger(trigger);
         op->setTrigger = trigger;
     }
 
-void valueAdded(const AnyExprRef&) {
-if (!op->defined) {
-    eventForwardedAsDefinednessChange();
-}
-}
-void valueRemoved(UInt index, HashType) final  {
-    if (index == op->index) {
-        valueChanged();
+    void valueAdded(const AnyExprRef&) {
+        if (!op->defined) {
+            eventForwardedAsDefinednessChange();
+        }
     }
-}
+    void valueRemoved(UInt index, HashType) final {
+        if (index == op->index) {
+            valueChanged();
+        }
+    }
 };
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::startTriggeringImpl() {
     if (!setTrigger) {
-        setTrigger =
-            make_shared<OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger>(
-                this);
+        setTrigger = make_shared<
+            OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger>(this);
         setOperand->addTrigger(setTrigger);
         setOperand->startTriggering();
     }
@@ -204,8 +201,9 @@ template <typename SetMemberViewType>
 ExprRef<SetMemberViewType>
 OpSetIndexInternal<SetMemberViewType>::deepCopySelfForUnrollImpl(
     const ExprRef<SetMemberViewType>&, const AnyIterRef& iterator) const {
-    auto newOpSetIndexInternal = make_shared<OpSetIndexInternal<SetMemberViewType>>(
-        setOperand->deepCopySelfForUnroll(setOperand, iterator), index);
+    auto newOpSetIndexInternal =
+        make_shared<OpSetIndexInternal<SetMemberViewType>>(
+            setOperand->deepCopySelfForUnroll(setOperand, iterator), index);
     newOpSetIndexInternal->defined = defined;
     return newOpSetIndexInternal;
 }
@@ -245,7 +243,7 @@ struct OpMaker<OpSetIndexInternal<View>> {
 
 template <typename View>
 ExprRef<View> OpMaker<OpSetIndexInternal<View>>::make(ExprRef<SetView> set,
-                                                UInt index) {
+                                                      UInt index) {
     return make_shared<OpSetIndexInternal<View>>(move(set), index);
 }
 

@@ -782,6 +782,13 @@ using EnableIfDomainMatchesView = typename enable_if<
             View>::value,
     int>::type;
 
+template <typename Domain, typename View>
+using EnableIfDomainNotMatchView = typename enable_if<
+    !is_same<typename AssociatedViewType<
+                 typename AssociatedValueType<Domain>::type>::type,
+             View>::value,
+    int>::type;
+
 void checkTuplePatternMatchSize(json& tupleMatchExpr,
                                 const shared_ptr<TupleDomain>& domain) {
     if (tupleMatchExpr.size() != domain->inners.size()) {
@@ -811,6 +818,14 @@ template <typename Domain,
 ExprRef<View> makeSetIndexFromDomain(shared_ptr<Domain>&,
                                      ExprRef<SetView>& expr, UInt index) {
     return OpMaker<OpSetIndexInternal<View>>::make(expr, index);
+}
+
+template <typename DomainType, typename ViewType,
+          EnableIfDomainNotMatchView<DomainType, ViewType> = 0>
+void extractPatternMatchAndAddExprsToScope(json&, const shared_ptr<DomainType>&,
+                                           ExprRef<ViewType>&, ParsedModel&,
+                                           vector<string>&) {
+    shouldNotBeCalledPanic;
 }
 
 template <typename DomainType, typename ViewType,
@@ -913,7 +928,7 @@ AnyDomainRef addExprToQuantifier(
                        (powerSetTest = dynamic_cast<OpPowerSet*>(
                             &(*(quantifier->container)))) != NULL) {
                 auto iterRef = quantifier->template newIterRef<SetView>();
-                auto iterDomain = fakeSetDomain(fakeSetDomain(innerDomain));
+                auto iterDomain = innerDomain;
                 ExprRef<SetView> iter(iterRef);
                 extractPatternMatchAndAddExprsToScope(
                     generatorExpr[0], iterDomain, iter, parsedModel,

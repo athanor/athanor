@@ -155,11 +155,14 @@ struct ExprTrigger
     }
 
     void adapterValueChanged() {
+        debug_log("hit, index=" << index);
+        debug_log("previousHash:" << previousHash);
         HashType newHash = getValueHash(getOperands()[index]->view());
         if (newHash == previousHash) {
+            debug_log("returning");
             return;
         }
-        debug_code(assert(op->memberHashes.count(previousHash)));
+        debug_code(assert(op->hashIndicesMap.count(previousHash)));
         bool operandBeingUsedInSet = index < op->numberElements();
         // if false, then another operand with the same value as this operands
         // old value is in the SetView, this operand was not being tracked as
@@ -338,21 +341,27 @@ void OpSetLit::updateVarViolations(const ViolationContext& context,
 
 ExprRef<SetView> OpSetLit::deepCopySelfForUnrollImpl(
     const ExprRef<SetView>&, const AnyIterRef& iterator) const {
-    AnyExprVec newOperands;
-    mpark::visit(
+    return mpark::visit(
         [&](auto& operands) {
-            auto& newOperandsImpl =
-                newOperands.emplace<ExprRefVec<viewType(operands)>>();
+            ExprRefVec<viewType(operands)> newOperands;
+            ExprRefVec<viewType(operands)> newSetMembers;
+
             for (auto& operand : operands) {
-                newOperandsImpl.emplace_back(
+                newOperands.emplace_back(
                     operand->deepCopySelfForUnroll(operand, iterator));
+                if (newOperands.size() <= numberElements()) {
+                    newSetMembers.emplace_back(newOperands.back());
+                }
             }
+            auto newOpSetLit = make_shared<OpSetLit>(move(newOperands));
+            newOpSetLit->members = newSetMembers;
+            newOpSetLit->memberHashes = memberHashes;
+            newOpSetLit->cachedHashTotal = cachedHashTotal;
+            newOpSetLit->hashIndicesMap = hashIndicesMap;
+            newOpSetLit->numberUndefined = numberUndefined;
+            return newOpSetLit;
         },
         operands);
-
-    auto newOpSetLit = make_shared<OpSetLit>(move(newOperands));
-    newOpSetLit->numberUndefined = numberUndefined;
-    return newOpSetLit;
 }
 
 std::ostream& OpSetLit::dumpState(std::ostream& os) const {

@@ -43,6 +43,29 @@ void ExprInterface<View>::addTriggerImpl(
     }
 }
 
+bool smallerValue(const AnyExprRef& u, const AnyExprRef& v) {
+    return u.index() < v.index() ||
+           (u.index() == v.index() &&
+            mpark::visit(
+                [&v](auto& uImpl) {
+                    auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v);
+                    return smallerValue(uImpl->view(), vImpl->view());
+                },
+                u));
+}
+
+bool largerValue(const AnyExprRef& u, const AnyExprRef& v) {
+    return u.index() > v.index() ||
+           (u.index() == v.index() &&
+            mpark::visit(
+                [&v](auto& uImpl) {
+                    auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v);
+                    return largerValue(uImpl->view(), vImpl->view());
+                },
+                u));
+}
+
+
 HashType getValueHash(const AnyExprRef& ref) {
     return mpark::visit([&](auto& ref) { return getValueHash(ref->view()); },
                         ref);

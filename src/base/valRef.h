@@ -73,8 +73,6 @@ ValRef<ValueType> constructValueOfSameType(const ValueType& other) {
 }
 
 void normalise(AnyValRef& v);
-bool smallerValue(const AnyValRef& u, const AnyValRef& v);
-bool largerValue(const AnyValRef& u, const AnyValRef& v);
 
 AnyValRef deepCopy(const AnyValRef& val);
 std::ostream& operator<<(std::ostream& os, const AnyValRef& v);

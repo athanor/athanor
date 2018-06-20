@@ -1,6 +1,9 @@
 #include "operators/opSetIndexInternal.h"
+
+#include <algorithm>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include "utils/ignoreUnused.h"
 using namespace std;
 
@@ -45,7 +48,7 @@ ExprRef<SetMemberViewType>& OpSetIndexInternal<SetMemberViewType>::getMember() {
 template <typename SetMemberViewType>
 const ExprRef<SetMemberViewType>&
 OpSetIndexInternal<SetMemberViewType>::getMember() const {
-    return sortedSet->getMembers(index);
+    return sortedSet->getMember(index);
 }
 
 template <typename SetMemberViewType>
@@ -98,8 +101,8 @@ template <typename SetMemberViewType>
 OpSetIndexInternal<SetMemberViewType>::OpSetIndexInternal(
     OpSetIndexInternal<SetMemberViewType>&& other)
     : ExprInterface<SetMemberViewType>(move(other)),
-      triggers(move(other.triggers)),
       sortedSet(move(other.sortedSet)),
+      triggers(move(other.triggers)),
       index(move(other.index)),
       defined(move(other.defined)) {
     sortedSet->parents[index] = this;
@@ -129,7 +132,7 @@ void OpSetIndexInternal<
                         ? 1
                         : -1;
     }
-    size_t limit = (increment == 1) ? setOperands->view().numberElements() : 0;
+    size_t limit = (increment == 1) ? setOperand->view().numberElements() : 0;
     bool shouldBeSmaller = (increment == 1) ? false : true;
     for (size_t i = index;
          i != limit &&
@@ -145,17 +148,17 @@ void OpSetIndexInternal<SetMemberViewType>::SortedSet::swapMembers(
     size_t index1, size_t index2) {
     swap(parentSetMapping[index1], parentSetMapping[index2]);
     swap(setParentMapping[parentSetMapping[index1]],
-         setParentMapping(parentSetMapping[index2]));
-    parents[index1]->notifyMemberSwapped);
-    parents[index2]->notifyMemberSwapped);
+         setParentMapping[parentSetMapping[index2]]);
+    parents[index1]->notifyMemberSwapped();
+    parents[index2]->notifyMemberSwapped();
 }
 
 template <typename SetMemberViewType>
-void OpSetIndexInternal<SetMemberViewType>::notifyMemberSwappedUInt index) {
+void OpSetIndexInternal<SetMemberViewType>::notifyMemberSwapped() {
     visitTriggers(
         [&](auto& t) {
             t->valueChanged();
-            t->reAttachTrigger();
+            t->reattachTrigger();
         },
         triggers);
 }
@@ -208,15 +211,13 @@ struct OpSetIndexInternal<SetMemberViewType>::SortedSet::SetOperandTrigger
 
     void valueAdded(const AnyExprRef&) { todoImpl(); }
     void valueRemoved(UInt, HashType) final { todoImpl(); }
-}
-}
-;
+};
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::startTriggeringImpl() {
     if (!sortedSet->setTrigger) {
-        sortedSet->setTrigger = make_shared<OpSetIndexInternal<
-            SetMemberViewType>::SortedSet::SetOperandTrigger>(this);
+        sortedSet->setTrigger = make_shared<typename OpSetIndexInternal<
+            SetMemberViewType>::SortedSet::SetOperandTrigger>(&(*(this->sortedSet)));
         sortedSet->setOperand->addTrigger(sortedSet->setTrigger);
         sortedSet->setOperand->startTriggering();
     }
@@ -254,10 +255,10 @@ OpSetIndexInternal<SetMemberViewType>::deepCopySelfForUnrollImpl(
     const ExprRef<SetMemberViewType>&, const AnyIterRef& iterator) const {
     if (!sortedSet->otherSortedSet) {
         sortedSet->otherSortedSet =
-            make_shared<OpSetIndexInternal<SetMemberViewType>::SortedSet>(
+            make_shared<typename OpSetIndexInternal<SetMemberViewType>::SortedSet>(
                 sortedSet->setOperand->deepCopySelfForUnroll(
                     sortedSet->setOperand, iterator));
-        sortedSet->otherSortedSet->parents->resize(sortedSet->parents.size());
+        sortedSet->otherSortedSet->parents.resize(sortedSet->parents.size());
         sortedSet->otherSortedSet->evaluated = sortedSet->evaluated;
         sortedSet->otherSortedSet->parentSetMapping =
             sortedSet->parentSetMapping;
@@ -279,7 +280,9 @@ std::ostream& OpSetIndexInternal<SetMemberViewType>::dumpState(
     std::ostream& os) const {
     os << "opSetIndexInternal(set=";
     sortedSet->setOperand->dumpState(os) << ",\n";
-    os << "index=" << index << ",\nparentSetMapping=" << sortedSet->parentSetMapping << ",\nsetParentMapping=" << sortedSet->setParentMapping << ")";
+    os << "index=" << index
+       << ",\nparentSetMapping=" << sortedSet->parentSetMapping
+       << ",\nsetParentMapping=" << sortedSet->setParentMapping << ")";
     return os;
 }
 
@@ -304,12 +307,15 @@ struct OpMaker;
 
 template <typename View>
 struct OpMaker<OpSetIndexInternal<View>> {
-    static ExprRef<View> make(std::shared_ptr<OpSetIndexInternal<View>::SortedSet> sortedSet, UInt index);
+    static ExprRef<View> make(
+        std::shared_ptr<typename OpSetIndexInternal<View>::SortedSet> sortedSet,
+        UInt index);
 };
 
 template <typename View>
-ExprRef<View> OpMaker<OpSetIndexInternal<View>>::make(shared_ptr<OpSetIndexInternal<View>> sortedSet,
-                                                      UInt index) {
+ExprRef<View> OpMaker<OpSetIndexInternal<View>>::make(
+    shared_ptr<typename OpSetIndexInternal<View>::SortedSet> sortedSet,
+    UInt index) {
     return make_shared<OpSetIndexInternal<View>>(move(sortedSet), index);
 }
 

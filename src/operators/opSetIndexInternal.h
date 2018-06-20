@@ -66,7 +66,7 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     ExprRef<SetMemberViewType>& getMember();
     const ExprRef<SetMemberViewType>& getMember() const;
     void reevaluateDefined();
-    void notifyMemberSwapped(UInt index);
+    void notifyMemberSwapped();
 };
 
 #endif /* SRC_OPERATORS_OPSETINDEXINTERNAL_H_ */

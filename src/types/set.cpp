@@ -111,9 +111,8 @@ void normaliseImpl(SetValue&, ExprRefVec<InnerViewType>& valMembersImpl) {
     for (auto& v : valMembersImpl) {
         normalise(*assumeAsValue(v));
     }
-    sort(valMembersImpl.begin(), valMembersImpl.end(), [](auto& u, auto& v) {
-        return smallerValue(*assumeAsValue(u), *assumeAsValue(v));
-    });
+    sort(valMembersImpl.begin(), valMembersImpl.end(),
+         [](auto& u, auto& v) { return smallerValue(u->view(), v->view()); });
 }
 
 template <>
@@ -126,7 +125,7 @@ void normalise<SetValue>(SetValue& val) {
 template <>
 bool smallerValue<SetView>(const SetView& u, const SetView& v);
 template <>
-bool largerValue<SetValue>(const SetValue& u, const SetValue& v);
+bool largerValue<SetView>(const SetView& u, const SetView& v);
 
 template <>
 bool smallerValue<SetView>(const SetView& u, const SetView& v) {
@@ -154,7 +153,7 @@ bool smallerValue<SetView>(const SetView& u, const SetView& v) {
 }
 
 template <>
-bool largerValue<SetValue>(const SetValue& u, const SetValue& v) {
+bool largerValue<SetView>(const SetView& u, const SetView& v) {
     return mpark::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =

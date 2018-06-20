@@ -116,14 +116,12 @@ void normalise<SequenceValue>(SequenceValue& val) {
 }
 
 template <>
-bool smallerValue<SequenceView>(const SequenceView& u,
-                                 const SequenceView& v);
+bool smallerValue<SequenceView>(const SequenceView& u, const SequenceView& v);
 template <>
 bool largerValue<SequenceView>(const SequenceView& u, const SequenceView& v);
 
 template <>
-bool smallerValue<SequenceView>(const SequenceView& u,
-                                 const SequenceView& v) {
+bool smallerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
     return mpark::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
@@ -148,8 +146,7 @@ bool smallerValue<SequenceView>(const SequenceView& u,
 }
 
 template <>
-bool largerValue<SequenceView>(const SequenceView& u,
-                                const SequenceView& v) {
+bool largerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
     return mpark::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =

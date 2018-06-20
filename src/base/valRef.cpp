@@ -5,7 +5,6 @@ using namespace std;
 ValBase constantPool;
 ValBase definedPool;
 
-
 void normalise(AnyValRef& v) {
     mpark::visit([](auto& vImpl) { normalise(*vImpl); }, v);
 }

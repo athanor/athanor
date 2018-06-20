@@ -172,14 +172,12 @@ void normalise<FunctionValue>(FunctionValue& val) {
 }
 
 template <>
-bool smallerValue<FunctionView>(const FunctionView& u,
-                                 const FunctionView& v);
+bool smallerValue<FunctionView>(const FunctionView& u, const FunctionView& v);
 template <>
 bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v);
 
 template <>
-bool smallerValue<FunctionView>(const FunctionView& u,
-                                 const FunctionView& v) {
+bool smallerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
     return mpark::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
@@ -204,8 +202,7 @@ bool smallerValue<FunctionView>(const FunctionView& u,
 }
 
 template <>
-bool largerValue<FunctionView>(const FunctionView& u,
-                                const FunctionView& v) {
+bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
     return mpark::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =

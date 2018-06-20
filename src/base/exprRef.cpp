@@ -65,7 +65,6 @@ bool largerValue(const AnyExprRef& u, const AnyExprRef& v) {
                 u));
 }
 
-
 HashType getValueHash(const AnyExprRef& ref) {
     return mpark::visit([&](auto& ref) { return getValueHash(ref->view()); },
                         ref);

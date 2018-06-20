@@ -107,11 +107,9 @@ bool smallerValue<TupleView>(const TupleView& u, const TupleView& v) {
         return false;
     }
     for (size_t i = 0; i < u.members.size(); ++i) {
-        if (smallerValue(u.members[i],
-                         v.members[i])) {
+        if (smallerValue(u.members[i], v.members[i])) {
             return true;
-        } else if (largerValue(u.members[i],
-                               v.members[i])) {
+        } else if (largerValue(u.members[i], v.members[i])) {
             return false;
         }
     }
@@ -128,8 +126,7 @@ bool largerValue<TupleView>(const TupleView& u, const TupleView& v) {
     for (size_t i = 0; i < u.members.size(); ++i) {
         if (largerValue(u.members[i], v.members[i])) {
             return true;
-        } else if (smallerValue(u.members[i],
-                                v.members[i])) {
+        } else if (smallerValue(u.members[i], v.members[i])) {
             return false;
         }
     }

@@ -9,28 +9,43 @@ void OpSetIndexInternal<SetMemberViewType>::addTriggerImpl(
     const shared_ptr<SetMemberTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));
-    if (!setOperand->isUndefined()) {
+    if (!sortedSet->setOperand->isUndefined()) {
         getMember()->addTrigger(trigger, includeMembers, memberIndex);
     }
 }
 
 template <typename SetMemberViewType>
-ExprRef<SetMemberViewType>& OpSetIndexInternal<SetMemberViewType>::getMember() {
+ExprRef<SetMemberViewType>&
+OpSetIndexInternal<SetMemberViewType>::SortedSet::getMember(size_t index) {
     debug_code(assert(!setOperand->isUndefined()));
     auto& members = setOperand->view().getMembers<SetMemberViewType>();
-    debug_code(assert(index < members.size()));
-    auto& member = members[index];
+    debug_code(assert(index < parentSetMapping.size()));
+    debug_code(assert(parentSetMapping[index] < members.size()));
+    auto& member = members[parentSetMapping[index]];
     return member;
 }
 
 template <typename SetMemberViewType>
 const ExprRef<SetMemberViewType>&
-OpSetIndexInternal<SetMemberViewType>::getMember() const {
+OpSetIndexInternal<SetMemberViewType>::SortedSet::getMember(
+    size_t index) const {
     debug_code(assert(!setOperand->isUndefined()));
     const auto& members = setOperand->view().getMembers<SetMemberViewType>();
-    debug_code(assert(index < members.size()));
-    const auto& member = members[index];
+    debug_code(assert(index < parentSetMapping.size()));
+    debug_code(assert(parentSetMapping[index] < members.size()));
+    const auto& member = members[parentSetMapping[index]];
     return member;
+}
+
+template <typename SetMemberViewType>
+ExprRef<SetMemberViewType>& OpSetIndexInternal<SetMemberViewType>::getMember() {
+    return sortedSet->getMember(index);
+}
+
+template <typename SetMemberViewType>
+const ExprRef<SetMemberViewType>&
+OpSetIndexInternal<SetMemberViewType>::getMember() const {
+    return sortedSet->getMembers(index);
 }
 
 template <typename SetMemberViewType>
@@ -44,15 +59,39 @@ const SetMemberViewType& OpSetIndexInternal<SetMemberViewType>::view() const {
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::reevaluateDefined() {
-    defined = !setOperand->isUndefined() &&
-              index < setOperand->view().numberElements() &&
+    defined = !sortedSet->setOperand->isUndefined() &&
+              sortedSet->parentSetMapping[index] <
+                  sortedSet->setOperand->view().numberElements() &&
               !getMember()->isUndefined();
 }
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::evaluateImpl() {
-    setOperand->evaluate();
+    sortedSet->evaluate();
     reevaluateDefined();
+}
+
+template <typename SetMemberViewType>
+void OpSetIndexInternal<SetMemberViewType>::SortedSet::evaluate() {
+    if (evaluated) {
+        return;
+    }
+    evaluated = true;
+    setOperand->evaluate();
+}
+
+template <typename SetMemberViewType>
+void OpSetIndexInternal<SetMemberViewType>::SortedSet::reevaluate() {
+    parentSetMapping.resize(parents.size());
+    iota(parentSetMapping.begin(), parentSetMapping.end(), 0);
+    sort(parentSetMapping.begin(), parentSetMapping.end(),
+         [&](size_t u, size_t v) {
+             return smallerValue(getMember(u)->view(), getMember(v)->view());
+             setParentMapping.resize(parentSetMapping.size());
+             for (size_t i = 0; i < parentSetMapping.size(); i++) {
+                 setParentMapping[parentSetMapping[i]] = i;
+             }
+         });
 }
 
 template <typename SetMemberViewType>
@@ -60,75 +99,93 @@ OpSetIndexInternal<SetMemberViewType>::OpSetIndexInternal(
     OpSetIndexInternal<SetMemberViewType>&& other)
     : ExprInterface<SetMemberViewType>(move(other)),
       triggers(move(other.triggers)),
-      setOperand(move(other.setOperand)),
+      sortedSet(move(other.sortedSet)),
       index(move(other.index)),
-      defined(move(other.defined)),
-      setTrigger(move(other.setTrigger)) {
+      defined(move(other.defined)) {
+    sortedSet->parents[index] = this;
+}
+
+template <typename SetMemberViewType>
+OpSetIndexInternal<SetMemberViewType>::SortedSet::SortedSet(
+    OpSetIndexInternal<SetMemberViewType>::SortedSet&& other)
+    : setOperand(move(other.setOperand)),
+      setTrigger(move(other.setTrigger)),
+      parents(move(other.parents)),
+      parentSetMapping(move(other.parentSetMapping)) {
     setTriggerParent(this, setTrigger);
 }
 
 template <typename SetMemberViewType>
-struct OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger
+void OpSetIndexInternal<
+    SetMemberViewType>::SortedSet::notifySetMemberValueChange(UInt index) {
+    int increment;
+    if (index == 0) {
+        increment = 1;
+    } else if (index == setOperand->view().numberElements() - 1) {
+        increment = -1;
+    } else {
+        increment = (smallerValue(getMember(index - 1)->view(),
+                                  getMember(index)->view()))
+                        ? 1
+                        : -1;
+    }
+    size_t limit = (increment == 1) ? setOperands->view().numberElements() : 0;
+    bool shouldBeSmaller = (increment == 1) ? false : true;
+    for (size_t i = index;
+         i != limit &&
+         smallerValue(getMember(index + increment)->view(),
+                      getMember(index)->view()) != shouldBeSmaller;
+         i = i + increment) {
+        swapMembers(index + increment, index);
+    }
+}
+
+template <typename SetMemberViewType>
+void OpSetIndexInternal<SetMemberViewType>::SortedSet::swapMembers(
+    size_t index1, size_t index2) {
+    swap(parentSetMapping[index1], parentSetMapping[index2]);
+    swap(setParentMapping[parentSetMapping[index1]],
+         setParentMapping(parentSetMapping[index2]));
+    parents[index1]->notifyMemberSwapped);
+    parents[index2]->notifyMemberSwapped);
+}
+
+template <typename SetMemberViewType>
+void OpSetIndexInternal<SetMemberViewType>::notifyMemberSwappedUInt index) {
+    visitTriggers(
+        [&](auto& t) {
+            t->valueChanged();
+            t->reAttachTrigger();
+        },
+        triggers);
+}
+
+template <typename SetMemberViewType>
+struct OpSetIndexInternal<SetMemberViewType>::SortedSet::SetOperandTrigger
     : public SetTrigger {
-    OpSetIndexInternal<SetMemberViewType>* op;
-    SetOperandTrigger(OpSetIndexInternal<SetMemberViewType>* op) : op(op) {}
+    OpSetIndexInternal<SetMemberViewType>::SortedSet* op;
+    SetOperandTrigger(OpSetIndexInternal<SetMemberViewType>::SortedSet* op)
+        : op(op) {}
 
-    bool eventForwardedAsDefinednessChange() {
-        bool wasDefined = op->defined;
-        op->reevaluateDefined();
-        if (wasDefined && !op->defined) {
-            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers);
-            return true;
-        } else if (!wasDefined && op->defined) {
-            visitTriggers(
-                [&](auto& t) {
-                    t->hasBecomeDefined();
-                    t->reattachTrigger();
-                },
-                op->triggers);
-            return true;
-        } else {
-            return !op->defined;
-        }
-    }
+    inline void hasBecomeUndefined() final { todoImpl(); }
 
-    inline void hasBecomeUndefined() final {
-        if (!op->defined) {
-            return;
-        }
-        op->defined = false;
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
-    }
-
-    void hasBecomeDefined() final {
-        op->reevaluateDefined();
-        if (!op->defined) {
-            return;
-        }
-        visitTriggers(
-            [&](auto& t) {
-                t->hasBecomeDefined();
-                t->reattachTrigger();
-            },
-            op->triggers);
-    }
+    void hasBecomeDefined() final { todoImpl(); }
 
     void possibleValueChange() final {
-        if (!op->defined) {
-            return;
+        for (auto& parent : op->parents) {
+            visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                          parent->triggers);
         }
-
-        visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
     }
     void valueChanged() final {
-        if (!eventForwardedAsDefinednessChange()) {
+        op->reevaluate();
+        for (auto& parent : op->parents) {
             visitTriggers(
                 [&](auto& t) {
                     t->valueChanged();
                     t->reattachTrigger();
                 },
-                op->triggers);
+                parent->triggers);
         }
     }
 
@@ -137,53 +194,47 @@ struct OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger
         // member, this trigger need not be forwarded
     }
 
-    inline void memberValueChanged(UInt, const AnyExprRef&) final {
-        // since the parent will already be directly triggering on the set
-        // member, this trigger need not be forwarded
+    inline void memberValueChanged(UInt index, const AnyExprRef&) final {
+        op->notifySetMemberValueChange(index);
     }
 
     void reattachTrigger() final {
         deleteTrigger(op->setTrigger);
-        auto trigger = make_shared<
-            OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger>(op);
+        auto trigger = make_shared<OpSetIndexInternal<
+            SetMemberViewType>::SortedSet::SetOperandTrigger>(op);
         op->setOperand->addTrigger(trigger);
         op->setTrigger = trigger;
     }
 
-    void valueAdded(const AnyExprRef&) {
-        if (!op->defined) {
-            eventForwardedAsDefinednessChange();
-        }
-    }
-    void valueRemoved(UInt index, HashType) final {
-        if (index == op->index) {
-            valueChanged();
-        }
-    }
-};
+    void valueAdded(const AnyExprRef&) { todoImpl(); }
+    void valueRemoved(UInt, HashType) final { todoImpl(); }
+}
+}
+;
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::startTriggeringImpl() {
-    if (!setTrigger) {
-        setTrigger = make_shared<
-            OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger>(this);
-        setOperand->addTrigger(setTrigger);
-        setOperand->startTriggering();
+    if (!sortedSet->setTrigger) {
+        sortedSet->setTrigger = make_shared<OpSetIndexInternal<
+            SetMemberViewType>::SortedSet::SetOperandTrigger>(this);
+        sortedSet->setOperand->addTrigger(sortedSet->setTrigger);
+        sortedSet->setOperand->startTriggering();
     }
 }
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::stopTriggeringOnChildren() {
-    if (setTrigger) {
-        deleteTrigger(setTrigger);
-        setTrigger = nullptr;
+    if (sortedSet->setTrigger) {
+        deleteTrigger(sortedSet->setTrigger);
+        sortedSet->setTrigger = nullptr;
     }
 }
+
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::stopTriggering() {
-    if (setTrigger) {
+    if (sortedSet->setTrigger) {
         stopTriggeringOnChildren();
-        setOperand->stopTriggering();
+        sortedSet->setOperand->stopTriggering();
     }
 }
 
@@ -193,7 +244,7 @@ void OpSetIndexInternal<SetMemberViewType>::updateVarViolations(
     if (defined) {
         getMember()->updateVarViolations(vioContext, vioDesc);
     } else {
-        setOperand->updateVarViolations(vioContext, vioDesc);
+        sortedSet->setOperand->updateVarViolations(vioContext, vioDesc);
     }
 }
 
@@ -201,26 +252,41 @@ template <typename SetMemberViewType>
 ExprRef<SetMemberViewType>
 OpSetIndexInternal<SetMemberViewType>::deepCopySelfForUnrollImpl(
     const ExprRef<SetMemberViewType>&, const AnyIterRef& iterator) const {
-    auto newOpSetIndexInternal =
-        make_shared<OpSetIndexInternal<SetMemberViewType>>(
-            setOperand->deepCopySelfForUnroll(setOperand, iterator), index);
-    newOpSetIndexInternal->defined = defined;
-    return newOpSetIndexInternal;
+    if (!sortedSet->otherSortedSet) {
+        sortedSet->otherSortedSet =
+            make_shared<OpSetIndexInternal<SetMemberViewType>::SortedSet>(
+                sortedSet->setOperand->deepCopySelfForUnroll(
+                    sortedSet->setOperand, iterator));
+        sortedSet->otherSortedSet->parents->resize(sortedSet->parents.size());
+        sortedSet->otherSortedSet->evaluated = sortedSet->evaluated;
+        sortedSet->otherSortedSet->parentSetMapping =
+            sortedSet->parentSetMapping;
+        sortedSet->otherSortedSet->setParentMapping =
+            sortedSet->setParentMapping;
+    }
+    auto newOpSetIndex = make_shared<OpSetIndexInternal<SetMemberViewType>>(
+        sortedSet->otherSortedSet, index);
+    newOpSetIndex->sortedSet->parents[index] = &(*newOpSetIndex);
+    if (++sortedSet->parentCopyCount == sortedSet->parents.size()) {
+        sortedSet->otherSortedSet = nullptr;
+    }
+    newOpSetIndex->defined = defined;
+    return newOpSetIndex;
 }
 
 template <typename SetMemberViewType>
 std::ostream& OpSetIndexInternal<SetMemberViewType>::dumpState(
     std::ostream& os) const {
     os << "opSetIndexInternal(set=";
-    setOperand->dumpState(os) << ",\n";
-    os << "index=" << index << ")";
+    sortedSet->setOperand->dumpState(os) << ",\n";
+    os << "index=" << index << ",\nparentSetMapping=" << sortedSet->parentSetMapping << ",\nsetParentMapping=" << sortedSet->setParentMapping << ")";
     return os;
 }
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::findAndReplaceSelf(
     const FindAndReplaceFunction& func) {
-    this->setOperand = findAndReplace(setOperand, func);
+    this->sortedSet->setOperand = findAndReplace(sortedSet->setOperand, func);
 }
 
 template <typename SetMemberViewType>
@@ -230,7 +296,7 @@ bool OpSetIndexInternal<SetMemberViewType>::isUndefined() {
 
 template <typename SetMemberViewType>
 bool OpSetIndexInternal<SetMemberViewType>::optimise(PathExtension path) {
-    return setOperand->optimise(path.extend(setOperand));
+    return sortedSet->setOperand->optimise(path.extend(sortedSet->setOperand));
 }
 
 template <typename Op>
@@ -238,13 +304,13 @@ struct OpMaker;
 
 template <typename View>
 struct OpMaker<OpSetIndexInternal<View>> {
-    static ExprRef<View> make(ExprRef<SetView> set, UInt index);
+    static ExprRef<View> make(std::shared_ptr<OpSetIndexInternal<View>::SortedSet> sortedSet, UInt index);
 };
 
 template <typename View>
-ExprRef<View> OpMaker<OpSetIndexInternal<View>>::make(ExprRef<SetView> set,
+ExprRef<View> OpMaker<OpSetIndexInternal<View>>::make(shared_ptr<OpSetIndexInternal<View>> sortedSet,
                                                       UInt index) {
-    return make_shared<OpSetIndexInternal<View>>(move(set), index);
+    return make_shared<OpSetIndexInternal<View>>(move(sortedSet), index);
 }
 
 #define opSetIndexInternalInstantiators(name)       \

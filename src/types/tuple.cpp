@@ -92,26 +92,24 @@ void normalise<TupleValue>(TupleValue& val) {
 }
 
 template <>
-bool smallerValue<TupleValue>(const TupleValue& u, const TupleValue& v);
+bool smallerValue<TupleView>(const TupleView& u, const TupleView& v);
 template <>
-bool largerValue<TupleValue>(const TupleValue& u, const TupleValue& v);
+bool largerValue<TupleView>(const TupleView& u, const TupleView& v);
 const AnyValRef toAnyValRef(const AnyExprRef& v) {
     return mpark::visit(
         [](const auto& v) -> AnyValRef { return assumeAsValue(v); }, v);
 }
 template <>
-bool smallerValue<TupleValue>(const TupleValue& u, const TupleValue& v) {
+bool smallerValue<TupleView>(const TupleView& u, const TupleView& v) {
     if (u.members.size() < v.members.size()) {
         return true;
     } else if (u.members.size() > v.members.size()) {
         return false;
     }
     for (size_t i = 0; i < u.members.size(); ++i) {
-        if (smallerValue(toAnyValRef(u.members[i]),
-                         toAnyValRef(v.members[i]))) {
+        if (smallerValue(u.members[i], v.members[i])) {
             return true;
-        } else if (largerValue(toAnyValRef(u.members[i]),
-                               toAnyValRef(v.members[i]))) {
+        } else if (largerValue(u.members[i], v.members[i])) {
             return false;
         }
     }
@@ -119,17 +117,16 @@ bool smallerValue<TupleValue>(const TupleValue& u, const TupleValue& v) {
 }
 
 template <>
-bool largerValue<TupleValue>(const TupleValue& u, const TupleValue& v) {
+bool largerValue<TupleView>(const TupleView& u, const TupleView& v) {
     if (u.members.size() > v.members.size()) {
         return true;
     } else if (u.members.size() < v.members.size()) {
         return false;
     }
     for (size_t i = 0; i < u.members.size(); ++i) {
-        if (largerValue(toAnyValRef(u.members[i]), toAnyValRef(v.members[i]))) {
+        if (largerValue(u.members[i], v.members[i])) {
             return true;
-        } else if (smallerValue(toAnyValRef(u.members[i]),
-                                toAnyValRef(v.members[i]))) {
+        } else if (smallerValue(u.members[i], v.members[i])) {
             return false;
         }
     }

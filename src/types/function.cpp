@@ -172,14 +172,12 @@ void normalise<FunctionValue>(FunctionValue& val) {
 }
 
 template <>
-bool smallerValue<FunctionValue>(const FunctionValue& u,
-                                 const FunctionValue& v);
+bool smallerValue<FunctionView>(const FunctionView& u, const FunctionView& v);
 template <>
-bool largerValue<FunctionValue>(const FunctionValue& u, const FunctionValue& v);
+bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v);
 
 template <>
-bool smallerValue<FunctionValue>(const FunctionValue& u,
-                                 const FunctionValue& v) {
+bool smallerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
     return mpark::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
@@ -190,11 +188,11 @@ bool smallerValue<FunctionValue>(const FunctionValue& u,
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (smallerValue(*assumeAsValue(uMembersImpl[i]),
-                                 *assumeAsValue(vMembersImpl[i]))) {
+                if (smallerValue(uMembersImpl[i]->view(),
+                                 vMembersImpl[i]->view())) {
                     return true;
-                } else if (largerValue(*assumeAsValue(uMembersImpl[i]),
-                                       *assumeAsValue(vMembersImpl[i]))) {
+                } else if (largerValue(uMembersImpl[i]->view(),
+                                       vMembersImpl[i]->view())) {
                     return false;
                 }
             }
@@ -204,8 +202,7 @@ bool smallerValue<FunctionValue>(const FunctionValue& u,
 }
 
 template <>
-bool largerValue<FunctionValue>(const FunctionValue& u,
-                                const FunctionValue& v) {
+bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
     return mpark::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
@@ -216,11 +213,11 @@ bool largerValue<FunctionValue>(const FunctionValue& u,
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (largerValue(*assumeAsValue(uMembersImpl[i]),
-                                *assumeAsValue(vMembersImpl[i]))) {
+                if (largerValue(uMembersImpl[i]->view(),
+                                vMembersImpl[i]->view())) {
                     return true;
-                } else if (smallerValue(*assumeAsValue(uMembersImpl[i]),
-                                        *assumeAsValue(vMembersImpl[i]))) {
+                } else if (smallerValue(uMembersImpl[i]->view(),
+                                        vMembersImpl[i]->view())) {
                     return false;
                 }
             }

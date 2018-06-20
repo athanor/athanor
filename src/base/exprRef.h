@@ -129,6 +129,8 @@ inline std::ostream& operator<<(std::ostream& os, const ExprRef<T>& ref) {
 
 HashType getValueHash(const AnyExprRef& ref);
 std::ostream& prettyPrint(std::ostream& os, const AnyExprRef& expr);
+bool smallerValue(const AnyExprRef& u, const AnyExprRef& v);
+bool largerValue(const AnyExprRef& u, const AnyExprRef& v);
 
 template <typename T>
 inline ExprRef<T> findAndReplace(ExprRef<T>& expr,

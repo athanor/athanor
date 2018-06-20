@@ -114,9 +114,9 @@ using Variantised =
 #undef variantValues
 
 template <typename Val>
-EnableIfValueAndReturn<Val, bool> smallerValue(const Val& u, const Val& v);
+EnableIfViewAndReturn<Val, bool> smallerValue(const Val& u, const Val& v);
 template <typename Val>
-EnableIfValueAndReturn<Val, bool> largerValue(const Val& u, const Val& v);
+EnableIfViewAndReturn<Val, bool> largerValue(const Val& u, const Val& v);
 template <typename View>
 EnableIfViewAndReturn<View, HashType> getValueHash(const View&);
 template <typename Val>

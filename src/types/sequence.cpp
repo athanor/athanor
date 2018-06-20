@@ -116,14 +116,12 @@ void normalise<SequenceValue>(SequenceValue& val) {
 }
 
 template <>
-bool smallerValue<SequenceValue>(const SequenceValue& u,
-                                 const SequenceValue& v);
+bool smallerValue<SequenceView>(const SequenceView& u, const SequenceView& v);
 template <>
-bool largerValue<SequenceValue>(const SequenceValue& u, const SequenceValue& v);
+bool largerValue<SequenceView>(const SequenceView& u, const SequenceView& v);
 
 template <>
-bool smallerValue<SequenceValue>(const SequenceValue& u,
-                                 const SequenceValue& v) {
+bool smallerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
     return mpark::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
@@ -134,11 +132,11 @@ bool smallerValue<SequenceValue>(const SequenceValue& u,
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (smallerValue(*assumeAsValue(uMembersImpl[i]),
-                                 *assumeAsValue(vMembersImpl[i]))) {
+                if (smallerValue(uMembersImpl[i]->view(),
+                                 vMembersImpl[i]->view())) {
                     return true;
-                } else if (largerValue(*assumeAsValue(uMembersImpl[i]),
-                                       *assumeAsValue(vMembersImpl[i]))) {
+                } else if (largerValue(uMembersImpl[i]->view(),
+                                       vMembersImpl[i]->view())) {
                     return false;
                 }
             }
@@ -148,8 +146,7 @@ bool smallerValue<SequenceValue>(const SequenceValue& u,
 }
 
 template <>
-bool largerValue<SequenceValue>(const SequenceValue& u,
-                                const SequenceValue& v) {
+bool largerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
     return mpark::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
@@ -160,11 +157,11 @@ bool largerValue<SequenceValue>(const SequenceValue& u,
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (largerValue(*assumeAsValue(uMembersImpl[i]),
-                                *assumeAsValue(vMembersImpl[i]))) {
+                if (largerValue(uMembersImpl[i]->view(),
+                                vMembersImpl[i]->view())) {
                     return true;
-                } else if (smallerValue(*assumeAsValue(uMembersImpl[i]),
-                                        *assumeAsValue(vMembersImpl[i]))) {
+                } else if (smallerValue(uMembersImpl[i]->view(),
+                                        vMembersImpl[i]->view())) {
                     return false;
                 }
             }

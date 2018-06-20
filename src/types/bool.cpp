@@ -52,11 +52,11 @@ template <>
 void normalise<BoolValue>(BoolValue&) {}
 
 template <>
-bool smallerValue<BoolValue>(const BoolValue& u, const BoolValue& v) {
+bool smallerValue<BoolView>(const BoolView& u, const BoolView& v) {
     return u.violation < v.violation;
 }
 
 template <>
-bool largerValue<BoolValue>(const BoolValue& u, const BoolValue& v) {
+bool largerValue<BoolView>(const BoolView& u, const BoolView& v) {
     return u.violation > v.violation;
 }

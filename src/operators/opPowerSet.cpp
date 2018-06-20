@@ -25,7 +25,7 @@ void OpPowerSet::reevaluate() {
     mpark::visit(
         [&](auto& members) {
             for (size_t i = 0; i < members.size(); i++) {
-                for (size_t j = i+ 1; j < members.size(); j++) {
+                for (size_t j = i + 1; j < members.size(); j++) {
                     auto subset =
                         OpMaker<OpSetLit>::make(ExprRefVec<viewType(members)>(
                             {members[i], members[j]}));

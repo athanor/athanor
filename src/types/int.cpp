@@ -60,12 +60,12 @@ void startTriggeringImpl(IntValue&) {}
 void stopTriggering(IntValue&) {}
 
 template <>
-bool smallerValue<IntValue>(const IntValue& u, const IntValue& v) {
+bool smallerValue<IntView>(const IntView& u, const IntView& v) {
     return u.value < v.value;
 }
 
 template <>
-bool largerValue<IntValue>(const IntValue& u, const IntValue& v) {
+bool largerValue<IntView>(const IntView& u, const IntView& v) {
     return u.value > v.value;
 }
 

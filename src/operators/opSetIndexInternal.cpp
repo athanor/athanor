@@ -217,7 +217,8 @@ template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::startTriggeringImpl() {
     if (!sortedSet->setTrigger) {
         sortedSet->setTrigger = make_shared<typename OpSetIndexInternal<
-            SetMemberViewType>::SortedSet::SetOperandTrigger>(&(*(this->sortedSet)));
+            SetMemberViewType>::SortedSet::SetOperandTrigger>(
+            &(*(this->sortedSet)));
         sortedSet->setOperand->addTrigger(sortedSet->setTrigger);
         sortedSet->setOperand->startTriggering();
     }
@@ -254,10 +255,10 @@ ExprRef<SetMemberViewType>
 OpSetIndexInternal<SetMemberViewType>::deepCopySelfForUnrollImpl(
     const ExprRef<SetMemberViewType>&, const AnyIterRef& iterator) const {
     if (!sortedSet->otherSortedSet) {
-        sortedSet->otherSortedSet =
-            make_shared<typename OpSetIndexInternal<SetMemberViewType>::SortedSet>(
-                sortedSet->setOperand->deepCopySelfForUnroll(
-                    sortedSet->setOperand, iterator));
+        sortedSet->otherSortedSet = make_shared<
+            typename OpSetIndexInternal<SetMemberViewType>::SortedSet>(
+            sortedSet->setOperand->deepCopySelfForUnroll(sortedSet->setOperand,
+                                                         iterator));
         sortedSet->otherSortedSet->parents.resize(sortedSet->parents.size());
         sortedSet->otherSortedSet->evaluated = sortedSet->evaluated;
         sortedSet->otherSortedSet->parentSetMapping =

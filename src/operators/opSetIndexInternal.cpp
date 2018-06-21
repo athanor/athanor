@@ -91,11 +91,11 @@ void OpSetIndexInternal<SetMemberViewType>::SortedSet::reevaluate() {
     sort(parentSetMapping.begin(), parentSetMapping.end(),
          [&](size_t u, size_t v) {
              return smallerValue(getMember(u)->view(), getMember(v)->view());
-             setParentMapping.resize(parentSetMapping.size());
-             for (size_t i = 0; i < parentSetMapping.size(); i++) {
-                 setParentMapping[parentSetMapping[i]] = i;
-             }
          });
+    setParentMapping.resize(parentSetMapping.size());
+    for (size_t i = 0; i < parentSetMapping.size(); i++) {
+        setParentMapping[parentSetMapping[i]] = i;
+    }
 }
 
 template <typename SetMemberViewType>
@@ -120,8 +120,8 @@ OpSetIndexInternal<SetMemberViewType>::SortedSet::SortedSet(
 }
 
 template <typename SetMemberViewType>
-void OpSetIndexInternal<
-    SetMemberViewType>::SortedSet::notifySetMemberValueChange(UInt memberIndex) {
+void OpSetIndexInternal<SetMemberViewType>::SortedSet::
+    notifySetMemberValueChange(UInt memberIndex) {
     size_t index = setParentMapping[memberIndex];
     int increment;
     if (index == 0) {

@@ -221,6 +221,7 @@ struct ExprTrigger
                 }
             }
         }
+        previousHash = newHash;
     }
 
     void reattachTrigger() final {

@@ -38,8 +38,10 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     bool defined = false;
     OpSetIndexInternal(std::shared_ptr<SortedSet> sortedSet, UInt index)
         : sortedSet(std::move(sortedSet)), index(index) {
-        this->sortedSet->parents.insert(
-            this->sortedSet->parents.begin() + this->index, this);
+        if (this->sortedSet->parents.size() <= this->index) {
+            this->sortedSet->parents.resize(this->index + 1);
+        }
+        this->sortedSet->parents[this->index] = this;
     }
     OpSetIndexInternal(const OpSetIndexInternal<SetMemberViewType>&) = delete;
     OpSetIndexInternal(OpSetIndexInternal<SetMemberViewType>&& other);

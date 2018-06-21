@@ -81,6 +81,7 @@ void OpSetIndexInternal<SetMemberViewType>::SortedSet::evaluate() {
     }
     evaluated = true;
     setOperand->evaluate();
+    reevaluate();
 }
 
 template <typename SetMemberViewType>
@@ -120,7 +121,8 @@ OpSetIndexInternal<SetMemberViewType>::SortedSet::SortedSet(
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<
-    SetMemberViewType>::SortedSet::notifySetMemberValueChange(UInt index) {
+    SetMemberViewType>::SortedSet::notifySetMemberValueChange(UInt memberIndex) {
+    size_t index = setParentMapping[memberIndex];
     int increment;
     if (index == 0) {
         increment = 1;

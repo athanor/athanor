@@ -95,7 +95,7 @@ struct ExprInterface : public Undefinable<View> {
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
-    virtual bool optimise(PathExtension path) = 0;
+    virtual std::pair<bool, ExprRef<View>> optimise(PathExtension path) = 0;
 };
 
 struct ViolationContext {

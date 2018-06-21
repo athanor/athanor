@@ -68,6 +68,7 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     ExprRef<SetMemberViewType>& getMember();
     const ExprRef<SetMemberViewType>& getMember() const;
     void reevaluateDefined();
+    void notifyPossibleMemberSwap();
     void notifyMemberSwapped();
 };
 

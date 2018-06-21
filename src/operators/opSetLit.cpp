@@ -113,11 +113,14 @@ struct ExprTrigger
     auto& getOperands() { return mpark::get<ExprRefVec<View>>(op->operands); }
 
     void adapterPossibleValueChange() {
+        debug_log("Possible value change: index=" << index);
+        debug_code(op->dumpState(cout) << endl);
         debug_code(op->assertValidHashes());
         if (index < op->numberElements()) {
             op->template notifyPossibleMemberChange<View>(index);
         }
         previousHash = getValueHash(getOperands()[index]->view());
+        debug_log("previousHash=" << previousHash);
     }
 
     void swapOperands(size_t index1, size_t index2) {
@@ -155,9 +158,11 @@ struct ExprTrigger
     }
 
     void adapterValueChanged() {
-        debug_log("hit, index=" << index);
-        debug_log("previousHash:" << previousHash);
         HashType newHash = getValueHash(getOperands()[index]->view());
+        debug_log("hit, index=" << index << "\npreviousHash=" << previousHash << "\nnewHash=" << newHash);;
+        debug_log("hashIndicesMap=" << op->hashIndicesMap);
+        debug_code(op->dumpState(cout) << endl);
+
         if (newHash == previousHash) {
             debug_log("returning");
             return;

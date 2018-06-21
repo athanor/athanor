@@ -123,6 +123,8 @@ template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::SortedSet::
     notifySetMemberValueChange(UInt memberIndex) {
     size_t index = setParentMapping[memberIndex];
+    visitTriggers([&] (auto& t) { t->valueChanged(); }, parents[index]->triggers);
+
     int increment;
     if (index == 0) {
         increment = 1;
@@ -148,12 +150,28 @@ void OpSetIndexInternal<SetMemberViewType>::SortedSet::
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::SortedSet::swapMembers(
     size_t index1, size_t index2) {
-    swap(parentSetMapping[index1], parentSetMapping[index2]);
+size_t temp = parentSetMapping[index1];
+    parents[index1]->notifyPossibleMemberSwap();
+    parentSetMapping[index1] = parentSetMapping[index2];
+    parents[index1]->notifyMemberSwapped();
+
+    parents[index2]->notifyPossibleMemberSwap();
+    parentSetMapping[index2] = temp;
+    parents[index2]->notifyMemberSwapped();
+
     swap(setParentMapping[parentSetMapping[index1]],
          setParentMapping[parentSetMapping[index2]]);
-    parents[index1]->notifyMemberSwapped();
-    parents[index2]->notifyMemberSwapped();
 }
+
+template <typename SetMemberViewType>
+void OpSetIndexInternal<SetMemberViewType>::notifyPossibleMemberSwap() {
+    visitTriggers(
+        [&](auto& t) {
+            t->possibleValueChange();
+        },
+        triggers);
+}
+
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::notifyMemberSwapped() {

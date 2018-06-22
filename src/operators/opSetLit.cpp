@@ -1,5 +1,6 @@
 #include "operators/opSetLit.h"
 #include <cassert>
+#include "operators/opSetIndexInternal.h"
 #include <cstdlib>
 #include "operators/simpleOperator.hpp"
 #include "types/allTypes.h"
@@ -405,6 +406,7 @@ void OpSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
 }
 bool OpSetLit::isUndefined() { return this->numberUndefined > 0; }
 pair<bool, ExprRef<SetView>> OpSetLit::optimise(PathExtension path) {
+    auto returnExpr = mpark::get<ExprRef<SetView>>(path.expr);
     bool changeMade = false;
     mpark::visit(
         [&](auto& operands) {
@@ -413,9 +415,28 @@ pair<bool, ExprRef<SetView>> OpSetLit::optimise(PathExtension path) {
                 changeMade |= optResult.first;
                 operand = optResult.second;
             }
+            typedef viewType(operands) View;
+            typename OpSetIndexInternal<View>::SortedSet* sortedSet = NULL;
+            bool first = true;
+            for (auto& operand: operands) {
+                auto setIndexTest = dynamic_cast<OpSetIndexInternal<View>*>(&(*operand));
+                if (!setIndexTest) {
+                    sortedSet = NULL;
+                    break;
+                }
+                if (first) {
+                    sortedSet = &(*(setIndexTest->sortedSet));
+                } else if (sortedSet != &(*(setIndexTest->sortedSet))) {
+                    sortedSet = NULL;
+                    break;
+                }
+            }
+            if (sortedSet) {
+                returnExpr = sortedSet->setOperand;
+            }
         },
         this->operands);
-    return make_pair(changeMade, mpark::get<ExprRef<SetView>>(path.expr));
+    return make_pair(changeMade, returnExpr);
 }
 template <typename Op>
 struct OpMaker;

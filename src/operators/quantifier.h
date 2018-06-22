@@ -68,7 +68,7 @@ struct Quantifier : public SequenceView {
     void stopTriggeringOnExpr(UInt oldIndex);
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
-    bool optimise(PathExtension path);
+    std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension path);
 };
 
 #endif /* SRC_OPERATORS_QUANTIFIER_H_ */

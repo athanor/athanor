@@ -163,16 +163,18 @@ void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         members);
 }
 bool OpSequenceLit::isUndefined() { return this->numberUndefined > 0; }
-bool OpSequenceLit::optimise(PathExtension path) {
+pair<bool, ExprRef<SequenceView>> OpSequenceLit::optimise(PathExtension path) {
     bool changeMade = false;
     mpark::visit(
         [&](auto& members) {
             for (auto& member : members) {
-                changeMade |= member->optimise(path.extend(member));
+                auto optResult = member->optimise(path.extend(member));
+                changeMade |= optResult.first;
+                member = optResult.second;
             }
         },
         this->members);
-    return changeMade;
+    return make_pair(changeMade, mpark::get<ExprRef<SequenceView>>(path.expr));
 }
 template <typename Op>
 struct OpMaker;

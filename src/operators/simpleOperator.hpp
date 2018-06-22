@@ -70,18 +70,23 @@ bool SimpleBinaryOperator<View, OperandView, Derived>::isUndefined() {
     return !this->isDefined();
 }
 template <typename View, typename OperandView, typename Derived>
-bool SimpleBinaryOperator<View, OperandView, Derived>::optimiseImpl() {
+bool SimpleBinaryOperator<View, OperandView,Derived>::optimiseImpl() {
     return false;
 }
 
 template <typename View, typename OperandView, typename Derived>
-bool SimpleBinaryOperator<View, OperandView, Derived>::optimise(
+std::pair<bool, ExprRef<View>> SimpleBinaryOperator<View, OperandView, Derived>::optimise(
     PathExtension path) {
     bool changeMade = false, first = true;
     while (true) {
-        bool tempChangeMade = left->optimise(path.extend(left));
+        auto leftOptResult = left->optimise(path.extend(left));
+        bool tempChangeMade = leftOptResult.first;
+        left = leftOptResult.second;
         changeMade |= tempChangeMade;
-        tempChangeMade |= right->optimise(path.extend(right));
+        auto rightOptResult = right->optimise(path.extend(right));
+        tempChangeMade |=  rightOptResult.first;
+        right = rightOptResult.second;
+
         changeMade |= tempChangeMade;
         if (first || tempChangeMade) {
             first = false;
@@ -93,7 +98,7 @@ bool SimpleBinaryOperator<View, OperandView, Derived>::optimise(
         }
         break;
     }
-    return changeMade;
+    return std::make_pair(changeMade, mpark::get<ExprRef<View>>(path.expr));
 }
 
 template <typename View, typename OperandView, typename Derived>
@@ -158,11 +163,13 @@ bool SimpleUnaryOperator<View, OperandView, Derived>::optimiseImpl() {
     return false;
 }
 template <typename View, typename OperandView, typename Derived>
-bool SimpleUnaryOperator<View, OperandView, Derived>::optimise(
+std::pair<bool, ExprRef<View>> SimpleUnaryOperator<View, OperandView, Derived>::optimise(
     PathExtension path) {
     bool changeMade = false, first = true;
     while (true) {
-        bool tempChangeMade = operand->optimise(path.extend(operand));
+        auto optResult = operand->optimise(path.extend(operand));
+        bool tempChangeMade =  optResult.first;
+        operand = optResult.second;
         changeMade |= tempChangeMade;
         if (first || tempChangeMade) {
             first = false;
@@ -174,6 +181,6 @@ bool SimpleUnaryOperator<View, OperandView, Derived>::optimise(
         }
         break;
     }
-    return changeMade;
+    return std::make_pair(changeMade, mpark::get<ExprRef<View>>(path.expr));
 }
 #endif /* SRC_OPERATORS_SIMPLEOPERATOR_HPP_ */

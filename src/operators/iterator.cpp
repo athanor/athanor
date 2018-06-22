@@ -87,8 +87,15 @@ bool Iterator<View>::isUndefined() {
 }
 
 template <typename View>
-bool Iterator<View>::optimise(PathExtension path) {
-    return ref && ref->optimise(path.extend(ref));
+pair<bool, ExprRef<View>> Iterator<View>::optimise(PathExtension path) {
+    auto returnExpr = mpark::get<ExprRef<View>>(path.expr);
+    if (!ref) {
+        return make_pair(false, returnExpr);
+    }
+
+    auto result = ref->optimise(path.extend(ref));
+    ref = result.second;
+    return make_pair(result.first, returnExpr);
 }
 
 std::ostream& operator<<(std::ostream& os, const AnyIterRef& ref) {

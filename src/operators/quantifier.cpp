@@ -365,13 +365,22 @@ bool Quantifier<ContainerType>::isUndefined() {
 }
 
 template <typename ContainerType>
-bool Quantifier<ContainerType>::optimise(PathExtension path) {
-    bool changeMade = container->optimise(path.extend(container));
-    changeMade |= (static_cast<bool>(condition) &&
-                   condition->optimise(path.extend(condition)));
+pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimise(
+    PathExtension path) {
+    bool changeMade = false;
+    auto optResult = container->optimise(path.extend(container));
+    changeMade |= optResult.first;
+    container = optResult.second;
+    if (condition) {
+        auto optResult = condition->optimise(path.extend(condition));
+        changeMade |= optResult.first;
+        condition = optResult.second;
+    }
     mpark::visit(overloaded(
                      [&](ExprRef<IntView>& expr) {
-                         changeMade |= expr->optimise(path.extend(expr));
+                         auto optResult = expr->optimise(path.extend(expr));
+                         changeMade |= optResult.first;
+                         expr = optResult.second;
                          bool optimised =
                              optimiseIfOpSumParentWithZeroingCondition(
                                  *this, expr, path);
@@ -384,7 +393,9 @@ bool Quantifier<ContainerType>::optimise(PathExtension path) {
                          }
                      },
                      [&](auto& expr) {
-                         changeMade |= expr->optimise(path.extend(expr));
+                         auto optResult = expr->optimise(path.extend(expr));
+                         changeMade |= optResult.first;
+                         expr = optResult.second;
                      }),
                  expr);
     if (condition) {
@@ -393,7 +404,7 @@ bool Quantifier<ContainerType>::optimise(PathExtension path) {
                 "range.\n";
         abort();
     }
-    return changeMade;
+    return make_pair(changeMade, mpark::get<ExprRef<SequenceView>>(path.expr));
 }
 
 bool isOpSum(const AnyExprRef& expr) {

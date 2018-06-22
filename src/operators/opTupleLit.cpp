@@ -134,16 +134,18 @@ void OpTupleLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
 
 bool OpTupleLit::isUndefined() { return numberUndefined > 0; }
 
-bool OpTupleLit::optimise(PathExtension path) {
+pair<bool, ExprRef<TupleView>> OpTupleLit::optimise(PathExtension path) {
     bool changeMade = false;
     for (auto& member : members) {
         mpark::visit(
             [&](auto& member) {
-                changeMade |= member->optimise(path.extend(member));
+                auto optResult = member->optimise(path.extend(member));
+                changeMade |= optResult.first;
+                member = optResult.second;
             },
             member);
     }
-    return changeMade;
+    return make_pair(changeMade, mpark::get<ExprRef<TupleView>>(path.expr));
 }
 
 template <typename Op>

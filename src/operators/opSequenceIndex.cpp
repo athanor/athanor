@@ -411,10 +411,16 @@ bool OpSequenceIndex<SequenceMemberViewType>::isUndefined() {
 }
 
 template <typename SequenceMemberViewType>
-bool OpSequenceIndex<SequenceMemberViewType>::optimise(PathExtension path) {
-    bool changeMade = sequenceOperand->optimise(path.extend(sequenceOperand));
-    changeMade |= indexOperand->optimise(path.extend(indexOperand));
-    return changeMade;
+pair<bool, ExprRef<SequenceMemberViewType>>
+OpSequenceIndex<SequenceMemberViewType>::optimise(PathExtension path) {
+    auto optResult = sequenceOperand->optimise(path.extend(sequenceOperand));
+    bool changeMade = optResult.first;
+    sequenceOperand = optResult.second;
+    auto optResult2 = indexOperand->optimise(path.extend(indexOperand));
+    changeMade |= optResult2.first;
+    indexOperand = optResult2.second;
+    return make_pair(changeMade,
+                     mpark::get<ExprRef<SequenceMemberViewType>>(path.expr));
 }
 
 template <typename Op>

@@ -71,7 +71,7 @@ struct OpSetLit : public SetView {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined() final;
-    bool optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<SetView>> optimise(PathExtension path) final;
     void assertValidHashes();
 };
 

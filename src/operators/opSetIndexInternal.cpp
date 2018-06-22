@@ -123,7 +123,8 @@ template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::SortedSet::
     notifySetMemberValueChange(UInt memberIndex) {
     size_t index = setParentMapping[memberIndex];
-    visitTriggers([&] (auto& t) { t->valueChanged(); }, parents[index]->triggers);
+    visitTriggers([&](auto& t) { t->valueChanged(); },
+                  parents[index]->triggers);
 
     int increment;
     if (index == 0) {
@@ -150,7 +151,7 @@ void OpSetIndexInternal<SetMemberViewType>::SortedSet::
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::SortedSet::swapMembers(
     size_t index1, size_t index2) {
-size_t temp = parentSetMapping[index1];
+    size_t temp = parentSetMapping[index1];
     parents[index1]->notifyPossibleMemberSwap();
     parentSetMapping[index1] = parentSetMapping[index2];
     parents[index1]->notifyMemberSwapped();
@@ -165,13 +166,8 @@ size_t temp = parentSetMapping[index1];
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::notifyPossibleMemberSwap() {
-    visitTriggers(
-        [&](auto& t) {
-            t->possibleValueChange();
-        },
-        triggers);
+    visitTriggers([&](auto& t) { t->possibleValueChange(); }, triggers);
 }
-
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::notifyMemberSwapped() {
@@ -319,8 +315,13 @@ bool OpSetIndexInternal<SetMemberViewType>::isUndefined() {
 }
 
 template <typename SetMemberViewType>
-bool OpSetIndexInternal<SetMemberViewType>::optimise(PathExtension path) {
-    return sortedSet->setOperand->optimise(path.extend(sortedSet->setOperand));
+pair<bool, ExprRef<SetMemberViewType>>
+OpSetIndexInternal<SetMemberViewType>::optimise(PathExtension path) {
+    auto optResult =
+        sortedSet->setOperand->optimise(path.extend(sortedSet->setOperand));
+    sortedSet->setOperand = optResult.second;
+    return make_pair(optResult.first,
+                     mpark::get<ExprRef<SetMemberViewType>>(path.expr));
 }
 
 template <typename Op>

@@ -60,7 +60,7 @@ struct Iterator : public ExprInterface<View> {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
-    bool optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
 };
 
 template <typename T>

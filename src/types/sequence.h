@@ -562,7 +562,7 @@ struct SequenceValue : public SequenceView, public ValBase {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
-    bool optimise(PathExtension) final;
+    std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension) final;
 };
 
 template <typename Child>

@@ -150,11 +150,19 @@ void OpIn::findAndReplaceSelf(const FindAndReplaceFunction& func) {
     setOperand->findAndReplaceSelf(func);
 }
 
-bool OpIn::optimise(PathExtension path) {
+pair<bool, ExprRef<BoolView>> OpIn::optimise(PathExtension path) {
     bool changeMade = false;
-    changeMade |= invoke(expr, expr->optimise(path.extend(expr)));
-    changeMade |= setOperand->optimise(path.extend(setOperand));
-    return changeMade;
+    mpark::visit(
+        [&](auto& expr) {
+            auto optResult = expr->optimise(path.extend(expr));
+            changeMade |= optResult.first;
+            expr = optResult.second;
+        },
+        expr);
+    auto optResult = setOperand->optimise(path.extend(setOperand));
+    changeMade |= optResult.first;
+    setOperand = optResult.second;
+    return make_pair(changeMade, mpark::get<ExprRef<BoolView>>(path.expr));
 }
 template <typename Op>
 struct OpMaker;

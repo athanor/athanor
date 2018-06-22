@@ -234,8 +234,12 @@ bool OpTupleIndex<TupleMemberViewType>::isUndefined() {
 }
 
 template <typename TupleMemberViewType>
-bool OpTupleIndex<TupleMemberViewType>::optimise(PathExtension path) {
-    return tupleOperand->optimise(path.extend(tupleOperand));
+pair<bool, ExprRef<TupleMemberViewType>>
+OpTupleIndex<TupleMemberViewType>::optimise(PathExtension path) {
+    auto optResult = tupleOperand->optimise(path.extend(tupleOperand));
+    tupleOperand = optResult.second;
+    return make_pair(optResult.first,
+                     mpark::get<ExprRef<TupleMemberViewType>>(path.expr));
 }
 
 template <typename Op>

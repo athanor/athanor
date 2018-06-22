@@ -301,12 +301,22 @@ bool OpFunctionImage<FunctionMemberViewType>::isUndefined() {
 }
 
 template <typename FunctionMemberViewType>
-bool OpFunctionImage<FunctionMemberViewType>::optimise(PathExtension path) {
+pair<bool, ExprRef<FunctionMemberViewType>>
+OpFunctionImage<FunctionMemberViewType>::optimise(PathExtension path) {
     bool changeMade = false;
-    changeMade |= functionOperand->optimise(path.extend(functionOperand));
-    changeMade |=
-        invoke(preImageOperand, optimise(path.extend(preImageOperand)));
-    return changeMade;
+    auto optResult = functionOperand->optimise(path.extend(functionOperand));
+    changeMade |= optResult.first;
+    functionOperand = optResult.second;
+    mpark::visit(
+        [&](auto& preImageOperand) {
+            auto optResult =
+                preImageOperand->optimise(path.extend(preImageOperand));
+            changeMade |= optResult.first;
+            preImageOperand = optResult.second;
+        },
+        preImageOperand);
+    return make_pair(changeMade,
+                     mpark::get<ExprRef<FunctionMemberViewType>>(path.expr));
 }
 template <typename Op>
 struct OpMaker;

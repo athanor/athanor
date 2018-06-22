@@ -159,7 +159,9 @@ struct ExprTrigger
 
     void adapterValueChanged() {
         HashType newHash = getValueHash(getOperands()[index]->view());
-        debug_log("hit, index=" << index << "\npreviousHash=" << previousHash << "\nnewHash=" << newHash);;
+        debug_log("hit, index=" << index << "\npreviousHash=" << previousHash
+                                << "\nnewHash=" << newHash);
+        ;
         debug_log("hashIndicesMap=" << op->hashIndicesMap);
         debug_code(op->dumpState(cout) << endl);
 
@@ -402,16 +404,18 @@ void OpSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         operands);
 }
 bool OpSetLit::isUndefined() { return this->numberUndefined > 0; }
-bool OpSetLit::optimise(PathExtension path) {
+pair<bool, ExprRef<SetView>> OpSetLit::optimise(PathExtension path) {
     bool changeMade = false;
     mpark::visit(
         [&](auto& operands) {
             for (auto& operand : operands) {
-                changeMade |= operand->optimise(path.extend(operand));
+                auto optResult = operand->optimise(path.extend(operand));
+                changeMade |= optResult.first;
+                operand = optResult.second;
             }
         },
         this->operands);
-    return changeMade;
+    return make_pair(changeMade, mpark::get<ExprRef<SetView>>(path.expr));
 }
 template <typename Op>
 struct OpMaker;

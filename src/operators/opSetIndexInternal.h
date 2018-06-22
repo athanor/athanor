@@ -64,7 +64,8 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
-    bool optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<SetMemberViewType>> optimise(
+        PathExtension path) final;
     ExprRef<SetMemberViewType>& getMember();
     const ExprRef<SetMemberViewType>& getMember() const;
     void reevaluateDefined();

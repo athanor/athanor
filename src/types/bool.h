@@ -41,7 +41,7 @@ struct BoolValue : public BoolView, ValBase {
 
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
-    bool optimise(PathExtension) final;
+    std::pair<bool, ExprRef<BoolView>> optimise(PathExtension) final;
 };
 
 template <typename Child>

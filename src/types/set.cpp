@@ -177,7 +177,6 @@ bool largerValue<SetView>(const SetView& u, const SetView& v) {
         u.members);
 }
 void SetView::assertValidState() {
-    return;
     mpark::visit(
         [&](auto& valMembersImpl) {
             std::unordered_set<UInt> seenHashes;

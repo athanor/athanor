@@ -1,7 +1,7 @@
 #include "operators/opSetLit.h"
 #include <cassert>
-#include "operators/opSetIndexInternal.h"
 #include <cstdlib>
+#include "operators/opSetIndexInternal.h"
 #include "operators/simpleOperator.hpp"
 #include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
@@ -418,8 +418,9 @@ pair<bool, ExprRef<SetView>> OpSetLit::optimise(PathExtension path) {
             typedef viewType(operands) View;
             typename OpSetIndexInternal<View>::SortedSet* sortedSet = NULL;
             bool first = true;
-            for (auto& operand: operands) {
-                auto setIndexTest = dynamic_cast<OpSetIndexInternal<View>*>(&(*operand));
+            for (auto& operand : operands) {
+                auto setIndexTest =
+                    dynamic_cast<OpSetIndexInternal<View>*>(&(*operand));
                 if (!setIndexTest) {
                     sortedSet = NULL;
                     break;

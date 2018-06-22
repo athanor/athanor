@@ -76,7 +76,10 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
 void OpPowerSet::updateVarViolations(const ViolationContext&,
                                      ViolationContainer&) {}
 
-void OpPowerSet::copy(OpPowerSet& newOp) const { newOp.sizeLimit = sizeLimit; }
+void OpPowerSet::copy(OpPowerSet& newOp) const {
+    newOp.sizeLimit = sizeLimit;
+    newOp.reevaluate();
+}
 
 std::ostream& OpPowerSet::dumpState(std::ostream& os) const {
     os << "OpPowerSet: value=";

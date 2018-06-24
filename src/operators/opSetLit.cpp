@@ -416,24 +416,25 @@ pair<bool, ExprRef<SetView>> OpSetLit::optimise(PathExtension path) {
                 operand = optResult.second;
             }
             typedef viewType(operands) View;
-            typename OpSetIndexInternal<View>::SortedSet* sortedSet = NULL;
+            ExprInterface<SetView>* commonSet = NULL;
+            OpSetIndexInternal<View>* setIndexTest = NULL;
             bool first = true;
             for (auto& operand : operands) {
-                auto setIndexTest =
+                setIndexTest =
                     dynamic_cast<OpSetIndexInternal<View>*>(&(*operand));
                 if (!setIndexTest) {
-                    sortedSet = NULL;
+                    commonSet= NULL;
                     break;
                 }
                 if (first) {
-                    sortedSet = &(*(setIndexTest->sortedSet));
-                } else if (sortedSet != &(*(setIndexTest->sortedSet))) {
-                    sortedSet = NULL;
+                    commonSet= &(*(setIndexTest->setOperand));
+                } else if (commonSet!= &(*(setIndexTest->setOperand))) {
+                    commonSet= NULL;
                     break;
                 }
             }
-            if (sortedSet) {
-                returnExpr = sortedSet->setOperand;
+            if (commonSet) {
+                returnExpr = setIndexTest->setOperand;
             }
         },
         this->operands);

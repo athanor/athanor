@@ -158,5 +158,12 @@ template <>
 struct OpMaker<OpImplies> {
     static ExprRef<BoolView> make(ExprRef<BoolView> l, ExprRef<BoolView> r);
 };
+template<typename View>
+struct OpSetIndexInternal;
+template <typename View>
+struct OpMaker<OpSetIndexInternal<View>> {
+    static ExprRef<View> make(ExprRef<SetView> set, UInt index);
+};
+
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

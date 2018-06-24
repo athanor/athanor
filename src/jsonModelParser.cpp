@@ -6,7 +6,6 @@
 #include <utility>
 #include "common/common.h"
 #include "operators/opPowerSet.h"
-#include "operators/opSetIndexInternal.h"
 #include "operators/operatorMakers.h"
 #include "operators/quantifier.h"
 #include "search/model.h"
@@ -818,16 +817,8 @@ template <typename Domain,
               typename AssociatedValueType<Domain>::type>::type>
 ExprRef<View> makeSetIndexFromDomain(
     shared_ptr<Domain>&,
-    shared_ptr<typename OpSetIndexInternal<View>::SortedSet>& set, UInt index) {
-    return make_shared<OpSetIndexInternal<View>>(set, index);
-}
-
-template <typename Domain,
-          typename View = typename AssociatedViewType<
-              typename AssociatedValueType<Domain>::type>::type>
-shared_ptr<typename OpSetIndexInternal<View>::SortedSet>
-makeSortedSetFromDomain(shared_ptr<Domain>&, ExprRef<SetView>& expr) {
-    return make_shared<typename OpSetIndexInternal<View>::SortedSet>(expr);
+    ExprRef<SetView>& set, UInt index) {
+    return OpMaker<OpSetIndexInternal<View>>::make(set, index);
 }
 
 template <typename DomainType, typename ViewType,
@@ -887,11 +878,9 @@ void extractPatternMatchAndAddExprsToScope(
                 json& setMatchExpr = patternExpr["AbsPatSet"];
                 mpark::visit(
                     [&](auto& innerDomain) {
-                        auto sortedSet =
-                            makeSortedSetFromDomain(innerDomain, expr);
                         for (size_t i = 0; i < setMatchExpr.size(); i++) {
                             auto setIndexExpr = makeSetIndexFromDomain(
-                                innerDomain, sortedSet, i);
+                                innerDomain, expr, i);
                             extractPatternMatchAndAddExprsToScope(
                                 setMatchExpr[i], innerDomain, setIndexExpr,
                                 parsedModel, variablesAddedToScope);

@@ -1,4 +1,3 @@
-
 #ifndef SRC_OPERATORS_OPSETINDEXINTERNAL_H_
 #define SRC_OPERATORS_OPSETINDEXINTERNAL_H_
 
@@ -9,40 +8,17 @@ template <typename SetMemberViewType>
 struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     typedef typename AssociatedTriggerType<SetMemberViewType>::type
         SetMemberTriggerType;
-
-    struct SortedSet {
-        struct SetOperandTrigger;
-        bool evaluated = false;
-        ExprRef<SetView> setOperand;
-        std::shared_ptr<SetOperandTrigger> setTrigger;
-        std::vector<OpSetIndexInternal*> parents;
-        std::vector<size_t> parentSetMapping;
-        std::vector<size_t> setParentMapping;
-        std::shared_ptr<SortedSet> otherSortedSet;
-        size_t parentCopyCount = 0;
-
-        SortedSet(ExprRef<SetView> setOperand)
-            : setOperand(std::move(setOperand)) {}
-        SortedSet(const SortedSet&) = delete;
-        SortedSet(SortedSet&& other);
-        void evaluate();
-        void reevaluate();
-        void notifySetMemberValueChange(UInt index);
-        void swapMembers(size_t index1, size_t index2);
-        ExprRef<SetMemberViewType>& getMember(size_t index);
-        const ExprRef<SetMemberViewType>& getMember(size_t index) const;
-    };
-    std::shared_ptr<SortedSet> sortedSet;
+    struct SetOperandTrigger;
     std::vector<std::shared_ptr<TriggerBase>> triggers;
+    ExprRef<SetView> setOperand;
     UInt index;
     bool defined = false;
-    OpSetIndexInternal(std::shared_ptr<SortedSet> sortedSet, UInt index)
-        : sortedSet(std::move(sortedSet)), index(index) {
-        if (this->sortedSet->parents.size() <= this->index) {
-            this->sortedSet->parents.resize(this->index + 1);
-        }
-        this->sortedSet->parents[this->index] = this;
-    }
+    std::shared_ptr<SetOperandTrigger> setTrigger;
+    std::vector<size_t> parentSetMapping;
+    std::vector<size_t> setParentMapping;
+
+    OpSetIndexInternal(ExprRef<SetView> setOperand, UInt index)
+        : setOperand(std::move(setOperand)), index(index) {}
     OpSetIndexInternal(const OpSetIndexInternal<SetMemberViewType>&) = delete;
     OpSetIndexInternal(OpSetIndexInternal<SetMemberViewType>&& other);
     ~OpSetIndexInternal() { this->stopTriggeringOnChildren(); }
@@ -71,6 +47,11 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     void reevaluateDefined();
     void notifyPossibleMemberSwap();
     void notifyMemberSwapped();
+    void evaluateMappings();
+    void handleSetMemberValueChange(UInt index);
+    void swapMemberMappings(size_t index1, size_t index2);
+    ExprRef<SetMemberViewType>& getMember(size_t index);
+    const ExprRef<SetMemberViewType>& getMember(size_t index) const;
 };
 
 #endif /* SRC_OPERATORS_OPSETINDEXINTERNAL_H_ */

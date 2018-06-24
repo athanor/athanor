@@ -46,8 +46,10 @@ void cleanNullTriggers(std::vector<std::shared_ptr<Trigger>>& triggers) {
 template <typename Visitor, typename Trigger>
 void visitTriggers(Visitor&& func,
                    std::vector<std::shared_ptr<Trigger>>& triggers) {
+    size_t size = triggers.size();
     size_t triggerNullCount = 0;
-    for (size_t i = 0; i < triggers.size(); i++) {
+    // triggers may be changed, insure that new triggers are ignored
+    for (size_t i = 0; i < size && i < triggers.size(); i++) {
         auto& trigger = triggers[i];
         if (trigger && trigger->active) {
             ++triggerEventCount;

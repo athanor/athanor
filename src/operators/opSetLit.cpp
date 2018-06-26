@@ -423,13 +423,13 @@ pair<bool, ExprRef<SetView>> OpSetLit::optimise(PathExtension path) {
                 setIndexTest =
                     dynamic_cast<OpSetIndexInternal<View>*>(&(*operand));
                 if (!setIndexTest) {
-                    commonSet= NULL;
+                    commonSet = NULL;
                     break;
                 }
                 if (first) {
-                    commonSet= &(*(setIndexTest->setOperand));
-                } else if (commonSet!= &(*(setIndexTest->setOperand))) {
-                    commonSet= NULL;
+                    commonSet = &(*(setIndexTest->setOperand));
+                } else if (commonSet != &(*(setIndexTest->setOperand))) {
+                    commonSet = NULL;
                     break;
                 }
             }

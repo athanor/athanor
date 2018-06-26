@@ -815,9 +815,8 @@ ExprRef<View> makeTupleIndexFromDomain(shared_ptr<Domain>&,
 template <typename Domain,
           typename View = typename AssociatedViewType<
               typename AssociatedValueType<Domain>::type>::type>
-ExprRef<View> makeSetIndexFromDomain(
-    shared_ptr<Domain>&,
-    ExprRef<SetView>& set, UInt index) {
+ExprRef<View> makeSetIndexFromDomain(shared_ptr<Domain>&, ExprRef<SetView>& set,
+                                     UInt index) {
     return OpMaker<OpSetIndexInternal<View>>::make(set, index);
 }
 
@@ -879,8 +878,8 @@ void extractPatternMatchAndAddExprsToScope(
                 mpark::visit(
                     [&](auto& innerDomain) {
                         for (size_t i = 0; i < setMatchExpr.size(); i++) {
-                            auto setIndexExpr = makeSetIndexFromDomain(
-                                innerDomain, expr, i);
+                            auto setIndexExpr =
+                                makeSetIndexFromDomain(innerDomain, expr, i);
                             extractPatternMatchAndAddExprsToScope(
                                 setMatchExpr[i], innerDomain, setIndexExpr,
                                 parsedModel, variablesAddedToScope);
@@ -1151,52 +1150,40 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
 }
 
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseDomainGeneratorInt(
-    json& intDomainExpr, ParsedModel& parsedModel) {
-    if (intDomainExpr.size() != 1) {
-        cerr << "Error: do not yet support unrolling (quantifying) "
-                "over int "
-                "domains with holes in them.\n";
+    IntDomain& domain) {
+    if (domain.bounds.size() != 1) {
+        cerr << "Do not currently support unrolling over int domains with "
+                "holes.\n";
         abort();
     }
-    ExprRef<IntView> from(nullptr), to(nullptr);
-    auto errorFunc = [](auto&&) {
-        cerr << "Expected int returning expression when parsing an int "
-                "domain "
-                "for unrolling.\n";
-    };
-    auto& rangeExpr = intDomainExpr[0];
-    if (rangeExpr.count("RangeBounded")) {
-        from = expect<IntView>(
-            parseExpr(rangeExpr["RangeBounded"][0], parsedModel).second,
-            errorFunc);
-        to = expect<IntView>(
-            parseExpr(rangeExpr["RangeBounded"][1], parsedModel).second,
-            errorFunc);
-    } else if (rangeExpr.count("RangeSingle")) {
-        from = expect<IntView>(
-            parseExpr(rangeExpr["RangeSingle"], parsedModel).second, errorFunc);
-        to = from;
-    } else {
-        cerr << "Unrecognised type of int range: " << rangeExpr << endl;
-        abort();
-    }
+    auto from = make<IntValue>();
+    from->value = domain.bounds.front().first;
+    from->setConstant(true);
+
+    auto to = make<IntValue>();
+    to->value = domain.bounds.front().second;
+    to->setConstant(true);
+
     return make_pair(fakeSequenceDomain(fakeIntDomain),
-                     OpMaker<IntRange>::make(from, to));
+                     OpMaker<IntRange>::make(from.asExpr(), to.asExpr()));
 }
 
 pair<AnyDomainRef, AnyExprRef> parseDomainGenerator(json& domainExpr,
                                                     ParsedModel& parsedModel) {
-    auto boolGeneratorPair = stringMatch<ParseDomainGeneratorFunction>(
-        {{"DomainInt", parseDomainGeneratorInt}},
-        make_pair(AnyDomainRef(fakeIntDomain), ExprRef<IntView>(nullptr)),
-        domainExpr, parsedModel);
-    if (boolGeneratorPair.first) {
-        return boolGeneratorPair.second;
-    } else {
-        cerr << "Error: do not yet support unrolling this domain.\n";
-        cerr << domainExpr << endl;
-        abort();
-    }
+    auto domain = parseDomain(domainExpr, parsedModel);
+    return mpark::visit(
+        overloaded(
+            [&](shared_ptr<IntDomain>& domain)
+                -> pair<AnyDomainRef, AnyExprRef> {
+                return parseDomainGeneratorInt(*domain);
+            },
+            [&](auto& domain) -> pair<AnyDomainRef, AnyExprRef> {
+                cerr << "Error: do not yet support unrolling this domain.\n";
+                prettyPrint(cerr, domain) << endl;
+                cerr << domainExpr << endl;
+                abort();
+            }),
+        domain);
 }
 
 void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {

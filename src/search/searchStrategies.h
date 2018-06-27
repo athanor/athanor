@@ -4,7 +4,7 @@
 #include "search/model.h"
 #include "search/statsContainer.h"
 
-u_int64_t ALLOWED_ITERATIONS_OF_INACTIVITY = 40000;
+u_int64_t ALLOWED_ITERATIONS_OF_INACTIVITY = 5000;
 class HillClimbingExploiter {
     u_int64_t iterationsSpentAtPeak;
 
@@ -43,6 +43,17 @@ struct ExplorationUsingViolationBackOff {
         violationBackOff = 1;
     }
 
+    inline void increaseViolationBackOff() {
+        violationBackOff *= 2;
+        if (violationBackOff >= ((u_int64_t)1) << 32) {
+            violationBackOff = 1;
+            std::cout << "Violation back off reset\n";
+        }
+        std::cout << "Violation back off set to " << violationBackOff
+                  << std::endl;
+
+    }
+
     bool newIteration(const Model& model, const StatsContainer& stats) {
         if (mode == SearchMode::EXPLOIT) {
             if (!exploiter.newIteration(model, stats)) {
@@ -54,15 +65,14 @@ struct ExplorationUsingViolationBackOff {
                 std::cout << "Exploring\n";
             }
         } else {
+            ++iterationsSinceLastImprove;
             if (!betterObjectiveFound &&
-                ++iterationsSinceLastImprove % ALLOWED_ITERATIONS_OF_INACTIVITY == 0) {
-                violationBackOff *= 2;
-                if (violationBackOff >= ((u_int64_t)1) << 32) {
-                    violationBackOff = 1;
-                    std::cout << "Violation back off reset\n";
-                }
-                std::cout << "Violation back off set to " << violationBackOff
-                          << std::endl;
+                iterationsSinceLastImprove % ALLOWED_ITERATIONS_OF_INACTIVITY == 0) {
+                increaseViolationBackOff();
+            } else if (betterObjectiveFound && iterationsSinceLastImprove % ALLOWED_ITERATIONS_OF_INACTIVITY*5 == 0){
+                increaseViolationBackOff();
+                betterObjectiveFound = false;
+
             }
         }
         return true;

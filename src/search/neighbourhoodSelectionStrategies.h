@@ -6,8 +6,10 @@
 #include <vector>
 #include "search/model.h"
 #include "search/statsContainer.h"
-#include "search/violationContainer.h"
 #include "utils/random.h"
+
+struct StatsContainer;
+
 class RandomNeighbourhoodSelection {
     const int numberNeighbourhoods;
 

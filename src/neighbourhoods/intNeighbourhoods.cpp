@@ -1,6 +1,8 @@
 #include <cassert>
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/statsContainer.h"
+
 #include "types/int.h"
 #include "utils/random.h"
 

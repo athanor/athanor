@@ -1,6 +1,7 @@
 #include <cmath>
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/statsContainer.h"
 #include "types/tuple.h"
 #include "utils/random.h"
 

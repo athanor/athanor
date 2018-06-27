@@ -6,11 +6,10 @@
 #include <vector>
 #include "base/base.h"
 #include "common/common.h"
-#include "search/statsContainer.h"
 #include "search/violationContainer.h"
 
 #define debug_neighbourhood_action(x) debug_log(x)
-
+struct StatsContainer;
 typedef std::function<bool()> AcceptanceCallBack;
 
 typedef std::function<bool(const AnyValVec& newValue)> ParentCheckCallBack;

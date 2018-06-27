@@ -1,5 +1,6 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/statsContainer.h"
 #include "types/bool.h"
 #include "utils/random.h"
 

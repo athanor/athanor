@@ -2,7 +2,8 @@
 #define SRC_SEARCH_STATSCONTAINER_H_
 #include <chrono>
 #include <iostream>
-struct Model;
+#include "search/model.h"
+
 struct StatsMarkPoint {
     u_int64_t numberIterations;
     u_int64_t minorNodeCount;
@@ -27,6 +28,17 @@ struct StatsMarkPoint {
           lastObjective(lastObjective) {}
 };
 
+inline Int calcDeltaObjective(OptimiseMode mode, Int newObj, Int oldObj) {
+    switch (mode) {
+        case OptimiseMode::MAXIMISE:
+            return oldObj - newObj;
+        case OptimiseMode::MINIMISE:
+            return newObj - oldObj;
+        default:
+            return 0;
+    }
+}
+
 struct NeighbourhoodResult {
     Model& model;
     size_t neighbourhoodIndex;
@@ -38,14 +50,13 @@ struct NeighbourhoodResult {
           neighbourhoodIndex(neighbourhoodIndex),
           statsMarkPoint(statsMarkPoint) {}
 
-    Int getDeltaViolation() {
+    inline Int getDeltaViolation() {
         return model.csp->view().violation - statsMarkPoint.lastViolation;
     }
-    Int getDeltaObjective() {
-        return (model.optimiseMode != OptimiseMode::NONE)
-                   ? model.objective->view()->value -
-                         statsMarkPoint.lastObjective
-                   : 0;
+    inline Int getDeltaObjective() {
+        return calcDeltaObjective(model.optimiseMode,
+                                  model.objective->view().value,
+                                  statsMarkPoint.lastObjective);
     }
 };
 
@@ -71,16 +82,74 @@ struct StatsContainer {
           nhTriggerEventCounts(model.neighbourhoods.size(), 0),
           nhTotalCpuTimes(model.neighbourhoods.size(), 0) {}
 
-    void reportResult(const NeighbourhoodResult& result) {
-        ++numberIterations;
-        ++nhActivationCounts[result.neighbourhoodIndex];
-        nhMinorNodeCounts[result.neighbourhoodIndex] += minorNodeCount - result.statsMarkPoint.numberMinorNodes;
-        nhTriggerEventCounts[result.neighbourhoodIndex] +=
-            triggerEventCount - result.statsMarkPoint.numberTriggers;
-        nhTotalCpuTimes[result.neighbourhoodIndex] += getCpuTime() - result.statsMarkPoint.cpuTimeTaken;
+    void initialSolution(Model& model) {
+        lastViolation = model.csp->view().violation;
+        lastObjective = model.objective->view().value;
+        bestViolation = lastViolation;
+        bestObjective = lastObjective;
+        checkForBestSolution(true, true, model);
     }
 
-    StatsMarkPoint getMarkPoint() {
+    inline void reportResult(const NeighbourhoodResult& result) {
+        ++numberIterations;
+        ++nhActivationCounts[result.neighbourhoodIndex];
+        nhMinorNodeCounts[result.neighbourhoodIndex] +=
+            minorNodeCount - result.statsMarkPoint.minorNodeCount;
+        nhTriggerEventCounts[result.neighbourhoodIndex] +=
+            triggerEventCount - result.statsMarkPoint.triggerEventCount;
+        nhTotalCpuTimes[result.neighbourhoodIndex] +=
+            getCpuTime() - result.statsMarkPoint.cpuTime;
+        lastViolation = result.model.csp->view().violation;
+        lastObjective = result.model.objective->view().value;
+        bool vioImproved = lastViolation < bestViolation,
+             objImproved = calcDeltaObjective(result.model.optimiseMode,
+                                              lastObjective, bestObjective) < 0;
+        checkForBestSolution(vioImproved, objImproved, result.model);
+    }
+
+    void checkForBestSolution(bool vioImproved, bool objImproved,
+                              Model& model) {
+        // following is a bit messy for printing purposes
+        if (vioImproved || objImproved) {
+            std::cout << "New best solution:\n";
+        }
+        if (vioImproved) {
+            bestViolation = lastViolation;
+            std::cout << "Violation = " << bestViolation << std::endl;
+        }
+        if (objImproved) {
+            bestObjective = lastObjective;
+            std::cout << "objective = " << bestObjective << std::endl;
+        }
+        if (vioImproved || objImproved) {
+            // for experiements
+            if (bestViolation == 0) {
+                std::cout << "Best solution: " << bestObjective << " "
+                          << getCpuTime() << std::endl;
+            }
+            printCurrentState(model);
+        }
+    }
+    inline void printCurrentState(Model& model) {
+        std::cout << (*this) << "\nTrigger event count " << triggerEventCount
+                  << "\n\n";
+
+        if (lastViolation == 0) {
+            std::cout << "solution start\n";
+        }
+        model.printVariables();
+        if (lastViolation == 0) {
+            std::cout << "solution end\n";
+        }
+        debug_code(debug_log("CSP state:");
+                   model.csp->dumpState(std::cout) << std::endl;
+                   if (model.optimiseMode != OptimiseMode::NONE) {
+                       debug_log("Objective state:");
+                       model.objective->dumpState(std::cout) << std::endl;
+                   });
+    }
+
+    inline StatsMarkPoint getMarkPoint() {
         return StatsMarkPoint(numberIterations, minorNodeCount,
                               triggerEventCount, getCpuTime(), bestViolation,
                               lastViolation, bestObjective, lastObjective);

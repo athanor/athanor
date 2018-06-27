@@ -30,7 +30,22 @@ struct Model {
     std::unordered_map<size_t, AnyExprRef> definingExpressions;
 
    private:
-    Model() {}
+    Model() { objective->view().value = 0; }
+
+   public:
+    void printVariables() const {
+        for (size_t i = 0; i < variables.size(); ++i) {
+            auto& v = variables[i];
+            std::cout << "letting " << variableNames[i] << " be ";
+            if (valBase(v.second).container != &definedPool) {
+                prettyPrint(std::cout, v.second);
+            } else {
+                prettyPrint(std::cout,
+                            definingExpressions.at(valBase(v.second).id));
+            }
+            std::cout << std::endl;
+        }
+    }
 };
 
 class ModelBuilder {

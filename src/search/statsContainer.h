@@ -111,21 +111,23 @@ struct StatsContainer {
     void checkForBestSolution(bool vioImproved, bool objImproved,
                               Model& model) {
         // following is a bit messy for printing purposes
-        if (vioImproved || objImproved) {
-            std::cout << "\nNew best solution:\n";
-        }
         if (vioImproved) {
             bestViolation = lastViolation;
-            std::cout << "Violation = " << bestViolation << std::endl;
         }
         if (objImproved) {
             bestObjective = lastObjective;
-            std::cout << "objective = " << bestObjective << std::endl;
         }
-        // for experiements
-        if (bestViolation == 0) {
-            std::cout << "Best solution: " << bestObjective << " "
-                      << getCpuTime() << std::endl;
+        if (vioImproved || objImproved) {
+            std::cout << "\nNew best solution:\n";
+            std::cout << "Violation = " << bestViolation << std::endl;
+            if (model.optimiseMode != OptimiseMode::NONE) {
+                std::cout << "objective = " << bestObjective << std::endl;
+            }
+            // for experiements
+            if (bestViolation == 0) {
+                std::cout << "Best solution: " << bestObjective << " "
+                          << getCpuTime() << std::endl;
+            }
         }
 
         if (vioImproved || objImproved) {

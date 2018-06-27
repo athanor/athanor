@@ -114,7 +114,7 @@ struct StatsContainer {
         if (vioImproved) {
             bestViolation = lastViolation;
         }
-        if ((bestViolation == 0 && objImproved) ||
+        if ((bestViolation == 0 && lastViolation == 0 && objImproved) ||
             (bestViolation != 0 && vioImproved)) {
             bestObjective = lastObjective;
         }
@@ -125,7 +125,7 @@ struct StatsContainer {
                 std::cout << "objective = " << lastObjective << std::endl;
             }
             // for experiements
-            if (bestViolation == 0) {
+            if (lastViolation == 0) {
                 std::cout << "Best solution: " << bestObjective << " "
                           << getCpuTime() << std::endl;
             }

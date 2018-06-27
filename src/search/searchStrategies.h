@@ -4,7 +4,7 @@
 #include "search/model.h"
 #include "search/statsContainer.h"
 
-u_int64_t ALLOWED_ITERATIONS_OF_INACTIVITY = 5000;
+u_int64_t ALLOWED_ITERATIONS_OF_INACTIVITY = 3000;
 class HillClimbingExploiter {
     u_int64_t iterationsSpentAtPeak;
 
@@ -18,9 +18,10 @@ class HillClimbingExploiter {
     }
 
     bool acceptSolution(const NeighbourhoodResult& result, StatsContainer&) {
-        bool allowed =
-            result.getDeltaViolation() <= 0 ||
-            (result.getViolation() == 0 && result.getDeltaObjective() <= 0);
+        bool allowed = result.getDeltaViolation() < 0 ||
+                       (result.getViolation() == 0 &&
+                        (result.model.optimiseMode == OptimiseMode::NONE ||
+                         result.getDeltaObjective() <= 0));
         if (allowed) {
             iterationsSpentAtPeak = 0;
         }
@@ -46,7 +47,7 @@ struct ExplorationUsingViolationBackOff {
     }
 
     inline void increaseViolationBackOff() {
-        violationBackOff *= 2;
+        violationBackOff += 1;
         if (violationBackOff >= ((u_int64_t)1) << 32) {
             violationBackOff = 1;
             std::cout << "Violation back off reset\n";
@@ -63,6 +64,7 @@ struct ExplorationUsingViolationBackOff {
                 lastObjective = stats.bestObjective;
                 lastViolation = stats.bestViolation;
                 betterObjectiveFound = false;
+                std::cout << "found=" << betterObjectiveFound << "\niteration=" << iterationsSinceLastImprove << std::endl;
                 mode = SearchMode::EXPLORE;
                 std::cout << "Exploring\n";
             }
@@ -78,6 +80,7 @@ struct ExplorationUsingViolationBackOff {
                            0) {
                 increaseViolationBackOff();
                 betterObjectiveFound = false;
+                std::cout << "found=" << betterObjectiveFound << "\niteration=" << iterationsSinceLastImprove << std::endl;
             }
         }
         return true;
@@ -98,6 +101,7 @@ struct ExplorationUsingViolationBackOff {
                     ((u_int64_t)deltaViolation) <= violationBackOff;
                 if (betterObjectiveFound) {
                     iterationsSinceLastImprove = 0;
+                    std::cout << "found=" << betterObjectiveFound << "\niteration=" << iterationsSinceLastImprove << std::endl;
                 }
                 return betterObjectiveFound;
             } else {

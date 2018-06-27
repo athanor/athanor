@@ -118,10 +118,10 @@ struct StatsContainer {
             bestObjective = lastObjective;
         }
         if (vioImproved || objImproved) {
-            std::cout << "\nNew best solution:\n";
-            std::cout << "Violation = " << bestViolation << std::endl;
+            std::cout << "\nNew solution:\n";
+            std::cout << "Violation = " << lastViolation << std::endl;
             if (model.optimiseMode != OptimiseMode::NONE) {
-                std::cout << "objective = " << bestObjective << std::endl;
+                std::cout << "objective = " << lastObjective << std::endl;
             }
             // for experiements
             if (bestViolation == 0) {

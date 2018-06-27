@@ -18,8 +18,9 @@ class HillClimbingExploiter {
     }
 
     bool acceptSolution(const NeighbourhoodResult& result, StatsContainer&) {
-        bool allowed = (result.getViolation() > 0 && result.getDeltaViolation() <= 0) ||
-               (result.getViolation() == 0 && result.getDeltaObjective() <= 0);
+        bool allowed =
+            (result.getViolation() > 0 && result.getDeltaViolation() <= 0) ||
+            (result.getViolation() == 0 && result.getDeltaObjective() <= 0);
         if (allowed) {
             iterationsSpentAtPeak = 0;
         }
@@ -34,6 +35,7 @@ struct ExplorationUsingViolationBackOff {
     Exploiter exploiter;
     u_int64_t violationBackOff;
     u_int64_t iterationsSinceLastImprove;
+    UInt lastViolation;
     Int lastObjective;
     bool betterObjectiveFound;
     ExplorationUsingViolationBackOff(Model& model) : exploiter(model) {}
@@ -51,7 +53,6 @@ struct ExplorationUsingViolationBackOff {
         }
         std::cout << "Violation back off set to " << violationBackOff
                   << std::endl;
-
     }
 
     bool newIteration(const Model& model, const StatsContainer& stats) {
@@ -59,7 +60,8 @@ struct ExplorationUsingViolationBackOff {
             if (!exploiter.newIteration(model, stats)) {
                 violationBackOff = 1;
                 iterationsSinceLastImprove = 0;
-                lastObjective = model.objective->view().value;
+                lastObjective = stats.bestObjective;
+                lastViolation = stats.bestViolation;
                 betterObjectiveFound = false;
                 mode = SearchMode::EXPLORE;
                 std::cout << "Exploring\n";
@@ -67,12 +69,15 @@ struct ExplorationUsingViolationBackOff {
         } else {
             ++iterationsSinceLastImprove;
             if (!betterObjectiveFound &&
-                iterationsSinceLastImprove % ALLOWED_ITERATIONS_OF_INACTIVITY == 0) {
+                iterationsSinceLastImprove % ALLOWED_ITERATIONS_OF_INACTIVITY ==
+                    0) {
                 increaseViolationBackOff();
-            } else if (betterObjectiveFound && iterationsSinceLastImprove % ALLOWED_ITERATIONS_OF_INACTIVITY*5 == 0){
+            } else if (betterObjectiveFound &&
+                       iterationsSinceLastImprove %
+                               ALLOWED_ITERATIONS_OF_INACTIVITY ==
+                           0) {
                 increaseViolationBackOff();
                 betterObjectiveFound = false;
-
             }
         }
         return true;
@@ -82,16 +87,25 @@ struct ExplorationUsingViolationBackOff {
         if (mode == SearchMode::EXPLOIT) {
             return exploiter.acceptSolution(result, stats);
         } else {
+            auto deltaObj =
+                calcDeltaObjective(result.model.optimiseMode,
+                                   result.getObjective(), lastObjective);
+            auto deltaViolation = result.getViolation() - lastViolation;
+
             if (!betterObjectiveFound) {
                 betterObjectiveFound =
-                    result.getDeltaObjective() < 0 &&
-                    ((u_int64_t)result.getDeltaViolation()) <= violationBackOff;
+                    deltaObj < 0 &&
+                    ((u_int64_t)deltaViolation) <= violationBackOff;
+                if (betterObjectiveFound) {
+                    iterationsSinceLastImprove = 0;
+                }
                 return betterObjectiveFound;
             } else {
-                bool allowed = calcDeltaObjective(result.model.optimiseMode,
-                                                  result.getObjective(),
-                                                  lastObjective) < 0 &&
-                               result.getDeltaViolation() <= 0;
+                bool allowed = deltaObj < 0 && result.getDeltaViolation() <= 0;
+                // check if strictly better
+                if (allowed && result.getDeltaViolation() < 0) {
+                    iterationsSinceLastImprove = 0;
+                }
                 if (allowed && result.getViolation() == 0) {
                     mode = SearchMode::EXPLOIT;
                     exploiter.initialise(result.model, stats);

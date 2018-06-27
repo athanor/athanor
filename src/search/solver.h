@@ -55,8 +55,9 @@ class Solver {
         stats.initialSolution(model);
         searchStrategy.initialise(model, stats);
         selectionStrategy.initialise(model);
-
-        while (!finished() && searchStrategy.newIteration(model, stats)) {
+        bool changeMade = false;
+        while (!finished() &&
+               (!changeMade || searchStrategy.newIteration(model, stats))) {
             int nextNeighbourhoodIndex =
                 selectionStrategy.nextNeighbourhood(model);
             Neighbourhood& neighbourhood =
@@ -69,8 +70,9 @@ class Solver {
                 model.variables
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
             auto statsMarkPoint = stats.getMarkPoint();
-
+            changeMade = false;
             AcceptanceCallBack callback = [&]() {
+                changeMade = true;
                 return searchStrategy.acceptSolution(
                     NeighbourhoodResult(model, nextNeighbourhoodIndex,
                                         statsMarkPoint),

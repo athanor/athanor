@@ -114,7 +114,8 @@ struct StatsContainer {
         if (vioImproved) {
             bestViolation = lastViolation;
         }
-        if (objImproved) {
+        if ((bestViolation == 0 && objImproved) ||
+            (bestViolation != 0 && vioImproved)) {
             bestObjective = lastObjective;
         }
         if (vioImproved || objImproved) {

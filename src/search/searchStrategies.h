@@ -19,7 +19,7 @@ class HillClimbingExploiter {
 
     bool acceptSolution(const NeighbourhoodResult& result, StatsContainer&) {
         bool allowed =
-            (result.getViolation() > 0 && result.getDeltaViolation() <= 0) ||
+            result.getDeltaViolation() <= 0 ||
             (result.getViolation() == 0 && result.getDeltaObjective() <= 0);
         if (allowed) {
             iterationsSpentAtPeak = 0;

@@ -3,22 +3,50 @@
 #include <chrono>
 #include <iostream>
 struct Model;
+struct StatsMarkPoint {
+    u_int64_t numberIterations;
+    u_int64_t minorNodeCount;
+    u_int64_t triggerEventCount;
+    double cpuTime;
+    UInt bestViolation;
+    UInt lastViolation;
+    Int bestObjective;
+    Int lastObjective;
+
+    StatsMarkPoint(u_int64_t numberIterations, u_int64_t minorNodeCount,
+                   u_int64_t triggerEventCount, double cpuTime,
+                   UInt bestViolation, UInt lastViolation, Int bestObjective,
+                   Int lastObjective)
+        : numberIterations(numberIterations),
+          minorNodeCount(minorNodeCount),
+          triggerEventCount(triggerEventCount),
+          cpuTime(cpuTime),
+          bestViolation(bestViolation),
+          lastViolation(lastViolation),
+          bestObjective(bestObjective),
+          lastObjective(lastObjective) {}
+};
+
 struct NeighbourhoodResult {
     Model& model;
-    UInt lastViolation;
     size_t neighbourhoodIndex;
-    u_int64_t numberMinorNodes;
-    u_int64_t numberTriggers;
-    double cpuTimeTaken;
-    NeighbourhoodResult(Model& model, UInt lastViolation,
-                        size_t neighbourhoodIndex, u_int64_t numberMinorNodes,
-                        u_int64_t numberTriggers, double cpuTimeTaken)
+    StatsMarkPoint statsMarkPoint;
+
+    NeighbourhoodResult(Model& model, size_t neighbourhoodIndex,
+                        const StatsMarkPoint& statsMarkPoint)
         : model(model),
-          lastViolation(lastViolation),
           neighbourhoodIndex(neighbourhoodIndex),
-          numberMinorNodes(numberMinorNodes),
-          numberTriggers(numberTriggers),
-          cpuTimeTaken(cpuTimeTaken) {}
+          statsMarkPoint(statsMarkPoint) {}
+
+    Int getDeltaViolation() {
+        return model.csp->view().violation - statsMarkPoint.lastViolation;
+    }
+    Int getDeltaObjective() {
+        return (model.optimiseMode != OptimiseMode::NONE)
+                   ? model.objective->view()->value -
+                         statsMarkPoint.lastObjective
+                   : 0;
+    }
 };
 
 struct StatsContainer {
@@ -33,21 +61,30 @@ struct StatsContainer {
     std::vector<u_int64_t> nhMinorNodeCounts;
     std::vector<u_int64_t> nhTriggerEventCounts;
     std::vector<double> nhTotalCpuTimes;
+    UInt bestViolation;
+    UInt lastViolation;
+    Int bestObjective;
+    Int lastObjective;
+    StatsContainer(Model& model)
+        : nhActivationCounts(model.neighbourhoods.size(), 0),
+          nhMinorNodeCounts(model.neighbourhoods.size(), 0),
+          nhTriggerEventCounts(model.neighbourhoods.size(), 0),
+          nhTotalCpuTimes(model.neighbourhoods.size(), 0) {}
 
-    StatsContainer(size_t numberNeighbourhoods)
-        : nhActivationCounts(numberNeighbourhoods, 0),
-          nhMinorNodeCounts(numberNeighbourhoods, 0),
-          nhTriggerEventCounts(numberNeighbourhoods, 0),
-          nhTotalCpuTimes(numberNeighbourhoods, 0) {}
     void reportResult(const NeighbourhoodResult& result) {
         ++numberIterations;
         ++nhActivationCounts[result.neighbourhoodIndex];
-        nhMinorNodeCounts[result.neighbourhoodIndex] += result.numberMinorNodes;
+        nhMinorNodeCounts[result.neighbourhoodIndex] += minorNodeCount - result.statsMarkPoint.numberMinorNodes;
         nhTriggerEventCounts[result.neighbourhoodIndex] +=
-            result.numberTriggers;
-        nhTotalCpuTimes[result.neighbourhoodIndex] += result.cpuTimeTaken;
+            triggerEventCount - result.statsMarkPoint.numberTriggers;
+        nhTotalCpuTimes[result.neighbourhoodIndex] += getCpuTime() - result.statsMarkPoint.cpuTimeTaken;
     }
 
+    StatsMarkPoint getMarkPoint() {
+        return StatsMarkPoint(numberIterations, minorNodeCount,
+                              triggerEventCount, getCpuTime(), bestViolation,
+                              lastViolation, bestObjective, lastObjective);
+    }
     inline void startTimer() {
         startTime = std::chrono::high_resolution_clock::now();
         startCpuTime = std::clock();

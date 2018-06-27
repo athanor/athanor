@@ -3,8 +3,10 @@
 #define SRC_SEARCH_SEARCHSTRATEGIES_H_
 #include "search/model.h"
 #include "search/statsContainer.h"
+
+u_int64_t ALLOWED_ITERATIONS_OF_INACTIVITY = 40000;
 class HillClimbingExploiter {
-    int iterationsSpentAtPeak;
+    u_int64_t iterationsSpentAtPeak;
 
    public:
     HillClimbingExploiter(Model&) {}
@@ -12,12 +14,16 @@ class HillClimbingExploiter {
         iterationsSpentAtPeak = 0;
     }
     bool newIteration(const Model&, const StatsContainer&) {
-        return ++iterationsSpentAtPeak < 120000;
+        return iterationsSpentAtPeak++ < ALLOWED_ITERATIONS_OF_INACTIVITY;
     }
 
     bool acceptSolution(const NeighbourhoodResult& result, StatsContainer&) {
-        return (result.getViolation() > 0 && result.getDeltaViolation() <= 0) ||
+        bool allowed = (result.getViolation() > 0 && result.getDeltaViolation() <= 0) ||
                (result.getViolation() == 0 && result.getDeltaObjective() <= 0);
+        if (allowed) {
+            iterationsSpentAtPeak = 0;
+        }
+        return allowed;
     }
 };
 
@@ -49,7 +55,7 @@ struct ExplorationUsingViolationBackOff {
             }
         } else {
             if (!betterObjectiveFound &&
-                ++iterationsSinceLastImprove % 120000 == 0) {
+                ++iterationsSinceLastImprove % ALLOWED_ITERATIONS_OF_INACTIVITY == 0) {
                 violationBackOff *= 2;
                 if (violationBackOff >= ((u_int64_t)1) << 32) {
                     violationBackOff = 1;

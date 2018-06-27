@@ -50,12 +50,13 @@ struct NeighbourhoodResult {
           neighbourhoodIndex(neighbourhoodIndex),
           statsMarkPoint(statsMarkPoint) {}
 
+    inline UInt getViolation() const { return model.csp->view().violation; }
+    inline Int getObjective() const { return model.objective->view().value; }
     inline Int getDeltaViolation() const {
-        return model.csp->view().violation - statsMarkPoint.lastViolation;
+        return getViolation() - statsMarkPoint.lastViolation;
     }
     inline Int getDeltaObjective() const {
-        return calcDeltaObjective(model.optimiseMode,
-                                  model.objective->view().value,
+        return calcDeltaObjective(model.optimiseMode, getObjective(),
                                   statsMarkPoint.lastObjective);
     }
 };
@@ -111,7 +112,7 @@ struct StatsContainer {
                               Model& model) {
         // following is a bit messy for printing purposes
         if (vioImproved || objImproved) {
-            std::cout << "New best solution:\n";
+            std::cout << "\nNew best solution:\n";
         }
         if (vioImproved) {
             bestViolation = lastViolation;
@@ -121,12 +122,13 @@ struct StatsContainer {
             bestObjective = lastObjective;
             std::cout << "objective = " << bestObjective << std::endl;
         }
+        // for experiements
+        if (bestViolation == 0) {
+            std::cout << "Best solution: " << bestObjective << " "
+                      << getCpuTime() << std::endl;
+        }
+
         if (vioImproved || objImproved) {
-            // for experiements
-            if (bestViolation == 0) {
-                std::cout << "Best solution: " << bestObjective << " "
-                          << getCpuTime() << std::endl;
-            }
             printCurrentState(model);
         }
     }
@@ -165,8 +167,12 @@ struct StatsContainer {
 
     friend inline std::ostream& operator<<(std::ostream& os,
                                            StatsContainer& stats) {
-        os << "Stats:\n";
         stats.endTimer();
+
+        os << "Stats:\n";
+        os << "Best violation: " << stats.bestViolation << std::endl;
+        os << "Best objective: " << stats.bestObjective << std::endl;
+
         os << "Number iterations: " << stats.numberIterations << std::endl;
         os << "Minor node count: " << stats.minorNodeCount << std::endl;
         std::chrono::duration<double> timeTaken =

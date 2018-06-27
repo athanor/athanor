@@ -53,10 +53,10 @@ class Solver {
         model.objective->startTriggering();
 
         stats.initialSolution(model);
-
+        searchStrategy.initialise(model, stats);
         selectionStrategy.initialise(model);
 
-        while (!finished()) {
+        while (!finished() && searchStrategy.newIteration(model, stats)) {
             int nextNeighbourhoodIndex =
                 selectionStrategy.nextNeighbourhood(model);
             Neighbourhood& neighbourhood =
@@ -71,23 +71,27 @@ class Solver {
             auto statsMarkPoint = stats.getMarkPoint();
 
             AcceptanceCallBack callback = [&]() {
-                return searchStrategy.acceptSolution(NeighbourhoodResult(
-                    model, nextNeighbourhoodIndex, statsMarkPoint));
+                return searchStrategy.acceptSolution(
+                    NeighbourhoodResult(model, nextNeighbourhoodIndex,
+                                        statsMarkPoint),
+                    stats);
             };
             ParentCheckCallBack alwaysTrueFunc(alwaysTrue);
             auto changingVariables = makeVecFrom(var.second);
             NeighbourhoodParams params(callback, alwaysTrueFunc, 1,
                                        changingVariables, stats, model.vioDesc);
-                        neighbourhood.apply(params);
+            neighbourhood.apply(params);
             NeighbourhoodResult result(model, nextNeighbourhoodIndex,
                                        statsMarkPoint);
             stats.reportResult(result);
             selectionStrategy.reportResult(result);
         }
         stats.endTimer();
-        std::cout << stats << "\nTrigger event count " << triggerEventCount
-                  << "\n\n";
+        std::cout << "\n\n";
         printNeighbourhoodStats();
+        std::cout << "\n\n"
+                  << stats << "\nTrigger event count " << triggerEventCount
+                  << "\n";
     }
 
     inline bool finished() {

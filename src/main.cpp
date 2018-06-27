@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include "common/common.h"
 #include "jsonModelParser.h"
-#include "search/searchStrategies.h"
+#include "search/solver.h"
 #include "utils/hashUtils.h"
 
 using namespace std;
@@ -92,7 +92,7 @@ int main(const int argc, const char** argv) {
     argParser.validateArgs(argc, argv);
     ParsedModel parsedModel = parseModelFromJson(fileArg.get());
     Model model = parsedModel.builder->build();
-    auto search = Solver<RandomNeighbourhoodWithViolation>(move(model));
+    auto search = Solver<HillClimber, RandomNeighbourhoodWithViolation>(move(model));
     signal(SIGINT, sigIntHandler);
     signal(SIGVTALRM, sigAlarmHandler);
     signal(SIGALRM, sigAlarmHandler);

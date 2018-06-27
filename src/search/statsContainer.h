@@ -50,10 +50,10 @@ struct NeighbourhoodResult {
           neighbourhoodIndex(neighbourhoodIndex),
           statsMarkPoint(statsMarkPoint) {}
 
-    inline Int getDeltaViolation() {
+    inline Int getDeltaViolation() const {
         return model.csp->view().violation - statsMarkPoint.lastViolation;
     }
-    inline Int getDeltaObjective() {
+    inline Int getDeltaObjective() const {
         return calcDeltaObjective(model.optimiseMode,
                                   model.objective->view().value,
                                   statsMarkPoint.lastObjective);

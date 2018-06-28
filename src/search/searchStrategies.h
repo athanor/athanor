@@ -32,7 +32,7 @@ class HillClimbingExploiter {
         return allowed;
     }
 };
-static const int queueSize = 100;
+static const int queueSize = 200;
 class LateAcceptanceHillClimbingExploiter {
     u_int64_t iterationsSpentAtPeak;
     std::deque<Int> historyOfSolutions;
@@ -115,10 +115,10 @@ struct ExplorationUsingViolationBackOff {
         violationBackOff *= 2;
         if (violationBackOff >= ((u_int64_t)1) << 32) {
             violationBackOff = 1;
-            std::cout << "Violation back off reset\n";
+//            std::cout << "Violation back off reset\n";
         }
-        std::cout << "Violation back off set to " << violationBackOff
-                  << std::endl;
+//        std::cout << "Violation back off set to " << violationBackOff
+//                  << std::endl;
     }
 
     bool newIteration(const Model& model, const StatsContainer& stats) {

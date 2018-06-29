@@ -93,7 +93,7 @@ int main(const int argc, const char** argv) {
     ParsedModel parsedModel = parseModelFromJson(fileArg.get());
     Model model = parsedModel.builder->build();
     auto search = Solver<
-        ExplorationUsingViolationBackOff<LateAcceptanceHillClimbingExploiter>,
+        ExplorationUsingViolationBackOff<HillClimbingExploiter>,
         RandomNeighbourhoodWithViolation>(move(model));
     signal(SIGINT, sigIntHandler);
     signal(SIGVTALRM, sigAlarmHandler);

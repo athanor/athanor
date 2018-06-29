@@ -35,17 +35,21 @@ class HillClimbingExploiter {
 static const int queueSize = 200;
 class LateAcceptanceHillClimbingExploiter {
     u_int64_t iterationsSpentAtPeak;
-    std::deque<Int> historyOfSolutions;
+    std::deque<Int> historyOfObjectives;
+    std::deque<UInt> historyOfViolations;
     Int bestObjective;
-
+UInt bestViolation;
    public:
     LateAcceptanceHillClimbingExploiter(Model&) {}
     void initialise(const Model& model, const StatsContainer&) {
-        if (model.csp->view().violation == 0) {
-            historyOfSolutions.clear();
-            historyOfSolutions.resize(queueSize, model.objective->view().value);
-            bestObjective = model.objective->view().value;
-        }
+        bestObjective = model.objective->view().value;
+        bestViolation= model.csp->view().violation;
+        historyOfViolations.clear();
+        historyOfViolations.resize(queueSize,bestViolation);
+        if (bestViolation == 0) {
+            historyOfObjectives.clear();
+            historyOfObjectives.resize(queueSize, bestObjective);
+                    }
         iterationsSpentAtPeak = 0;
     }
     bool newIteration(const Model&, const StatsContainer&) {
@@ -55,24 +59,34 @@ class LateAcceptanceHillClimbingExploiter {
     bool acceptSolution(const NeighbourhoodResult& result, StatsContainer&) {
         bool notOptimiseMode = result.model.optimiseMode == OptimiseMode::NONE;
         assert(!notOptimiseMode);
-        if (result.getDeltaViolation() < 0) {
+        auto maxViolationAllowed = std::max(result.statsMarkPoint.lastViolation,historyOfViolations.front());
+        if (result.getViolation() < bestViolation) {
             iterationsSpentAtPeak = 0;
             if (result.getViolation() == 0) {
                 bestObjective = result.getObjective();
-                historyOfSolutions.clear();
-                historyOfSolutions.resize(queueSize, bestObjective);
+                historyOfObjectives.clear();
+                historyOfObjectives.resize(queueSize, bestObjective);
             }
-            return true;
-        } else if (result.getDeltaViolation() > 0) {
+        }
+        historyOfViolations.pop_front();
+        if (result.getViolation() <= maxViolationAllowed) {
+            historyOfViolations.push_back(result.getViolation());
+            if (result.getDeltaViolation() < 0) {
+                return true;
+            }
+        } else {
+            UInt currentViolation = historyOfViolations.back();
+            historyOfViolations.push_back(currentViolation);
             return false;
         }
+
         if (result.getViolation() == 0) {
             Int objectiveLimit =
                 (result.model.optimiseMode == OptimiseMode::MAXIMISE)
                     ? std::min(result.statsMarkPoint.lastObjective,
-                               historyOfSolutions.front())
+                               historyOfObjectives.front())
                     : std::max(result.statsMarkPoint.lastObjective,
-                               historyOfSolutions.front());
+                               historyOfObjectives.front());
             bool acceptNewObjective =
                 calcDeltaObjective(result.model.optimiseMode,
                                    result.getObjective(), objectiveLimit) <= 0;
@@ -83,14 +97,16 @@ class LateAcceptanceHillClimbingExploiter {
                 bestObjective = result.getObjective();
                 iterationsSpentAtPeak = 0;
             }
-            historyOfSolutions.pop_front();
-            historyOfSolutions.push_back(result.getObjective());
+            historyOfObjectives.pop_front();
             if (acceptNewObjective) {
-                std::cout << "ping " << result.getObjective() << "," << historyOfSolutions.front() << std::endl;
+                historyOfObjectives.push_back(result.getObjective());
+            } else {
+                Int currentObjective = historyOfObjectives.back();
+                historyOfObjectives.push_back(currentObjective);
             }
             return acceptNewObjective;
         }
-        return false;
+        return result.getViolation() <= maxViolationAllowed;
     }
 };
 

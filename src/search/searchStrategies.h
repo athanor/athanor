@@ -145,11 +145,11 @@ struct ExplorationUsingViolationBackOff {
                 lastObjective = stats.bestObjective;
                 lastViolation = stats.bestViolation;
                 betterObjectiveFound = false;
-                std::cout << "found=" << betterObjectiveFound
-                          << "\niteration=" << iterationsSinceLastImprove
-                          << std::endl;
+//                std::cout << "found=" << betterObjectiveFound
+//                          << "\niteration=" << iterationsSinceLastImprove
+//                          << std::endl;
                 mode = SearchMode::EXPLORE;
-                std::cout << "Exploring\n";
+//                std::cout << "Exploring\n";
             }
         } else {
             ++iterationsSinceLastImprove;
@@ -163,9 +163,9 @@ struct ExplorationUsingViolationBackOff {
                            0) {
                 increaseViolationBackOff();
                 betterObjectiveFound = false;
-                std::cout << "found=" << betterObjectiveFound
-                          << "\niteration=" << iterationsSinceLastImprove
-                          << std::endl;
+//                std::cout << "found=" << betterObjectiveFound
+//                          << "\niteration=" << iterationsSinceLastImprove
+//                          << std::endl;
             }
         }
         return true;
@@ -186,9 +186,9 @@ struct ExplorationUsingViolationBackOff {
                     ((u_int64_t)deltaViolation) <= violationBackOff;
                 if (betterObjectiveFound) {
                     iterationsSinceLastImprove = 0;
-                    std::cout << "found=" << betterObjectiveFound
-                              << "\niteration=" << iterationsSinceLastImprove
-                              << std::endl;
+//                    std::cout << "found=" << betterObjectiveFound
+//                              << "\niteration=" << iterationsSinceLastImprove
+//                              << std::endl;
                 }
                 return betterObjectiveFound;
             } else {

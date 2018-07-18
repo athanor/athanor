@@ -91,7 +91,8 @@ struct StatsContainer {
         checkForBestSolution(true, true, model);
     }
 
-    inline void reportResult(const NeighbourhoodResult& result) {
+    inline void reportResult(bool solutionAccepted,
+                             const NeighbourhoodResult& result) {
         ++numberIterations;
         ++nhActivationCounts[result.neighbourhoodIndex];
         nhMinorNodeCounts[result.neighbourhoodIndex] +=
@@ -100,6 +101,9 @@ struct StatsContainer {
             triggerEventCount - result.statsMarkPoint.triggerEventCount;
         nhTotalCpuTimes[result.neighbourhoodIndex] +=
             getCpuTime() - result.statsMarkPoint.cpuTime;
+        if (!solutionAccepted) {
+            return;
+        }
         lastViolation = result.model.csp->view().violation;
         lastObjective = result.model.objective->view().value;
         bool vioImproved = lastViolation < bestViolation,

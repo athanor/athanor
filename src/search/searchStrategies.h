@@ -33,33 +33,41 @@ class HillClimbingExploiter {
     }
 };
 static const int queueSize = 200;
+
 class LateAcceptanceHillClimbingExploiter {
     u_int64_t iterationsSpentAtPeak;
     std::deque<Int> historyOfObjectives;
     std::deque<UInt> historyOfViolations;
     Int bestObjective;
-UInt bestViolation;
+    UInt bestViolation;
+
    public:
     LateAcceptanceHillClimbingExploiter(Model&) {}
     void initialise(const Model& model, const StatsContainer&) {
         bestObjective = model.objective->view().value;
-        bestViolation= model.csp->view().violation;
+        bestViolation = model.csp->view().violation;
         historyOfViolations.clear();
-        historyOfViolations.resize(queueSize,bestViolation);
+        historyOfViolations.resize(queueSize, bestViolation);
         if (bestViolation == 0) {
             historyOfObjectives.clear();
             historyOfObjectives.resize(queueSize, bestObjective);
-                    }
+        }
         iterationsSpentAtPeak = 0;
     }
+
     bool newIteration(const Model&, const StatsContainer&) {
-        return iterationsSpentAtPeak++ < ALLOWED_ITERATIONS_OF_INACTIVITY;
+        return ++iterationsSpentAtPeak < ALLOWED_ITERATIONS_OF_INACTIVITY;
     }
 
     bool acceptSolution(const NeighbourhoodResult& result, StatsContainer&) {
-        bool notOptimiseMode = result.model.optimiseMode == OptimiseMode::NONE;
-        assert(!notOptimiseMode);
-        auto maxViolationAllowed = std::max(result.statsMarkPoint.lastViolation,historyOfViolations.front());
+        static u_int64_t count = 0;
+        if (++count % 2000 == 0) {
+            //            std::cout << "check " <<
+            //            result.statsMarkPoint.lastViolation << " "
+            //                      << historyOfViolations.front() << std::endl;
+        }
+        auto maxViolationAllowed = std::max(result.statsMarkPoint.lastViolation,
+                                            historyOfViolations.front());
         if (result.getViolation() < bestViolation) {
             iterationsSpentAtPeak = 0;
             if (result.getViolation() == 0) {
@@ -131,10 +139,10 @@ struct ExplorationUsingViolationBackOff {
         violationBackOff *= 2;
         if (violationBackOff >= ((u_int64_t)1) << 32) {
             violationBackOff = 1;
-//            std::cout << "Violation back off reset\n";
+            //            std::cout << "Violation back off reset\n";
         }
-//        std::cout << "Violation back off set to " << violationBackOff
-//                  << std::endl;
+        //        std::cout << "Violation back off set to " << violationBackOff
+        //                  << std::endl;
     }
 
     bool newIteration(const Model& model, const StatsContainer& stats) {
@@ -145,11 +153,12 @@ struct ExplorationUsingViolationBackOff {
                 lastObjective = stats.bestObjective;
                 lastViolation = stats.bestViolation;
                 betterObjectiveFound = false;
-//                std::cout << "found=" << betterObjectiveFound
-//                          << "\niteration=" << iterationsSinceLastImprove
-//                          << std::endl;
+                //                std::cout << "found=" << betterObjectiveFound
+                //                          << "\niteration=" <<
+                //                          iterationsSinceLastImprove
+                //                          << std::endl;
                 mode = SearchMode::EXPLORE;
-//                std::cout << "Exploring\n";
+                //                std::cout << "Exploring\n";
             }
         } else {
             ++iterationsSinceLastImprove;
@@ -163,9 +172,10 @@ struct ExplorationUsingViolationBackOff {
                            0) {
                 increaseViolationBackOff();
                 betterObjectiveFound = false;
-//                std::cout << "found=" << betterObjectiveFound
-//                          << "\niteration=" << iterationsSinceLastImprove
-//                          << std::endl;
+                //                std::cout << "found=" << betterObjectiveFound
+                //                          << "\niteration=" <<
+                //                          iterationsSinceLastImprove
+                //                          << std::endl;
             }
         }
         return true;
@@ -186,9 +196,11 @@ struct ExplorationUsingViolationBackOff {
                     ((u_int64_t)deltaViolation) <= violationBackOff;
                 if (betterObjectiveFound) {
                     iterationsSinceLastImprove = 0;
-//                    std::cout << "found=" << betterObjectiveFound
-//                              << "\niteration=" << iterationsSinceLastImprove
-//                              << std::endl;
+                    //                    std::cout << "found=" <<
+                    //                    betterObjectiveFound
+                    //                              << "\niteration=" <<
+                    //                              iterationsSinceLastImprove
+                    //                              << std::endl;
                 }
                 return betterObjectiveFound;
             } else {

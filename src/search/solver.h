@@ -71,12 +71,14 @@ class Solver {
                     [model.neighbourhoodVarMapping[nextNeighbourhoodIndex]];
             auto statsMarkPoint = stats.getMarkPoint();
             changeMade = false;
+            bool solutionAccepted = false;
             AcceptanceCallBack callback = [&]() {
                 changeMade = true;
-                return searchStrategy.acceptSolution(
+                solutionAccepted = searchStrategy.acceptSolution(
                     NeighbourhoodResult(model, nextNeighbourhoodIndex,
                                         statsMarkPoint),
                     stats);
+                return solutionAccepted;
             };
             ParentCheckCallBack alwaysTrueFunc(alwaysTrue);
             auto changingVariables = makeVecFrom(var.second);
@@ -85,7 +87,7 @@ class Solver {
             neighbourhood.apply(params);
             NeighbourhoodResult result(model, nextNeighbourhoodIndex,
                                        statsMarkPoint);
-            stats.reportResult(result);
+            stats.reportResult(solutionAccepted, result);
             selectionStrategy.reportResult(result);
         }
         stats.endTimer();

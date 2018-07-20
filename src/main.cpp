@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include "common/common.h"
 #include "jsonModelParser.h"
+#include "search/neighbourhoodSelectionStrategies.h"
+#include "search/searchStrategies.h"
 #include "search/solver.h"
 #include "utils/hashUtils.h"
 
@@ -91,10 +93,10 @@ void sigAlarmHandler(int);
 int main(const int argc, const char** argv) {
     argParser.validateArgs(argc, argv);
     ParsedModel parsedModel = parseModelFromJson(fileArg.get());
-    Model model = parsedModel.builder->build();
-    auto search =
-        Solver<ExplorationUsingViolationBackOff<HillClimbingExploiter>,
-               RandomNeighbourhoodWithViolation>(move(model));
+    State state(parsedModel.builder->build());
+    auto nhSelection = make_shared<RandomNeighbourhoodWithViolation>();
+    auto strategy = makeExplorationUsingViolationBackOff(
+        makeHillClimbing(nhSelection), nhSelection);
     signal(SIGINT, sigIntHandler);
     signal(SIGVTALRM, sigAlarmHandler);
     signal(SIGALRM, sigAlarmHandler);
@@ -104,7 +106,7 @@ int main(const int argc, const char** argv) {
     } else if (realTimeLimitFlag) {
         setTimeout(realTimeLimitArg.get(), false);
     }
-    search.search();
+    search(strategy, state);
 }
 
 void setTimeout(int numberSeconds, bool virtualTimer) {
@@ -123,5 +125,21 @@ void setTimeout(int numberSeconds, bool virtualTimer) {
     }
 }
 bool sigIntActivated = false, sigAlarmActivated = false;
-void sigIntHandler(int) { sigIntActivated = true; }
-void sigAlarmHandler(int) { sigAlarmActivated = true; }
+void forceExit() {
+    std::cout << "\n\nFORCE EXIT\n";
+    abort();
+}
+void sigIntHandler(int) {
+    if (sigIntActivated) {
+        forceExit();
+    }
+    sigIntActivated = true;
+    setTimeout(5, false);
+}
+void sigAlarmHandler(int) {
+    if (sigIntActivated || sigAlarmActivated) {
+        forceExit();
+    }
+    sigAlarmActivated = true;
+    setTimeout(5, false);
+}

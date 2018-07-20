@@ -16,6 +16,10 @@
 extern ValBase definedPool;
 class ModelBuilder;
 enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
+
+inline Int transposeObjective(OptimiseMode mode, Int objective) {
+    return (mode == OptimiseMode::MAXIMISE) ? -objective : objective;
+}
 struct Model {
     friend ModelBuilder;
     std::vector<std::pair<AnyDomainRef, AnyValRef>> variables;
@@ -45,6 +49,12 @@ struct Model {
             }
             std::cout << std::endl;
         }
+    }
+
+   public:
+    inline UInt getViolation() const { return csp->view().violation; }
+    inline Int getObjective() const {
+        return transposeObjective(optimiseMode, objective->view().value);
     }
 };
 

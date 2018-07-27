@@ -42,7 +42,6 @@ struct MSetView : public ExprInterface<MSetView> {
     friend MSetValue;
     AnyExprVec members;
     HashType cachedHashTotal = 0;
-    HashType hashOfPossibleChange;
     std::vector<std::shared_ptr<MSetTrigger>> triggers;
     debug_code(bool posMSetValueChangeCalled = false);
 
@@ -135,26 +134,27 @@ struct MSetView : public ExprInterface<MSetView> {
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void notifyPossibleMemberChange(UInt index) {
+    inline HashType notifyPossibleMemberChange(UInt index) {
         auto& members = getMembers<InnerViewType>();
         debug_code(assertValidState());
-        hashOfPossibleChange = getValueHash(members[index]->view());
+        HashType memberHash = getValueHash(members[index]->view());
         AnyExprRef triggerMember = members[index];
         visitTriggers(
             [&](auto& t) {
                 t->possibleMemberValueChange(index, triggerMember);
             },
             triggers);
+        return memberHash;
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void memberChangedAndNotify(size_t index) {
-        HashType oldHash = hashOfPossibleChange;
-        hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
-        if (oldHash == hashOfPossibleChange) {
-            return;
+    inline HashType memberChangedAndNotify(size_t index, HashType oldHash) {
+        HashType newHash = memberChanged<InnerViewType>(oldHash, index);
+        if (oldHash == newHash) {
+            return newHash;
         }
         notifyMemberChanged(index, getMembers<InnerViewType>()[index]);
+        return newHash;
     }
 
     inline void notifyEntireMSetChange() {
@@ -264,28 +264,28 @@ struct MSetValue : public MSetView, public ValBase {
     }
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline void notifyPossibleMemberChange(UInt index) {
+    inline HashType notifyPossibleMemberChange(UInt index) {
         return MSetView::notifyPossibleMemberChange<
             typename AssociatedViewType<InnerValueType>::type>(index);
     }
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline bool tryMemberChange(size_t index, Func&& func) {
+    inline std::pair<bool, HashType> tryMemberChange(size_t index,
+                                                     HashType oldHash,
+                                                     Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        HashType oldHash = hashOfPossibleChange;
-        hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
+        HashType newHash = memberChanged<InnerViewType>(oldHash, index);
         if (func()) {
             MSetView::notifyMemberChanged(index,
                                           getMembers<InnerViewType>()[index]);
-            return true;
+            return std::make_pair(true, newHash);
         } else {
-            if (oldHash != hashOfPossibleChange) {
-                cachedHashTotal -= mix(hashOfPossibleChange);
+            if (oldHash != newHash) {
+                cachedHashTotal -= mix(newHash);
                 cachedHashTotal += mix(oldHash);
-                hashOfPossibleChange = oldHash;
             }
-            return false;
+            return std::make_pair(false, oldHash);
         }
     }
 

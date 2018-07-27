@@ -69,18 +69,27 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
                     (vioDescAtThisLevel.getTotalViolation() != 0)
                         ? vioDescAtThisLevel.selectRandomVar()
                         : globalRandom<UInt>(0, val.numberElements() - 1);
-                val.notifyPossibleMemberChange<InnerValueType>(indexToChange);
-                ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
-                    return val.tryMemberChange<InnerValueType>(
-                        indexToChange,
-                        [&]() { return params.parentCheck(params.vals); });
-                };
+                HashType oldHash =
+                    val.notifyPossibleMemberChange<InnerValueType>(
+                        indexToChange);
+                ParentCheckCallBack parentCheck =
+                    [&](const AnyValVec& ) {
+
+                        auto statusHashPair =
+                            val.tryMemberChange<InnerValueType>(
+                                indexToChange, oldHash, [&]() {
+                                    return params.parentCheck(params.vals);
+                                });
+                        oldHash = statusHashPair.second;
+                        return statusHashPair.first;
+                    };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
                     if (requiresRevert) {
-                        val.notifyPossibleMemberChange<InnerValueType>(
-                            indexToChange);
+                        oldHash =
+                            val.notifyPossibleMemberChange<InnerValueType>(
+                                indexToChange);
                     }
                     return !requiresRevert;
                 };
@@ -95,7 +104,7 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
                     changingMembers, params.stats, vioDescAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
-                    val.tryMemberChange<InnerValueType>(indexToChange,
+                    val.tryMemberChange<InnerValueType>(indexToChange, oldHash,
                                                         [&]() { return true; });
                 }
             });

@@ -200,8 +200,7 @@ struct ExprTrigger
             if (!newValueInSet) {
                 // operand was being used in the set view, it now has a new
                 // value, notify the set of the new value
-                op->hashOfPossibleChange = previousHash;
-                op->template memberChangedAndNotify<View>(index);
+                op->template memberChangedAndNotify<View>(index, previousHash);
                 auto otherOperandWithSameValue =
                     op->removeHash(previousHash, index);
                 op->addHash(newHash, index);

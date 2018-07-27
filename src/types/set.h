@@ -48,7 +48,6 @@ struct SetView : public ExprInterface<SetView> {
     std::unordered_set<HashType> memberHashes;
     AnyExprVec members;
     HashType cachedHashTotal = 0;
-    HashType hashOfPossibleChange;
     std::vector<std::shared_ptr<SetTrigger>> triggers;
     debug_code(bool posSetValueChangeCalled = false);
 
@@ -100,7 +99,7 @@ struct SetView : public ExprInterface<SetView> {
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline UInt memberChanged(HashType oldHash, UInt index) {
+    inline HashType memberChanged(HashType oldHash, UInt index) {
         auto& members = getMembers<InnerViewType>();
         HashType newHash = getValueHash(members[index]->view());
         if (newHash != oldHash) {
@@ -159,26 +158,27 @@ struct SetView : public ExprInterface<SetView> {
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void notifyPossibleMemberChange(UInt index) {
+    inline HashType notifyPossibleMemberChange(UInt index) {
         auto& members = getMembers<InnerViewType>();
         debug_code(assertValidState());
-        hashOfPossibleChange = getValueHash(members[index]->view());
+        HashType memberHash = getValueHash(members[index]->view());
         AnyExprRef triggerMember = members[index];
         visitTriggers(
             [&](auto& t) {
                 t->possibleMemberValueChange(index, triggerMember);
             },
             triggers);
+        return memberHash;
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void memberChangedAndNotify(size_t index) {
-        HashType oldHash = hashOfPossibleChange;
-        hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
-        if (oldHash == hashOfPossibleChange) {
-            return;
+    inline HashType memberChangedAndNotify(size_t index, HashType oldHash) {
+        HashType newHash = memberChanged<InnerViewType>(oldHash, index);
+        if (oldHash == newHash) {
+            return newHash;
         }
         notifyMemberChanged(index, getMembers<InnerViewType>()[index]);
+        return newHash;
     }
 
     inline void notifyEntireSetChange() {
@@ -297,30 +297,30 @@ struct SetValue : public SetView, public ValBase {
     }
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline void notifyPossibleMemberChange(UInt index) {
+    inline HashType notifyPossibleMemberChange(UInt index) {
         return SetView::notifyPossibleMemberChange<
             typename AssociatedViewType<InnerValueType>::type>(index);
     }
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline bool tryMemberChange(size_t index, Func&& func) {
+    inline std::pair<bool, HashType> tryMemberChange(size_t index,
+                                                     HashType oldHash,
+                                                     Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        HashType oldHash = hashOfPossibleChange;
-        hashOfPossibleChange = memberChanged<InnerViewType>(oldHash, index);
+        HashType newHash = memberChanged<InnerViewType>(oldHash, index);
         if (func()) {
             SetView::notifyMemberChanged(index,
                                          getMembers<InnerViewType>()[index]);
-            return true;
+            return std::make_pair(true, newHash);
         } else {
-            if (oldHash != hashOfPossibleChange) {
+            if (oldHash != newHash) {
                 memberHashes.insert(oldHash);
-                memberHashes.erase(hashOfPossibleChange);
-                cachedHashTotal -= mix(hashOfPossibleChange);
+                memberHashes.erase(newHash);
+                cachedHashTotal -= mix(newHash);
                 cachedHashTotal += mix(oldHash);
-                hashOfPossibleChange = oldHash;
             }
-            return false;
+            return std::make_pair(false, oldHash);
         }
     }
 

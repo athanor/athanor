@@ -192,13 +192,24 @@ struct OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger
             },
             op->triggers);
     }
-    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {
+    inline void possibleMemberValueChange(UInt) final {
         // since the parent will already be directly triggering on the set
         // member, this trigger need not be forwarded
     }
 
-    inline void memberValueChanged(UInt index, const AnyExprRef&) final {
+    inline void memberValueChanged(UInt index) final {
         op->handleSetMemberValueChange(index);
+    }
+
+    inline void possibleMemberValuesChange(const std::vector<UInt>&) final {
+        // since the parent will already be directly triggering on the set
+        // member, this trigger need not be forwarded
+    }
+
+    inline void memberValuesChanged(const std::vector<UInt>& indices) final {
+        for (auto index : indices) {
+            op->handleSetMemberValueChange(index);
+        }
     }
 
     void reattachTrigger() final {

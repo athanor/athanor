@@ -1,4 +1,18 @@
 #include "search/statsContainer.h"
+#include "search/model.h"
+Int NeighbourhoodResult::getDeltaViolation() const {
+    return model.getViolation() - statsMarkPoint.lastViolation;
+}
+Int NeighbourhoodResult::getDeltaObjective() const {
+    return model.getObjective() - statsMarkPoint.lastObjective;
+}
+
+StatsContainer::StatsContainer(Model& model)
+    : optimiseMode(model.optimiseMode),
+      nhActivationCounts(model.neighbourhoods.size(), 0),
+      nhMinorNodeCounts(model.neighbourhoods.size(), 0),
+      nhTriggerEventCounts(model.neighbourhoods.size(), 0),
+      nhTotalCpuTimes(model.neighbourhoods.size(), 0) {}
 #include <iostream>
 void StatsContainer::initialSolution(Model& model) {
     lastViolation = model.csp->view().violation;

@@ -2,12 +2,13 @@
 #define SRC_SEARCH_MODEL_H_
 #include <algorithm>
 #include <chrono>
-#include "operators/operatorMakers.h"
 
 #include <cassert>
 #include "base/base.h"
 #include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
+#include "operators/operatorMakers.h"
+
 #include "operators/opAnd.h"
 #include "operators/opIntEq.h"
 #include "operators/opSequenceLit.h"
@@ -15,8 +16,10 @@
 #include "types/allTypes.h"
 extern ValBase definedPool;
 class ModelBuilder;
-enum OptimiseMode { NONE, MAXIMISE, MINIMISE };
-
+#ifndef CLASS_OPTIMISEMODE
+#define CLASS_OPTIMISEMODE
+enum class OptimiseMode { NONE, MAXIMISE, MINIMISE };
+#endif
 inline Int transposeObjective(OptimiseMode mode, Int objective) {
     return (mode == OptimiseMode::MAXIMISE) ? -objective : objective;
 }

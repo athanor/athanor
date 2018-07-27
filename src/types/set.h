@@ -39,9 +39,11 @@ struct SetTrigger : public virtual TriggerBase {
     virtual void valueRemoved(UInt indexOfRemovedValue,
                               HashType hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyExprRef& member) = 0;
-    virtual void possibleMemberValueChange(UInt index,
-                                           const AnyExprRef& member) = 0;
-    virtual void memberValueChanged(UInt index, const AnyExprRef& member) = 0;
+    virtual void possibleMemberValueChange(UInt index) = 0;
+    virtual void memberValueChanged(UInt index) = 0;
+    virtual void possibleMemberValuesChange(
+        const std::vector<UInt>& indices) = 0;
+    virtual void memberValuesChanged(const std::vector<UInt>& indices) = 0;
 };
 struct SetView : public ExprInterface<SetView> {
     friend SetValue;
@@ -113,12 +115,9 @@ struct SetView : public ExprInterface<SetView> {
         return newHash;
     }
 
-    inline void notifyMemberChanged(size_t index,
-                                    const AnyExprRef& changedMember) {
+    inline void notifyMemberChanged(size_t index) {
         debug_code(assertValidState());
-        visitTriggers(
-            [&](auto& t) { t->memberValueChanged(index, changedMember); },
-            triggers);
+        visitTriggers([&](auto& t) { t->memberValueChanged(index); }, triggers);
     }
 
     void silentClear() {
@@ -162,12 +161,8 @@ struct SetView : public ExprInterface<SetView> {
         auto& members = getMembers<InnerViewType>();
         debug_code(assertValidState());
         HashType memberHash = getValueHash(members[index]->view());
-        AnyExprRef triggerMember = members[index];
-        visitTriggers(
-            [&](auto& t) {
-                t->possibleMemberValueChange(index, triggerMember);
-            },
-            triggers);
+        visitTriggers([&](auto& t) { t->possibleMemberValueChange(index); },
+                      triggers);
         return memberHash;
     }
 
@@ -177,7 +172,7 @@ struct SetView : public ExprInterface<SetView> {
         if (oldHash == newHash) {
             return newHash;
         }
-        notifyMemberChanged(index, getMembers<InnerViewType>()[index]);
+        notifyMemberChanged(index);
         return newHash;
     }
 
@@ -310,8 +305,7 @@ struct SetValue : public SetView, public ValBase {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         HashType newHash = memberChanged<InnerViewType>(oldHash, index);
         if (func()) {
-            SetView::notifyMemberChanged(index,
-                                         getMembers<InnerViewType>()[index]);
+            SetView::notifyMemberChanged(index);
             return std::make_pair(true, newHash);
         } else {
             if (oldHash != newHash) {
@@ -367,10 +361,14 @@ struct ChangeTriggerAdapter<SetTrigger, Child>
     inline void valueAdded(const AnyExprRef&) final {
         this->forwardValueChanged();
     }
-    inline void possibleMemberValueChange(UInt, const AnyExprRef&) final {
+    inline void possibleMemberValueChange(UInt) final {
         this->forwardPossibleValueChange();
     }
-    inline void memberValueChanged(UInt, const AnyExprRef&) final {
+    inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
+    inline void possibleMemberValuesChange(const std::vector<UInt>&) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void memberValuesChanged(const std::vector<UInt>&) final {
         this->forwardValueChanged();
     }
 };

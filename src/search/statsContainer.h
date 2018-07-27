@@ -2,8 +2,8 @@
 #define SRC_SEARCH_STATSCONTAINER_H_
 #include <chrono>
 #include <iostream>
-#include "search/model.h"
-
+#include "base/base.h"
+struct Model;
 struct StatsMarkPoint {
     u_int64_t numberIterations;
     u_int64_t minorNodeCount;
@@ -41,13 +41,13 @@ struct NeighbourhoodResult {
           foundAssignment(foundAssignment),
           statsMarkPoint(statsMarkPoint) {}
 
-    inline Int getDeltaViolation() const {
-        return model.getViolation() - statsMarkPoint.lastViolation;
-    }
-    inline Int getDeltaObjective() const {
-        return model.getObjective() - statsMarkPoint.lastObjective;
-    }
+    Int getDeltaViolation() const;
+    Int getDeltaObjective() const;
 };
+#ifndef CLASS_OPTIMISEMODE
+#define CLASS_OPTIMISEMODE
+enum class OptimiseMode { NONE, MAXIMISE, MINIMISE };
+#endif
 
 struct StatsContainer {
     OptimiseMode optimiseMode;
@@ -66,12 +66,7 @@ struct StatsContainer {
     UInt lastViolation;
     Int bestObjective;
     Int lastObjective;
-    StatsContainer(Model& model)
-        : optimiseMode(model.optimiseMode),
-          nhActivationCounts(model.neighbourhoods.size(), 0),
-          nhMinorNodeCounts(model.neighbourhoods.size(), 0),
-          nhTriggerEventCounts(model.neighbourhoods.size(), 0),
-          nhTotalCpuTimes(model.neighbourhoods.size(), 0) {}
+    StatsContainer(Model& model);
 
     inline StatsMarkPoint getMarkPoint() {
         return StatsMarkPoint(numberIterations, minorNodeCount,

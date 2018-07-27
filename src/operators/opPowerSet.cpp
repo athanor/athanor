@@ -66,10 +66,16 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
         todoImpl();
         ;
     }
-    void possibleMemberValueChange(UInt, const AnyExprRef&) final {
+    void possibleMemberValueChange(UInt) final {
         // ignore, ;
     }
-    void memberValueChanged(UInt, const AnyExprRef&) final {
+    void memberValueChanged(UInt) final {
+        // ignore;
+    }
+    void possibleMemberValuesChange(const vector<UInt>&) final {
+        // ignore, ;
+    }
+    void memberValuesChanged(const vector<UInt>&) final {
         // ignore;
     }
 };

@@ -21,6 +21,9 @@ struct NeighbourhoodParams {
     AnyValVec& vals;
     StatsContainer& stats;
     ViolationContainer& vioDesc;
+    std::vector<ViolationContainer*>
+        vioContainers;  // only for neighbourhoods who require multiple vars
+
     NeighbourhoodParams(const AcceptanceCallBack& changeAccepted,
                         const ParentCheckCallBack& parentCheck,
                         const int parentCheckTryLimit, AnyValVec& vals,

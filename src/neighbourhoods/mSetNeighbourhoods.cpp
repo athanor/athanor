@@ -72,17 +72,14 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
                 HashType oldHash =
                     val.notifyPossibleMemberChange<InnerValueType>(
                         indexToChange);
-                ParentCheckCallBack parentCheck =
-                    [&](const AnyValVec& ) {
+                ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
 
-                        auto statusHashPair =
-                            val.tryMemberChange<InnerValueType>(
-                                indexToChange, oldHash, [&]() {
-                                    return params.parentCheck(params.vals);
-                                });
-                        oldHash = statusHashPair.second;
-                        return statusHashPair.first;
-                    };
+                    auto statusHashPair = val.tryMemberChange<InnerValueType>(
+                        indexToChange, oldHash,
+                        [&]() { return params.parentCheck(params.vals); });
+                    oldHash = statusHashPair.second;
+                    return statusHashPair.first;
+                };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();

@@ -690,12 +690,10 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
             valuesToUnroll);
     }
 
-    void possibleMemberValueChange(UInt, const AnyExprRef&) final {}
-    void memberValueChanged(UInt, const AnyExprRef&) final{};
-    void possibleMemberValuesChange(const std::vector<UInt>&,
-                                    const AnyExprRef&) final {}
-    void memberValuesChanged(const std::vector<UInt>&,
-                             const AnyExprRef&) final{};
+    void possibleMemberValueChange(UInt) final {}
+    void memberValueChanged(UInt) final{};
+    void possibleMemberValuesChange(const std::vector<UInt>&) final {}
+    void memberValuesChanged(const std::vector<UInt>&) final{};
     void possibleValueChange() final {}
     void valueChanged() {
         while (op->numberElements() != 0) {

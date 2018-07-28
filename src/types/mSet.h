@@ -173,7 +173,7 @@ struct MSetView : public ExprInterface<MSetView> {
             indices.begin(), indices.end(), hashes.begin(),
             [&](UInt index) { return getValueHash(members[index]->view()); });
         debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->possibleMemberValueChange(index); },
+        visitTriggers([&](auto& t) { t->possibleMemberValuesChange(indices); },
                       triggers);
     }
 
@@ -302,7 +302,7 @@ struct MSetValue : public MSetView, public ValBase {
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline void notifyPossibleMembersChange(const std::vector<UInt>& indices,
                                             std::vector<HashType>& hashes) {
-        MSetView::notifyPossibleMemberChange<
+        MSetView::notifyPossibleMembersChange<
             typename AssociatedViewType<InnerValueType>::type>(indices, hashes);
     }
 

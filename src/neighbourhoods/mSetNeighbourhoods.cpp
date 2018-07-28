@@ -118,6 +118,99 @@ void mSetLiftSingleGen(const MSetDomain& domain, int numberValsRequired,
         domain.inner);
 }
 
+std::vector<UInt> nRandomIntegers(UInt start, UInt end, size_t size) {
+    std::vector<UInt> integers;
+    integers.reserve(size);
+    while (integers.size() < size) {
+        UInt random = globalRandom<UInt>(start, end);
+        // using linear find as expecting size to be very small
+        if (std::find(integers.begin(), integers.end(), random) !=
+            integers.end()) {
+            integers.emplace_back(random);
+        }
+    }
+    return integers;
+}
+template <typename InnerDomainPtrType>
+void mSetLiftMultipleGenImpl(const MSetDomain& domain,
+                             const InnerDomainPtrType& innerDomainPtr,
+                             int numberValsRequired,
+                             std::vector<Neighbourhood>& neighbourhoods) {
+    std::vector<Neighbourhood> innerDomainNeighbourhoods;
+    generateNeighbourhoods(1, domain.inner, innerDomainNeighbourhoods);
+    UInt innerDomainSize = getDomainSize(domain.inner);
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    for (auto& innerNh : innerDomainNeighbourhoods) {
+        neighbourhoods.emplace_back(
+            "mSetLiftMultiple_" + innerNh.name, numberValsRequired,
+            [innerNhApply{std::move(innerNh.apply)},
+             innerNhNumberValsRequired{innerNh.numberValsRequired},
+             innerDomainSize, &domain,
+             &innerDomainPtr](NeighbourhoodParams& params) {
+                auto& val = *(params.getVals<MSetValue>().front());
+                if (val.numberElements() < (size_t)innerNhNumberValsRequired) {
+                    ++params.stats.minorNodeCount;
+                    return;
+                }
+                ViolationContainer& vioDescAtThisLevel =
+                    params.vioDesc.hasChildViolation(val.id)
+                        ? params.vioDesc.childViolations(val.id)
+                        : emptyViolations;
+                std::vector<UInt> indicesToChange =
+                    (vioDescAtThisLevel.getTotalViolation() != 0)
+                        ? vioDescAtThisLevel.selectRandomVars(
+                              innerNhNumberValsRequired)
+                        : nRandomIntegers(0, val.numberElements() - 1,
+                                          innerNhNumberValsRequired);
+                std::vector<HashType> oldHashes;
+                val.notifyPossibleMembersChange<InnerValueType>(indicesToChange,
+                                                                oldHashes);
+                ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
+
+                    return val.tryMembersChange<InnerValueType>(
+                        indicesToChange, oldHashes,
+                        [&]() { return params.parentCheck(params.vals); });
+                };
+                bool requiresRevert = false;
+                AcceptanceCallBack changeAccepted = [&]() {
+                    requiresRevert = !params.changeAccepted();
+                    if (requiresRevert) {
+                        val.notifyPossibleMembersChange<InnerValueType>(
+                            indicesToChange, oldHashes);
+                    }
+                    return !requiresRevert;
+                };
+                AnyValVec changingMembers;
+                auto& changingMembersImpl =
+                    changingMembers.emplace<ValRefVec<InnerValueType>>();
+                for (UInt indexToChange : indicesToChange) {
+                    changingMembersImpl.emplace_back(
+                        val.member<InnerValueType>(indexToChange));
+                }
+                NeighbourhoodParams innerNhParams(
+                    changeAccepted, parentCheck,
+                    getTryLimit(val.numberElements(), innerDomainSize),
+                    changingMembers, params.stats, vioDescAtThisLevel);
+                innerNhApply(innerNhParams);
+                if (requiresRevert) {
+                    val.tryMembersChange<InnerValueType>(
+                        indicesToChange, oldHashes, [&]() { return true; });
+                }
+            });
+    }
+}
+
+void mSetLiftMultipleGen(const MSetDomain& domain, int numberValsRequired,
+                         std::vector<Neighbourhood>& neighbourhoods) {
+    mpark::visit(
+        [&](const auto& innerDomainPtr) {
+            mSetLiftMultipleGenImpl(domain, innerDomainPtr, numberValsRequired,
+                                    neighbourhoods);
+        },
+        domain.inner);
+}
+
 template <typename InnerDomainPtrType>
 void mSetAddGenImpl(const MSetDomain& domain,
                     InnerDomainPtrType& innerDomainPtr, int numberValsRequired,

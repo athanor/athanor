@@ -101,6 +101,84 @@ void setAddGen(const SetDomain& domain, int numberValsRequired,
         },
         domain.inner);
 }
+template <typename InnerDomainPtrType>
+void setMoveGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
+                    int numberValsRequired,
+                    std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    UInt innerDomainSize = getDomainSize(domain.inner);
+
+    neighbourhoods.emplace_back(
+        "setMove", numberValsRequired,
+        [innerDomainSize, &domain,
+         &innerDomainPtr](NeighbourhoodParams& params) {
+            auto& vals = params.getVals<SetValue>();
+            debug_code(assert(vals.size() == 2));
+            auto& fromVal = *(vals[0]);
+            auto& toVal = *(vals[1]);
+            if (fromVal.numberElements() == domain.sizeAttr.minSize ||
+                toVal.numberElements() == domain.sizeAttr.maxSize) {
+                ++params.stats.minorNodeCount;
+                return;
+            }
+            int numberTries = 0;
+            const int tryLimit =
+                params.parentCheckTryLimit *
+                getTryLimit(toVal.numberElements(), innerDomainSize);
+            debug_neighbourhood_action("Looking for value to move");
+            bool success;
+            do {
+            debug_code(prettyPrint(cout, static_cast<SetView&>(fromVal)));
+            debug_code(prettyPrint(cout, static_cast<SetView&>(toVal)));
+                ++params.stats.minorNodeCount;
+                UInt indexToMove =
+                    globalRandom<UInt>(0, fromVal.numberElements() - 1);
+                if (toVal.containsMember(
+                        fromVal.getMembers<InnerViewType>()[indexToMove])) {
+                    continue;
+                }
+                auto memberToMove = assumeAsValue(
+                    fromVal.getMembers<InnerViewType>()[indexToMove]);
+                success = toVal.tryAddMember(memberToMove, [&]() {
+                    return fromVal
+                        .tryRemoveMember<InnerValueType>(
+                            indexToMove,
+                            [&]() { return params.parentCheck(params.vals); })
+                        .first;
+                });
+            } while (!success && ++numberTries < tryLimit);
+            if (!success) {
+                debug_neighbourhood_action(
+                    "Couldn't find value, number tries=" << tryLimit);
+                return;
+            }
+            debug_neighbourhood_action(
+                "Moved value: " << toVal.getMembers<InnerViewType>().back());
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                auto member =
+                    toVal
+                        .tryRemoveMember<InnerValueType>(
+                            toVal.numberElements() - 1, []() { return true; })
+                        .second;
+                fromVal.tryAddMember(member, [&]() { return true; });
+            }
+        });
+}
+void setMoveGen(const SetDomain& domain, int numberValsRequired,
+                std::vector<Neighbourhood>& neighbourhoods) {
+    if (domain.sizeAttr.sizeType == SizeAttr::SizeAttrType::EXACT_SIZE) {
+        return;
+    }
+    mpark::visit(
+        [&](const auto& innerDomainPtr) {
+            setMoveGenImpl(domain, innerDomainPtr, numberValsRequired,
+                           neighbourhoods);
+        },
+        domain.inner);
+}
 
 template <typename InnerDomainPtrType>
 void setRemoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
@@ -184,10 +262,8 @@ void setLiftSingleGenImpl(const SetDomain& domain,
                     params.vioDesc.hasChildViolation(val.id)
                         ? params.vioDesc.childViolations(val.id)
                         : emptyViolations;
-                UInt indexToChange =
-                    (vioDescAtThisLevel.getTotalViolation() != 0)
-                        ? vioDescAtThisLevel.selectRandomVar()
-                        : globalRandom<UInt>(0, val.numberElements() - 1);
+                UInt indexToChange = vioDescAtThisLevel.selectRandomVar(
+                    val.numberElements() - 1);
                 HashType oldHash =
                     val.notifyPossibleMemberChange<InnerValueType>(
                         indexToChange);
@@ -282,4 +358,7 @@ void setAssignRandomGen(const SetDomain& domain, int numberValsRequired,
 }
 
 const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::value = {
-    {1, setLiftSingleGen}, {1, setAddGen}, {1, setRemoveGen}};
+    //    {1, setLiftSingleGen},  //
+    //    {1, setAddGen},
+    //    {1, setRemoveGen},
+    {2, setMoveGen}};

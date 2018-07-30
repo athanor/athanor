@@ -41,7 +41,8 @@ class RandomNeighbourhoodWithViolation {
             return globalRandom<size_t>(0,
                                         state.model.neighbourhoods.size() - 1);
         } else {
-            size_t biasRandomVar = state.model.vioDesc.selectRandomVar();
+            size_t biasRandomVar = state.model.vioDesc.selectRandomVar(
+                state.model.variables.size() - 1);
             return state.model
                 .varNeighbourhoodMapping[biasRandomVar][globalRandom<size_t>(
                     0,

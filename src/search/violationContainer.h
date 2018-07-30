@@ -61,60 +61,8 @@ class ViolationContainer {
         return _childViolations.count(id);
     }
 
-    UInt selectRandomVar() const {
-        assert(totalViolation != 0);
-        if (totalViolation == 0) {
-            std::cerr << "Cannot select random variable when there are zero "
-                         "violations\n";
-            abort();
-        }
-        UInt rand = globalRandom<UInt>(0, totalViolation - 1);
-        for (UInt varId : getVarsWithViolation()) {
-            UInt violation = varViolation(varId);
-            if (violation > rand) {
-                return varId;
-            } else {
-                rand -= violation;
-            }
-        }
-        assert(false);
-        abort();
-    }
-    std::vector<UInt> selectRandomVars(size_t size) const {
-        assert(totalViolation != 0);
-        if (totalViolation == 0) {
-            std::cerr << "Cannot select random variable when there are zero "
-                         "violations\n";
-            abort();
-        }
-        std::vector<UInt> vars;
-        UInt violationToIgnore = 0;
-        while (vars.size() < size) {
-            UInt rand =
-                globalRandom<UInt>(0, totalViolation - 1 - violationToIgnore);
-            size_t sizeBackup = vars.size();
-            for (UInt varId : getVarsWithViolation()) {
-                // using linear find as expecting size to be very small
-                if (std::find(vars.begin(), vars.end(), varId) == vars.end()) {
-                    continue;
-                }
-                UInt violation = varViolation(varId);
-                if (violation > rand) {
-                    vars.emplace_back(varId);
-                    violationToIgnore += violation;
-                    break;
-                } else {
-                    rand -= violation;
-                }
-            }
-            if (sizeBackup == vars.size()) {
-                std::cerr << "Failed to select random var\n";
-                assert(false);
-                abort();
-            }
-        }
-        return vars;
-    }
+    UInt selectRandomVar(UInt maxVar) const;
+    std::vector<UInt> selectRandomVars(UInt maxVar, size_t numberVars) const;
 };
 
 #endif /* SRC_SEARCH_VIOLATIONCONTAINER_H_ */

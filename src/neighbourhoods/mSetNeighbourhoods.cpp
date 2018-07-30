@@ -52,6 +52,9 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
+        if (innerNh.numberValsRequired == 1) {
+            continue;
+        }
         neighbourhoods.emplace_back(
             "mSetLiftSingle_" + innerNh.name, numberValsRequired,
             [innerNhApply{std::move(innerNh.apply)}, innerDomainSize, &domain,
@@ -65,10 +68,8 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
                     params.vioDesc.hasChildViolation(val.id)
                         ? params.vioDesc.childViolations(val.id)
                         : emptyViolations;
-                UInt indexToChange =
-                    (vioDescAtThisLevel.getTotalViolation() != 0)
-                        ? vioDescAtThisLevel.selectRandomVar()
-                        : globalRandom<UInt>(0, val.numberElements() - 1);
+                UInt indexToChange = vioDescAtThisLevel.selectRandomVar(
+                    val.numberElements() - 1);
                 HashType oldHash =
                     val.notifyPossibleMemberChange<InnerValueType>(
                         indexToChange);
@@ -118,26 +119,13 @@ void mSetLiftSingleGen(const MSetDomain& domain, int numberValsRequired,
         domain.inner);
 }
 
-std::vector<UInt> nRandomIntegers(UInt start, UInt end, size_t size) {
-    std::vector<UInt> integers;
-    integers.reserve(size);
-    while (integers.size() < size) {
-        UInt random = globalRandom<UInt>(start, end);
-        // using linear find as expecting size to be very small
-        if (std::find(integers.begin(), integers.end(), random) !=
-            integers.end()) {
-            integers.emplace_back(random);
-        }
-    }
-    return integers;
-}
 template <typename InnerDomainPtrType>
 void mSetLiftMultipleGenImpl(const MSetDomain& domain,
                              const InnerDomainPtrType& innerDomainPtr,
                              int numberValsRequired,
                              std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
-    generateNeighbourhoods(1, domain.inner, innerDomainNeighbourhoods);
+    generateNeighbourhoods(0, domain.inner, innerDomainNeighbourhoods);
     UInt innerDomainSize = getDomainSize(domain.inner);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
@@ -158,11 +146,9 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain,
                         ? params.vioDesc.childViolations(val.id)
                         : emptyViolations;
                 std::vector<UInt> indicesToChange =
-                    (vioDescAtThisLevel.getTotalViolation() != 0)
-                        ? vioDescAtThisLevel.selectRandomVars(
-                              innerNhNumberValsRequired)
-                        : nRandomIntegers(0, val.numberElements() - 1,
-                                          innerNhNumberValsRequired);
+                    vioDescAtThisLevel.selectRandomVars(
+                        val.numberElements() - 1, innerNhNumberValsRequired);
+                debug_log(indicesToChange);
                 std::vector<HashType> oldHashes;
                 val.notifyPossibleMembersChange<InnerValueType>(indicesToChange,
                                                                 oldHashes);
@@ -361,4 +347,7 @@ void mSetAssignRandomGen(const MSetDomain& domain, int numberValsRequired,
 }
 
 const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::value = {
-    {1, mSetLiftSingleGen}, {1, mSetRemoveGen}, {1, mSetAddGen}};
+    {1, mSetLiftSingleGen},
+    {1, mSetLiftMultipleGen},
+    {1, mSetRemoveGen},
+    {1, mSetAddGen}};

@@ -65,10 +65,8 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                     params.vioDesc.hasChildViolation(val.id)
                         ? params.vioDesc.childViolations(val.id)
                         : emptyViolations;
-                UInt indexToChange =
-                    (vioDescAtThisLevel.getTotalViolation() != 0)
-                        ? vioDescAtThisLevel.selectRandomVar()
-                        : globalRandom<UInt>(0, val.numberElements() - 1);
+                UInt indexToChange = vioDescAtThisLevel.selectRandomVar(
+                    val.numberElements() - 1);
                 val.notifyPossibleSubsequenceChange<InnerValueType>(
                     indexToChange, indexToChange + 1);
                 ParentCheckCallBack parentCheck =

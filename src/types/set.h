@@ -115,9 +115,35 @@ struct SetView : public ExprInterface<SetView> {
         return newHash;
     }
 
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void membersChanged(std::vector<HashType>& hashes,
+                               const std::vector<UInt>& indices) {
+        auto& members = getMembers<InnerViewType>();
+        for (HashType oldHash : hashes) {
+            cachedHashTotal -= mix(oldHash);
+            bool erased = memberHashes.erase(oldHash);
+            ignoreUnused(erased);
+            debug_code(assert(erased));
+        }
+        std::transform(
+            indices.begin(), indices.end(), hashes.begin(),
+            [&](UInt index) { return getValueHash(members[index]->view()); });
+        for (HashType newHash : hashes) {
+            cachedHashTotal += mix(newHash);
+            debug_code(assert(!memberHashes.count(newHash)));
+            memberHashes.insert(newHash);
+        }
+        debug_code(assertValidState());
+    }
+
     inline void notifyMemberChanged(size_t index) {
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->memberValueChanged(index); }, triggers);
+    }
+    inline void notifyMembersChanged(const std::vector<UInt>& indices) {
+        debug_code(assertValidState());
+        visitTriggers([&](auto& t) { t->memberValuesChanged(indices); },
+                      triggers);
     }
 
     void silentClear() {
@@ -164,6 +190,18 @@ struct SetView : public ExprInterface<SetView> {
         visitTriggers([&](auto& t) { t->possibleMemberValueChange(index); },
                       triggers);
         return memberHash;
+    }
+    template <typename InnerViewType>
+    inline void notifyPossibleMembersChange(const std::vector<UInt>& indices,
+                                            std::vector<HashType>& hashes) {
+        auto& members = getMembers<InnerViewType>();
+        hashes.resize(indices.size());
+        std::transform(
+            indices.begin(), indices.end(), hashes.begin(),
+            [&](UInt index) { return getValueHash(members[index]->view()); });
+        debug_code(assertValidState());
+        visitTriggers([&](auto& t) { t->possibleMemberValuesChange(indices); },
+                      triggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -297,6 +335,13 @@ struct SetValue : public SetView, public ValBase {
             typename AssociatedViewType<InnerValueType>::type>(index);
     }
 
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
+    inline void notifyPossibleMembersChange(const std::vector<UInt>& indices,
+                                            std::vector<HashType>& hashes) {
+        SetView::notifyPossibleMembersChange<
+            typename AssociatedViewType<InnerValueType>::type>(indices, hashes);
+    }
+
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
     inline std::pair<bool, HashType> tryMemberChange(size_t index,
@@ -315,6 +360,30 @@ struct SetValue : public SetView, public ValBase {
                 cachedHashTotal += mix(oldHash);
             }
             return std::make_pair(false, oldHash);
+        }
+    }
+
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
+    inline bool tryMembersChange(const std::vector<UInt>& indices,
+                                 std::vector<HashType>& hashes, Func&& func) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        std::vector<HashType> newHashes(hashes.begin(), hashes.end());
+        membersChanged<InnerViewType>(newHashes, indices);
+        HashType cachedHashTotalBackup = cachedHashTotal;
+        if (func()) {
+            SetView::notifyMembersChanged(indices);
+            return true;
+        } else {
+            cachedHashTotal = cachedHashTotalBackup;
+            for (auto hash : newHashes) {
+                memberHashes.erase(hash);
+            }
+            for (auto hash : hashes) {
+                memberHashes.insert(hash);
+            }
+            debug_code(assertValidState());
+            return false;
         }
     }
 

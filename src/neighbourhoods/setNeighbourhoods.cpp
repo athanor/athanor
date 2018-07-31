@@ -130,8 +130,8 @@ void setMoveGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
             debug_neighbourhood_action("Looking for value to move");
             bool success;
             do {
-            debug_code(prettyPrint(cout, static_cast<SetView&>(fromVal)));
-            debug_code(prettyPrint(cout, static_cast<SetView&>(toVal)));
+                debug_code(prettyPrint(cout, static_cast<SetView&>(fromVal)));
+                debug_code(prettyPrint(cout, static_cast<SetView&>(toVal)));
                 ++params.stats.minorNodeCount;
                 UInt indexToMove =
                     globalRandom<UInt>(0, fromVal.numberElements() - 1);
@@ -321,6 +321,104 @@ void setLiftSingleGen(const SetDomain& domain, int numberValsRequired,
         domain.inner);
 }
 
+template <typename InnerValueType>
+bool setDoesNotContain(SetValue& val,
+                       const ValRefVec<InnerValueType>& newMembers) {
+    size_t lastInsertedIndex = 0;
+    do {
+        HashType hash = getValueHash(newMembers[lastInsertedIndex]);
+        bool inserted = val.memberHashes.insert(hash).second;
+        if (!inserted) {
+            break;
+        }
+    } while (++lastInsertedIndex < newMembers.size());
+    for (size_t i = 0; i < lastInsertedIndex; i++) {
+        val.memberHashes.erase(getValueHash(newMembers[i]));
+    }
+    return lastInsertedIndex == newMembers.size();
+}
+template <typename InnerDomainPtrType>
+void setLiftMultipleGenImpl(const SetDomain& domain,
+                            const InnerDomainPtrType& innerDomainPtr,
+                            int numberValsRequired,
+                            std::vector<Neighbourhood>& neighbourhoods) {
+    std::vector<Neighbourhood> innerDomainNeighbourhoods;
+    generateNeighbourhoods(0, domain.inner, innerDomainNeighbourhoods);
+    UInt innerDomainSize = getDomainSize(domain.inner);
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    for (auto& innerNh : innerDomainNeighbourhoods) {
+        neighbourhoods.emplace_back(
+            "setLiftMultiple_" + innerNh.name, numberValsRequired,
+            [innerNhApply{std::move(innerNh.apply)},
+             innerNhNumberValsRequired{innerNh.numberValsRequired},
+             innerDomainSize, &domain,
+             &innerDomainPtr](NeighbourhoodParams& params) {
+                auto& val = *(params.getVals<SetValue>().front());
+                if (val.numberElements() < (size_t)innerNhNumberValsRequired) {
+                    ++params.stats.minorNodeCount;
+                    return;
+                }
+                ViolationContainer& vioDescAtThisLevel =
+                    params.vioDesc.hasChildViolation(val.id)
+                        ? params.vioDesc.childViolations(val.id)
+                        : emptyViolations;
+                std::vector<UInt> indicesToChange =
+                    vioDescAtThisLevel.selectRandomVars(
+                        val.numberElements() - 1, innerNhNumberValsRequired);
+                debug_log(indicesToChange);
+                std::vector<HashType> oldHashes;
+                val.notifyPossibleMembersChange<InnerValueType>(indicesToChange,
+                                                                oldHashes);
+                ParentCheckCallBack parentCheck =
+                    [&](const AnyValVec& newMembers) {
+                        auto& newMembersImpl =
+                            mpark::get<ValRefVec<InnerValueType>>(newMembers);
+                        return setDoesNotContain(val, newMembersImpl) &&
+                               val.tryMembersChange<InnerValueType>(
+                                   indicesToChange, oldHashes, [&]() {
+                                       return params.parentCheck(params.vals);
+                                   });
+                    };
+                bool requiresRevert = false;
+                AcceptanceCallBack changeAccepted = [&]() {
+                    requiresRevert = !params.changeAccepted();
+                    if (requiresRevert) {
+                        val.notifyPossibleMembersChange<InnerValueType>(
+                            indicesToChange, oldHashes);
+                    }
+                    return !requiresRevert;
+                };
+                AnyValVec changingMembers;
+                auto& changingMembersImpl =
+                    changingMembers.emplace<ValRefVec<InnerValueType>>();
+                for (UInt indexToChange : indicesToChange) {
+                    changingMembersImpl.emplace_back(
+                        val.member<InnerValueType>(indexToChange));
+                }
+                NeighbourhoodParams innerNhParams(
+                    changeAccepted, parentCheck,
+                    getTryLimit(val.numberElements(), innerDomainSize),
+                    changingMembers, params.stats, vioDescAtThisLevel);
+                innerNhApply(innerNhParams);
+                if (requiresRevert) {
+                    val.tryMembersChange<InnerValueType>(
+                        indicesToChange, oldHashes, [&]() { return true; });
+                }
+            });
+    }
+}
+
+void setLiftMultipleGen(const SetDomain& domain, int numberValsRequired,
+                        std::vector<Neighbourhood>& neighbourhoods) {
+    mpark::visit(
+        [&](const auto& innerDomainPtr) {
+            setLiftMultipleGenImpl(domain, innerDomainPtr, numberValsRequired,
+                                   neighbourhoods);
+        },
+        domain.inner);
+}
+
 void setAssignRandomGen(const SetDomain& domain, int numberValsRequired,
                         std::vector<Neighbourhood>& neighbourhoods) {
     neighbourhoods.emplace_back(
@@ -358,7 +456,8 @@ void setAssignRandomGen(const SetDomain& domain, int numberValsRequired,
 }
 
 const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::value = {
-    //    {1, setLiftSingleGen},  //
-    //    {1, setAddGen},
-    //    {1, setRemoveGen},
+    {1, setLiftSingleGen},    //
+    {1, setLiftMultipleGen},  //
+    {1, setAddGen},
+    {1, setRemoveGen},
     {2, setMoveGen}};

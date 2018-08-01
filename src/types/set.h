@@ -282,7 +282,6 @@ struct SetValue : public SetView, public ValBase {
                 typedef typename AssociatedViewType<InnerValueType>::type
                     InnerViewType;
                 SetView::removeMember<InnerViewType>(numberElements() - 1);
-                valBase(*member).container = NULL;
             }
         }
         return false;

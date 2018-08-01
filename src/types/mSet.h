@@ -249,7 +249,6 @@ struct MSetValue : public MSetView, public ValBase {
             typedef
                 typename AssociatedViewType<InnerValueType>::type InnerViewType;
             MSetView::removeMember<InnerViewType>(numberElements() - 1);
-            valBase(*member).container = NULL;
             return false;
         }
     }

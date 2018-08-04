@@ -49,7 +49,22 @@ struct Dimension {
 };
 typedef std::vector<Dimension> DimensionVec;
 
-struct FunctionTrigger : public virtual TriggerBase {};
+struct FunctionOuterTrigger : public virtual TriggerBase {
+    // later will have more specific triggers, currently only those inherited
+    // from TriggerBase
+};
+
+struct FunctionMemberTrigger : public virtual TriggerBase {
+    virtual void possibleImageChange(UInt index) = 0;
+    virtual void imageChanged(UInt index) = 0;
+    virtual void possibleImageChange(const std::vector<UInt>& indices) = 0;
+    virtual void imageChanged(const std::vector<UInt>& indices) = 0;
+    virtual void imageSwap(UInt index1, UInt index2) = 0;
+};
+
+struct FunctionTrigger : public virtual FunctionOuterTrigger,
+                         public virtual FunctionMemberTrigger {};
+
 template <typename View>
 ExprRef<View> functionIndexToDomain(const DimensionVec&, UInt) {
     static_assert(!std::is_same<View, IntView>::value,
@@ -62,13 +77,32 @@ ExprRef<IntView> functionIndexToDomain<IntView>(const DimensionVec& dimensions,
 
 template <>
 ExprRef<TupleView> functionIndexToDomain<TupleView>(
-    const DimensionVec& dimensions, UInt index);
+    const DimensionVec& dimensions, UInt);
+
+template <typename View>
+void functionIndexToDomain(const DimensionVec&, UInt, View&) {
+    static_assert(!std::is_same<View, IntView>::value,
+                  "Currently do not support function from this type.\n");
+}
+
+template <>
+void functionIndexToDomain<IntView>(const DimensionVec& dimensions, UInt index,
+                                    IntView&);
+
+template <>
+void functionIndexToDomain<TupleView>(const DimensionVec& dimensions, UInt,
+                                      TupleView&);
 
 struct FunctionView : public ExprInterface<FunctionView> {
     friend FunctionValue;
     DimensionVec dimensions;
     AnyExprVec range;
-    std::vector<std::shared_ptr<FunctionTrigger>> triggers;
+    std::vector<std::shared_ptr<FunctionOuterTrigger>> triggers;
+
+    std::vector<std::shared_ptr<FunctionMemberTrigger>> allMemberTriggers;
+    std::vector<std::vector<std::shared_ptr<FunctionMemberTrigger>>>
+        singleMemberTriggers;
+    debug_code(bool posFunctionValueChangeCalled = false);
 
     std::pair<bool, UInt> domainToIndex(const IntView& intV);
     std::pair<bool, UInt> domainToIndex(const TupleView& tupleV);
@@ -77,10 +111,18 @@ struct FunctionView : public ExprInterface<FunctionView> {
     std::pair<bool, UInt> domainToIndex(const View&) {
         shouldNotBeCalledPanic;
     }
+
+    template <typename View, EnableIfView<View> = 0>
+    void indexToDomain(UInt index, View& view) const {
+        functionIndexToDomain<View>(dimensions, index, view);
+    }
+
     template <typename View, EnableIfView<View> = 0>
     ExprRef<View> indexToDomain(UInt index) const {
         return functionIndexToDomain<View>(dimensions, index);
     }
+
+    static DimensionVec makeDimensionVecFromDomain(const AnyDomainRef& domain);
 
     template <typename InnerViewType, typename DimVec,
               EnableIfView<InnerViewType> = 0>
@@ -96,6 +138,13 @@ struct FunctionView : public ExprInterface<FunctionView> {
         range.emplace<ExprRefVec<InnerViewType>>().assign(requiredSize,
                                                           nullptr);
     }
+    template <typename Func>
+    void visitMemberTriggers(Func&& func, UInt index) {
+        visitTriggers(func, allMemberTriggers);
+        if (index < singleMemberTriggers.size()) {
+            visitTriggers(func, singleMemberTriggers[index]);
+        }
+    }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void assignImage(size_t index,
@@ -104,8 +153,66 @@ struct FunctionView : public ExprInterface<FunctionView> {
         debug_code(assert(index < range.size()));
         range[index] = member;
     }
+    inline void notifyPossibleImageChange(UInt index) {
+        debug_code(assertValidState());
+        visitMemberTriggers([&](auto& t) { t->possibleImageChange(index); },
+                            index);
+    }
 
-    FunctionView() {}
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void imageChanged(UInt index) {
+        ignoreUnused(index);
+    }
+
+    inline void notifyImageChanged(UInt index) {
+        debug_code(assertValidState());
+        visitMemberTriggers([&](auto& t) { t->imageChanged(index); }, index);
+    }
+
+    void notifyPossibleSwapImages(UInt index1, UInt index2) {
+        visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                      allMemberTriggers);
+        if (index1 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                          singleMemberTriggers[index1]);
+        }
+        if (index2 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                          singleMemberTriggers[index2]);
+        }
+    }
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void swapImages(UInt index1, UInt index2) {
+        auto& range = getRange<InnerViewType>();
+        std::swap(range[index1], range[index2]);
+        debug_code(assertValidState());
+    }
+
+    inline void notifyImagesSwapped(UInt index1, UInt index2) {
+        debug_code(assert(posFunctionValueChangeCalled);
+                   posFunctionValueChangeCalled = false);
+
+        visitTriggers([&](auto& t) { t->imageSwap(index1, index2); },
+                      allMemberTriggers);
+        if (index1 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->imageSwap(index1, index2); },
+                          singleMemberTriggers[index1]);
+        }
+        if (index2 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->imageSwap(index1, index2); },
+                          singleMemberTriggers[index2]);
+        }
+    }
+
+    inline void notifyPossibleFunctionValueChange() {
+        visitTriggers([](auto& t) { t->possibleValueChange(); }, triggers);
+        debug_code(posFunctionValueChangeCalled = true);
+    }
+    inline void notifyEntireFunctionChange() {
+        debug_code(assert(posFunctionValueChangeCalled);
+                   posFunctionValueChangeCalled = false);
+        visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
+    }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getRange() {
@@ -120,6 +227,8 @@ struct FunctionView : public ExprInterface<FunctionView> {
     inline UInt rangeSize() const {
         return mpark::visit([](auto& range) { return range.size(); }, range);
     }
+
+    void assertValidState();
 };
 
 struct FunctionValue : public FunctionView, public ValBase {
@@ -134,7 +243,7 @@ struct FunctionValue : public FunctionView, public ValBase {
     inline void assignImage(UInt index, const ValRef<InnerValueType>& member) {
         FunctionView::assignImage(index, member.asExpr());
         valBase(*member).container = this;
-        valBase(*member).id = id;
+        valBase(*member).id = index;
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -142,6 +251,51 @@ struct FunctionValue : public FunctionView, public ValBase {
         if (mpark::get_if<ExprRefVec<InnerViewType>>(&(range)) == NULL) {
             range.emplace<ExprRefVec<InnerViewType>>();
         }
+    }
+
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
+    inline bool trySwapImages(UInt index1, UInt index2, Func&& func) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        notifyPossibleSwapImages(index1, index2);
+        FunctionView::swapImages<InnerViewType>(index1, index2);
+        if (func()) {
+            auto& range = getRange<InnerViewType>();
+            valBase(*assumeAsValue(range[index1])).id = index1;
+            valBase(*assumeAsValue(range[index2])).id = index2;
+            FunctionView::notifyImagesSwapped(index1, index2);
+            debug_code(assertValidVarBases());
+            return true;
+        } else {
+            FunctionView::swapImages<InnerViewType>(index1, index2);
+            return false;
+        }
+    }
+
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
+    inline bool tryImageChange(UInt index, Func&& func) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        FunctionView::imageChanged<InnerViewType>(index);
+        if (func()) {
+            FunctionView::notifyImageChanged(index);
+            return true;
+        } else {
+            FunctionView::imageChanged<InnerViewType>(index);
+            return false;
+        }
+    }
+    template <typename Func>
+    bool tryAssignNewValue(FunctionValue& newvalue, Func&& func) {
+        // fake putting in the value first untill func()verifies that it is
+        // happy with the change
+        std::swap(*this, newvalue);
+        bool allowed = func();
+        std::swap(*this, newvalue);
+        if (allowed) {
+            deepCopy(newvalue, *this);
+        }
+        return allowed;
     }
 
     void printVarBases();
@@ -157,10 +311,24 @@ struct FunctionValue : public FunctionView, public ValBase {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
     std::pair<bool, ExprRef<FunctionView>> optimise(PathExtension) final;
+
+    void assertValidVarBases();
 };
 
 template <typename Child>
 struct ChangeTriggerAdapter<FunctionTrigger, Child>
-    : public ChangeTriggerAdapterBase<FunctionTrigger, Child> {};
+    : public ChangeTriggerAdapterBase<FunctionTrigger, Child> {
+    inline void possibleImageChange(UInt) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void possibleImageChange(const std::vector<UInt>&) final {
+        this->forwardPossibleValueChange();
+    }
+    inline void imageChanged(UInt) final { this->forwardValueChanged(); }
+    inline void imageChanged(const std::vector<UInt>&) final {
+        this->forwardValueChanged();
+    }
+    inline void imageSwap(UInt, UInt) final { this->forwardValueChanged(); }
+};
 
 #endif /* SRC_TYPES_FUNCTION_H_ */

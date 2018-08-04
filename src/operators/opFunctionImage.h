@@ -7,6 +7,7 @@
 #include "types/int.h"
 template <typename FunctionMemberViewType>
 struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
+    struct FunctionOperandTrigger;
     struct PreImageTriggerBase {
         OpFunctionImage<FunctionMemberViewType>* op;
         PreImageTriggerBase(OpFunctionImage<FunctionMemberViewType>* op)
@@ -20,8 +21,12 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     ExprRef<FunctionView> functionOperand;
     AnyExprRef preImageOperand;
     Int cachedIndex;
+    bool defined = false;
     bool locallyDefined = false;
     std::shared_ptr<PreImageTriggerBase> preImageTrigger;
+    std::shared_ptr<FunctionOperandTrigger> functionOperandTrigger;
+    std::shared_ptr<FunctionOperandTrigger> functionMemberTrigger;
+
     OpFunctionImage(ExprRef<FunctionView> functionOperand,
                     AnyExprRef preImageOperand)
         : functionOperand(std::move(functionOperand)),
@@ -50,9 +55,12 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     bool isUndefined();
     ExprRef<FunctionMemberViewType>& getMember();
     const ExprRef<FunctionMemberViewType>& getMember() const;
-    void reevaluate();
+    void reevaluate(bool recalculateCachedIndex = true);
     std::pair<bool, ExprRef<FunctionMemberViewType>> optimise(
         PathExtension path) final;
+
+    void reattachFunctionMemberTrigger(bool deleteFirst);
+    bool eventForwardedAsDefinednessChange(bool recalculateIndex);
 };
 
 #endif /* SRC_OPERATORS_OPFUNCTIONIMAGE_H_ */

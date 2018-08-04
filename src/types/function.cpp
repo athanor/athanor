@@ -9,6 +9,53 @@
 #include "types/tuple.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
+struct NoSupportException {};
+Dimension intDomainToDimension(IntDomain& dom) {
+    if (dom.bounds.size() > 1) {
+        cerr << "Error: this function does not support int domains with holes "
+                "in it.\n";
+        throw NoSupportException();
+    }
+    return Dimension(dom.bounds.front().first, dom.bounds.front().second);
+}
+DimensionVec FunctionView::makeDimensionVecFromDomain(
+    const AnyDomainRef& domain) {
+    const shared_ptr<IntDomain>* intDomainTest;
+    const shared_ptr<TupleDomain>* tupleDomainTest;
+    try {
+        if ((intDomainTest = mpark::get_if<shared_ptr<IntDomain>>(&domain)) !=
+            NULL) {
+            return {intDomainToDimension(**intDomainTest)};
+        } else if ((tupleDomainTest = mpark::get_if<shared_ptr<TupleDomain>>(
+                        &domain)) != NULL) {
+            DimensionVec dimVec;
+            for (auto& innerDomain : (*tupleDomainTest)->inners) {
+                auto innerIntDomain =
+                    mpark::get<shared_ptr<IntDomain>>(innerDomain);
+                dimVec.emplace_back(intDomainToDimension(*innerIntDomain));
+            }
+            return dimVec;
+        } else {
+            throw NoSupportException();
+        }
+    } catch (...) {
+        cerr << "Currently no support for building DimensionVecs from function "
+                "domain: ";
+        prettyPrint(cerr, domain) << endl;
+        abort();
+    }
+}
+
+template <typename Op>
+struct OpMaker;
+
+struct OpTupleLit;
+
+template <>
+struct OpMaker<OpTupleLit> {
+    static ExprRef<TupleView> make(std::vector<AnyExprRef> members);
+};
+
 namespace {
 pair<bool, UInt> translateValueFromDimension(Int value,
                                              const Dimension& dimension) {
@@ -62,17 +109,42 @@ ExprRef<IntView> functionIndexToDomain<IntView>(const DimensionVec& dimensions,
 }
 
 template <>
+void functionIndexToDomain<IntView>(const DimensionVec& dimensions, UInt index,
+                                    IntView& view) {
+    debug_code(assert(dimensions.size() == 1));
+    view.changeValue([&]() {
+        view.value = dimensions[0].lower + index;
+        return true;
+    });
+}
+
+template <>
 ExprRef<TupleView> functionIndexToDomain<TupleView>(
     const DimensionVec& dimensions, UInt index) {
-    auto val = make<TupleValue>();
+    vector<AnyExprRef> tupleMembers;
     for (auto& dim : dimensions) {
         auto intVal = make<IntValue>();
         UInt row = index / dim.blockSize;
         index %= dim.blockSize;
         intVal->value = row + dim.lower;
-        val->addMember(intVal);
+        tupleMembers.emplace_back(intVal.asExpr());
     }
-    return val.asExpr();
+    return OpMaker<OpTupleLit>::make(move(tupleMembers));
+}
+
+template <>
+void functionIndexToDomain<TupleView>(const DimensionVec& dimensions,
+                                      UInt index, TupleView& view) {
+    for (size_t dimIndex = 0; dimIndex < dimensions.size(); dimIndex++) {
+        auto& dim = dimensions[dimIndex];
+        auto& memberView = mpark::get<ExprRef<IntView>>(view.members[dimIndex]);
+        UInt row = index / dim.blockSize;
+        index %= dim.blockSize;
+        memberView->view().changeValue([&]() {
+            memberView->view().value = row + dim.lower;
+            return true;
+        });
+    }
 }
 
 template <>
@@ -224,4 +296,55 @@ bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
             return false;
         },
         u.range);
+}
+
+void FunctionView::assertValidState() {
+    // no state to validate currently
+}
+
+void FunctionValue::assertValidVarBases() {
+    mpark::visit(
+        [&](auto& valMembersImpl) {
+            if (valMembersImpl.empty()) {
+                return;
+            }
+            bool success = true;
+            for (size_t i = 0; i < valMembersImpl.size(); i++) {
+                const ValBase& base =
+                    valBase(*assumeAsValue(valMembersImpl[i]));
+                if (base.container != this) {
+                    success = false;
+                    cerr << "member " << i
+                         << "'s container does not point to this function."
+                         << endl;
+                } else if (base.id != i) {
+                    success = false;
+                    cerr << "function member " << i << "has id " << base.id
+                         << " but it should be " << i << endl;
+                }
+            }
+            if (!success) {
+                cerr << "Members: " << valMembersImpl << endl;
+                this->printVarBases();
+                assert(false);
+            }
+        },
+        range);
+}
+
+void FunctionValue::printVarBases() {
+    mpark::visit(
+        [&](auto& valMembersImpl) {
+            cout << "parent is constant: " << (this->container == &constantPool)
+                 << endl;
+            for (auto& member : valMembersImpl) {
+                cout << "val id: " << valBase(*assumeAsValue(member)).id
+                     << endl;
+                cout << "is constant: "
+                     << (valBase(*assumeAsValue(member)).container ==
+                         &constantPool)
+                     << endl;
+            }
+        },
+        range);
 }

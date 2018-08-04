@@ -375,6 +375,18 @@ SizeAttr parseSizeAttr(json& sizeAttrExpr, ParsedModel& parsedModel) {
     }
 }
 
+PartialAttr parsePartialAttr(json& partialAttrExpr) {
+    if (partialAttrExpr == "PartialityAttr_Partial") {
+        return PartialAttr::PARTIAL;
+    } else if (partialAttrExpr == "PartialityAttr_Total") {
+        return PartialAttr::TOTAL;
+    } else {
+        cerr << "Error: unknown partiality attribute: " << partialAttrExpr
+             << endl;
+        abort();
+    }
+}
+
 shared_ptr<SetDomain> parseDomainSet(json& setDomainExpr,
                                      ParsedModel& parsedModel) {
     SizeAttr sizeAttr = parseSizeAttr(setDomainExpr[1], parsedModel);
@@ -411,6 +423,30 @@ shared_ptr<SequenceDomain> parseDomainSequence(json& sequenceDomainExpr,
     }
 }
 
+shared_ptr<FunctionDomain> parseDomainFunction(json& functionDomainExpr,
+                                               ParsedModel& parsedModel) {
+    SizeAttr sizeAttr = parseSizeAttr(functionDomainExpr[1][0], parsedModel);
+
+    if (sizeAttr.sizeType != SizeAttr::SizeAttrType::NO_SIZE) {
+        cerr << "Do not support/understand function with size attribute.\nn";
+        abort();
+    }
+    PartialAttr partialAttr = parsePartialAttr(functionDomainExpr[1][1]);
+    if (partialAttr != PartialAttr::TOTAL) {
+        cerr << "Error: currently only support total functions.\n";
+        abort();
+    }
+    if (functionDomainExpr[1][2] != "JectivityAttr_None") {
+        cerr << "Error, not supporting jectivity attributes on functions at "
+                "the moment.\n";
+        abort();
+    }
+    return make_shared<FunctionDomain>(
+        JectivityAttr::NONE, partialAttr,
+        parseDomain(functionDomainExpr[2], parsedModel),
+        parseDomain(functionDomainExpr[3], parsedModel));
+}
+
 shared_ptr<TupleDomain> parseDomainTuple(json& tupleDomainExpr,
                                          ParsedModel& parsedModel) {
     vector<AnyDomainRef> innerDomains;
@@ -442,6 +478,7 @@ pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
          {"DomainMSet", parseDomainMSet},
          {"DomainSequence", parseDomainSequence},
          {"DomainTuple", parseDomainTuple},
+         {"DomainFunction", parseDomainFunction},
 
          {"DomainReference", parseDomainReference}},
         AnyDomainRef(fakeIntDomain), domainExpr, parsedModel);
@@ -899,50 +936,79 @@ AnyDomainRef addExprToQuantifier(
                               ? generatorParent["GenInExpr"]
                               : generatorParent["GenDomainNoRepr"];
     vector<string> variablesAddedToScope;
+    const AnyDomainRef& innerDomain = overloaded(
+        [&](const FunctionDomain& dom) { return dom.to; },
+        [&](const auto& dom) { return dom.inner; })(*containerDomain);
     mpark::visit(
-        [&](auto& innerDomain) {
+        [&](const auto& innerDomain) {
             typedef typename BaseType<decltype(innerDomain)>::element_type
                 InnerDomainType;
             typedef typename AssociatedViewType<
                 typename AssociatedValueType<InnerDomainType>::type>::type
                 InnerViewType;
-            OpPowerSet* powerSetTest;
-            if (is_same<SequenceDomain, ContainerDomainType>::value) {
-                auto iterRef = quantifier->template newIterRef<TupleView>();
-                if (generatorParent.count("GenDomainNoRepr")) {
-                    auto iter =
-                        OpMaker<OpTupleIndex<InnerViewType>>::make(iterRef, 1);
+            overloaded(
+                [&](shared_ptr<SetDomain>&) {
+                    OpPowerSet* powerSetTest =
+                        dynamic_cast<OpPowerSet*>(&(*(quantifier->container)));
+                    if (powerSetTest != NULL) {
+                        auto iterRef =
+                            quantifier->template newIterRef<SetView>();
+                        auto iterDomain = innerDomain;
+                        ExprRef<SetView> iter(iterRef);
+                        extractPatternMatchAndAddExprsToScope(
+                            generatorExpr[0], iterDomain, iter, parsedModel,
+                            variablesAddedToScope);
+                        powerSetTest->sizeLimit =
+                            generatorExpr[0]["AbsPatSet"].size();
+                    } else {
+                        ExprRef<InnerViewType> iter(
+                            quantifier->template newIterRef<InnerViewType>());
+                        extractPatternMatchAndAddExprsToScope(
+                            generatorExpr[0], innerDomain, iter, parsedModel,
+                            variablesAddedToScope);
+                    }
+                },
+                [&](shared_ptr<MSetDomain>&) {
+                    ExprRef<InnerViewType> iter(
+                        quantifier->template newIterRef<InnerViewType>());
                     extractPatternMatchAndAddExprsToScope(
                         generatorExpr[0], innerDomain, iter, parsedModel,
                         variablesAddedToScope);
-                } else {
+                },
+                [&](shared_ptr<SequenceDomain>&) {
+                    auto iterRef = quantifier->template newIterRef<TupleView>();
+                    if (generatorParent.count("GenDomainNoRepr")) {
+                        auto iter = OpMaker<OpTupleIndex<InnerViewType>>::make(
+                            iterRef, 1);
+                        extractPatternMatchAndAddExprsToScope(
+                            generatorExpr[0], innerDomain, iter, parsedModel,
+                            variablesAddedToScope);
+                    } else {
+                        auto iterDomain =
+                            fakeTupleDomain({fakeIntDomain, innerDomain});
+                        ExprRef<TupleView> iter(iterRef);
+                        extractPatternMatchAndAddExprsToScope(
+                            generatorExpr[0], iterDomain, iter, parsedModel,
+                            variablesAddedToScope);
+                    }
+                },
+                [&](shared_ptr<FunctionDomain>& functionDomain) {
+                    ExprRef<TupleView> iter(
+                        quantifier->template newIterRef<TupleView>());
                     auto iterDomain =
-                        fakeTupleDomain({fakeIntDomain, innerDomain});
-                    ExprRef<TupleView> iter(iterRef);
+                        fakeTupleDomain({functionDomain->from, innerDomain});
                     extractPatternMatchAndAddExprsToScope(
                         generatorExpr[0], iterDomain, iter, parsedModel,
                         variablesAddedToScope);
-                }
-            } else if (is_same<SetDomain, ContainerDomainType>::value &&
-                       (powerSetTest = dynamic_cast<OpPowerSet*>(
-                            &(*(quantifier->container)))) != NULL) {
-                auto iterRef = quantifier->template newIterRef<SetView>();
-                auto iterDomain = innerDomain;
-                ExprRef<SetView> iter(iterRef);
-                extractPatternMatchAndAddExprsToScope(
-                    generatorExpr[0], iterDomain, iter, parsedModel,
-                    variablesAddedToScope);
-                powerSetTest->sizeLimit = generatorExpr[0]["AbsPatSet"].size();
-            } else {
-                ExprRef<InnerViewType> iter(
-                    quantifier->template newIterRef<InnerViewType>());
 
-                extractPatternMatchAndAddExprsToScope(
-                    generatorExpr[0], innerDomain, iter, parsedModel,
-                    variablesAddedToScope);
-            }
+                },
+                [&](auto&) {
+                    cerr << "no support for this type\n";
+                    abort();
+
+                })(containerDomain);
         },
-        (containerDomain->inner));
+        innerDomain);
     auto expr = parseExpr(comprExpr[0], parsedModel);
     quantifier->setExpression(expr.second);
     vector<ExprRef<BoolView>> conditions;
@@ -1015,6 +1081,12 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
                 auto& domain = mpark::get<shared_ptr<SequenceDomain>>(
                     domainContainerPair.first);
                 return buildQuant(comprExpr, sequence, domain, parsedModel);
+            },
+            [&](ExprRef<FunctionView>& function)
+                -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
+                auto& domain = mpark::get<shared_ptr<FunctionDomain>>(
+                    domainContainerPair.first);
+                return buildQuant(comprExpr, function, domain, parsedModel);
             },
             move(errorHandler)),
         domainContainerPair.second);
@@ -1149,8 +1221,8 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     }
 }
 
-pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseDomainGeneratorIntFromDomain(
-    IntDomain& domain) {
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>>
+parseDomainGeneratorIntFromDomain(IntDomain& domain) {
     if (domain.bounds.size() != 1) {
         cerr << "Do not currently support unrolling over int domains with "
                 "holes.\n";
@@ -1164,14 +1236,15 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseDomainGeneratorIntF
     to->value = domain.bounds.front().second;
     to->setConstant(true);
 
-    auto domainExprPair = make_pair(fakeSequenceDomain(fakeIntDomain),
-                     OpMaker<IntRange>::make(from.asExpr(), to.asExpr()));
+    auto domainExprPair =
+        make_pair(fakeSequenceDomain(fakeIntDomain),
+                  OpMaker<IntRange>::make(from.asExpr(), to.asExpr()));
     domainExprPair.second->setConstant(true);
     return domainExprPair;
 }
 
-pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseDomainGeneratorIntFromExpr(
-    json& intDomainExpr, ParsedModel& parsedModel) {
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>>
+parseDomainGeneratorIntFromExpr(json& intDomainExpr, ParsedModel& parsedModel) {
     if (intDomainExpr.size() != 1) {
         cerr << "Error: do not yet support unrolling (quantifying) "
                 "over int "
@@ -1201,14 +1274,13 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseDomainGeneratorIntF
         abort();
     }
     auto domainExprPair = make_pair(fakeSequenceDomain(fakeIntDomain),
-                     OpMaker<IntRange>::make(from, to));
+                                    OpMaker<IntRange>::make(from, to));
     domainExprPair.second->setConstant(from->isConstant() && to->isConstant());
     return domainExprPair;
 }
 
-
-pair<AnyDomainRef, AnyExprRef> parseDomainGeneratorReference(json& domainExpr,
-                                                    ParsedModel& parsedModel) {
+pair<AnyDomainRef, AnyExprRef> parseDomainGeneratorReference(
+    json& domainExpr, ParsedModel& parsedModel) {
     auto domain = parseDomain(domainExpr, parsedModel);
     return mpark::visit(
         overloaded(
@@ -1229,7 +1301,7 @@ pair<AnyDomainRef, AnyExprRef> parseDomainGenerator(json& domainExpr,
                                                     ParsedModel& parsedModel) {
     auto boolGeneratorPair = stringMatch<ParseDomainGeneratorFunction>(
         {{"DomainInt", parseDomainGeneratorIntFromExpr},
-        {"DomainReference", parseDomainGeneratorReference}},
+         {"DomainReference", parseDomainGeneratorReference}},
         make_pair(AnyDomainRef(fakeIntDomain), ExprRef<IntView>(nullptr)),
         domainExpr, parsedModel);
     if (boolGeneratorPair.first) {
@@ -1240,7 +1312,6 @@ pair<AnyDomainRef, AnyExprRef> parseDomainGenerator(json& domainExpr,
         abort();
     }
 }
-
 
 void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
     string lettingName = lettingArray[0]["Name"];

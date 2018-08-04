@@ -60,6 +60,9 @@ struct InitialUnroller<MSetView>;
 template <>
 struct InitialUnroller<SequenceView>;
 
+template <>
+struct InitialUnroller<FunctionView>;
+
 template <typename Container>
 struct ContainerTrigger;
 template <>
@@ -68,6 +71,8 @@ template <>
 struct ContainerTrigger<MSetView>;
 template <>
 struct ContainerTrigger<SequenceView>;
+template <>
+struct ContainerTrigger<FunctionView>;
 
 template <typename ContainerType>
 Quantifier<ContainerType>::Quantifier(Quantifier<ContainerType>&& other)
@@ -896,6 +901,91 @@ struct InitialUnroller<SequenceView> {
     }
 };
 
+template <>
+struct InitialUnroller<FunctionView> {
+    template <typename Quant>
+    static void initialUnroll(Quant& quantifier) {
+        mpark::visit(
+            [&](auto& membersImpl) {
+                for (size_t i = 0; i < membersImpl.size(); i++) {
+                    if (quantifier.container->view().dimensions.size() == 1) {
+                        auto tupleFirstMember =
+                            quantifier.container->view()
+                                .template indexToDomain<IntView>(i);
+                        auto unrolledExpr = OpMaker<OpTupleLit>::make(
+                            {tupleFirstMember, membersImpl[i]});
+                        quantifier.unroll(i, unrolledExpr);
+                    } else {
+                        auto tupleFirstMember =
+                            quantifier.container->view()
+                                .template indexToDomain<TupleView>(i);
+                        auto unrolledExpr = OpMaker<OpTupleLit>::make(
+                            {tupleFirstMember, membersImpl[i]});
+                        quantifier.unroll(i, unrolledExpr);
+                    }
+                }
+            },
+            quantifier.container->view().range);
+    }
+};
+
+template <>
+struct ContainerTrigger<FunctionView> : public FunctionTrigger {
+    Quantifier<FunctionView>* op;
+
+    ContainerTrigger(Quantifier<FunctionView>* op) : op(op) {}
+    void possibleImageChange(UInt) final {}
+    void imageChanged(UInt) final {}
+    void possibleImageChange(const std::vector<UInt>&) final {}
+    void imageChanged(const std::vector<UInt>&) final {}
+    void possibleValueChange() final {}
+    void valueChanged() {
+        while (op->numberElements() != 0) {
+            op->roll(op->numberElements() - 1);
+        }
+        InitialUnroller<FunctionView>::initialUnroll(*op);
+    }
+
+    void imageSwap(UInt index1, UInt index2) final {
+        op->swap(index1, index2, true);
+        correctUnrolledTupleIndex(index1);
+        correctUnrolledTupleIndex(index2);
+    }
+
+    void correctUnrolledTupleIndex(size_t index) {
+        debug_log("Correcting tuple index " << index);
+        auto& tuple =
+            mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
+        if (op->container->view().dimensions.size() == 1) {
+            auto& preImage =
+                mpark::get<ExprRef<IntView>>(tuple->view().members[0]);
+            op->container->view().indexToDomain(index, preImage->view());
+        } else {
+            auto& preImage =
+                mpark::get<ExprRef<TupleView>>(tuple->view().members[0]);
+            op->container->view().indexToDomain(index, preImage->view());
+        }
+    }
+    void hasBecomeUndefined() {
+        op->containerDefined = false;
+        if (op->numberUndefined == 0) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                          op->triggers);
+        }
+    }
+    void hasBecomeDefined() {
+        op->containerDefined = true;
+        this->valueChanged();
+    }
+    void reattachTrigger() final {
+        deleteTrigger(op->containerTrigger);
+        auto trigger = make_shared<ContainerTrigger<FunctionView>>(op);
+        op->container->addTrigger(trigger);
+        op->containerTrigger = trigger;
+    }
+};
+
 template struct Quantifier<SetView>;
 template struct Quantifier<MSetView>;
 template struct Quantifier<SequenceView>;
+template struct Quantifier<FunctionView>;

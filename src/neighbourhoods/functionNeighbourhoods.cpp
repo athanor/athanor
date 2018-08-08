@@ -3,6 +3,7 @@
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
 #include "types/function.h"
+#include "types/int.h"
 #include "utils/random.h"
 
 using namespace std;
@@ -157,6 +158,95 @@ void functionImagesSwapGen(const FunctionDomain& domain, int numberValsRequired,
         },
         domain.to);
 }
+const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
+inline int getTryLimit(UInt numberMembers, UInt domainSize) {
+    double successChance = (domainSize - numberMembers) / (double)domainSize;
+    return (int)(ceil(NUMBER_TRIES_CONSTANT_MULTIPLIER / successChance));
+}
+
+void functionUnifyImagesGenImpl(const FunctionDomain& domain,
+                                const shared_ptr<IntDomain>& innerDomainPtr,
+                                int numberValsRequired,
+                                std::vector<Neighbourhood>& neighbourhoods) {
+    UInt innerDomainSize = innerDomainPtr->domainSize;
+    neighbourhoods.emplace_back(
+        "functionUnifyImages", numberValsRequired,
+        [&domain, &innerDomainPtr,
+         innerDomainSize](NeighbourhoodParams& params) {
+            auto& val = *(params.getVals<FunctionValue>().front());
+            if (val.rangeSize() < 2) {
+                ++params.stats.minorNodeCount;
+                return;
+            }
+            int numberTries = 0;
+            const int tryLimit = params.parentCheckTryLimit *
+                                 getTryLimit(val.rangeSize(), innerDomainSize);
+            debug_neighbourhood_action("Looking for indices to unitfy");
+            bool success;
+            UInt index1, index2;
+            Int valueBackup;
+
+            do {
+                ++params.stats.minorNodeCount;
+                index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
+                index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
+                if (val.getRange<IntView>()[index1]->view().value ==
+                    val.getRange<IntView>()[index2]->view().value) {
+                    continue;
+                }
+                // randomly swap indices
+                if (globalRandom(0, 1)) {
+                    swap(index1, index2);
+                }
+                auto& value1 = val.getRange<IntView>()[index1]->view();
+                auto& view2 = val.getRange<IntView>()[index2]->view();
+                val.notifyPossibleImageChange(index2);
+                valueBackup = view2.value;
+                success = val.tryImageChange<IntValue>(index2, [&]() {
+                    return view2.changeValue([&]() {
+                        view2.value = value1.value;
+                        if (params.parentCheck(params.vals)) {
+                            return true;
+                        } else {
+                            view2.value = valueBackup;
+                            return false;
+                        }
+                    });
+                });
+            } while (!success && ++numberTries < tryLimit);
+            if (!success) {
+                debug_neighbourhood_action(
+                    "Couldn't find images to unify, number tries=" << tryLimit);
+                return;
+            }
+            debug_neighbourhood_action("images unified: " << index1 << " and "
+                                                          << index2);
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                val.notifyPossibleImageChange(index2);
+                auto& view2 = val.getRange<IntView>()[index2]->view();
+                val.tryImageChange<IntValue>(index2, [&]() {
+                    return view2.changeValue([&]() {
+                        view2.value = valueBackup;
+                        return true;
+                    });
+                });
+            }
+        });
+}
+
+void functionUnifyImagesGen(const FunctionDomain& domain,
+                            int numberValsRequired,
+                            std::vector<Neighbourhood>& neighbourhoods) {
+    mpark::visit(overloaded(
+                     [&](const shared_ptr<IntDomain>& innerDomainPtr) {
+                         functionUnifyImagesGenImpl(domain, innerDomainPtr,
+                                                    numberValsRequired,
+                                                    neighbourhoods);
+                     },
+                     [&](const auto&) {}),
+                 domain.to);
+}
 
 void functionAssignRandomGen(const FunctionDomain& domain,
                              int numberValsRequired,
@@ -198,4 +288,6 @@ void functionAssignRandomGen(const FunctionDomain& domain,
 const NeighbourhoodVec<FunctionDomain>
     NeighbourhoodGenList<FunctionDomain>::value = {
         {1, functionLiftSingleGen},  //
-        {1, functionImagesSwapGen}};
+        {1, functionImagesSwapGen},
+        {1, functionUnifyImagesGen},
+};

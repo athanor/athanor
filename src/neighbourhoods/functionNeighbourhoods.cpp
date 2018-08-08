@@ -188,6 +188,7 @@ void functionUnifyImagesGenImpl(const FunctionDomain& domain,
 
             do {
                 ++params.stats.minorNodeCount;
+                ++params.stats.minorNodeCount;
                 index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
                 index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
                 if (val.getRange<IntView>()[index1]->view().value ==
@@ -198,13 +199,13 @@ void functionUnifyImagesGenImpl(const FunctionDomain& domain,
                 if (globalRandom(0, 1)) {
                     swap(index1, index2);
                 }
-                auto& value1 = val.getRange<IntView>()[index1]->view();
+                auto& view1 = val.getRange<IntView>()[index1]->view();
                 auto& view2 = val.getRange<IntView>()[index2]->view();
                 val.notifyPossibleImageChange(index2);
                 valueBackup = view2.value;
                 success = val.tryImageChange<IntValue>(index2, [&]() {
                     return view2.changeValue([&]() {
-                        view2.value = value1.value;
+                        view2.value = view1.value;
                         if (params.parentCheck(params.vals)) {
                             return true;
                         } else {
@@ -241,6 +242,92 @@ void functionUnifyImagesGen(const FunctionDomain& domain,
     mpark::visit(overloaded(
                      [&](const shared_ptr<IntDomain>& innerDomainPtr) {
                          functionUnifyImagesGenImpl(domain, innerDomainPtr,
+                                                    numberValsRequired,
+                                                    neighbourhoods);
+                     },
+                     [&](const auto&) {}),
+                 domain.to);
+}
+
+void functionSplitImagesGenImpl(const FunctionDomain& domain,
+                                const shared_ptr<IntDomain>& innerDomainPtr,
+                                int numberValsRequired,
+                                std::vector<Neighbourhood>& neighbourhoods) {
+    UInt innerDomainSize = innerDomainPtr->domainSize;
+    neighbourhoods.emplace_back(
+        "functionSplitImages", numberValsRequired,
+        [&domain, &innerDomainPtr,
+         innerDomainSize](NeighbourhoodParams& params) {
+            auto& val = *(params.getVals<FunctionValue>().front());
+            if (val.rangeSize() < 2) {
+                ++params.stats.minorNodeCount;
+                return;
+            }
+            int numberTries = 0;
+            const int tryLimit = params.parentCheckTryLimit *
+                                 getTryLimit(val.rangeSize(), innerDomainSize);
+            debug_neighbourhood_action("Looking for indices to split");
+            bool success;
+            UInt index1, index2;
+            Int valueBackup;
+
+            do {
+                ++params.stats.minorNodeCount;
+                index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
+                index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
+                if (val.getRange<IntView>()[index1]->view().value !=
+                    val.getRange<IntView>()[index2]->view().value) {
+                    continue;
+                }
+                // randomly swap indices
+                if (globalRandom(0, 1)) {
+                    swap(index1, index2);
+                }
+                auto& view1 = val.getRange<IntView>()[index1]->view();
+                auto value2 = val.member<IntValue>(index2);
+                val.notifyPossibleImageChange(index2);
+                valueBackup = value2->value;
+                success = val.tryImageChange<IntValue>(index2, [&]() {
+                    return value2->changeValue([&]() {
+                        assignRandomValueInDomain(*innerDomainPtr, *value2,
+                                                  params.stats);
+                        if (value2->value != valueBackup &&
+                            params.parentCheck(params.vals)) {
+                            return true;
+                        } else {
+                            value2->value = valueBackup;
+                            return false;
+                        }
+                    });
+                });
+            } while (!success && ++numberTries < tryLimit);
+            if (!success) {
+                debug_neighbourhood_action(
+                    "Couldn't find images to split, number tries=" << tryLimit);
+                return;
+            }
+            debug_neighbourhood_action("images split: " << index1 << " and "
+                                                        << index2);
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                val.notifyPossibleImageChange(index2);
+                auto& view2 = val.getRange<IntView>()[index2]->view();
+                val.tryImageChange<IntValue>(index2, [&]() {
+                    return view2.changeValue([&]() {
+                        view2.value = valueBackup;
+                        return true;
+                    });
+                });
+            }
+        });
+}
+
+void functionSplitImagesGen(const FunctionDomain& domain,
+                            int numberValsRequired,
+                            std::vector<Neighbourhood>& neighbourhoods) {
+    mpark::visit(overloaded(
+                     [&](const shared_ptr<IntDomain>& innerDomainPtr) {
+                         functionSplitImagesGenImpl(domain, innerDomainPtr,
                                                     numberValsRequired,
                                                     neighbourhoods);
                      },
@@ -290,4 +377,5 @@ const NeighbourhoodVec<FunctionDomain>
         {1, functionLiftSingleGen},  //
         {1, functionImagesSwapGen},
         {1, functionUnifyImagesGen},
+        {1, functionSplitImagesGen},
 };

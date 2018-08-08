@@ -52,7 +52,7 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
         (bestViolation != 0 && vioImproved)) {
         bestObjective = lastObjective;
     }
-    if (vioImproved || objImproved) {
+    if (vioImproved || (lastViolation == 0 && objImproved)) {
         std::cout << "\nNew solution:\n";
         std::cout << "Violation = " << lastViolation << std::endl;
         if (model.optimiseMode != OptimiseMode::NONE) {
@@ -68,7 +68,7 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
         }
     }
 
-    if (vioImproved || objImproved) {
+    if (vioImproved || (lastViolation == 0 && objImproved)) {
         printCurrentState(model);
     }
 }

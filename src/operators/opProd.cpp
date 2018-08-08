@@ -13,10 +13,31 @@ using OperandsSequenceTrigger = OperatorTrates<OpProd>::OperandsSequenceTrigger;
 OpProd::OpProd(OpProd&& other)
     : SimpleUnaryOperator<IntView, SequenceView, OpProd>(std::move(other)),
       evaluationComplete(std::move(other.evaluationComplete)) {}
+void OpProd::addSingleValue(Int exprValue) {
+    if (exprValue == 0) {
+        ++numberZeros;
+    } else {
+        cachedValue *= exprValue;
+    }
+    value *= exprValue;
+}
+void OpProd::removeSingleValue(Int exprValue) {
+    if (exprValue == 0) {
+        --numberZeros;
+        if (numberZeros == 0) {
+            value = cachedValue;
+        }
+    } else {
+        value /= exprValue;
+        cachedValue /= exprValue;
+    }
+}
 
 class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
    public:
     Int previousValue;
+    Int previousValueWithoutZeros;
+    UInt numberZerosInPreviousValue;
     PreviousValueCache<Int> previousValues;
     OpProd* op;
     OperandsSequenceTrigger(OpProd* op) : op(op) {}
@@ -34,9 +55,8 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
             }
             return;
         }
-
         op->changeValue([&]() {
-            op->value *= expr->view().value;
+            op->addSingleValue(expr->view().value);
             return true;
         });
     }
@@ -56,9 +76,8 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
             }
             return;
         }
-
         op->changeValue([&]() {
-            op->value /= expr->view().value;
+            op->removeSingleValue(expr->view().value);
             return true;
         });
     }
@@ -87,35 +106,79 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
         }
 
         previousValue = 1;
+        previousValueWithoutZeros = 1;
+        numberZerosInPreviousValue = 0;
         for (size_t i = startIndex; i < endIndex; i++) {
-            previousValue *= getValueCatchUndef(i);
+            Int operandValue = getValueCatchUndef(i);
+            previousValue *= operandValue;
+            if (operandValue != 0) {
+                previousValueWithoutZeros *= operandValue;
+            } else {
+                ++numberZerosInPreviousValue;
+            }
         }
     }
 
+    inline void handleSingleOperandChange(UInt index) {
+        Int newValue = getValueCatchUndef(index);
+        Int oldValue = previousValues.getAndSet(index, newValue);
+        op->changeValue([&]() {
+            op->removeSingleValue(oldValue);
+            op->addSingleValue(newValue);
+            return true;
+        });
+    }
+
+    void handleMultiOperandChange(Int newValue, Int newValueWithoutZeros) {
+        // remove old value if necessary
+        if (previousValue == 0) {
+            if (op->numberZeros == 0) {
+                op->cachedValue /= previousValueWithoutZeros;
+                op->value = op->cachedValue;
+            }
+        } else {
+            op->value /= previousValue;
+            op->cachedValue /= previousValue;
+        }
+        // add new value
+        if (newValue == 0) {
+            op->cachedValue *= newValueWithoutZeros;
+        } else {
+            op->cachedValue *= newValue;
+        }
+        op->value *= newValue;
+    }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         if (!op->evaluationComplete) {
             return;
         }
-
-        Int newValue = 1;
-
-        for (size_t i = startIndex; i < endIndex; i++) {
-            newValue *= getValueCatchUndef(i);
-        }
-        Int valueToRemove;
         if (endIndex - startIndex == 1) {
-            valueToRemove = previousValues.getAndSet(startIndex, newValue);
-        } else {
-            valueToRemove = previousValue;
+            handleSingleOperandChange(startIndex);
+            return;
+        }
+        Int newValue = 1;
+        Int newValueWithoutZeros = 1;
+        UInt numberZerosInNewValue = 0;
+        for (size_t i = startIndex; i < endIndex; i++) {
+            Int operandValue = getValueCatchUndef(i);
+            newValue *= operandValue;
+            if (operandValue != 0) {
+                newValueWithoutZeros *= operandValue;
+            } else {
+                ++numberZerosInNewValue;
+            }
+        }
+        op->numberZeros -= numberZerosInPreviousValue;
+        op->numberZeros += numberZerosInNewValue;
+        if (previousValue == newValue) {
+            return;
         }
 
         if (!op->isDefined()) {
-            op->value /= valueToRemove;
-            op->value *= newValue;
+            handleMultiOperandChange(newValue, newValueWithoutZeros);
         } else {
             op->changeValue([&]() {
-                op->value /= valueToRemove;
-                op->value *= newValue;
+                handleMultiOperandChange(newValue, newValueWithoutZeros);
                 return true;
             });
         }
@@ -160,7 +223,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
         if (!op->evaluationComplete) {
             return;
         }
-        op->value /= previousValues.get(index);
+        op->removeSingleValue(previousValues.get(index));
         if (op->operand->view().numberUndefined == 1) {
             op->setDefined(false, false);
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
@@ -176,8 +239,8 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
             return;
         }
 
-        op->value *=
-            op->operand->view().getMembers<IntView>()[index]->view().value;
+        op->addSingleValue(
+            op->operand->view().getMembers<IntView>()[index]->view().value);
         if (op->operand->view().numberUndefined == 0) {
             op->setDefined(true, false);
             visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
@@ -189,11 +252,13 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
 void OpProd::reevaluate() {
     setDefined(true, false);
     value = 1;
+    cachedValue = 1;
+    numberZeros = 0;
     for (auto& operandChild : operand->view().getMembers<IntView>()) {
         if (operandChild->isUndefined()) {
             setDefined(false, false);
         } else {
-            value *= operandChild->view().value;
+            addSingleValue(operandChild->view().value);
         }
     }
     evaluationComplete = true;
@@ -208,6 +273,7 @@ void OpProd::updateVarViolations(const ViolationContext& vioContext,
 
 void OpProd::copy(OpProd& newOp) const {
     newOp.value = value;
+    newOp.cachedValue = cachedValue;
     newOp.evaluationComplete = this->evaluationComplete;
 }
 

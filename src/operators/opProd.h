@@ -17,6 +17,8 @@ struct OpProd : public SimpleUnaryOperator<IntView, SequenceView, OpProd> {
     using SimpleUnaryOperator<IntView, SequenceView,
                               OpProd>::SimpleUnaryOperator;
     bool evaluationComplete = false;
+    UInt numberZeros = 0;
+    Int cachedValue;
     OpProd(OpProd&& other);
     void reevaluate();
     void updateVarViolations(const ViolationContext& vioContext,
@@ -24,6 +26,8 @@ struct OpProd : public SimpleUnaryOperator<IntView, SequenceView, OpProd> {
     void copy(OpProd& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
     bool optimiseImpl();
+    void addSingleValue(Int exprValue);
+    void removeSingleValue(Int exprValue);
 };
 
 #endif /* SRC_OPERATORS_OPPROD_H_ */

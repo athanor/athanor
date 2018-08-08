@@ -97,7 +97,7 @@ void Quantifier<ContainerType>::unroll(UInt index,
                                        const ExprRef<ViewType>& newView) {
     mpark::visit(
         [&](auto& members) {
-            debug_log("unrolling " << newView);
+            debug_log("unrolling " << newView << " at index " << index);
             auto iterRef = this->newIterRef<ViewType>();
             // choose which expr to copy from
             // use previously unrolled expr if available as  can be most

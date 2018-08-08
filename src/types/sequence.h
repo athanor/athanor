@@ -306,7 +306,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
                                    const ExprRef<InnerViewType>& member) {
         notifyPossibleSequenceValueChange();
         if (addMember(index, member)) {
-            notifyMemberAdded(index, getMembers<InnerViewType>().back());
+            notifyMemberAdded(index, getMembers<InnerViewType>()[index]);
             return true;
         } else {
             return false;

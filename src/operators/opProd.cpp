@@ -41,7 +41,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     PreviousValueCache<Int> previousValues;
     OpProd* op;
     OperandsSequenceTrigger(OpProd* op) : op(op) {}
-    void valueAdded(UInt, const AnyExprRef& exprIn) final {
+    void valueAdded(UInt index, const AnyExprRef& exprIn) final {
         previousValues.clear();
         if (!op->evaluationComplete) {
             return;

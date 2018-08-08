@@ -36,7 +36,7 @@ void StatsContainer::reportResult(bool solutionAccepted,
         return;
     }
     lastViolation = result.model.csp->view().violation;
-    lastObjective = result.model.objective->view().value;
+    lastObjective = result.model.getObjective();
     bool vioImproved = lastViolation < bestViolation;
     bool objImproved = lastObjective < bestObjective;
     checkForBestSolution(vioImproved, objImproved, result.model);

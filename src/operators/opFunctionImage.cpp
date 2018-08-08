@@ -417,7 +417,15 @@ OpFunctionImage<FunctionMemberViewType>::deepCopySelfForUnrollImpl(
 template <typename FunctionMemberViewType>
 std::ostream& OpFunctionImage<FunctionMemberViewType>::dumpState(
     std::ostream& os) const {
-    os << "opFunctionImage(function=";
+    os << "opFunctionImage(value=";
+    if (defined) {
+        prettyPrint(os, getMember()->view());
+    } else {
+        os << "undefined";
+    }
+    os << ",\n";
+
+    os << "function=";
     functionOperand->dumpState(os) << ",\n";
     os << "preImage=";
     invoke_r(preImageOperand, dumpState(os), ostream&) << ")";

@@ -170,6 +170,7 @@ struct FunctionView : public ExprInterface<FunctionView> {
     }
 
     void notifyPossibleSwapImages(UInt index1, UInt index2) {
+        debug_code(posFunctionValueChangeCalled = true);
         visitTriggers([&](auto& t) { t->possibleValueChange(); },
                       allMemberTriggers);
         if (index1 < singleMemberTriggers.size()) {

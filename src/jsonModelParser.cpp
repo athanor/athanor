@@ -746,7 +746,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpNotEq(json& operandsExpr,
         },
         left);
 }
-
+template <bool flipped = false>
 pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLess(
     json& expr, ParsedModel& parsedModel) {
     auto errorFunc = [&](auto&&) {
@@ -756,6 +756,10 @@ pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLess(
         expect<IntView>(parseExpr(expr[0], parsedModel).second, errorFunc);
     auto right =
         expect<IntView>(parseExpr(expr[1], parsedModel).second, errorFunc);
+    if (flipped) {
+        swap(left, right);
+    }
+
     return make_pair(fakeBoolDomain, OpMaker<OpLess>::make(left, right));
 }
 
@@ -771,6 +775,7 @@ pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpImplies(
     return make_pair(fakeBoolDomain, OpMaker<OpImplies>::make(left, right));
 }
 
+template <bool flipped = false>
 pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLessEq(
     json& expr, ParsedModel& parsedModel) {
     auto errorFunc = [&](auto&&) {
@@ -780,6 +785,9 @@ pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLessEq(
         expect<IntView>(parseExpr(expr[0], parsedModel).second, errorFunc);
     auto right =
         expect<IntView>(parseExpr(expr[1], parsedModel).second, errorFunc);
+    if (flipped) {
+        swap(left, right);
+    }
     return make_pair(fakeBoolDomain, OpMaker<OpLessEq>::make(left, right));
 }
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseOpSequenceLit(
@@ -1195,9 +1203,11 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"Reference", parseValueReference},
              {"Comprehension", parseComprehension},
              {"MkOpEq", parseOpEq},
-             {"MkOpLt", parseOpLess},
+             {"MkOpLt", parseOpLess<false>},
+             {"MkOpLeq", parseOpLessEq<false>},
+             {"MkOpGt", parseOpLess<true>},
+             {"MkOpGeq", parseOpLessEq<true>},
              {"MkOpNeq", parseOpNotEq},
-             {"MkOpLeq", parseOpLessEq},
              {"MkOpImply", parseOpImplies},
              {"MkOpIn", parseOpIn},
              {"MkOpMod", parseOpMod},
@@ -1281,7 +1291,7 @@ parseDomainGeneratorIntFromExpr(json& intDomainExpr, ParsedModel& parsedModel) {
 
 pair<AnyDomainRef, AnyExprRef> parseDomainGeneratorReference(
     json& domainExpr, ParsedModel& parsedModel) {
-    auto domain = parseDomain(domainExpr, parsedModel);
+    auto domain = parseDomainReference(domainExpr, parsedModel);
     return mpark::visit(
         overloaded(
             [&](shared_ptr<IntDomain>& domain)

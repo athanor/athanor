@@ -20,6 +20,7 @@ void OpProd::addSingleValue(Int exprValue) {
         cachedValue *= exprValue;
     }
     value *= exprValue;
+    assert((numberZeros > 0 && value == 0) || (value != 0 && numberZeros == 0));
 }
 void OpProd::removeSingleValue(Int exprValue) {
     if (exprValue == 0) {
@@ -41,7 +42,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     PreviousValueCache<Int> previousValues;
     OpProd* op;
     OperandsSequenceTrigger(OpProd* op) : op(op) {}
-    void valueAdded(UInt index, const AnyExprRef& exprIn) final {
+    void valueAdded(UInt, const AnyExprRef& exprIn) final {
         previousValues.clear();
         if (!op->evaluationComplete) {
             return;
@@ -120,6 +121,8 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     inline void handleSingleOperandChange(UInt index) {
+        debug_code(assert((op->numberZeros > 0 && op->value == 0) ||
+                          (op->value != 0 && op->numberZeros == 0)));
         Int newValue = getValueCatchUndef(index);
         Int oldValue = previousValues.getAndSet(index, newValue);
         op->changeValue([&]() {
@@ -274,6 +277,7 @@ void OpProd::updateVarViolations(const ViolationContext& vioContext,
 void OpProd::copy(OpProd& newOp) const {
     newOp.value = value;
     newOp.cachedValue = cachedValue;
+    newOp.numberZeros = numberZeros;
     newOp.evaluationComplete = this->evaluationComplete;
 }
 

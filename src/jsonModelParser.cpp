@@ -746,6 +746,28 @@ pair<AnyDomainRef, AnyExprRef> parseOpNotEq(json& operandsExpr,
         },
         left);
 }
+pair<AnyDomainRef, AnyExprRef> parseOpCatchUndef(json& operandsExpr,
+                                                 ParsedModel& parsedModel) {
+    auto domainExprPair = parseExpr(operandsExpr[0], parsedModel);
+    auto& domain = domainExprPair.first;
+    AnyExprRef& left = domainExprPair.second;
+    AnyExprRef right = parseExpr(operandsExpr[1], parsedModel).second;
+    return mpark::visit(
+        [&](auto& left) -> pair<AnyDomainRef, AnyExprRef> {
+            auto errorHandler = [&](auto&&) {
+                cerr << "Expected right operand to be of same type as left, "
+                        "i.e. "
+                     << TypeAsString<typename AssociatedValueType<viewType(
+                            left)>::type>::value
+                     << endl;
+            };
+            typedef viewType(left) View;
+            return make_pair(domain,
+                             OpMaker<OpCatchUndef<View>>::make(
+                                 left, expect<View>(right, errorHandler)));
+        },
+        left);
+}
 template <bool flipped = false>
 pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLess(
     json& expr, ParsedModel& parsedModel) {
@@ -1209,6 +1231,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpGeq", parseOpLessEq<true>},
              {"MkOpNeq", parseOpNotEq},
              {"MkOpImply", parseOpImplies},
+             {"MkOpCatchUndef", parseOpCatchUndef},
              {"MkOpIn", parseOpIn},
              {"MkOpMod", parseOpMod},
              {"MkOpMinus", parseOpMinus},

@@ -165,4 +165,11 @@ struct OpMaker<OpSetIndexInternal<View>> {
     static ExprRef<View> make(ExprRef<SetView> set, UInt index);
 };
 
+template <typename View>
+struct OpCatchUndef;
+template <typename View>
+struct OpMaker<OpCatchUndef<View>> {
+    static ExprRef<View> make(ExprRef<View> expr, ExprRef<View> replacement);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

@@ -108,11 +108,10 @@ struct ExprTrigger
     }
 
     void adapterHasBecomeUndefined() {
-        visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                      this->op->triggers);
         this->op->exprDefined = false;
         visitTriggers(
             [&](auto& t) {
+                t->hasBecomeDefined();
                 t->valueChanged();
                 t->reattachTrigger();
             },

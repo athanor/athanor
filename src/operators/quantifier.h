@@ -12,7 +12,6 @@ struct ContainerTrigger;
 
 template <typename ContainerType>
 struct Quantifier : public SequenceView {
-    struct ContainerDelayedTrigger;
     struct ExprTriggerBase {
         Quantifier<ContainerType>* op;
         UInt index;
@@ -27,7 +26,7 @@ struct Quantifier : public SequenceView {
     bool containerDefined = true;
     std::vector<AnyIterRef> unrolledIterVals;
     std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
-    std::shared_ptr<ContainerDelayedTrigger> containerDelayedTrigger;
+    std::shared_ptr<ContainerTrigger<ContainerType>> containerDelayedTrigger;
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
     AnyExprVec valuesToUnroll;
 

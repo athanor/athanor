@@ -77,13 +77,19 @@ class ExplorationUsingViolationBackOff {
         : climbStrategy(std::move(climbStrategy)),
           exploreStrategy(std::move(exploreStrategy)) {}
     void run(State& state, bool) {
-        if (state.model.optimiseMode == OptimiseMode::NONE) {
-            std::cerr << "Error: This strategy does not work with satisfaction "
-                         "problems.\n";
-            abort();
+        bool explorationSupported =
+            state.model.optimiseMode != OptimiseMode::NONE;
+        if (!explorationSupported) {
+            std::cout << "[warning]: This exploration strategy does not work "
+                         "with satisfaction "
+                         "problems.  Will not enter explore mode using this "
+                         "strategy.\n";
         }
         while (true) {
-            climbStrategy->run(state, false);
+            climbStrategy->run(state, !explorationSupported);
+            if (!explorationSupported) {
+                throw EndOfSearchException();
+            }
             explore(state);
         }
     }

@@ -1,5 +1,5 @@
 #include "search/violationContainer.h"
-
+#include <algorithm>
 UInt ViolationContainer::selectRandomVar(UInt maxVar) const {
     if (totalViolation == 0) {
         return globalRandom<UInt>(0, maxVar);

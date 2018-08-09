@@ -99,16 +99,24 @@ OpFunctionImage<FunctionMemberViewType>::OpFunctionImage(
       functionOperand(move(other.functionOperand)),
       preImageOperand(move(other.preImageOperand)),
       cachedIndex(move(other.cachedIndex)),
+      defined(move(other.defined)),
       locallyDefined(move(other.locallyDefined)),
+      functionOperandTrigger(move(other.functionOperandTrigger)),
+      functionMemberTrigger(move(other.functionMemberTrigger)),
       preImageTrigger(move(other.preImageTrigger)) {
-    setTriggerParent(this, preImageTrigger);
+    setTriggerParent(this, functionOperandTrigger, functionMemberTrigger,
+                     preImageTrigger);
 }
 
 template <typename FunctionMemberViewType>
 bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
     bool recalculateIndex) {
     bool wasDefined = defined;
+    bool wasLocallyDefined = locallyDefined;
     reevaluate(recalculateIndex);
+    if (!wasLocallyDefined && locallyDefined) {
+        reattachFunctionMemberTrigger(true);
+    }
     if (wasDefined && !defined) {
         visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers);
         return true;
@@ -122,9 +130,6 @@ bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
         return true;
     } else {
         return !defined;
-    }
-    if (!wasDefined && locallyDefined) {
-        reattachFunctionMemberTrigger(true);
     }
 }
 

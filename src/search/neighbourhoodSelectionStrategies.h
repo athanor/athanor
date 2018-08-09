@@ -3,12 +3,52 @@
 #define SRC_SEARCH_NEIGHBOURHOODSELECTIONSTRATEGIES_H_
 #include <algorithm>
 #include <cassert>
+#include <climits>
 #include <vector>
 #include "search/model.h"
 #include "search/solver.h"
 #include "search/statsContainer.h"
 #include "utils/random.h"
 
+class InteractiveNeighbourhoodSelector {
+   public:
+    template <typename ParentStrategy>
+    inline void run(State& state, ParentStrategy&& parentStrategy) {
+        while (true) {
+            std::cout << "select a neighbourhood, choices are:\n";
+            for (size_t i = 0; i < state.model.neighbourhoods.size(); i++) {
+                std::cout << (i + 1) << ": "
+                          << state.model.neighbourhoods[i].name << std::endl;
+            }
+            int input;
+            if (!(std::cin >> input)) {
+                std::cout << "Error: expected integer.\n";
+                std::cin.clear();
+                std::cin.ignore(INT_MAX, '\n');
+                continue;
+            }
+            if (input == -1) {
+                std::cout << "Exiting...\n";
+                throw EndOfSearchException();
+            }
+            if (input < 1 || input > (int)state.model.neighbourhoods.size()) {
+                std::cout << "Error: integer out of range.\n";
+                continue;
+            }
+            bool accepted = false;
+            state.runNeighbourhood(input - 1, [&](const auto& result) {
+                accepted = parentStrategy(result);
+                return accepted;
+            });
+            if (accepted) {
+                std::cout << "change accepted\n";
+            } else {
+                std::cout << "change rejected\n";
+            }
+            break;
+        }
+    }
+};
 class RandomNeighbourhood {
    public:
     template <typename ParentStrategy>

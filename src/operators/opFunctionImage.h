@@ -8,6 +8,8 @@
 template <typename FunctionMemberViewType>
 struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     struct FunctionOperandTrigger;
+    typedef typename AssociatedTriggerType<FunctionMemberViewType>::type
+        FunctionMemberTriggerType;
     struct PreImageTriggerBase {
         OpFunctionImage<FunctionMemberViewType>* op;
         PreImageTriggerBase(OpFunctionImage<FunctionMemberViewType>* op)
@@ -15,17 +17,15 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
         virtual ~PreImageTriggerBase() {}
     };
 
-    typedef typename AssociatedTriggerType<FunctionMemberViewType>::type
-        FunctionMemberTriggerType;
     std::vector<std::shared_ptr<TriggerBase>> triggers;
     ExprRef<FunctionView> functionOperand;
     AnyExprRef preImageOperand;
     Int cachedIndex;
     bool defined = false;
     bool locallyDefined = false;
-    std::shared_ptr<PreImageTriggerBase> preImageTrigger;
     std::shared_ptr<FunctionOperandTrigger> functionOperandTrigger;
     std::shared_ptr<FunctionOperandTrigger> functionMemberTrigger;
+    std::shared_ptr<PreImageTriggerBase> preImageTrigger;
 
     OpFunctionImage(ExprRef<FunctionView> functionOperand,
                     AnyExprRef preImageOperand)

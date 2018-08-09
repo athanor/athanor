@@ -12,6 +12,7 @@ struct ContainerTrigger;
 
 template <typename ContainerType>
 struct Quantifier : public SequenceView {
+    struct ContainerDelayedTrigger;
     struct ExprTriggerBase {
         Quantifier<ContainerType>* op;
         UInt index;
@@ -26,7 +27,9 @@ struct Quantifier : public SequenceView {
     bool containerDefined = true;
     std::vector<AnyIterRef> unrolledIterVals;
     std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
+    std::shared_ptr<ContainerDelayedTrigger> containerDelayedTrigger;
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
+    AnyExprVec valuesToUnroll;
 
     Quantifier(ExprRef<ContainerType> container, const int id = nextQuantId())
         : quantId(id), container(std::move(container)) {}
@@ -34,7 +37,10 @@ struct Quantifier : public SequenceView {
     inline void setExpression(AnyExprRef exprIn) {
         expr = std::move(exprIn);
         mpark::visit(
-            [&](auto& expr) { members.emplace<ExprRefVec<viewType(expr)>>(); },
+            [&](auto& expr) {
+                members.emplace<ExprRefVec<viewType(expr)>>();
+
+            },
             expr);
     }
 

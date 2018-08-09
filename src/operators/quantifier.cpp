@@ -82,8 +82,10 @@ Quantifier<ContainerType>::Quantifier(Quantifier<ContainerType>&& other)
       expr(move(other.expr)),
       unrolledIterVals(move(other.unrolledIterVals)),
       containerTrigger(move(other.containerTrigger)),
+      containerDelayedTrigger(move(other.containerDelayedTrigger)),
       exprTriggers(move(other.exprTriggers)) {
-    setTriggerParent(this, containerTrigger, exprTriggers);
+    setTriggerParent(this, containerTrigger, containerDelayedTrigger,
+                     exprTriggers);
 }
 
 template <typename ContainerType>
@@ -178,6 +180,12 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnrollImpl(
         [&](const auto& expr) {
             newQuantifier->setExpression(
                 expr->deepCopySelfForUnroll(expr, iterator));
+            mpark::visit(
+                [&](auto& members) {
+                    newQuantifier->valuesToUnroll
+                        .template emplace<ExprRefVec<viewType(members)>>();
+                },
+                valuesToUnroll);
             auto& members = this->getMembers<viewType(expr)>();
             for (size_t i = 0; i < members.size(); ++i) {
                 auto& member = members[i];
@@ -297,6 +305,10 @@ void Quantifier<ContainerType>::stopTriggeringOnChildren() {
     if (containerTrigger) {
         deleteTrigger(containerTrigger);
         containerTrigger = nullptr;
+    }
+    if (containerDelayedTrigger) {
+        deleteTrigger(containerDelayedTrigger);
+        containerDelayedTrigger = nullptr;
     }
     if (!exprTriggers.empty()) {
         mpark::visit(
@@ -573,18 +585,34 @@ bool optimiseIfIntRangeWithConditions(Quantifier& quant) {
     return true;
 }
 
-template <>
-struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
-    Quantifier<SetView>* op;
-    AnyExprVec valuesToUnroll;
-
-    ContainerTrigger(Quantifier<SetView>* op) : op(op) {
+template <typename ContainerType>
+struct Quantifier<ContainerType>::ContainerDelayedTrigger
+    : public DelayedTrigger {
+    Quantifier<ContainerType>* op;
+    ContainerDelayedTrigger(Quantifier<ContainerType>* op) : op(op) {}
+    void hasBecomeDefined() final {}
+    void hasBecomeUndefined() {}
+    void possibleValueChange() {}
+    void valueChanged() {}
+    void reattachTrigger() {}
+    void trigger() final {
         mpark::visit(
-            [&](auto& members) {
-                valuesToUnroll.emplace<BaseType<decltype(members)>>();
+            [&](auto& vToUnroll) {
+                for (auto& value : vToUnroll) {
+                    op->unroll(op->numberElements(), value);
+                }
+                vToUnroll.clear();
             },
-            op->container->view().members);
+            op->valuesToUnroll);
+        deleteTrigger(op->containerDelayedTrigger);
+        op->containerDelayedTrigger = nullptr;
     }
+};
+template <>
+struct ContainerTrigger<SetView> : public SetTrigger {
+    Quantifier<SetView>* op;
+
+    ContainerTrigger(Quantifier<SetView>* op) : op(op) {}
     void possibleValueChange() final {}
     void valueRemoved(UInt indexOfRemovedValue, HashType) final {
         if (indexOfRemovedValue < op->numberElements() - 1) {
@@ -597,11 +625,13 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
             [&](auto& vToUnroll) {
                 vToUnroll.emplace_back(
                     mpark::get<ExprRef<viewType(vToUnroll)>>(member));
-                if (vToUnroll.size() == 1) {
-                    addDelayedTrigger(op->containerTrigger);
+                if (!op->containerDelayedTrigger) {
+                    op->containerDelayedTrigger = make_shared<
+                        Quantifier<SetView>::ContainerDelayedTrigger>(op);
+                    addDelayedTrigger(op->containerDelayedTrigger);
                 }
             },
-            valuesToUnroll);
+            op->valuesToUnroll);
     }
 
     void possibleMemberValueChange(UInt) final {}
@@ -620,16 +650,6 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
                 }
             },
             op->container->view().members);
-    }
-    void trigger() final {
-        mpark::visit(
-            [&](auto& vToUnroll) {
-                for (auto& value : vToUnroll) {
-                    op->unroll(op->numberElements(), value);
-                }
-                vToUnroll.clear();
-            },
-            valuesToUnroll);
     }
     void reattachTrigger() final {
         deleteTrigger(op->containerTrigger);
@@ -657,6 +677,11 @@ struct InitialUnroller<SetView> {
     static void initialUnroll(Quant& quantifier) {
         mpark::visit(
             [&](auto& membersImpl) {
+                debug_log("setting type to "
+                          << TypeAsString<typename AssociatedValueType<viewType(
+                                 membersImpl)>::type>::value);
+                quantifier.valuesToUnroll
+                    .template emplace<BaseType<decltype(membersImpl)>>();
                 for (auto& member : membersImpl) {
                     quantifier.unroll(quantifier.numberElements(), member);
                 }
@@ -766,7 +791,8 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
     ContainerTrigger(Quantifier<SequenceView>* op) : op(op) {
         mpark::visit(
             [&](auto& members) {
-                valuesToUnroll.emplace<ExprRefVec<viewType(members)>>();
+                valuesToUnroll
+                    .template emplace<ExprRefVec<viewType(members)>>();
             },
             op->container->view().members);
     }

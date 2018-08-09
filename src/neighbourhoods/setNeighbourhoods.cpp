@@ -202,6 +202,7 @@ void setRemoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
                 ++params.stats.minorNodeCount;
                 indexToRemove =
                     globalRandom<size_t>(0, val.numberElements() - 1);
+                debug_log("trying to remove index " << indexToRemove << " from set " << val.view());
                 std::pair<bool, ValRef<InnerValueType>> removeStatus =
                     val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
                         return params.parentCheck(params.vals);

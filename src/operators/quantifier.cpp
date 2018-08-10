@@ -655,7 +655,7 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
         op->containerDefined = false;
         if (op->numberUndefined == 0) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers);
+                          op->triggers,true);
         }
     }
     void hasBecomeDefined() {
@@ -754,7 +754,7 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
         op->containerDefined = false;
         if (op->numberUndefined == 0) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers);
+                          op->triggers, true);
         }
     }
     void hasBecomeDefined() {
@@ -900,7 +900,7 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
         op->containerDefined = false;
         if (op->numberUndefined == 0) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers);
+                          op->triggers,true);
         }
     }
     void hasBecomeDefined() {
@@ -1002,7 +1002,7 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
         op->containerDefined = false;
         if (op->numberUndefined == 0) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers);
+                          op->triggers,true);
         }
     }
     void hasBecomeDefined() {

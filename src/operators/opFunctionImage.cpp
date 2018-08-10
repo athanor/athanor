@@ -118,7 +118,7 @@ bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
         reattachFunctionMemberTrigger(true);
     }
     if (wasDefined && !defined) {
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers, true);
         return true;
     } else if (!wasDefined && defined) {
         visitTriggers(
@@ -126,7 +126,7 @@ bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
-            triggers);
+            triggers, true);
         return true;
     } else {
         return !defined;

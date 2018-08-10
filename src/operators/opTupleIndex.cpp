@@ -76,7 +76,7 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
         op->reevaluateDefined();
         if (wasDefined && !op->defined) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers);
+                          op->triggers, true);
             return true;
         } else if (!wasDefined && op->defined) {
             visitTriggers(
@@ -84,7 +84,7 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
                     t->hasBecomeDefined();
                     t->reattachTrigger();
                 },
-                op->triggers);
+                op->triggers, true);
             return true;
         } else {
             return !op->defined;
@@ -96,7 +96,7 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
             return;
         }
         op->defined = false;
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers, true);
     }
 
     void hasBecomeDefined() final {
@@ -109,7 +109,7 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
-            op->triggers);
+            op->triggers, true);
     }
 
     void possibleValueChange() final {

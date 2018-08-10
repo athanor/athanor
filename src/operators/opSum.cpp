@@ -27,7 +27,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
             if (op->operand->view().numberUndefined == 1) {
                 op->setDefined(false, false);
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                              op->triggers);
+                              op->triggers, true);
             }
             return;
         }
@@ -48,7 +48,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
             if (op->operand->view().numberUndefined == 0) {
                 op->setDefined(true, false);
                 visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                              op->triggers);
+                              op->triggers, true);
             }
             return;
         }
@@ -123,7 +123,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
             op->reevaluate();
             if (op->isDefined()) {
                 visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                              op->triggers);
+                              op->triggers, true);
             }
             return;
         }
@@ -134,7 +134,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         });
         if (!isDefined) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers);
+                          op->triggers, true);
         }
     }
 
@@ -158,7 +158,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         if (op->operand->view().numberUndefined == 1) {
             op->setDefined(false, false);
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers);
+                          op->triggers, true);
         }
     }
 
@@ -175,7 +175,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         if (op->operand->view().numberUndefined == 0) {
             op->setDefined(true, false);
             visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                          op->triggers);
+                          op->triggers, true);
         }
     }
 };

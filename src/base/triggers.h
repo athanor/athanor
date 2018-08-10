@@ -10,6 +10,7 @@ struct ExprRef;
 extern u_int64_t triggerEventCount;
 struct TriggerBase {
     bool active = true;
+    bool acceptDefinednessTriggers = true;
     virtual ~TriggerBase() {}
     virtual void possibleValueChange() = 0;
     virtual void valueChanged() = 0;
@@ -45,13 +46,17 @@ void cleanNullTriggers(std::vector<std::shared_ptr<Trigger>>& triggers) {
 
 template <typename Visitor, typename Trigger>
 void visitTriggers(Visitor&& func,
-                   std::vector<std::shared_ptr<Trigger>>& triggers) {
+                   std::vector<std::shared_ptr<Trigger>>& triggers,
+                   bool isDefinednessTrigger = false) {
     size_t size = triggers.size();
     size_t triggerNullCount = 0;
     // triggers may be changed, insure that new triggers are ignored
     for (size_t i = 0; i < size && i < triggers.size(); i++) {
         auto& trigger = triggers[i];
         if (trigger && trigger->active) {
+            if (isDefinednessTrigger && !trigger->acceptDefinednessTriggers) {
+                continue;
+            }
             ++triggerEventCount;
             func(trigger);
         } else {

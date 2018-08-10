@@ -103,7 +103,7 @@ struct OpSequenceIndexTriggerBase {
         op->reevaluateDefined();
         if (wasDefined && !op->defined) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers);
+                          op->triggers, true);
             return true;
         } else if (!wasDefined && op->defined) {
             visitTriggers(
@@ -111,7 +111,7 @@ struct OpSequenceIndexTriggerBase {
                     t->hasBecomeDefined();
                     t->reattachTrigger();
                 },
-                op->triggers);
+                op->triggers, true);
             return true;
         } else {
             return !op->defined;
@@ -127,7 +127,7 @@ struct OpSequenceIndexTriggerBase {
             return;
         }
         op->defined = false;
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers, true);
     }
     void hasBecomeDefinedBase() {
         op->reevaluateDefined();
@@ -140,7 +140,7 @@ struct OpSequenceIndexTriggerBase {
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
-            op->triggers);
+            op->triggers, true);
     }
 };
 

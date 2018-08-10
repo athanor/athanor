@@ -10,9 +10,8 @@ void OpCatchUndef<ExprViewType>::addTriggerImpl(
     const shared_ptr<ExprTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));
-    if (exprDefined) {
-        getMember()->addTrigger(trigger, includeMembers, memberIndex);
-    }
+    trigger->acceptDefinednessTriggers = false;
+    getMember()->addTrigger(trigger, includeMembers, memberIndex);
 }
 
 template <typename ExprViewType>
@@ -111,7 +110,6 @@ struct ExprTrigger
         this->op->exprDefined = false;
         visitTriggers(
             [&](auto& t) {
-                t->hasBecomeDefined();
                 t->valueChanged();
                 t->reattachTrigger();
             },

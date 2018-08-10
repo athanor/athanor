@@ -35,7 +35,7 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
         if (op->isDefined()) {
             op->setDefined(false, false);
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers);
+                          op->triggers, true);
         }
     }
     void hasBecomeDefined() {
@@ -49,7 +49,7 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
                 adjustUpper(false);
             }
             visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                          op->triggers);
+                          op->triggers,true);
         }
     }
     inline void adjustLower(bool trigger) {

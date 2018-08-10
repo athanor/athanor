@@ -130,6 +130,10 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain,
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
+        if (innerNh.numberValsRequired < 2) {
+            continue;
+        }
+
         neighbourhoods.emplace_back(
             "mSetLiftMultiple_" + innerNh.name, numberValsRequired,
             [innerNhApply{std::move(innerNh.apply)},

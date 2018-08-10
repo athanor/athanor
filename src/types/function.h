@@ -146,6 +146,16 @@ struct FunctionView : public ExprInterface<FunctionView> {
         }
     }
 
+    template <typename Func>
+    void visitMemberTriggers(Func&& func, const std::vector<UInt>& indices) {
+        visitTriggers(func, allMemberTriggers);
+        for (auto& index : indices) {
+            if (index < singleMemberTriggers.size()) {
+                visitTriggers(func, singleMemberTriggers[index]);
+            }
+        }
+    }
+
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void assignImage(size_t index,
                             const ExprRef<InnerViewType>& member) {
@@ -153,6 +163,7 @@ struct FunctionView : public ExprInterface<FunctionView> {
         debug_code(assert(index < range.size()));
         range[index] = member;
     }
+
     inline void notifyPossibleImageChange(UInt index) {
         debug_code(assertValidState());
         visitMemberTriggers([&](auto& t) { t->possibleImageChange(index); },
@@ -167,6 +178,23 @@ struct FunctionView : public ExprInterface<FunctionView> {
     inline void notifyImageChanged(UInt index) {
         debug_code(assertValidState());
         visitMemberTriggers([&](auto& t) { t->imageChanged(index); }, index);
+    }
+
+    inline void notifyPossibleImagesChange(const std::vector<UInt>& indices) {
+        debug_code(assertValidState());
+        visitMemberTriggers([&](auto& t) { t->possibleImageChange(indices); },
+                            indices);
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void imagesChanged(const std::vector<UInt>& indices) {
+        ignoreUnused(indices);
+    }
+
+    inline void notifyImagesChanged(const std::vector<UInt>& indices) {
+        debug_code(assertValidState());
+        visitMemberTriggers([&](auto& t) { t->imageChanged(indices); },
+                            indices);
     }
 
     void notifyPossibleSwapImages(UInt index1, UInt index2) {
@@ -283,6 +311,19 @@ struct FunctionValue : public FunctionView, public ValBase {
             return true;
         } else {
             FunctionView::imageChanged<InnerViewType>(index);
+            return false;
+        }
+    }
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
+    inline bool tryImagesChange(const std::vector<UInt>& indices, Func&& func) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        FunctionView::imagesChanged<InnerViewType>(indices);
+        if (func()) {
+            FunctionView::notifyImagesChanged(indices);
+            return true;
+        } else {
+            FunctionView::imagesChanged<InnerViewType>(indices);
             return false;
         }
     }

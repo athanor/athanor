@@ -105,6 +105,85 @@ void functionLiftSingleGen(const FunctionDomain& domain, int numberValsRequired,
 }
 
 template <typename InnerDomainPtrType>
+void functionLiftMultipleGenImpl(const FunctionDomain& domain,
+                                 const InnerDomainPtrType& innerDomainPtr,
+                                 int numberValsRequired,
+                                 std::vector<Neighbourhood>& neighbourhoods) {
+    std::vector<Neighbourhood> innerDomainNeighbourhoods;
+    generateNeighbourhoods(0, domain.to, innerDomainNeighbourhoods);
+    UInt innerDomainSize = getDomainSize(domain.to);
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    for (auto& innerNh : innerDomainNeighbourhoods) {
+        if (innerNh.numberValsRequired < 2) {
+            continue;
+        }
+
+        neighbourhoods.emplace_back(
+            "functionLiftMultiple_" + innerNh.name, numberValsRequired,
+            [innerNhApply{std::move(innerNh.apply)},
+             innerNhNumberValsRequired{innerNh.numberValsRequired},
+             innerDomainSize, &domain,
+             &innerDomainPtr](NeighbourhoodParams& params) {
+                auto& val = *(params.getVals<FunctionValue>().front());
+                if (val.rangeSize() < (size_t)innerNhNumberValsRequired) {
+                    ++params.stats.minorNodeCount;
+                    return;
+                }
+                ViolationContainer& vioDescAtThisLevel =
+                    params.vioDesc.hasChildViolation(val.id)
+                        ? params.vioDesc.childViolations(val.id)
+                        : emptyViolations;
+                std::vector<UInt> indicesToChange =
+                    vioDescAtThisLevel.selectRandomVars(
+                        val.rangeSize() - 1, innerNhNumberValsRequired);
+                debug_log(indicesToChange);
+                val.notifyPossibleImagesChange(indicesToChange);
+                ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
+
+                    return val.tryImagesChange<InnerValueType>(
+                        indicesToChange,
+                        [&]() { return params.parentCheck(params.vals); });
+                };
+                bool requiresRevert = false;
+                AcceptanceCallBack changeAccepted = [&]() {
+                    requiresRevert = !params.changeAccepted();
+                    if (requiresRevert) {
+                        val.notifyPossibleImagesChange(indicesToChange);
+                    }
+                    return !requiresRevert;
+                };
+                AnyValVec changingMembers;
+                auto& changingMembersImpl =
+                    changingMembers.emplace<ValRefVec<InnerValueType>>();
+                for (UInt indexToChange : indicesToChange) {
+                    changingMembersImpl.emplace_back(
+                        val.member<InnerValueType>(indexToChange));
+                }
+                NeighbourhoodParams innerNhParams(
+                    changeAccepted, parentCheck, params.parentCheckTryLimit,
+                    changingMembers, params.stats, vioDescAtThisLevel);
+                innerNhApply(innerNhParams);
+                if (requiresRevert) {
+                    val.tryImagesChange<InnerValueType>(indicesToChange,
+                                                        [&]() { return true; });
+                }
+            });
+    }
+}
+
+void functionLiftMultipleGen(const FunctionDomain& domain,
+                             int numberValsRequired,
+                             std::vector<Neighbourhood>& neighbourhoods) {
+    mpark::visit(
+        [&](const auto& innerDomainPtr) {
+            functionLiftMultipleGenImpl(domain, innerDomainPtr,
+                                        numberValsRequired, neighbourhoods);
+        },
+        domain.to);
+}
+
+template <typename InnerDomainPtrType>
 void functionImagesSwapGenImpl(const FunctionDomain& domain,
                                InnerDomainPtrType& innerDomainPtr,
                                int numberValsRequired,

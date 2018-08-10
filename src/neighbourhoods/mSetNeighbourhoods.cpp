@@ -52,9 +52,6 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
-        if (innerNh.numberValsRequired == 1) {
-            continue;
-        }
         neighbourhoods.emplace_back(
             "mSetLiftSingle_" + innerNh.name, numberValsRequired,
             [innerNhApply{std::move(innerNh.apply)}, innerDomainSize, &domain,

@@ -73,6 +73,7 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
     }
 }
 void StatsContainer::printCurrentState(Model& model) {
+    return;
     std::cout << (*this) << "\nTrigger event count " << triggerEventCount
               << "\n\n";
 

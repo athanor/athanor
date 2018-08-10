@@ -60,6 +60,7 @@ inline void updateMinValues(OpMinMax<minMode>& op, bool trigger) {
     if (!wasDefined && !op.isDefined()) {
         visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers, true);
     } else if (wasDefined && !op.isDefined()) {
+        visitTriggers([&](auto& t) { t->possibleValueChange(); }, op.triggers);
         visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op.triggers, true);
     } else if (op.isDefined()) {
         swap(op.value, oldValue);

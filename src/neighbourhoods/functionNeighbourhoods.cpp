@@ -152,10 +152,22 @@ void functionImagesSwapGenImpl(const FunctionDomain& domain,
 void functionImagesSwapGen(const FunctionDomain& domain, int numberValsRequired,
                            std::vector<Neighbourhood>& neighbourhoods) {
     mpark::visit(
-        [&](const auto& innerDomainPtr) {
-            functionImagesSwapGenImpl(domain, innerDomainPtr,
-                                      numberValsRequired, neighbourhoods);
-        },
+        overloaded(
+            [&](const shared_ptr<BoolDomain>& innerDomainPtr) {
+                functionImagesSwapGenImpl(domain, innerDomainPtr,
+                                          numberValsRequired, neighbourhoods);
+            },
+            [&](const shared_ptr<IntDomain>& innerDomainPtr) {
+                functionImagesSwapGenImpl(domain, innerDomainPtr,
+                                          numberValsRequired, neighbourhoods);
+            },
+            [&](const auto& innerDomainPtr) {
+                if (false) {
+                    functionImagesSwapGenImpl(domain, innerDomainPtr,
+                                              numberValsRequired,
+                                              neighbourhoods);
+                }
+            }),
         domain.to);
 }
 const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
@@ -284,6 +296,7 @@ void functionSplitImagesGenImpl(const FunctionDomain& domain,
                     swap(index1, index2);
                 }
                 auto& view1 = val.getRange<IntView>()[index1]->view();
+                static_cast<void>(view1);
                 auto value2 = val.member<IntValue>(index2);
                 val.notifyPossibleImageChange(index2);
                 valueBackup = value2->value;

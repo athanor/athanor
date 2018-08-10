@@ -466,8 +466,9 @@ void functionAssignRandomGen(const FunctionDomain& domain,
 
 const NeighbourhoodVec<FunctionDomain>
     NeighbourhoodGenList<FunctionDomain>::value = {
-        {1, functionLiftSingleGen},  //
-        {1, functionImagesSwapGen},
-        {1, functionUnifyImagesGen},
+        {1, functionLiftSingleGen},    //
+        {1, functionLiftMultipleGen},  //
+        {1, functionImagesSwapGen},    //
+        {1, functionUnifyImagesGen},   //
         {1, functionSplitImagesGen},
 };

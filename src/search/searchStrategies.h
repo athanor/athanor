@@ -31,7 +31,8 @@ class HillClimbing {
                     allowed = result.model.getViolation() == 0 &&
                               result.getDeltaObjective() <= 0;
                 }
-                if (!isOuterMostStrategy && !allowed) {
+                if (!isOuterMostStrategy && !allowed &&
+                    state.model.getViolation() == 0) {
                     ++iterationsAtPeak;
                 }
                 return allowed;

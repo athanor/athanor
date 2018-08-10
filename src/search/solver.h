@@ -15,7 +15,7 @@ class State {
    public:
     Model model;
     StatsContainer stats;
-
+double totalTimeInNeighbourhoods = 0;
     State(Model model) : model(std::move(model)), stats(this->model) {}
 
     auto makeVecFrom(AnyValRef& val) {
@@ -60,6 +60,7 @@ class State {
             strategy(nhResult);
         }
         stats.reportResult(solutionAccepted, nhResult);
+        totalTimeInNeighbourhoods += (stats.getCpuTime() - nhResult.statsMarkPoint.cpuTime);
     }
 
     inline void testForTermination() {
@@ -172,6 +173,7 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
     std::cout << "\n\n"
               << state.stats << "\nTrigger event count " << triggerEventCount
               << "\n";
-}
+    std::cout << "total time actually spent in neighbourhoods: " << state.totalTimeInNeighbourhoods << std::endl;
+ }
 
 #endif /* SRC_SEARCH_SOLVER_H_ */

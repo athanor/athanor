@@ -78,9 +78,7 @@ void StatsContainer::printCurrentState(Model& model) {
 
     if (lastViolation == 0) {
         std::cout << "solution start\n";
-    }
-    model.printVariables();
-    if (lastViolation == 0) {
+        model.printVariables();
         std::cout << "solution end\n";
     }
     debug_code(debug_log("CSP state:");

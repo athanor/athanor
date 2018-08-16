@@ -171,5 +171,12 @@ template <typename View>
 struct OpMaker<OpCatchUndef<View>> {
     static ExprRef<View> make(ExprRef<View> expr, ExprRef<View> replacement);
 };
+template <typename SequenceInnerType>
+struct OpFlattenOneLevel;
+
+template <typename SequenceInnerType>
+struct OpMaker<OpFlattenOneLevel<SequenceInnerType>> {
+    static ExprRef<SequenceView> make(ExprRef<SequenceView> o);
+};
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

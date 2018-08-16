@@ -889,15 +889,15 @@ ExprRef<View> makeSetIndexFromDomain(shared_ptr<Domain>&, ExprRef<SetView>& set,
 
 template <typename DomainType, typename ViewType,
           EnableIfDomainNotMatchView<DomainType, ViewType> = 0>
-void extractPatternMatchAndAddExprsToScope(json&, const shared_ptr<DomainType>&,
-                                           ExprRef<ViewType>&, ParsedModel&,
-                                           vector<string>&) {
+void addLocalVarsToScopeFromPatternMatch(json&, const shared_ptr<DomainType>&,
+                                         ExprRef<ViewType>&, ParsedModel&,
+                                         vector<string>&) {
     shouldNotBeCalledPanic;
 }
 
 template <typename DomainType, typename ViewType,
           EnableIfDomainMatchesView<DomainType, ViewType> = 0>
-void extractPatternMatchAndAddExprsToScope(
+void addLocalVarsToScopeFromPatternMatch(
     json& patternExpr, const shared_ptr<DomainType>& domain,
     ExprRef<ViewType>& expr, ParsedModel& parsedModel,
     vector<string>& variablesAddedToScope) {
@@ -924,7 +924,7 @@ void extractPatternMatchAndAddExprsToScope(
                         [&](auto& innerDomain) {
                             auto tupleIndexExpr =
                                 makeTupleIndexFromDomain(innerDomain, expr, i);
-                            extractPatternMatchAndAddExprsToScope(
+                            addLocalVarsToScopeFromPatternMatch(
                                 tupleMatchExpr[i], innerDomain, tupleIndexExpr,
                                 parsedModel, variablesAddedToScope);
                         },
@@ -947,7 +947,7 @@ void extractPatternMatchAndAddExprsToScope(
                         for (size_t i = 0; i < setMatchExpr.size(); i++) {
                             auto setIndexExpr =
                                 makeSetIndexFromDomain(innerDomain, expr, i);
-                            extractPatternMatchAndAddExprsToScope(
+                            addLocalVarsToScopeFromPatternMatch(
                                 setMatchExpr[i], innerDomain, setIndexExpr,
                                 parsedModel, variablesAddedToScope);
                         }
@@ -958,14 +958,14 @@ void extractPatternMatchAndAddExprsToScope(
 }
 
 template <typename ContainerDomainType, typename Quantifier>
-AnyDomainRef addExprToQuantifier(
-    json& comprExpr, shared_ptr<ContainerDomainType>& containerDomain,
-    Quantifier& quantifier, ParsedModel& parsedModel) {
-    json& generatorParent = comprExpr[1][0]["Generator"];
+void parseGenerator(json& generatorParent,
+                    shared_ptr<ContainerDomainType>& containerDomain,
+                    Quantifier& quantifier,
+                    vector<string>& variablesAddedToScope,
+                    ParsedModel& parsedModel) {
     json& generatorExpr = (generatorParent.count("GenInExpr"))
                               ? generatorParent["GenInExpr"]
                               : generatorParent["GenDomainNoRepr"];
-    vector<string> variablesAddedToScope;
     const AnyDomainRef& innerDomain = overloaded(
         [&](const FunctionDomain& dom) { return dom.to; },
         [&](const auto& dom) { return dom.inner; })(*containerDomain);
@@ -985,7 +985,7 @@ AnyDomainRef addExprToQuantifier(
                             quantifier->template newIterRef<SetView>();
                         auto iterDomain = innerDomain;
                         ExprRef<SetView> iter(iterRef);
-                        extractPatternMatchAndAddExprsToScope(
+                        addLocalVarsToScopeFromPatternMatch(
                             generatorExpr[0], iterDomain, iter, parsedModel,
                             variablesAddedToScope);
                         powerSetTest->sizeLimit =
@@ -993,7 +993,7 @@ AnyDomainRef addExprToQuantifier(
                     } else {
                         ExprRef<InnerViewType> iter(
                             quantifier->template newIterRef<InnerViewType>());
-                        extractPatternMatchAndAddExprsToScope(
+                        addLocalVarsToScopeFromPatternMatch(
                             generatorExpr[0], innerDomain, iter, parsedModel,
                             variablesAddedToScope);
                     }
@@ -1001,7 +1001,7 @@ AnyDomainRef addExprToQuantifier(
                 [&](shared_ptr<MSetDomain>&) {
                     ExprRef<InnerViewType> iter(
                         quantifier->template newIterRef<InnerViewType>());
-                    extractPatternMatchAndAddExprsToScope(
+                    addLocalVarsToScopeFromPatternMatch(
                         generatorExpr[0], innerDomain, iter, parsedModel,
                         variablesAddedToScope);
                 },
@@ -1010,14 +1010,14 @@ AnyDomainRef addExprToQuantifier(
                     if (generatorParent.count("GenDomainNoRepr")) {
                         auto iter = OpMaker<OpTupleIndex<InnerViewType>>::make(
                             iterRef, 1);
-                        extractPatternMatchAndAddExprsToScope(
+                        addLocalVarsToScopeFromPatternMatch(
                             generatorExpr[0], innerDomain, iter, parsedModel,
                             variablesAddedToScope);
                     } else {
                         auto iterDomain =
                             fakeTupleDomain({fakeIntDomain, innerDomain});
                         ExprRef<TupleView> iter(iterRef);
-                        extractPatternMatchAndAddExprsToScope(
+                        addLocalVarsToScopeFromPatternMatch(
                             generatorExpr[0], iterDomain, iter, parsedModel,
                             variablesAddedToScope);
                     }
@@ -1027,7 +1027,7 @@ AnyDomainRef addExprToQuantifier(
                         quantifier->template newIterRef<TupleView>());
                     auto iterDomain =
                         fakeTupleDomain({functionDomain->from, innerDomain});
-                    extractPatternMatchAndAddExprsToScope(
+                    addLocalVarsToScopeFromPatternMatch(
                         generatorExpr[0], iterDomain, iter, parsedModel,
                         variablesAddedToScope);
 
@@ -1039,6 +1039,11 @@ AnyDomainRef addExprToQuantifier(
                 })(containerDomain);
         },
         innerDomain);
+}
+
+template <typename Quantifier>
+AnyDomainRef addExprToQuantifier(json& comprExpr, Quantifier& quantifier,
+                                 ParsedModel& parsedModel) {
     auto expr = parseExpr(comprExpr[0], parsedModel);
     quantifier->setExpression(expr.second);
     vector<ExprRef<BoolView>> conditions;
@@ -1058,26 +1063,56 @@ AnyDomainRef addExprToQuantifier(
     } else if (conditions.size() == 1) {
         quantifier->setCondition(conditions[0]);
     }
-    for (auto& varName : variablesAddedToScope) {
-        parsedModel.namedExprs.erase(varName);
-    }
     return expr.first;
 }
 
-template <typename ContainerReturnType, typename ContainerDomainPtrType>
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> makeFlatten(
+    pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> sequenceExpr) {
+    return mpark::visit(
+        [&](auto& innerDomain)
+            -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
+            typedef typename AssociatedValueType<typename BaseType<decltype(
+                innerDomain)>::element_type>::type ValueType;
+            typedef typename AssociatedViewType<ValueType>::type View;
+            return make_pair(
+                sequenceExpr.first,
+                OpMaker<OpFlattenOneLevel<View>>::make(sequenceExpr.second));
+        },
+        sequenceExpr.first->inner);
+}
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehensionImpl(
+    json& comprExpr, ParsedModel& parsedModel, size_t generatorIndex);
+template <typename ContainerReturnType, typename ContainerDomainType>
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> buildQuant(
     json& comprExpr, ExprRef<ContainerReturnType>& container,
-    ContainerDomainPtrType&& domain, ParsedModel& parsedModel) {
+    shared_ptr<ContainerDomainType>& domain, size_t generatorIndex,
+    ParsedModel& parsedModel) {
     auto quantifier = make_shared<Quantifier<ContainerReturnType>>(container);
-    AnyDomainRef innerDomain =
-        addExprToQuantifier(comprExpr, domain, quantifier, parsedModel);
-    return make_pair(fakeSequenceDomain(innerDomain),
-                     ExprRef<SequenceView>(quantifier));
+    vector<string> variablesAddedToScope;
+    parseGenerator(comprExpr[1][generatorIndex]["Generator"], domain,
+                   quantifier, variablesAddedToScope, parsedModel);
+    pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> returnValue =
+        make_pair(fakeSequenceDomain(fakeBoolDomain),
+                  ExprRef<SequenceView>(nullptr));
+    if (generatorIndex > 0) {
+        auto innerQuantifier =
+            parseComprehensionImpl(comprExpr, parsedModel, generatorIndex - 1);
+        quantifier->setExpression(innerQuantifier.second);
+        returnValue = makeFlatten(make_pair(innerQuantifier.first, quantifier));
+    } else {
+        AnyDomainRef innerDomain =
+            addExprToQuantifier(comprExpr, quantifier, parsedModel);
+        returnValue = make_pair(fakeSequenceDomain(innerDomain),
+                                ExprRef<SequenceView>(quantifier));
+    }
+    for (auto& varName : variablesAddedToScope) {
+        parsedModel.namedExprs.erase(varName);
+    }
+    return returnValue;
 }
-
-pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
-    json& comprExpr, ParsedModel& parsedModel) {
-    auto& generatorParent = comprExpr[1][0]["Generator"];
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehensionImpl(
+    json& comprExpr, ParsedModel& parsedModel, size_t generatorIndex) {
+    auto& generatorParent = comprExpr[1][generatorIndex]["Generator"];
     json& generatorExpr = (generatorParent.count("GenInExpr"))
                               ? generatorParent["GenInExpr"]
                               : generatorParent["GenDomainNoRepr"];
@@ -1098,28 +1133,38 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
                 -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
                 auto& domain = mpark::get<shared_ptr<SetDomain>>(
                     domainContainerPair.first);
-                return buildQuant(comprExpr, set, domain, parsedModel);
+                return buildQuant(comprExpr, set, domain, generatorIndex,
+                                  parsedModel);
             },
             [&](ExprRef<MSetView>& mSet)
                 -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
                 auto& domain = mpark::get<shared_ptr<MSetDomain>>(
                     domainContainerPair.first);
-                return buildQuant(comprExpr, mSet, domain, parsedModel);
+                return buildQuant(comprExpr, mSet, domain, generatorIndex,
+                                  parsedModel);
             },
             [&](ExprRef<SequenceView>& sequence)
                 -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
                 auto& domain = mpark::get<shared_ptr<SequenceDomain>>(
                     domainContainerPair.first);
-                return buildQuant(comprExpr, sequence, domain, parsedModel);
+                return buildQuant(comprExpr, sequence, domain, generatorIndex,
+                                  parsedModel);
             },
             [&](ExprRef<FunctionView>& function)
                 -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
                 auto& domain = mpark::get<shared_ptr<FunctionDomain>>(
                     domainContainerPair.first);
-                return buildQuant(comprExpr, function, domain, parsedModel);
+                return buildQuant(comprExpr, function, domain, generatorIndex,
+                                  parsedModel);
             },
             move(errorHandler)),
         domainContainerPair.second);
+}
+
+pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
+    json& comprExpr, ParsedModel& parsedModel) {
+    return parseComprehensionImpl(comprExpr, parsedModel,
+                                  comprExpr[1].size() - 1);
 }
 
 template <typename View, typename Op, typename Domain>

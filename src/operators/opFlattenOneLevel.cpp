@@ -60,13 +60,14 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
     InnerSequenceTrigger(OpFlattenOneLevel<SequenceInnerType>* op, UInt index)
         : op(op), index(index) {}
     inline void valueRemoved(UInt indexOfRemoved, const AnyExprRef&) {
-        op->removeMemberAndNotify<SequenceInnerType>(index + indexOfRemoved);
+        op->removeMemberAndNotify<SequenceInnerType>(
+            op->startingIndices[index] + indexOfRemoved);
         for (size_t i = index + 1; i < op->startingIndices.size(); i++) {
             --op->startingIndices[i];
         }
     }
     inline void valueAdded(UInt indexOfAdded, const AnyExprRef& member) final {
-        op->addMemberAndNotify(index + indexOfAdded,
+        op->addMemberAndNotify(op->startingIndices[index] + indexOfAdded,
                                mpark::get<ExprRef<SequenceInnerType>>(member));
         for (size_t i = index + 1; i < op->startingIndices.size(); i++) {
             ++op->startingIndices[i];
@@ -76,15 +77,19 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
     inline void possibleSubsequenceChange(UInt startIndex,
                                           UInt endIndex) final {
         op->notifyPossibleSubsequenceChange<SequenceInnerType>(
-            index + startIndex, index + endIndex);
+            op->startingIndices[index] + startIndex,
+            op->startingIndices[index] + endIndex);
     }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
-        op->changeSubsequenceAndNotify<SequenceInnerType>(index + startIndex,
-                                                          index + endIndex);
+        op->changeSubsequenceAndNotify<SequenceInnerType>(
+            op->startingIndices[index] + startIndex,
+            op->startingIndices[index] + endIndex);
     }
     inline void beginSwaps() final {}
     inline void positionsSwapped(UInt index1, UInt index2) final {
-        op->swapAndNotify<SequenceInnerType>(index + index1, index + index2);
+        op->swapAndNotify<SequenceInnerType>(
+            op->startingIndices[index] + index1,
+            op->startingIndices[index] + index2);
     }
     inline void endSwaps() final {}
     inline void memberHasBecomeDefined(UInt) {}
@@ -181,6 +186,8 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
             return;
         }
         op->startingIndices.emplace_back();
+        op->startingIndices.back() =
+            op->startingIndices[op->startingIndices.size() - 2];
         for (size_t i = op->startingIndices.size(); i > index + 1; i--) {
             op->startingIndices[index - 1] = op->startingIndices[i - 2];
             op->startingIndices[i - 1] += shiftAmount;

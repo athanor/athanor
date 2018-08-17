@@ -239,7 +239,7 @@ std::ostream& OpFlattenOneLevel<SequenceInnerType>::dumpState(
 template <typename SequenceInnerType>
 void OpFlattenOneLevel<SequenceInnerType>::evaluateImpl() {
     operand->evaluate();
-    bool defined = !operand->isUndefined();
+    defined = !operand->isUndefined();
     if (defined) {
         reevaluate();
     }

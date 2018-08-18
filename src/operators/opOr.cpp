@@ -102,8 +102,6 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
         }
     }
 
-    inline void beginSwaps() final {}
-    inline void endSwaps() final {}
     inline void positionsSwapped(UInt index1, UInt index2) {
         if (op->minViolationIndices.count(index1)) {
             if (!op->minViolationIndices.count(index2)) {

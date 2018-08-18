@@ -127,7 +127,8 @@ struct OpSequenceIndexTriggerBase {
             return;
         }
         op->defined = false;
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers, true);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers,
+                      true);
     }
     void hasBecomeDefinedBase() {
         op->reevaluateDefined();
@@ -208,8 +209,6 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         // member, this trigger need not be forwarded
     }
 
-    inline void beginSwaps() final {}
-    inline void endSwaps() final {}
     inline void positionsSwapped(UInt index1, UInt index2) final {
         if (!op->locallyDefined) {
             return;

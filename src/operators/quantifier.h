@@ -66,7 +66,7 @@ struct Quantifier : public SequenceView {
     template <typename ViewType>
     void unroll(UInt index, const ExprRef<ViewType>& newView);
     void roll(UInt index);
-    void swap(UInt index1, UInt index2, bool notifyBeginEnd = true);
+    void swapExprs(UInt index1, UInt index2);
     template <typename ViewType>
     void startTriggeringOnExpr(UInt index, ExprRef<ViewType>& expr);
     template <typename ViewType>

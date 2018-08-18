@@ -58,10 +58,12 @@ inline void updateMinValues(OpMinMax<minMode>& op, bool trigger) {
         return;
     }
     if (!wasDefined && !op.isDefined()) {
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers, true);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers,
+                      true);
     } else if (wasDefined && !op.isDefined()) {
         visitTriggers([&](auto& t) { t->possibleValueChange(); }, op.triggers);
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op.triggers, true);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op.triggers,
+                      true);
     } else if (op.isDefined()) {
         swap(op.value, oldValue);
         op.changeValue([&]() {
@@ -144,8 +146,6 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
             updateMinValues(*op, true);
         }
     }
-    inline void beginSwaps() final {}
-    inline void endSwaps() final {}
 
     inline void positionsSwapped(UInt index1, UInt index2) {
         if (op->minValueIndices.count(index1)) {

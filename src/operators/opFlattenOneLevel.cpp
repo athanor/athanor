@@ -6,7 +6,7 @@
 
 using namespace std;
 template <typename SequenceInnerType>
-void OpFlattenOneLevel<SequenceInnerType>::assertValidStartingIndices() {
+void OpFlattenOneLevel<SequenceInnerType>::assertValidStartingIndices() const {
     auto& innerSequences = operand->view().getMembers<SequenceView>();
     UInt total = 0;
     bool success = true;
@@ -31,6 +31,9 @@ void OpFlattenOneLevel<SequenceInnerType>::assertValidStartingIndices() {
         for (auto& innerSequence : innerSequences) {
             prettyPrint(cerr, innerSequence->view()) << endl;
         }
+        cerr << "startingIndices: " << startingIndices << endl;
+        cerr << "Flattened value: ";
+        prettyPrint(cerr, this->view()) << endl;
         assert(false);
         abort();
     }
@@ -65,13 +68,16 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
         for (size_t i = index + 1; i < op->startingIndices.size(); i++) {
             --op->startingIndices[i];
         }
+        debug_code(op->assertValidStartingIndices());
     }
     inline void valueAdded(UInt indexOfAdded, const AnyExprRef& member) final {
         op->addMemberAndNotify(op->startingIndices[index] + indexOfAdded,
                                mpark::get<ExprRef<SequenceInnerType>>(member));
+
         for (size_t i = index + 1; i < op->startingIndices.size(); i++) {
             ++op->startingIndices[i];
         }
+        debug_code(op->assertValidStartingIndices());
     }
 
     inline void possibleSubsequenceChange(UInt startIndex,
@@ -85,13 +91,11 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
             op->startingIndices[index] + startIndex,
             op->startingIndices[index] + endIndex);
     }
-    inline void beginSwaps() final {}
     inline void positionsSwapped(UInt index1, UInt index2) final {
         op->swapAndNotify<SequenceInnerType>(
             op->startingIndices[index] + index1,
             op->startingIndices[index] + index2);
     }
-    inline void endSwaps() final {}
     inline void memberHasBecomeDefined(UInt) {}
     inline void memberHasBecomeUndefined(UInt) {}
     void hasBecomeUndefined() {}
@@ -185,9 +189,7 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
             op->startingIndices.emplace_back(0);
             return;
         }
-        op->startingIndices.emplace_back();
-        op->startingIndices.back() =
-            op->startingIndices[op->startingIndices.size() - 2];
+        op->startingIndices.emplace_back(op->numberElements());
         for (size_t i = op->startingIndices.size(); i > index + 1; i--) {
             op->startingIndices[index - 1] = op->startingIndices[i - 2];
             op->startingIndices[i - 1] += shiftAmount;
@@ -221,10 +223,80 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
     void memberHasBecomeUndefined(UInt index) {
         op->notifyMemberUndefined<SequenceInnerType>(index);
     }
-    void beginSwaps() final {}
-    void endSwaps() final {}
     void positionsSwapped(UInt index1, UInt index2) {
-        todoImpl(index1, index2);
+        std::swap(op->innerSequenceTriggers[index1],
+                  op->innerSequenceTriggers[index2]);
+        op->innerSequenceTriggers[index1]->index = index1;
+        op->innerSequenceTriggers[index2]->index = index2;
+        if (index1 == index2) {
+            return;
+        } else if (index1 > index2) {
+            swap(index1, index2);
+        }
+        UInt nextStartingIndex = (index2 + 1 < op->startingIndices.size())
+                                     ? op->startingIndices[index2 + 1]
+                                     : op->numberElements();
+        if (op->startingIndices[index1] == op->startingIndices[index2]) {
+            op->startingIndices[index2] = nextStartingIndex;
+
+            debug_code(op->assertValidStartingIndices());
+            return;
+        }
+        UInt length1 =
+            op->startingIndices[index1 + 1] - op->startingIndices[index1];
+        UInt length2 = nextStartingIndex - op->startingIndices[index2];
+        UInt shorterLength = std::min(length1, length2);
+        swapElements(op->startingIndices[index1], op->startingIndices[index2],
+                     shorterLength);
+        if (length1 == length2) {
+            debug_code(op->assertValidStartingIndices());
+            return;
+        }
+        UInt fromStart, toStart, moveLength, shiftStart, shiftEnd;
+
+        if (length1 < length2) {
+            fromStart = op->startingIndices[index2] + length1;
+            toStart = op->startingIndices[index1] + length1;
+            moveLength = length2 - length1;
+            shiftStart = index1 + 1;
+            shiftEnd = index2 + 1;
+        } else {
+            fromStart = op->startingIndices[index1] + length2;
+            toStart = op->startingIndices[index2] + length2;
+            moveLength = length1 - length2;
+            shiftStart = index2;
+            shiftEnd = op->startingIndices.size();
+        }
+        moveElements(fromStart, toStart, moveLength);
+        incrementIndices(shiftStart, shiftEnd, moveLength);
+        debug_code(op->assertValidStartingIndices());
+    }
+    void incrementIndices(UInt shiftStart, UInt shiftEnd, UInt moveLength) {
+        for (UInt i = shiftStart; i < shiftEnd; i++) {
+            op->startingIndices[i] += moveLength;
+        }
+    }
+    void moveElements(UInt start1, UInt start2, UInt length) {
+        vector<ExprRef<SequenceInnerType>> elements;
+        for (size_t i = start1 + length; i > start1; i--) {
+            elements.emplace_back(
+                op->removeMemberAndNotify<SequenceInnerType>(i - 1));
+        }
+        if (start2 >= start1) {
+            start2 -= length;
+        }
+        UInt i = 0;
+        while (!elements.empty()) {
+            op->addMemberAndNotify((start2) + i, elements.back());
+            ++i;
+            elements.pop_back();
+        }
+    }
+
+    void swapElements(UInt start1, UInt start2, UInt length) {
+        for (UInt i = 0; i < length; i++) {
+            op->swapAndNotify<SequenceInnerType>(start1 + i, start2 + i);
+        }
     }
 };
 
@@ -237,6 +309,8 @@ std::ostream& OpFlattenOneLevel<SequenceInnerType>::dumpState(
     std::ostream& os) const {
     os << "OpFlattenOneLevel<SequenceInnerType>: value=";
     prettyPrint(os, this->view());
+    os << "\nstartingIndices: " << startingIndices;
+    debug_code(assertValidStartingIndices());
     os << "\noperand: ";
     operand->dumpState(os);
     os << ")";

@@ -47,9 +47,8 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
         });
     }
 
-    inline void beginSwaps() final { previousViolations.clear(); }
-    inline void endSwaps() final { previousViolations.clear(); }
     inline void positionsSwapped(UInt index1, UInt index2) {
+        previousViolations.clear();
         if (op->violatingOperands.count(index1)) {
             if (!op->violatingOperands.count(index2)) {
                 op->violatingOperands.erase(index1);

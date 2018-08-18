@@ -136,17 +136,10 @@ void Quantifier<ContainerType>::unroll(UInt index,
 }
 
 template <typename ContainerType>
-void Quantifier<ContainerType>::swap(UInt index1, UInt index2,
-                                     bool notifyBeginEnd) {
+void Quantifier<ContainerType>::swapExprs(UInt index1, UInt index2) {
     mpark::visit(
         [&](auto& members) {
-            if (notifyBeginEnd) {
-                this->notifyBeginSwaps();
-            }
             this->swapAndNotify<viewType(members)>(index1, index2);
-            if (notifyBeginEnd) {
-                this->notifyEndSwaps();
-            }
         },
         members);
     std::swap(exprTriggers[index1], exprTriggers[index2]);
@@ -596,7 +589,7 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
     void possibleValueChange() final {}
     void valueRemoved(UInt indexOfRemovedValue, HashType) final {
         if (indexOfRemovedValue < op->numberElements() - 1) {
-            op->swap(indexOfRemovedValue, op->numberElements() - 1);
+            op->swapExprs(indexOfRemovedValue, op->numberElements() - 1);
         }
         op->roll(op->numberElements() - 1);
     }
@@ -655,7 +648,7 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
         op->containerDefined = false;
         if (op->numberUndefined == 0) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers,true);
+                          op->triggers, true);
         }
     }
     void hasBecomeDefined() {
@@ -696,7 +689,7 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
     }
     void valueRemoved(UInt indexOfRemovedValue, const AnyExprRef&) final {
         if (indexOfRemovedValue < op->numberElements() - 1) {
-            op->swap(indexOfRemovedValue, op->numberElements() - 1);
+            op->swapExprs(indexOfRemovedValue, op->numberElements() - 1);
         }
         op->roll(op->numberElements() - 1);
     }
@@ -836,10 +829,8 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
             op->container->view().members);
     }
 
-    void beginSwaps() final { op->notifyBeginSwaps(); }
-    void endSwaps() final { op->notifyEndSwaps(); }
     void positionsSwapped(UInt index1, UInt index2) final {
-        op->swap(index1, index2, false);
+        op->swapExprs(index1, index2);
         correctUnrolledTupleIndex(index1);
         correctUnrolledTupleIndex(index2);
     }
@@ -900,7 +891,7 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
         op->containerDefined = false;
         if (op->numberUndefined == 0) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers,true);
+                          op->triggers, true);
         }
     }
     void hasBecomeDefined() {
@@ -979,7 +970,7 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     }
 
     void imageSwap(UInt index1, UInt index2) final {
-        op->swap(index1, index2, true);
+        op->swapExprs(index1, index2);
         correctUnrolledTupleIndex(index1);
         correctUnrolledTupleIndex(index2);
     }
@@ -1002,7 +993,7 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
         op->containerDefined = false;
         if (op->numberUndefined == 0) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers,true);
+                          op->triggers, true);
         }
     }
     void hasBecomeDefined() {

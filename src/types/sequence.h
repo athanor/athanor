@@ -51,9 +51,7 @@ struct SequenceOuterTrigger : public virtual TriggerBase {
 struct SequenceMemberTrigger : public virtual TriggerBase {
     virtual void possibleSubsequenceChange(UInt startIndex, UInt endIndex) = 0;
     virtual void subsequenceChanged(UInt startIndex, UInt endIndex) = 0;
-    virtual void beginSwaps() = 0;
     virtual void positionsSwapped(UInt index1, UInt index2) = 0;
-    virtual void endSwaps() = 0;
 };
 
 struct SequenceTrigger : public virtual SequenceOuterTrigger,
@@ -197,19 +195,30 @@ struct SequenceView : public ExprInterface<SequenceView> {
         debug_code(assertValidState());
     }
 
+    inline void notifyPossiblePositionsSwapp(UInt index1, UInt index2) {
+        visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                      allMemberTriggers);
+        if (index1 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                          singleMemberTriggers[index1]);
+        }
+        if (index2 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->possibleValueChange(); },
+                          singleMemberTriggers[index2]);
+        }
+    }
+
     inline void notifyPositionsSwapped(UInt index1, UInt index2) {
         visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
                       allMemberTriggers);
-        if (index1 >= singleMemberTriggers.size()) {
-            return;
+        if (index1 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
+                          singleMemberTriggers[index1]);
         }
-        visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
-                      singleMemberTriggers[index1]);
-        if (index2 >= singleMemberTriggers.size()) {
-            return;
+        if (index2 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
+                          singleMemberTriggers[index2]);
         }
-        visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
-                      singleMemberTriggers[index2]);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -254,15 +263,9 @@ struct SequenceView : public ExprInterface<SequenceView> {
         debug_code(posSequenceValueChangeCalled = true);
     }
 
-    inline void notifyBeginSwaps() {
-        visitTriggers([&](auto& t) { t->beginSwaps(); }, allMemberTriggers);
-    }
-    inline void notifyEndSwaps() {
-        visitTriggers([&](auto& t) { t->endSwaps(); }, allMemberTriggers);
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void swapAndNotify(UInt index1, UInt index2) {
+        notifyPossiblePositionsSwapp(index1, index2);
         swapPositions<InnerViewType>(index1, index2);
         notifyPositionsSwapped(index1, index2);
     }
@@ -497,7 +500,7 @@ struct SequenceValue : public SequenceView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline bool trySwapPositions(UInt index1, UInt index2, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        notifyBeginSwaps();
+        notifyPossiblePositionsSwapp(index1, index2);
         SequenceView::swapPositions<InnerViewType>(index1, index2);
         if (func()) {
             auto& members = getMembers<InnerViewType>();
@@ -505,11 +508,9 @@ struct SequenceValue : public SequenceView, public ValBase {
             valBase(*assumeAsValue(members[index2])).id = index2;
             SequenceView::notifyPositionsSwapped(index1, index2);
             debug_code(assertValidVarBases());
-            notifyEndSwaps();
             return true;
         } else {
-            SequenceView::swapPositions<InnerViewType>(index1, index2);
-            notifyEndSwaps();
+            SequenceView::swapAndNotify<InnerViewType>(index1, index2);
             return false;
         }
     }
@@ -582,9 +583,9 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
         this->forwardValueChanged();
         ;
     }
-    inline void beginSwaps() final { this->forwardPossibleValueChange(); }
-    inline void positionsSwapped(UInt, UInt) final {}
-    inline void endSwaps() final { this->forwardValueChanged(); }
+    inline void positionsSwapped(UInt, UInt) final {
+        this->forwardValueChanged();
+    }
     inline void memberHasBecomeDefined(UInt) {}
     inline void memberHasBecomeUndefined(UInt) {}
 };

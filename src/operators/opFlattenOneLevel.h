@@ -37,6 +37,6 @@ struct OpFlattenOneLevel : public SequenceView {
     std::ostream& dumpState(std::ostream& os) const final;
     std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension path) final;
     void reattachAllInnerSequenceTriggers(bool deleteFirst);
-    void assertValidStartingIndices();
+    void assertValidStartingIndices() const;
 };
 #endif /* SRC_OPERATORS_OPFlattenOneLevel_H_ */

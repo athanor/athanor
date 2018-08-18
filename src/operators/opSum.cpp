@@ -58,9 +58,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         });
     }
 
-    inline void beginSwaps() final { previousValues.clear(); }
-    inline void endSwaps() final {}
-    inline void positionsSwapped(UInt, UInt) {}
+    inline void positionsSwapped(UInt, UInt) { previousValues.clear(); }
 
     ExprRef<IntView>& getMember(UInt index) {
         return op->operand->view().getMembers<IntView>()[index];
@@ -174,8 +172,8 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
             op->operand->view().getMembers<IntView>()[index]->view().value;
         if (op->operand->view().numberUndefined == 0) {
             op->setDefined(true, false);
-            visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                          op->triggers, true);
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
+                          true);
         }
     }
 };

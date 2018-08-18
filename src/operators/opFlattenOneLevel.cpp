@@ -245,6 +245,7 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
         UInt length1 =
             op->startingIndices[index1 + 1] - op->startingIndices[index1];
         UInt length2 = nextStartingIndex - op->startingIndices[index2];
+
         UInt shorterLength = std::min(length1, length2);
         swapElements(op->startingIndices[index1], op->startingIndices[index2],
                      shorterLength);
@@ -252,7 +253,12 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
             debug_code(op->assertValidStartingIndices());
             return;
         }
-        UInt fromStart, toStart, moveLength, shiftStart, shiftEnd;
+        if (length2 == 0 && index2 - index1 == 1) {
+            op->startingIndices[index2] = op->startingIndices[index1];
+            debug_code(op->assertValidStartingIndices());
+            return;
+        }
+        UInt fromStart, toStart, moveLength;
 
         if (length1 < length2) {
             fromStart = op->startingIndices[index2] + length1;

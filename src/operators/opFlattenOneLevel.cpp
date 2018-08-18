@@ -258,20 +258,17 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
             fromStart = op->startingIndices[index2] + length1;
             toStart = op->startingIndices[index1] + length1;
             moveLength = length2 - length1;
-            shiftStart = index1 + 1;
-            shiftEnd = index2 + 1;
+            incrementIndices(index1 + 1, index2 + 1, moveLength);
         } else {
             fromStart = op->startingIndices[index1] + length2;
             toStart = op->startingIndices[index2] + length2;
             moveLength = length1 - length2;
-            shiftStart = index2;
-            shiftEnd = op->startingIndices.size();
+            incrementIndices(index1 + 1, index2 + 1, -moveLength);
         }
         moveElements(fromStart, toStart, moveLength);
-        incrementIndices(shiftStart, shiftEnd, moveLength);
         debug_code(op->assertValidStartingIndices());
     }
-    void incrementIndices(UInt shiftStart, UInt shiftEnd, UInt moveLength) {
+    void incrementIndices(UInt shiftStart, UInt shiftEnd, Int moveLength) {
         for (UInt i = shiftStart; i < shiftEnd; i++) {
             op->startingIndices[i] += moveLength;
         }

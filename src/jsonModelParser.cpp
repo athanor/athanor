@@ -598,6 +598,11 @@ pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
                 -> pair<shared_ptr<IntDomain>, AnyExprRef> {
                 return make_pair(fakeIntDomain, OpMaker<OpSetSize>::make(set));
             },
+            [&](ExprRef<SequenceView>& sequence)
+                -> pair<shared_ptr<IntDomain>, AnyExprRef> {
+                return make_pair(fakeIntDomain,
+                                 OpMaker<OpSequenceSize>::make(sequence));
+            },
             [&](auto&& operand) -> pair<shared_ptr<IntDomain>, AnyExprRef> {
                 cerr << "Error, not yet handling OpTwoBars with an operand "
                         "of type "

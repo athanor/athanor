@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include <unordered_map>
+#include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
 using namespace std;
@@ -41,6 +42,8 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
             return;
         }
         shiftIndices(index, true);
+        shiftIndicesUp(index, op->operand->view().numberElements(),
+                       op->violatingOperands);
 
         HashType newMemberHash = getValueHash(exprIn);
         if (op->addHash(newMemberHash, index) > 1) {
@@ -58,17 +61,32 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
         }
 
         HashType hash = getValueHash(exprIn);
-        if (op->removeHash(hash, index) <= 1) {
+        if (op->removeHash(hash, index) >= 1) {
             op->changeValue([&]() {
                 --op->violation;
                 return true;
             });
         }
         shiftIndices(index, false);
+        shiftIndicesDown(index, op->operand->view().numberElements(),
+                         op->violatingOperands);
+
         debug_code(op->assertValidState());
     }
 
     inline void positionsSwapped(UInt index1, UInt index2) {
+        if (op->violatingOperands.count(index1)) {
+            if (!op->violatingOperands.count(index2)) {
+                op->violatingOperands.erase(index1);
+                op->violatingOperands.insert(index2);
+            }
+        } else {
+            if (op->violatingOperands.count(index2)) {
+                op->violatingOperands.erase(index2);
+                op->violatingOperands.insert(index1);
+            }
+        }
+
         auto hash1 = op->indicesHashMap[index1];
         auto hash2 = op->indicesHashMap[index2];
         swap(op->indicesHashMap[index1], op->indicesHashMap[index2]);
@@ -91,7 +109,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
                 for (size_t i = startIndex; i < endIndex; i++) {
                     HashType oldHash = op->indicesHashMap[i];
                     HashType newHash = getValueHash(members[i]->view());
-                    if (op->removeHash(oldHash, i) <= 1) {
+                    if (op->removeHash(oldHash, i) >= 1) {
                         --violationDelta;
                     }
                     if (op->addHash(newHash, i) > 1) {
@@ -205,7 +223,6 @@ ExprRef<BoolView> OpMaker<OpAllDiff>::make(ExprRef<SequenceView> o) {
 }
 
 void OpAllDiff::assertValidState() {
-    vector<Int> duplicateOperands;
     bool success = true;
     for (size_t i = 0; i < indicesHashMap.size(); i++) {
         HashType hash = indicesHashMap[i];
@@ -227,16 +244,18 @@ void OpAllDiff::assertValidState() {
             break;
         }
         if (indices.size() > 2) {
-            for (const auto& index : indices) {
-                duplicateOperands.push_back(index);
-            }
         }
     }
+    size_t total = 0;
+    vector<Int> duplicateOperands;
     if (success) {
-        size_t total = 0;
-
         for (auto& hashIndicesPair : hashIndicesMap) {
             total += hashIndicesPair.second.size();
+            if (hashIndicesPair.second.size() > 1) {
+                for (const auto& index : hashIndicesPair.second) {
+                    duplicateOperands.push_back(index);
+                }
+            }
         }
         if (total != indicesHashMap.size()) {
             cerr << "Error: found " << total

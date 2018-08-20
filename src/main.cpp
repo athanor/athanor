@@ -94,7 +94,7 @@ int main(const int argc, const char** argv) {
     argParser.validateArgs(argc, argv);
     ParsedModel parsedModel = parseModelFromJson(fileArg.get());
     State state(parsedModel.builder->build());
-    auto nhSelection = make_shared<RandomNeighbourhood>();
+    auto nhSelection = make_shared<RandomNeighbourhoodWithViolation>();
     auto strategy = makeExplorationUsingViolationBackOff(
         makeHillClimbing(nhSelection), nhSelection);
     signal(SIGINT, sigIntHandler);

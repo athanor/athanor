@@ -52,7 +52,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     std::pair<bool, ExprRef<SequenceMemberViewType>> optimise(
         PathExtension path) final;
 
-    void reattachSequenceMemberTrigger(bool deleteFirst = true);
+    void reattachSequenceMemberTrigger();
 };
 
 #endif /* SRC_OPERATORS_OPSEQUENCEINDEX_H_ */

@@ -127,10 +127,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
         if (memberUndefined) {
             numberUndefined++;
         }
-        if (index < singleMemberTriggers.size()) {
-            singleMemberTriggers.insert(singleMemberTriggers.begin() + index,
-                                        {});
-        }
         debug_code(assertValidState());
         return true;
     }
@@ -166,8 +162,10 @@ struct SequenceView : public ExprInterface<SequenceView> {
         if (removedMember->isUndefined()) {
             numberUndefined--;
         }
-        if (index < singleMemberTriggers.size()) {
-            singleMemberTriggers.erase(singleMemberTriggers.begin() + index);
+        if (members.size() < singleMemberTriggers.size()) {
+            singleMemberTriggers.erase(
+                singleMemberTriggers.begin() + members.size(),
+                singleMemberTriggers.end());
         }
         return removedMember;
     }

@@ -77,6 +77,10 @@ class FastIterableIntSet {
     inline void setIndexOf(Int element, size_t index) {
         elementIndexes[translate(element)] = index + 1;
     }
+    friend inline std::ostream& operator<<(std::ostream& os,
+                                           const FastIterableIntSet& set) {
+        return os << set.contents;
+    }
 };
 
 #endif /* SRC_UTILS_FASTITERABLEINTSET_H_ */

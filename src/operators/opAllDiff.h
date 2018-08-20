@@ -21,14 +21,49 @@ struct OpAllDiff
 
     using SimpleUnaryOperator<BoolView, SequenceView,
                               OpAllDiff>::SimpleUnaryOperator;
-    std::unordered_map<HashType, size_t> hashCounts;
-    FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
+    std::unordered_map<HashType, FastIterableIntSet> hashIndicesMap;
+    std::vector<HashType> indicesHashMap;
+    FastIterableIntSet violatingOperands;
+
+    size_t addHash(HashType hash, size_t memberIndex) {
+        auto& indices = hashIndicesMap[hash];
+        if (indices.size() == 1) {
+            violatingOperands.insert(*indices.begin());
+        }
+
+        bool inserted = indices.insert(memberIndex).second;
+        static_cast<void>(inserted);
+        debug_code(assert(inserted));
+        indicesHashMap[memberIndex] = hash;
+        if (indices.size() > 1) {
+            violatingOperands.insert(memberIndex);
+        }
+        return indices.size();
+    }
+
+    size_t removeHash(HashType hash, size_t memberIndex) {
+        auto& indices = hashIndicesMap[hash];
+        bool deleted = indices.erase(memberIndex);
+        violatingOperands.erase(memberIndex);
+        if (indices.size() == 1) {
+            violatingOperands.erase(*indices.begin());
+        }
+        static_cast<void>(deleted);
+        debug_code(assert(deleted));
+        if (indices.size() == 0) {
+            hashIndicesMap.erase(hash);
+            return 0;
+        } else {
+            return indices.size();
+        }
+    }
     void reevaluate();
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer& vioDesc) final;
     void copy(OpAllDiff& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
     bool optimiseImpl();
+    void assertValidState();
 };
 
 #endif /* SRC_OPERATORS_OPALLDIFF_H_ */

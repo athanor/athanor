@@ -178,5 +178,10 @@ template <typename SequenceInnerType>
 struct OpMaker<OpFlattenOneLevel<SequenceInnerType>> {
     static ExprRef<SequenceView> make(ExprRef<SequenceView> o);
 };
+struct OpAllDiff;
+template <>
+struct OpMaker<OpAllDiff> {
+    static ExprRef<BoolView> make(ExprRef<SequenceView>);
+};
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

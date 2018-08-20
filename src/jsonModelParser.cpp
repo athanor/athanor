@@ -579,6 +579,16 @@ pair<AnyDomainRef, AnyExprRef> parseOpPowerSet(json& powerSetExpr,
                      OpMaker<OpPowerSet>::make(move(operand)));
 }
 
+pair<AnyDomainRef, AnyExprRef> parseOpAllDiff(json& operandExpr,
+                                              ParsedModel& parsedModel) {
+    return make_pair(
+        fakeBoolDomain,
+        OpMaker<OpAllDiff>::make(expect<SequenceView>(
+            parseExpr(operandExpr, parsedModel).second, [&](auto&&) {
+                cerr << "OpAllDiff expects a sequence returning expression.\n";
+                cerr << operandExpr << endl;
+            })));
+}
 pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
                                               ParsedModel& parsedModel) {
     AnyExprRef operand = parseExpr(operandExpr, parsedModel).second;
@@ -1289,6 +1299,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpSum", makeVaradicOpParser<IntView, OpSum>(fakeIntDomain)},
              {"MkOpProduct",
               makeVaradicOpParser<IntView, OpProd>(fakeIntDomain)},
+             {"MkOpAllDiff", parseOpAllDiff},
              {"MkOpRelationProj", parseOpRelationProj},
              {"MkOpMin", parseOpMinMax<true>},
              {"MkOpMax", parseOpMinMax<false>},

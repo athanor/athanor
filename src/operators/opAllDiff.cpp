@@ -1,12 +1,7 @@
-#define fudge
-#ifndef fudge
 #include "operators/opAllDiff.h"
 #include <algorithm>
 #include <cassert>
 #include <unordered_map>
-#include "operators/flatten.h"
-#include "operators/previousValueCache.h"
-#include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
 using namespace std;
@@ -14,92 +9,106 @@ using OperandsSequenceTrigger =
     OperatorTrates<OpAllDiff>::OperandsSequenceTrigger;
 class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
     : public SequenceTrigger {
-    vector<HashType> previousHashes;
+   public:
     OpAllDiff* op;
     OperandsSequenceTrigger(OpAllDiff* op) : op(op) {}
-    void valueAdded(UInt index, const AnyExprRef& exprIn) final {
-        HashType newMemberHash = getValueHash(exprIn);
-        previousHashes.insert(index, newMemberHash);
-        if () }
 
-    void valueRemoved(UInt index, const AnyExprRef& exprIn) final {
-        previousViolations.clear();
-        const auto& expr = mpark::get<ExprRef<BoolView>>(exprIn);
-        UInt violationOfRemovedExpr = expr->view().violation;
-        debug_code(assert((op->violatingOperands.count(index) &&
-                           violationOfRemovedExpr > 0) ||
-                          (!op->violatingOperands.count(index) &&
-                           violationOfRemovedExpr == 0)));
-        op->violatingOperands.erase(index);
-        shiftIndicesDown(index, op->operand->view().numberElements(),
-                         op->violatingOperands);
-        op->changeValue([&]() {
-            op->violation -= violationOfRemovedExpr;
-            return true;
-        });
-    }
-
-    inline void beginSwaps() final { previousViolations.clear(); }
-    inline void endSwaps() final { previousViolations.clear(); }
-    inline void positionsSwapped(UInt index1, UInt index2) {
-        if (op->violatingOperands.count(index1)) {
-            if (!op->violatingOperands.count(index2)) {
-                op->violatingOperands.erase(index1);
-                op->violatingOperands.insert(index2);
+    void shiftIndices(UInt aboveIndex, bool up) {
+        if (up) {
+            for (size_t i = op->indicesHashMap.size(); i > aboveIndex; i--) {
+                auto hash = op->indicesHashMap[i - 1];
+                auto& indices = op->hashIndicesMap[hash];
+                indices.erase(i - 1);
+                indices.insert(i);
             }
+            op->indicesHashMap.insert(op->indicesHashMap.begin() + aboveIndex,
+                                      0);
+
         } else {
-            if (op->violatingOperands.count(index2)) {
-                op->violatingOperands.erase(index2);
-                op->violatingOperands.insert(index1);
+            for (size_t i = aboveIndex + 1; i < op->indicesHashMap.size();
+                 i++) {
+                auto hash = op->indicesHashMap[i];
+                auto& indices = op->hashIndicesMap[hash];
+                indices.erase(i);
+                indices.insert(i - 1);
             }
+            op->indicesHashMap.erase(op->indicesHashMap.begin() + aboveIndex);
         }
     }
-    inline void possibleSubsequenceChange(UInt startIndex,
-                                          UInt endIndex) final {
-        if (endIndex - startIndex == 1) {
-            previousViolations.store(startIndex,
-                                     op->operand->view()
-                                         .getMembers<BoolView>()[startIndex]
-                                         ->view()
-                                         .violation);
+
+    void valueAdded(UInt index, const AnyExprRef& exprIn) final {
+        if (!op->allOperandsAreDefined()) {
             return;
         }
-        previousViolation = 0;
-        for (size_t i = startIndex; i < endIndex; i++) {
-            previousViolation +=
-                op->operand->view().getMembers<BoolView>()[i]->view().violation;
+        shiftIndices(index, true);
+
+        HashType newMemberHash = getValueHash(exprIn);
+        if (op->addHash(newMemberHash, index) > 1) {
+            op->changeValue([&]() {
+                ++op->violation;
+                return true;
+            });
         }
+        debug_code(op->assertValidState());
     }
-    inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
-        UInt newViolation = 0;
-        for (size_t i = startIndex; i < endIndex; i++) {
-            UInt operandViolation =
-                op->operand->view().getMembers<BoolView>()[i]->view().violation;
-            newViolation += operandViolation;
-            if (operandViolation > 0) {
-                op->violatingOperands.insert(i);
-            } else {
-                op->violatingOperands.erase(i);
-            }
-        }
-        UInt violationToRemove;
-        if (endIndex - startIndex == 1) {
-            violationToRemove =
-                previousViolations.getAllDiffSet(startIndex, newViolation);
-        } else {
-            violationToRemove = previousViolation;
+
+    void valueRemoved(UInt index, const AnyExprRef& exprIn) final {
+        if (!op->allOperandsAreDefined()) {
+            return;
         }
 
+        HashType hash = getValueHash(exprIn);
+        if (op->removeHash(hash, index) <= 1) {
+            op->changeValue([&]() {
+                --op->violation;
+                return true;
+            });
+        }
+        shiftIndices(index, false);
+        debug_code(op->assertValidState());
+    }
+
+    inline void positionsSwapped(UInt index1, UInt index2) {
+        auto hash1 = op->indicesHashMap[index1];
+        auto hash2 = op->indicesHashMap[index2];
+        swap(op->indicesHashMap[index1], op->indicesHashMap[index2]);
+        auto& indices1 = op->hashIndicesMap[hash1];
+        auto& indices2 = op->hashIndicesMap[hash2];
+        indices1.erase(index1);
+        indices2.erase(index2);
+        indices1.insert(index2);
+        indices2.insert(index1);
+        debug_code(op->assertValidState());
+    }
+    inline void possibleSubsequenceChange(UInt, UInt) final {}
+    inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
+        if (!op->allOperandsAreDefined()) {
+            return;
+        }
+        Int violationDelta = 0;
+        mpark::visit(
+            [&](auto& members) {
+                for (size_t i = startIndex; i < endIndex; i++) {
+                    HashType oldHash = op->indicesHashMap[i];
+                    HashType newHash = getValueHash(members[i]->view());
+                    if (op->removeHash(oldHash, i) <= 1) {
+                        --violationDelta;
+                    }
+                    if (op->addHash(newHash, i) > 1) {
+                        ++violationDelta;
+                    }
+                }
+            },
+            op->operand->view().members);
         op->changeValue([&]() {
-            op->violation -= violationToRemove;
-            op->violation += newViolation;
+            op->violation += violationDelta;
             return true;
         });
+        debug_code(op->assertValidState());
     }
 
     void possibleValueChange() final {}
     void valueChanged() final {
-        previousViolations.clear();
         op->changeValue([&]() {
             op->reevaluate();
             return true;
@@ -113,37 +122,62 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
         op->operandTrigger = trigger;
     }
 
-    void hasBecomeUndefined() final {
-        previousViolations.clear();
-        op->setDefined(false, true);
+    void hasBecomeUndefined() final { op->setDefined(false, true); }
+    void hasBecomeDefined() final {
+        op->reevaluate();
+        op->setDefined(true, true);
     }
-    void hasBecomeDefined() final { op->setDefined(true, true); }
-    void memberHasBecomeUndefined(UInt) final { shouldNotBeCalledPanic; }
-    void memberHasBecomeDefined(UInt) final { shouldNotBeCalledPanic; }
+    void memberHasBecomeUndefined(UInt) final {
+        if (op->operand->view().numberUndefined == 1) {
+            op->setDefined(false, true);
+        }
+    }
+    void memberHasBecomeDefined(UInt) final {
+        if (op->operand->view().numberUndefined == 0) {
+            op->reevaluate();
+            op->setDefined(true, true);
+        }
+    }
 };
 
 void OpAllDiff::reevaluate() {
     violation = 0;
-    for (size_t i = 0; i < operand->view().numberElements(); ++i) {
-        auto& operandChild = operand->view().getMembers<BoolView>()[i];
-        if (operandChild->view().violation > 0) {
-            violatingOperands.insert(i);
-        }
-        violation += operandChild->view().violation;
-    }
+    hashIndicesMap.clear();
+    indicesHashMap.clear();
+    mpark::visit(
+        [&](auto& members) {
+            indicesHashMap.resize(members.size());
+            for (size_t i = 0; i < members.size(); i++) {
+                auto& member = members[i];
+                if (member->isUndefined()) {
+                    return;
+                }
+                HashType hash = getValueHash(member->view());
+                if (addHash(hash, i) > 1) {
+                    ++violation;
+                }
+            }
+        },
+        operand->view().members);
+    debug_code(assertValidState());
 }
 
 void OpAllDiff::updateVarViolations(const ViolationContext&,
                                     ViolationContainer& vioDesc) {
-    for (size_t violatingOperandIndex : violatingOperands) {
-        operand->view()
-            .getMembers<BoolView>()[violatingOperandIndex]
-            ->updateVarViolations(violation, vioDesc);
-    }
+    mpark::visit(
+        [&](auto& members) {
+            for (size_t index : violatingOperands) {
+                members[index]->updateVarViolations(
+                    hashIndicesMap[indicesHashMap[index]].size(), vioDesc);
+            }
+        },
+        operand->view().members);
 }
 
 void OpAllDiff::copy(OpAllDiff& newOp) const {
     newOp.violation = violation;
+    newOp.hashIndicesMap = hashIndicesMap;
+    newOp.indicesHashMap = indicesHashMap;
     newOp.violatingOperands = violatingOperands;
 }
 
@@ -153,10 +187,10 @@ std::ostream& OpAllDiff::dumpState(std::ostream& os) const {
                                          violatingOperands.end());
     sort(sortedViolatingOperands.begin(), sortedViolatingOperands.end());
     os << "Violating indices: " << sortedViolatingOperands << endl;
-    return operand->dumpState(os);
+    return operand->dumpState(os) << ")";
 }
 
-bool OpAllDiff::optimiseImpl() { return flatten<BoolView>(*this); }
+bool OpAllDiff::optimiseImpl() { return false; }
 
 template <typename Op>
 struct OpMaker;
@@ -170,8 +204,74 @@ ExprRef<BoolView> OpMaker<OpAllDiff>::make(ExprRef<SequenceView> o) {
     return make_shared<OpAllDiff>(move(o));
 }
 
-void initialiseOpAllDiff(OpAllDiff&) {}
+void OpAllDiff::assertValidState() {
+    vector<Int> duplicateOperands;
+    bool success = true;
+    for (size_t i = 0; i < indicesHashMap.size(); i++) {
+        HashType hash = indicesHashMap[i];
+        auto iter = hashIndicesMap.find(hash);
+        if (iter == hashIndicesMap.end()) {
+            cerr << "Error: hash " << hash << " at index " << i
+                 << " mapped to no set in hashIndicesMap\n";
+            success = false;
+            break;
+        }
+        auto& indices = iter->second;
+        if (!indices.count(i)) {
+            cerr
+                << "Error: index " << i << " maps to hash "
+                << " hash "
+                << " but hashIndicesMap does not have the hash index mapping\n";
+            cerr << "Error: Hash " << hash << " maps to " << indices << endl;
+            success = false;
+            break;
+        }
+        if (indices.size() > 2) {
+            for (const auto& index : indices) {
+                duplicateOperands.push_back(index);
+            }
+        }
+    }
+    if (success) {
+        size_t total = 0;
+
+        for (auto& hashIndicesPair : hashIndicesMap) {
+            total += hashIndicesPair.second.size();
+        }
+        if (total != indicesHashMap.size()) {
+            cerr << "Error: found " << total
+                 << " indices in hashIndicesMap but indicesHashMap has a size "
+                    "of "
+                 << indicesHashMap.size() << endl;
+            success = false;
+        }
+    }
+    if (success) {
+        for (auto& index : duplicateOperands) {
+            if (!violatingOperands.count(index)) {
+                cerr << "Error: violatingOperands does not contain index "
+                     << index << endl;
+                success = false;
+                break;
+            }
+        }
+    }
+    if (success && duplicateOperands.size() != violatingOperands.size()) {
+        cerr << "Error: violatingOperands has too many indices.\n";
+        success = false;
+    }
+    if (!success) {
+        cerr << "hashIndicesMap: " << hashIndicesMap << endl;
+        cerr << "indicesHashMap: " << indicesHashMap << endl;
+        vector<UInt> sortedViolatingOperands(violatingOperands.begin(),
+                                             violatingOperands.end());
+        sort(sortedViolatingOperands.begin(), sortedViolatingOperands.end());
+
+        cerr << "violatingOperands(sorted): " << sortedViolatingOperands
+             << endl;
+        assert(false);
+        abort();
+    }
+}
 
 template struct SimpleUnaryOperator<BoolView, SequenceView, OpAllDiff>;
-
-#endif

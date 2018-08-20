@@ -6,11 +6,6 @@
 #include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-ostream& operator<<(ostream& os, const FastIterableIntSet& set);
-ostream& operator<<(ostream& os, const FastIterableIntSet& set) {
-    containerToArrayString(os, set, ",");
-    return os;
-}
 
 void OpSetLit::evaluateImpl() {
     debug_code(assert(exprTriggers.empty()));

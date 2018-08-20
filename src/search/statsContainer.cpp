@@ -75,7 +75,6 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
 void StatsContainer::printCurrentState(Model& model) {
     std::cout << (*this) << "\nTrigger event count " << triggerEventCount
               << "\n\n";
-    model.printVariables();
     if (lastViolation == 0) {
         std::cout << "solution start\n";
         model.printVariables();

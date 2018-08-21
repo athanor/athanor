@@ -9,9 +9,15 @@ inline static u_int64_t nextQuantId() {
 }
 template <typename Container>
 struct ContainerTrigger;
+template <typename ContainerType>
+struct OptionalIndices {};
+template <>
+struct OptionalIndices<SequenceView> {
+    std::vector<size_t> indicesOfValuesToUnroll;
+};
 
 template <typename ContainerType>
-struct Quantifier : public SequenceView {
+struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
     struct ExprTriggerBase {
         Quantifier<ContainerType>* op;
         UInt index;

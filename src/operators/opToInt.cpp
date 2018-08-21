@@ -7,8 +7,8 @@
 using namespace std;
 
 void OpToInt::reevaluate() { value = (operand->view().violation == 0) ? 1 : 0; }
-void OpToInt::updateVarViolations(const ViolationContext& vioContext,
-                                  ViolationContainer& vioDesc) {
+void OpToInt::updateVarViolationsImpl(const ViolationContext& vioContext,
+                                      ViolationContainer& vioContainer) {
     const IntViolationContext* intVioContextTest =
         dynamic_cast<const IntViolationContext*>(&vioContext);
     if (intVioContextTest) {
@@ -21,7 +21,7 @@ void OpToInt::updateVarViolations(const ViolationContext& vioContext,
             return;
         }
     }
-    operand->updateVarViolations(vioContext, vioDesc);
+    operand->updateVarViolations(vioContext, vioContainer);
 }
 
 void OpToInt::copy(OpToInt& newOp) const { newOp.value = value; }

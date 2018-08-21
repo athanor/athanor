@@ -191,10 +191,10 @@ void OpSum::reevaluate() {
     evaluationComplete = true;
 }
 
-void OpSum::updateVarViolations(const ViolationContext& vioContext,
-                                ViolationContainer& vioDesc) {
+void OpSum::updateVarViolationsImpl(const ViolationContext& vioContext,
+                                    ViolationContainer& vioContainer) {
     for (auto& operandChild : operand->view().getMembers<IntView>()) {
-        operandChild->updateVarViolations(vioContext, vioDesc);
+        operandChild->updateVarViolations(vioContext, vioContainer);
     }
 }
 

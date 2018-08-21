@@ -5,8 +5,8 @@ void OpIntEq::reevaluate() {
     violation = abs(left->view().value - right->view().value);
 }
 
-void OpIntEq::updateVarViolations(const ViolationContext&,
-                                  ViolationContainer& vioDesc) {
+void OpIntEq::updateVarViolationsImpl(const ViolationContext&,
+                                      ViolationContainer& vioContainer) {
     if (violation == 0) {
         return;
     } else if (allOperandsAreDefined()) {
@@ -16,16 +16,16 @@ void OpIntEq::updateVarViolations(const ViolationContext&,
                 violation,
                 ((diff > 0) ? IntViolationContext::Reason::TOO_LARGE
                             : IntViolationContext::Reason::TOO_SMALL)),
-            vioDesc);
+            vioContainer);
         right->updateVarViolations(
             IntViolationContext(
                 violation,
                 ((diff < 0) ? IntViolationContext::Reason::TOO_LARGE
                             : IntViolationContext::Reason::TOO_SMALL)),
-            vioDesc);
+            vioContainer);
     } else {
-        left->updateVarViolations(violation, vioDesc);
-        right->updateVarViolations(violation, vioDesc);
+        left->updateVarViolations(violation, vioContainer);
+        right->updateVarViolations(violation, vioContainer);
     }
 }
 

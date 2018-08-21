@@ -20,20 +20,20 @@ struct NeighbourhoodParams {
     const int parentCheckTryLimit;
     AnyValVec& vals;
     StatsContainer& stats;
-    ViolationContainer& vioDesc;
+    ViolationContainer& vioContainer;
     std::vector<ViolationContainer*>
         vioContainers;  // only for neighbourhoods who require multiple vars
 
     NeighbourhoodParams(const AcceptanceCallBack& changeAccepted,
                         const ParentCheckCallBack& parentCheck,
                         const int parentCheckTryLimit, AnyValVec& vals,
-                        StatsContainer& stats, ViolationContainer& vioDesc)
+                        StatsContainer& stats, ViolationContainer& vioContainer)
         : changeAccepted(changeAccepted),
           parentCheck(parentCheck),
           parentCheckTryLimit(parentCheckTryLimit),
           vals(vals),
           stats(stats),
-          vioDesc(vioDesc) {}
+          vioContainer(vioContainer) {}
 
     template <typename Val>
     ValRefVec<Val>& getVals() {

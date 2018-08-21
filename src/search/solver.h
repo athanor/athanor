@@ -5,7 +5,7 @@
 #include "search/model.h"
 #include "search/statsContainer.h"
 #include "types/allTypes.h"
-void dumpVarViolations(const ViolationContainer& vioDesc);
+void dumpVarViolations(const ViolationContainer& vioContainer);
 extern bool sigIntActivated, sigAlarmActivated;
 extern u_int64_t iterationLimit;
 inline bool alwaysTrue(const AnyValVec&) { return true; }
@@ -15,7 +15,7 @@ class State {
    public:
     Model model;
     StatsContainer stats;
-double totalTimeInNeighbourhoods = 0;
+    double totalTimeInNeighbourhoods = 0;
     State(Model model) : model(std::move(model)), stats(this->model) {}
 
     auto makeVecFrom(AnyValRef& val) {
@@ -51,7 +51,8 @@ double totalTimeInNeighbourhoods = 0;
         ParentCheckCallBack alwaysTrueFunc(alwaysTrue);
         auto changingVariables = makeVecFrom(var.second);
         NeighbourhoodParams params(callback, alwaysTrueFunc, 1,
-                                   changingVariables, stats, model.vioDesc);
+                                   changingVariables, stats,
+                                   model.vioContainer);
         neighbourhood.apply(params);
         NeighbourhoodResult nhResult(model, nhIndex, changeMade,
                                      statsMarkPoint);
@@ -60,7 +61,8 @@ double totalTimeInNeighbourhoods = 0;
             strategy(nhResult);
         }
         stats.reportResult(solutionAccepted, nhResult);
-        totalTimeInNeighbourhoods += (stats.getCpuTime() - nhResult.statsMarkPoint.cpuTime);
+        totalTimeInNeighbourhoods +=
+            (stats.getCpuTime() - nhResult.statsMarkPoint.cpuTime);
     }
 
     inline void testForTermination() {
@@ -108,17 +110,18 @@ double totalTimeInNeighbourhoods = 0;
     }
 };
 
-void dumpVarViolations(const ViolationContainer& vioDesc) {
-    auto sortedVars = vioDesc.getVarsWithViolation();
+void dumpVarViolations(const ViolationContainer& vioContainer) {
+    auto sortedVars = vioContainer.getVarsWithViolation();
     std::sort(sortedVars.begin(), sortedVars.end());
     for (auto& var : sortedVars) {
         std::cout << "var: " << var
-                  << ", violation=" << vioDesc.varViolation(var) << std::endl;
+                  << ", violation=" << vioContainer.varViolation(var)
+                  << std::endl;
     }
     for (auto& var : sortedVars) {
-        if (vioDesc.hasChildViolation(var)) {
+        if (vioContainer.hasChildViolation(var)) {
             std::cout << "Entering var " << var << std::endl;
-            dumpVarViolations(vioDesc.childViolations(var));
+            dumpVarViolations(vioContainer.childViolations(var));
             std::cout << "exiting var " << var << std::endl;
         }
     }
@@ -173,7 +176,8 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
     std::cout << "\n\n"
               << state.stats << "\nTrigger event count " << triggerEventCount
               << "\n";
-    std::cout << "total time actually spent in neighbourhoods: " << state.totalTimeInNeighbourhoods << std::endl;
- }
+    std::cout << "total time actually spent in neighbourhoods: "
+              << state.totalTimeInNeighbourhoods << std::endl;
+}
 
 #endif /* SRC_SEARCH_SOLVER_H_ */

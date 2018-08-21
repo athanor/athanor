@@ -70,18 +70,18 @@ class RandomNeighbourhoodWithViolation {
             [&](const auto& result) { return parentStrategy(result); });
     }
     void updateViolations(State& state) {
-        state.model.vioDesc.reset();
+        state.model.vioContainer.reset();
         if (state.model.csp->violation == 0) {
             return;
         }
-        state.model.csp->updateVarViolations(0, state.model.vioDesc);
+        state.model.csp->updateVarViolations(0, state.model.vioContainer);
     }
     inline size_t nextNeighbourhood(const State& state) {
-        if (state.model.vioDesc.getTotalViolation() == 0) {
+        if (state.model.vioContainer.getTotalViolation() == 0) {
             return globalRandom<size_t>(0,
                                         state.model.neighbourhoods.size() - 1);
         } else {
-            size_t biasRandomVar = state.model.vioDesc.selectRandomVar(
+            size_t biasRandomVar = state.model.vioContainer.selectRandomVar(
                 state.model.variables.size() - 1);
             return state.model
                 .varNeighbourhoodMapping[biasRandomVar][globalRandom<size_t>(

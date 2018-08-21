@@ -332,8 +332,8 @@ void OpSetLit::stopTriggering() {
     }
 }
 
-void OpSetLit::updateVarViolations(const ViolationContext& context,
-                                   ViolationContainer& container) {
+void OpSetLit::updateVarViolationsImpl(const ViolationContext& context,
+                                       ViolationContainer& container) {
     mpark::visit(
         [&](auto& operands) {
             for (auto& operand : operands) {

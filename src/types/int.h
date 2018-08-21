@@ -48,8 +48,8 @@ struct IntValue : public IntView, ValBase {
     void evaluateImpl() final;
     void startTriggeringImpl() final;
     void stopTriggering() final;
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer&) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer&) final;
     ExprRef<IntView> deepCopySelfForUnrollImpl(
         const ExprRef<IntView>&, const AnyIterRef& iterator) const final;
 

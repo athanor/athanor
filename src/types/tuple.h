@@ -127,8 +127,8 @@ struct TupleValue : public TupleView, public ValBase {
     void evaluateImpl() final;
     void startTriggeringImpl() final;
     void stopTriggering() final;
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer&) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer&) final;
     ExprRef<TupleView> deepCopySelfForUnrollImpl(
         const ExprRef<TupleView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;

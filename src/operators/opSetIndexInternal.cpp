@@ -252,12 +252,12 @@ void OpSetIndexInternal<SetMemberViewType>::stopTriggering() {
 }
 
 template <typename SetMemberViewType>
-void OpSetIndexInternal<SetMemberViewType>::updateVarViolations(
-    const ViolationContext& vioContext, ViolationContainer& vioDesc) {
+void OpSetIndexInternal<SetMemberViewType>::updateVarViolationsImpl(
+    const ViolationContext& vioContext, ViolationContainer& vioContainer) {
     if (defined) {
-        getMember()->updateVarViolations(vioContext, vioDesc);
+        getMember()->updateVarViolations(vioContext, vioContainer);
     } else {
-        setOperand->updateVarViolations(vioContext, vioDesc);
+        setOperand->updateVarViolations(vioContext, vioContainer);
     }
 }
 

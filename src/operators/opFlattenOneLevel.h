@@ -26,8 +26,8 @@ struct OpFlattenOneLevel : public SequenceView {
     void stopTriggering() final;
     void stopTriggeringOnChildren();
 
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer& vioDesc) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer& vioContainer) final;
     ExprRef<SequenceView> deepCopySelfForUnrollImpl(
         const ExprRef<SequenceView>& self,
         const AnyIterRef& iterator) const final;

@@ -58,8 +58,8 @@ struct OpAllDiff
         }
     }
     void reevaluate();
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer& vioDesc) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer& vioContainer) final;
     void copy(OpAllDiff& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
     bool optimiseImpl();

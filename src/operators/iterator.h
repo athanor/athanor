@@ -53,8 +53,8 @@ struct Iterator : public ExprInterface<View> {
     void stopTriggering() final;
     void stopTriggeringOnChildren() {}
 
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer&) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer&) final;
     ExprRef<View> deepCopySelfForUnrollImpl(
         const ExprRef<View>& self, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;

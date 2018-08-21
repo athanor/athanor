@@ -304,7 +304,7 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
 };
 
 template <typename SequenceInnerType>
-void OpFlattenOneLevel<SequenceInnerType>::updateVarViolations(
+void OpFlattenOneLevel<SequenceInnerType>::updateVarViolationsImpl(
     const ViolationContext&, ViolationContainer&) {}
 
 template <typename SequenceInnerType>

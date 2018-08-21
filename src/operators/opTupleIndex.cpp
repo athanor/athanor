@@ -96,7 +96,8 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
             return;
         }
         op->defined = false;
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers, true);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers,
+                      true);
     }
 
     void hasBecomeDefined() final {
@@ -193,12 +194,12 @@ void OpTupleIndex<TupleMemberViewType>::stopTriggering() {
 }
 
 template <typename TupleMemberViewType>
-void OpTupleIndex<TupleMemberViewType>::updateVarViolations(
-    const ViolationContext& vioContext, ViolationContainer& vioDesc) {
+void OpTupleIndex<TupleMemberViewType>::updateVarViolationsImpl(
+    const ViolationContext& vioContext, ViolationContainer& vioContainer) {
     if (defined) {
-        getMember()->updateVarViolations(vioContext, vioDesc);
+        getMember()->updateVarViolations(vioContext, vioContainer);
     } else {
-        tupleOperand->updateVarViolations(vioContext, vioDesc);
+        tupleOperand->updateVarViolations(vioContext, vioContainer);
     }
 }
 

@@ -214,10 +214,10 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
     void hasBecomeDefined() final { op->setDefined(true, true); }
 };
 
-void OpSubsetEq::updateVarViolations(const ViolationContext&,
-                                     ViolationContainer& vioDesc) {
-    left->updateVarViolations(violation, vioDesc);
-    right->updateVarViolations(violation, vioDesc);
+void OpSubsetEq::updateVarViolationsImpl(const ViolationContext&,
+                                         ViolationContainer& vioContainer) {
+    left->updateVarViolations(violation, vioContainer);
+    right->updateVarViolations(violation, vioContainer);
 }
 
 void OpSubsetEq::copy(OpSubsetEq& newOp) const { newOp.violation = violation; }

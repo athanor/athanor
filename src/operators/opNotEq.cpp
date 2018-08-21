@@ -15,10 +15,10 @@ void OpNotEq<OperandView>::reevaluate() {
 }
 
 template <typename OperandView>
-void OpNotEq<OperandView>::updateVarViolations(const ViolationContext&,
-                                               ViolationContainer& vioDesc) {
-    this->left->updateVarViolations(this->violation, vioDesc);
-    this->right->updateVarViolations(this->violation, vioDesc);
+void OpNotEq<OperandView>::updateVarViolationsImpl(
+    const ViolationContext&, ViolationContainer& vioContainer) {
+    this->left->updateVarViolations(this->violation, vioContainer);
+    this->right->updateVarViolations(this->violation, vioContainer);
 }
 
 template <typename OperandView>

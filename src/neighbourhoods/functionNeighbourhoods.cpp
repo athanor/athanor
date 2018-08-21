@@ -56,12 +56,12 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
                     ++params.stats.minorNodeCount;
                     return;
                 }
-                ViolationContainer& vioDescAtThisLevel =
-                    params.vioDesc.hasChildViolation(val.id)
-                        ? params.vioDesc.childViolations(val.id)
+                ViolationContainer& vioContainerAtThisLevel =
+                    params.vioContainer.hasChildViolation(val.id)
+                        ? params.vioContainer.childViolations(val.id)
                         : emptyViolations;
-                UInt indexToChange =
-                    vioDescAtThisLevel.selectRandomVar(val.rangeSize() - 1);
+                UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
+                    val.rangeSize() - 1);
                 val.notifyPossibleImageChange(indexToChange);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
                     return val.tryImageChange<InnerValueType>(
@@ -84,7 +84,7 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
 
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck, 1, changingMembers,
-                    params.stats, vioDescAtThisLevel);
+                    params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryImageChange<InnerValueType>(indexToChange,
@@ -130,12 +130,12 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
                     ++params.stats.minorNodeCount;
                     return;
                 }
-                ViolationContainer& vioDescAtThisLevel =
-                    params.vioDesc.hasChildViolation(val.id)
-                        ? params.vioDesc.childViolations(val.id)
+                ViolationContainer& vioContainerAtThisLevel =
+                    params.vioContainer.hasChildViolation(val.id)
+                        ? params.vioContainer.childViolations(val.id)
                         : emptyViolations;
                 std::vector<UInt> indicesToChange =
-                    vioDescAtThisLevel.selectRandomVars(
+                    vioContainerAtThisLevel.selectRandomVars(
                         val.rangeSize() - 1, innerNhNumberValsRequired);
                 debug_log(indicesToChange);
                 val.notifyPossibleImagesChange(indicesToChange);
@@ -162,7 +162,7 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
                 }
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck, params.parentCheckTryLimit,
-                    changingMembers, params.stats, vioDescAtThisLevel);
+                    changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryImagesChange<InnerValueType>(indicesToChange,

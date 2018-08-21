@@ -158,10 +158,10 @@ void OpCatchUndef<ExprViewType>::stopTriggering() {
 }
 
 template <typename ExprViewType>
-void OpCatchUndef<ExprViewType>::updateVarViolations(
-    const ViolationContext& vioContext, ViolationContainer& vioDesc) {
+void OpCatchUndef<ExprViewType>::updateVarViolationsImpl(
+    const ViolationContext& vioContext, ViolationContainer& vioContainer) {
     if (exprDefined) {
-        expr->updateVarViolations(vioContext, vioDesc);
+        expr->updateVarViolations(vioContext, vioContainer);
     }
 }
 

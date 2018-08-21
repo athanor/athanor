@@ -45,8 +45,8 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     void stopTriggering() final;
     void stopTriggeringOnChildren();
 
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer&) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer&) final;
     ExprRef<FunctionMemberViewType> deepCopySelfForUnrollImpl(
         const ExprRef<FunctionMemberViewType>& self,
         const AnyIterRef& iterator) const final;

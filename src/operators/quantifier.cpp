@@ -315,7 +315,8 @@ void Quantifier<ContainerType>::stopTriggering() {
         stopTriggeringOnChildren();
         mpark::visit(
             [&](auto& expr) {
-                for (auto& member : this->template getMembers<viewType(expr)>()) {
+                for (auto& member :
+                     this->template getMembers<viewType(expr)>()) {
                     member->stopTriggering();
                 }
             },
@@ -353,8 +354,8 @@ ostream& Quantifier<ContainerType>::dumpState(ostream& os) const {
 }
 
 template <typename ContainerType>
-void Quantifier<ContainerType>::updateVarViolations(const ViolationContext&,
-                                                    ViolationContainer&) {}
+void Quantifier<ContainerType>::updateVarViolationsImpl(const ViolationContext&,
+                                                        ViolationContainer&) {}
 
 template <typename ContainerType>
 void Quantifier<ContainerType>::findAndReplaceSelf(

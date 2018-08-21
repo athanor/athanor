@@ -3,10 +3,10 @@
 using namespace std;
 void OpMod::reevaluate() { value = left->view().value % right->view().value; }
 
-void OpMod::updateVarViolations(const ViolationContext& vioContext,
-                                ViolationContainer& vioDesc) {
-    left->updateVarViolations(vioContext, vioDesc);
-    right->updateVarViolations(vioContext, vioDesc);
+void OpMod::updateVarViolationsImpl(const ViolationContext& vioContext,
+                                    ViolationContainer& vioContainer) {
+    left->updateVarViolations(vioContext, vioContainer);
+    right->updateVarViolations(vioContext, vioContainer);
 }
 
 void OpMod::copy(OpMod& newOp) const { newOp.value = value; }

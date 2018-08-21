@@ -10,13 +10,13 @@ void OpImplies::reevaluate() {
     }
 }
 
-void OpImplies::updateVarViolations(const ViolationContext&,
-                                    ViolationContainer& vioDesc) {
+void OpImplies::updateVarViolationsImpl(const ViolationContext&,
+                                        ViolationContainer& vioContainer) {
     if (violation == 0) {
         return;
     } else {
-        left->updateVarViolations(violation, vioDesc);
-        right->updateVarViolations(violation, vioDesc);
+        left->updateVarViolations(violation, vioContainer);
+        right->updateVarViolations(violation, vioContainer);
     }
 }
 void OpImplies::copy(OpImplies& newOp) const { newOp.violation = violation; }

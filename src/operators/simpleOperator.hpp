@@ -70,13 +70,13 @@ bool SimpleBinaryOperator<View, OperandView, Derived>::isUndefined() {
     return !this->isDefined();
 }
 template <typename View, typename OperandView, typename Derived>
-bool SimpleBinaryOperator<View, OperandView,Derived>::optimiseImpl() {
+bool SimpleBinaryOperator<View, OperandView, Derived>::optimiseImpl() {
     return false;
 }
 
 template <typename View, typename OperandView, typename Derived>
-std::pair<bool, ExprRef<View>> SimpleBinaryOperator<View, OperandView, Derived>::optimise(
-    PathExtension path) {
+std::pair<bool, ExprRef<View>>
+SimpleBinaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
     bool changeMade = false, first = true;
     while (true) {
         auto leftOptResult = left->optimise(path.extend(left));
@@ -84,7 +84,7 @@ std::pair<bool, ExprRef<View>> SimpleBinaryOperator<View, OperandView, Derived>:
         left = leftOptResult.second;
         changeMade |= tempChangeMade;
         auto rightOptResult = right->optimise(path.extend(right));
-        tempChangeMade |=  rightOptResult.first;
+        tempChangeMade |= rightOptResult.first;
         right = rightOptResult.second;
 
         changeMade |= tempChangeMade;
@@ -163,12 +163,12 @@ bool SimpleUnaryOperator<View, OperandView, Derived>::optimiseImpl() {
     return false;
 }
 template <typename View, typename OperandView, typename Derived>
-std::pair<bool, ExprRef<View>> SimpleUnaryOperator<View, OperandView, Derived>::optimise(
-    PathExtension path) {
+std::pair<bool, ExprRef<View>>
+SimpleUnaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
     bool changeMade = false, first = true;
     while (true) {
         auto optResult = operand->optimise(path.extend(operand));
-        bool tempChangeMade =  optResult.first;
+        bool tempChangeMade = optResult.first;
         operand = optResult.second;
         changeMade |= tempChangeMade;
         if (first || tempChangeMade) {

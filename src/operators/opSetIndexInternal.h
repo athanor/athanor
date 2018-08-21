@@ -32,8 +32,8 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     void stopTriggering() final;
     void stopTriggeringOnChildren();
 
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer&) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer&) final;
     ExprRef<SetMemberViewType> deepCopySelfForUnrollImpl(
         const ExprRef<SetMemberViewType>& self,
         const AnyIterRef& iterator) const final;

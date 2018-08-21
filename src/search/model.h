@@ -33,7 +33,7 @@ struct Model {
     std::shared_ptr<OpAnd> csp = nullptr;
     ExprRef<IntView> objective = make<IntValue>().asExpr();
     OptimiseMode optimiseMode = OptimiseMode::NONE;
-    ViolationContainer vioDesc;
+    ViolationContainer vioContainer;
     std::unordered_map<size_t, AnyExprRef> definingExpressions;
 
    private:

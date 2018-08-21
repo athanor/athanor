@@ -61,11 +61,11 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                     ++params.stats.minorNodeCount;
                     return;
                 }
-                ViolationContainer& vioDescAtThisLevel =
-                    params.vioDesc.hasChildViolation(val.id)
-                        ? params.vioDesc.childViolations(val.id)
+                ViolationContainer& vioContainerAtThisLevel =
+                    params.vioContainer.hasChildViolation(val.id)
+                        ? params.vioContainer.childViolations(val.id)
                         : emptyViolations;
-                UInt indexToChange = vioDescAtThisLevel.selectRandomVar(
+                UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
                     val.numberElements() - 1);
                 val.notifyPossibleSubsequenceChange<InnerValueType>(
                     indexToChange, indexToChange + 1);
@@ -97,7 +97,7 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
 
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck, 1, changingMembers,
-                    params.stats, vioDescAtThisLevel);
+                    params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.trySubsequenceChange<InnerValueType>(

@@ -118,7 +118,8 @@ bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
         reattachFunctionMemberTrigger(true);
     }
     if (wasDefined && !defined) {
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers, true);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers,
+                      true);
         return true;
     } else if (!wasDefined && defined) {
         visitTriggers(
@@ -393,13 +394,13 @@ void OpFunctionImage<FunctionMemberViewType>::stopTriggering() {
 }
 
 template <typename FunctionMemberViewType>
-void OpFunctionImage<FunctionMemberViewType>::updateVarViolations(
-    const ViolationContext& vioContext, ViolationContainer& vioDesc) {
-    invoke(preImageOperand, updateVarViolations(vioContext, vioDesc));
+void OpFunctionImage<FunctionMemberViewType>::updateVarViolationsImpl(
+    const ViolationContext& vioContext, ViolationContainer& vioContainer) {
+    invoke(preImageOperand, updateVarViolationsImpl(vioContext, vioContainer));
     if (locallyDefined) {
-        getMember()->updateVarViolations(vioContext, vioDesc);
+        getMember()->updateVarViolations(vioContext, vioContainer);
     } else {
-        functionOperand->updateVarViolations(vioContext, vioDesc);
+        functionOperand->updateVarViolations(vioContext, vioContainer);
     }
 }
 

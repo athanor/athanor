@@ -79,8 +79,8 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
         // ignore;
     }
 };
-void OpPowerSet::updateVarViolations(const ViolationContext&,
-                                     ViolationContainer&) {}
+void OpPowerSet::updateVarViolationsImpl(const ViolationContext&,
+                                         ViolationContainer&) {}
 
 void OpPowerSet::copy(OpPowerSet& newOp) const {
     newOp.sizeLimit = sizeLimit;

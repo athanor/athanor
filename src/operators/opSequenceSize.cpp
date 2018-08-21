@@ -7,9 +7,9 @@
 using namespace std;
 
 void OpSequenceSize::reevaluate() { value = operand->view().numberElements(); }
-void OpSequenceSize::updateVarViolations(const ViolationContext& vioContext,
-                                    ViolationContainer& vioDesc) {
-    operand->updateVarViolations(vioContext, vioDesc);
+void OpSequenceSize::updateVarViolationsImpl(const ViolationContext& vioContext,
+                                             ViolationContainer& vioContainer) {
+    operand->updateVarViolations(vioContext, vioContainer);
 }
 
 void OpSequenceSize::copy(OpSequenceSize& newOp) const { newOp.value = value; }

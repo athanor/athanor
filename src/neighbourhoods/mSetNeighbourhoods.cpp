@@ -61,11 +61,11 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
                     ++params.stats.minorNodeCount;
                     return;
                 }
-                ViolationContainer& vioDescAtThisLevel =
-                    params.vioDesc.hasChildViolation(val.id)
-                        ? params.vioDesc.childViolations(val.id)
+                ViolationContainer& vioContainerAtThisLevel =
+                    params.vioContainer.hasChildViolation(val.id)
+                        ? params.vioContainer.childViolations(val.id)
                         : emptyViolations;
-                UInt indexToChange = vioDescAtThisLevel.selectRandomVar(
+                UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
                     val.numberElements() - 1);
                 HashType oldHash =
                     val.notifyPossibleMemberChange<InnerValueType>(
@@ -96,7 +96,7 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck,
                     getTryLimit(val.numberElements(), innerDomainSize),
-                    changingMembers, params.stats, vioDescAtThisLevel);
+                    changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMemberChange<InnerValueType>(indexToChange, oldHash,
@@ -142,12 +142,12 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain,
                     ++params.stats.minorNodeCount;
                     return;
                 }
-                ViolationContainer& vioDescAtThisLevel =
-                    params.vioDesc.hasChildViolation(val.id)
-                        ? params.vioDesc.childViolations(val.id)
+                ViolationContainer& vioContainerAtThisLevel =
+                    params.vioContainer.hasChildViolation(val.id)
+                        ? params.vioContainer.childViolations(val.id)
                         : emptyViolations;
                 std::vector<UInt> indicesToChange =
-                    vioDescAtThisLevel.selectRandomVars(
+                    vioContainerAtThisLevel.selectRandomVars(
                         val.numberElements() - 1, innerNhNumberValsRequired);
                 debug_log(indicesToChange);
                 std::vector<HashType> oldHashes;
@@ -178,7 +178,7 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain,
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck,
                     getTryLimit(val.numberElements(), innerDomainSize),
-                    changingMembers, params.stats, vioDescAtThisLevel);
+                    changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMembersChange<InnerValueType>(

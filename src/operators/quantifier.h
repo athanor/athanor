@@ -57,8 +57,8 @@ struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
     void startTriggeringImpl() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer&) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer&) final;
     ExprRef<SequenceView> deepCopySelfForUnrollImpl(
         const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;

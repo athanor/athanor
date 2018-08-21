@@ -20,8 +20,8 @@ struct OpOr : public SimpleUnaryOperator<BoolView, SequenceView, OpOr> {
     FastIterableIntSet minViolationIndices = FastIterableIntSet(0, 0);
 
     void reevaluate();
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer& vioDesc) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer& vioContainer) final;
     void copy(OpOr& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
 

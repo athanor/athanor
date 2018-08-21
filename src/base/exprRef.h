@@ -78,8 +78,14 @@ struct ExprInterface : public Undefinable<View> {
     }
     virtual void startTriggeringImpl() = 0;
     virtual void stopTriggering() = 0;
-    virtual void updateVarViolations(const ViolationContext& vioContext,
-                                     ViolationContainer&) = 0;
+    void updateVarViolations(const ViolationContext& vioContext,
+                             ViolationContainer& vioContainer) {
+        if (!isConstant()) {
+            updateVarViolationsImpl(vioContext, vioContainer);
+        }
+    }
+    virtual void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                         ViolationContainer&) = 0;
     inline ExprRef<View> deepCopySelfForUnroll(const ExprRef<View>& self,
                                                const AnyIterRef& iterator) {
         if (isConstant()) {

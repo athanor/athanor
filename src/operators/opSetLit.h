@@ -64,8 +64,8 @@ struct OpSetLit : public SetView {
     void startTriggeringImpl() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer&) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer&) final;
     ExprRef<SetView> deepCopySelfForUnrollImpl(
         const ExprRef<SetView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;

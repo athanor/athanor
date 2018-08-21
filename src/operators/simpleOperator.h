@@ -17,10 +17,10 @@ struct DefinedContainer {
             if (defined) {
                 static_cast<Derived&>(*this).reevaluate();
                 visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                              static_cast<Derived&>(*this).triggers,true);
+                              static_cast<Derived&>(*this).triggers, true);
             } else {
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                              static_cast<Derived&>(*this).triggers,true);
+                              static_cast<Derived&>(*this).triggers, true);
             }
         }
     }

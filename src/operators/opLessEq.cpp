@@ -6,22 +6,22 @@ void OpLessEq::reevaluate() {
     violation = abs(min<Int>(diff, 0));
 }
 
-void OpLessEq::updateVarViolations(const ViolationContext&,
-                                   ViolationContainer& vioDesc) {
+void OpLessEq::updateVarViolationsImpl(const ViolationContext&,
+                                       ViolationContainer& vioContainer) {
     if (violation == 0) {
         return;
     } else if (allOperandsAreDefined()) {
         left->updateVarViolations(
             IntViolationContext(violation,
                                 IntViolationContext::Reason::TOO_LARGE),
-            vioDesc);
+            vioContainer);
         right->updateVarViolations(
             IntViolationContext(violation,
                                 IntViolationContext::Reason::TOO_SMALL),
-            vioDesc);
+            vioContainer);
     } else {
-        left->updateVarViolations(violation, vioDesc);
-        right->updateVarViolations(violation, vioDesc);
+        left->updateVarViolations(violation, vioContainer);
+        right->updateVarViolations(violation, vioContainer);
     }
 }
 void OpLessEq::copy(OpLessEq& newOp) const { newOp.violation = violation; }

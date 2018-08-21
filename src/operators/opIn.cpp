@@ -118,13 +118,13 @@ void OpIn::stopTriggering() {
     }
 }
 
-void OpIn::updateVarViolations(const ViolationContext&,
-                               ViolationContainer& vioDesc) {
+void OpIn::updateVarViolationsImpl(const ViolationContext&,
+                                   ViolationContainer& vioContainer) {
     if (violation == 0) {
         return;
     } else {
-        invoke(expr, expr->updateVarViolations(violation, vioDesc));
-        setOperand->updateVarViolations(violation, vioDesc);
+        invoke(expr, expr->updateVarViolations(violation, vioContainer));
+        setOperand->updateVarViolations(violation, vioContainer);
     }
 }
 

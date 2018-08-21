@@ -180,13 +180,13 @@ void OpAllDiff::reevaluate() {
     debug_code(assertValidState());
 }
 
-void OpAllDiff::updateVarViolations(const ViolationContext&,
-                                    ViolationContainer& vioDesc) {
+void OpAllDiff::updateVarViolationsImpl(const ViolationContext&,
+                                        ViolationContainer& vioContainer) {
     mpark::visit(
         [&](auto& members) {
             for (size_t index : violatingOperands) {
                 members[index]->updateVarViolations(
-                    hashIndicesMap[indicesHashMap[index]].size(), vioDesc);
+                    hashIndicesMap[indicesHashMap[index]].size(), vioContainer);
             }
         },
         operand->view().members);

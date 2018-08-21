@@ -48,8 +48,8 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
             } else {
                 adjustUpper(false);
             }
-            visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                          op->triggers,true);
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
+                          true);
         }
     }
     inline void adjustLower(bool trigger) {
@@ -116,10 +116,10 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
     }
 };
 
-void IntRange::updateVarViolations(const ViolationContext& vioContext,
-                                   ViolationContainer& vioDesc) {
-    left->updateVarViolations(vioContext, vioDesc);
-    right->updateVarViolations(vioContext, vioDesc);
+void IntRange::updateVarViolationsImpl(const ViolationContext& vioContext,
+                                       ViolationContainer& vioContainer) {
+    left->updateVarViolations(vioContext, vioContainer);
+    right->updateVarViolations(vioContext, vioContainer);
 }
 
 void IntRange::copy(IntRange& newOp) const {

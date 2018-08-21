@@ -6,10 +6,10 @@ void OpPower::reevaluate() {
     value = pow(left->view().value, right->view().value);
 }
 
-void OpPower::updateVarViolations(const ViolationContext& vioContext,
-                                  ViolationContainer& vioDesc) {
-    left->updateVarViolations(vioContext, vioDesc);
-    right->updateVarViolations(vioContext, vioDesc);
+void OpPower::updateVarViolationsImpl(const ViolationContext& vioContext,
+                                      ViolationContainer& vioContainer) {
+    left->updateVarViolations(vioContext, vioContainer);
+    right->updateVarViolations(vioContext, vioContainer);
 }
 
 void OpPower::copy(OpPower& newOp) const { newOp.value = value; }

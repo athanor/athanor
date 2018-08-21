@@ -19,8 +19,8 @@ struct OpSum : public SimpleUnaryOperator<IntView, SequenceView, OpSum> {
     bool evaluationComplete = false;
     OpSum(OpSum&& other);
     void reevaluate();
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer& vioDesc) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer& vioContainer) final;
     void copy(OpSum& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
     bool optimiseImpl();

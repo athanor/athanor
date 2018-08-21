@@ -4,10 +4,10 @@ using namespace std;
 
 void OpMinus::reevaluate() { value = left->view().value - right->view().value; }
 
-void OpMinus::updateVarViolations(const ViolationContext& vioContext,
-                                  ViolationContainer& vioDesc) {
-    left->updateVarViolations(vioContext, vioDesc);
-    right->updateVarViolations(vioContext, vioDesc);
+void OpMinus::updateVarViolationsImpl(const ViolationContext& vioContext,
+                                      ViolationContainer& vioContainer) {
+    left->updateVarViolations(vioContext, vioContainer);
+    right->updateVarViolations(vioContext, vioContainer);
 }
 
 void OpMinus::copy(OpMinus& newOp) const { newOp.value = value; }

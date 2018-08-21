@@ -34,8 +34,8 @@ struct OpCatchUndef : public ExprInterface<ExprViewType> {
     void stopTriggering() final;
     void stopTriggeringOnChildren();
 
-    void updateVarViolations(const ViolationContext& vioContext,
-                             ViolationContainer&) final;
+    void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                 ViolationContainer&) final;
     ExprRef<ExprViewType> deepCopySelfForUnrollImpl(
         const ExprRef<ExprViewType>& self,
         const AnyIterRef& iterator) const final;

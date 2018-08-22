@@ -9,6 +9,7 @@ template <typename View>
 void Iterator<View>::addTriggerImpl(
     const shared_ptr<typename Iterator<View>::TriggerType>& trigger,
     bool includeMembers, Int memberIndex) {
+    debug_code(assert(ref));
     auto otherTrigger = trigger;
     triggers.emplace_back(getTriggerBase(otherTrigger));
     ref->addTrigger(trigger, includeMembers, memberIndex);
@@ -16,16 +17,19 @@ void Iterator<View>::addTriggerImpl(
 
 template <typename View>
 View& Iterator<View>::view() {
+    debug_code(assert(ref));
     return ref->view();
     ;
 }
 template <typename View>
 const View& Iterator<View>::view() const {
+    debug_code(assert(ref));
     return ref->view();
 }
 
 template <typename View>
 void Iterator<View>::evaluateImpl() {
+    debug_code(assert(ref));
     ref->evaluate();
 }
 
@@ -38,16 +42,19 @@ Iterator<View>::Iterator(Iterator<View>&& other)
 
 template <typename View>
 void Iterator<View>::startTriggeringImpl() {
+    debug_code(assert(ref));
     ref->startTriggering();
 }
 
 template <typename View>
 void Iterator<View>::stopTriggering() {
+    debug_code(assert(ref));
     ref->stopTriggering();
 }
 template <typename View>
 void Iterator<View>::updateVarViolationsImpl(const ViolationContext& vioContext,
                                              ViolationContainer& vioContainer) {
+    debug_code(assert(ref));
     ref->updateVarViolations(vioContext, vioContainer);
 }
 
@@ -83,6 +90,7 @@ void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction& func) {
 
 template <typename View>
 bool Iterator<View>::isUndefined() {
+    debug_code(assert(ref));
     return ref->isUndefined();
 }
 

@@ -381,21 +381,18 @@ pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimise(
         changeMade |= optResult.first;
         condition = optResult.second;
     }
+    bool containerOptimised = optimiseIfIntRangeWithConditions(*this);
+    changeMade |= containerOptimised;
+
     mpark::visit(overloaded(
                      [&](ExprRef<IntView>& expr) {
                          auto optResult = expr->optimise(path.extend(expr));
                          changeMade |= optResult.first;
                          expr = optResult.second;
-                         bool optimised =
+                         containerOptimised |=
                              optimiseIfOpSumParentWithZeroingCondition(
                                  *this, expr, path);
-                         changeMade |= optimised;
-                         optimised = optimiseIfIntRangeWithConditions(*this);
-                         changeMade |= optimised;
-                         if (optimised) {
-                             container->optimise(path.extend(container));
-                             expr->optimise(path.extend(expr));
-                         }
+                         changeMade |= containerOptimised;
                      },
                      [&](auto& expr) {
                          auto optResult = expr->optimise(path.extend(expr));
@@ -403,12 +400,19 @@ pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimise(
                          expr = optResult.second;
                      }),
                  expr);
+
     if (condition) {
         cerr << "Error, for the moment, not supporting conditions on "
                 "quantifiers unless they can be optimised into the an integer "
                 "range.\n";
         abort();
     }
+    if (changeMade) {
+        container->optimise(path.extend(container));
+        mpark::visit([&](auto& expr) { expr->optimise(path.extend(expr)); },
+                     expr);
+    }
+
     return make_pair(changeMade, mpark::get<ExprRef<SequenceView>>(path.expr));
 }
 

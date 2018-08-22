@@ -122,7 +122,6 @@ void Quantifier<ContainerType>::unroll(UInt index,
                           ->getValue();
             ExprRef<viewType(members)> newMember =
                 exprToCopy->deepCopySelfForUnroll(exprToCopy, iterRef);
-            newMember->dumpState(cout) << endl;
             iterRef->changeValue(!evaluateExpr, oldValueOfIter, newView, [&]() {
                 if (evaluateExpr) {
                     newMember->evaluate();
@@ -521,8 +520,9 @@ bool optimiseIfOpSumParentWithZeroingCondition(Quantifier& quant,
         collectLowerAndUpperLimits(*opProdOperands, quant.quantId);
     bool changeMade = false;
     if (!lowerAndUpperLimits.second.empty()) {
-        quant.container->setConstant(quant.container->isConstant() &&
-                                    areAllConstant(lowerAndUpperLimits.second));
+        quant.container->setConstant(
+            quant.container->isConstant() &&
+            areAllConstant(lowerAndUpperLimits.second));
         lowerAndUpperLimits.second.emplace_back(intRangeTest->right);
         intRangeTest->right = OpMaker<OpMin>::make(
             OpMaker<OpSequenceLit>::make(move(lowerAndUpperLimits.second)));
@@ -530,7 +530,7 @@ bool optimiseIfOpSumParentWithZeroingCondition(Quantifier& quant,
     }
     if (!lowerAndUpperLimits.first.empty()) {
         quant.container->setConstant(quant.container->isConstant() &&
-                                    areAllConstant(lowerAndUpperLimits.first));
+                                     areAllConstant(lowerAndUpperLimits.first));
         lowerAndUpperLimits.first.emplace_back(intRangeTest->left);
         intRangeTest->left = OpMaker<OpMax>::make(
             OpMaker<OpSequenceLit>::make(move(lowerAndUpperLimits.first)));
@@ -577,8 +577,9 @@ bool optimiseIfIntRangeWithConditions(Quantifier& quant) {
     quant.condition = nullptr;
     bool changeMade = false;
     if (!lowerAndUpperLimits.second.empty()) {
-        quant.container->setConstant(quant.container->isConstant() &&
-                                    areAllConstant(lowerAndUpperLimits.second));
+        quant.container->setConstant(
+            quant.container->isConstant() &&
+            areAllConstant(lowerAndUpperLimits.second));
         lowerAndUpperLimits.second.emplace_back(intRangeTest->right);
         intRangeTest->right = OpMaker<OpMin>::make(
             OpMaker<OpSequenceLit>::make(move(lowerAndUpperLimits.second)));
@@ -586,7 +587,7 @@ bool optimiseIfIntRangeWithConditions(Quantifier& quant) {
     }
     if (!lowerAndUpperLimits.first.empty()) {
         quant.container->setConstant(quant.container->isConstant() &&
-                                    areAllConstant(lowerAndUpperLimits.first));
+                                     areAllConstant(lowerAndUpperLimits.first));
         lowerAndUpperLimits.first.emplace_back(intRangeTest->left);
         intRangeTest->left = OpMaker<OpMax>::make(
             OpMaker<OpSequenceLit>::make(move(lowerAndUpperLimits.first)));
@@ -859,9 +860,6 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
     void trigger() final {
         mpark::visit(
             [&](auto& vToUnroll) {
-                debug_log("indicesToUnroll size: "
-                          << op->indicesOfValuesToUnroll.size());
-                debug_log("valuesToUnroll size " << vToUnroll.size());
                 debug_code(assert(vToUnroll.size() ==
                                   op->indicesOfValuesToUnroll.size()));
                 const UInt MAX_UINT = ~((UInt)0);

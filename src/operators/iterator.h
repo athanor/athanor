@@ -15,25 +15,32 @@ struct Iterator : public ExprInterface<View> {
     template <typename Func>
     inline void changeValue(bool triggering, const ExprRef<View>& oldVal,
                             const ExprRef<View>& newVal, Func&& callback) {
-        ref = newVal;
-        callback();
-        if (triggering) {
+        if (!triggering) {
+            ref = newVal;
+            callback();
+        } else {
+            ref = oldVal;
+            callback();
             bool oldValUndefined = oldVal->isUndefined();
             if (!oldValUndefined) {
-                ref = oldVal;
                 visitTriggers([&](auto& t) { t->possibleValueChange(); },
                               triggers);
-                ref = newVal;
             }
+            ref = newVal;
             bool newValUndefined = newVal->isUndefined();
             if (oldValUndefined && !newValUndefined) {
-                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                              triggers);
+                visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, triggers,
+                              true);
             } else if (!oldValUndefined && newValUndefined) {
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                              triggers);
+                              triggers, true);
             } else if (!newValUndefined) {
-                visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
+                visitTriggers(
+                    [&](auto& t) {
+                        t->valueChanged();
+                        t->reattachTrigger();
+                    },
+                    triggers);
             }
         }
     }

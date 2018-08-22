@@ -86,6 +86,7 @@ void OpFunctionImage<FunctionMemberViewType>::reevaluate(
 
 template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::evaluateImpl() {
+    this->dumpState(cout) << endl;
     functionOperand->evaluate();
     invoke(preImageOperand, evaluate());
     reevaluate();

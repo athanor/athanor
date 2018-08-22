@@ -124,6 +124,8 @@ void IntRange::updateVarViolationsImpl(const ViolationContext& vioContext,
 
 void IntRange::copy(IntRange& newOp) const {
     newOp.members = this->members;
+    newOp.cachedLower = cachedLower;
+    newOp.cachedUpper = cachedUpper;
     newOp.lowerExclusive = lowerExclusive;
     newOp.upperExclusive = upperExclusive;
 }

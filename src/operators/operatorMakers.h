@@ -189,5 +189,11 @@ template <>
 struct OpMaker<OpAllDiff> {
     static ExprRef<BoolView> make(ExprRef<SequenceView>);
 };
+struct OpDiv;
+
+template <>
+struct OpMaker<OpDiv> {
+    static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
+};
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

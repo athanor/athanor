@@ -515,6 +515,19 @@ pair<AnyDomainRef, AnyExprRef> parseOpMod(json& modExpr,
                      OpMaker<OpMod>::make(move(left), move(right)));
 }
 
+pair<AnyDomainRef, AnyExprRef> parseOpDiv(json& modExpr,
+                                          ParsedModel& parsedModel) {
+    string errorMessage = "Expected int returning expression within Op div: ";
+    ExprRef<IntView> left =
+        expect<IntView>(parseExpr(modExpr[0], parsedModel).second,
+                        [&](auto&&) { cerr << errorMessage << modExpr[0]; });
+    ExprRef<IntView> right =
+        expect<IntView>(parseExpr(modExpr[1], parsedModel).second,
+                        [&](auto&&) { cerr << errorMessage << modExpr[1]; });
+    return make_pair(fakeIntDomain,
+                     OpMaker<OpDiv>::make(move(left), move(right)));
+}
+
 pair<AnyDomainRef, AnyExprRef> parseOpMinus(json& minusExpr,
                                             ParsedModel& parsedModel) {
     string errorMessage = "Expected int returning expression within Op minus: ";
@@ -1058,19 +1071,29 @@ void parseGenerator(json& generatorParent,
 
 template <typename Quantifier>
 AnyDomainRef addExprToQuantifier(json& comprExpr, Quantifier& quantifier,
+                                 size_t generatorIndex,
                                  ParsedModel& parsedModel) {
     auto expr = parseExpr(comprExpr[0], parsedModel);
     quantifier->setExpression(expr.second);
+    return expr.first;
+}
+
+template <typename Quantifier>
+void addConditionsToQuantifier(json& comprExpr, Quantifier& quantifier,
+                               size_t generatorIndex,
+                               ParsedModel& parsedModel) {
     vector<ExprRef<BoolView>> conditions;
-    for (auto& expr : comprExpr[1]) {
-        if (expr.count("Condition")) {
-            auto parsedCondition = expect<BoolView>(
-                parseExpr(expr["Condition"], parsedModel).second, [&](auto&&) {
-                    cerr << "Conitions for quantifiers must be bool "
-                            "returning.\n";
-                });
-            conditions.emplace_back(parsedCondition);
+    for (size_t i = generatorIndex + 1; i < comprExpr[1].size(); i++) {
+        auto& expr = comprExpr[1][i];
+        if (!expr.count("Condition")) {
+            break;
         }
+        auto parsedCondition = expect<BoolView>(
+            parseExpr(expr["Condition"], parsedModel).second, [&](auto&&) {
+                cerr << "Conitions for quantifiers must be bool "
+                        "returning.\n";
+            });
+        conditions.emplace_back(parsedCondition);
     }
     if (conditions.size() > 1) {
         quantifier->setCondition(OpMaker<OpAnd>::make(
@@ -1078,9 +1101,7 @@ AnyDomainRef addExprToQuantifier(json& comprExpr, Quantifier& quantifier,
     } else if (conditions.size() == 1) {
         quantifier->setCondition(conditions[0]);
     }
-    return expr.first;
 }
-
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> makeFlatten(
     pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> sequenceExpr) {
     return mpark::visit(
@@ -1095,8 +1116,10 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> makeFlatten(
         },
         sequenceExpr.first->inner);
 }
-pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehensionImpl(
-    json& comprExpr, ParsedModel& parsedModel, size_t generatorIndex);
+
+pair<bool, pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>>>
+parseComprehensionImpl(json& comprExpr, ParsedModel& parsedModel,
+                       size_t generatorIndex);
 template <typename ContainerReturnType, typename ContainerDomainType>
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> buildQuant(
     json& comprExpr, ExprRef<ContainerReturnType>& container,
@@ -1106,17 +1129,21 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> buildQuant(
     vector<string> variablesAddedToScope;
     parseGenerator(comprExpr[1][generatorIndex]["Generator"], domain,
                    quantifier, variablesAddedToScope, parsedModel);
+    addConditionsToQuantifier(comprExpr, quantifier, generatorIndex,
+                              parsedModel);
     pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> returnValue =
         make_pair(fakeSequenceDomain(fakeBoolDomain),
                   ExprRef<SequenceView>(nullptr));
-    if (generatorIndex > 0) {
-        auto innerQuantifier =
-            parseComprehensionImpl(comprExpr, parsedModel, generatorIndex - 1);
+
+    auto boolInnerQuantPair =
+        parseComprehensionImpl(comprExpr, parsedModel, generatorIndex + 1);
+    if (boolInnerQuantPair.first) {
+        auto& innerQuantifier = boolInnerQuantPair.second;
         quantifier->setExpression(innerQuantifier.second);
         returnValue = makeFlatten(make_pair(innerQuantifier.first, quantifier));
     } else {
-        AnyDomainRef innerDomain =
-            addExprToQuantifier(comprExpr, quantifier, parsedModel);
+        AnyDomainRef innerDomain = addExprToQuantifier(
+            comprExpr, quantifier, generatorIndex, parsedModel);
         returnValue = make_pair(fakeSequenceDomain(innerDomain),
                                 ExprRef<SequenceView>(quantifier));
     }
@@ -1125,8 +1152,19 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> buildQuant(
     }
     return returnValue;
 }
-pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehensionImpl(
-    json& comprExpr, ParsedModel& parsedModel, size_t generatorIndex) {
+
+pair<bool, pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>>>
+parseComprehensionImpl(json& comprExpr, ParsedModel& parsedModel,
+                       size_t generatorIndex) {
+    if (generatorIndex == comprExpr[1].size()) {
+        return make_pair(false, make_pair(fakeSequenceDomain(fakeIntDomain),
+                                          ExprRef<SequenceView>(nullptr)));
+    }
+    if (!comprExpr[1][generatorIndex].count("Generator")) {
+        return parseComprehensionImpl(comprExpr, parsedModel,
+                                      generatorIndex + 1);
+    }
+
     auto& generatorParent = comprExpr[1][generatorIndex]["Generator"];
     json& generatorExpr = (generatorParent.count("GenInExpr"))
                               ? generatorParent["GenInExpr"]
@@ -1142,7 +1180,7 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehensionImpl(
         (generatorParent.count("GenInExpr"))
             ? parseExpr(generatorExpr[1], parsedModel)
             : parseDomainGenerator(generatorExpr[1], parsedModel);
-    return mpark::visit(
+    auto returnVal = mpark::visit(
         overloaded(
             [&](ExprRef<SetView>& set)
                 -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
@@ -1174,12 +1212,18 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehensionImpl(
             },
             move(errorHandler)),
         domainContainerPair.second);
+    return make_pair(true, returnVal);
 }
 
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
     json& comprExpr, ParsedModel& parsedModel) {
-    return parseComprehensionImpl(comprExpr, parsedModel,
-                                  comprExpr[1].size() - 1);
+    auto boolComprPair = parseComprehensionImpl(comprExpr, parsedModel, 0);
+    if (boolComprPair.first) {
+        return move(boolComprPair.second);
+    } else {
+        cerr << "Failed to find a generator to parse in the comprehension.\n";
+        abort();
+    }
 }
 
 template <typename View, typename Op, typename Domain>
@@ -1294,6 +1338,7 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpCatchUndef", parseOpCatchUndef},
              {"MkOpIn", parseOpIn},
              {"MkOpMod", parseOpMod},
+             {"MkOpDiv", parseOpDiv},
              {"MkOpMinus", parseOpMinus},
              {"MkOpPow", parseOpPower},
              {"MkOpTwoBars", parseOpTwoBars},

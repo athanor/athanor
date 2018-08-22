@@ -21,6 +21,8 @@ struct SetDomain {
 
    private:
     inline void trimMaxSize() {
+        //temperary skip
+        return;
         UInt innerDomainSize = getDomainSize(inner);
         if (innerDomainSize < sizeAttr.maxSize) {
             sizeAttr.maxSize = innerDomainSize;

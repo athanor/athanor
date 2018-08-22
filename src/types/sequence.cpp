@@ -1,6 +1,7 @@
 #include "types/sequence.h"
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include "common/common.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
@@ -92,9 +93,28 @@ void matchInnerType(const SequenceDomain& domain, SequenceValue& target) {
         domain.inner);
 }
 
+pair<bool, UInt> safePow(UInt a, UInt b) {
+    if (b * log(a) < log(MAX_DOMAIN_SIZE)) {
+        return make_pair(true, pow(a, b));
+    } else {
+        return make_pair(false, 0);
+    }
+}
+
 template <>
 UInt getDomainSize<SequenceDomain>(const SequenceDomain& domain) {
-    todoImpl(domain);
+    UInt innerDomainSize = getDomainSize(domain.inner);
+    UInt domainSize = 0;
+    for (UInt i = domain.sizeAttr.minSize; i <= domain.sizeAttr.maxSize; i++) {
+        auto boolIntPair = safePow(innerDomainSize, i);
+        if (!boolIntPair.first ||
+            MAX_DOMAIN_SIZE - domainSize < boolIntPair.second) {
+            domainSize = MAX_DOMAIN_SIZE;
+            break;
+        }
+        domainSize += boolIntPair.second;
+    }
+    return domainSize;
 }
 
 void evaluateImpl(SequenceValue&) {}

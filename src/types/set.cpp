@@ -97,7 +97,12 @@ void matchInnerType(const SetDomain& domain, SetValue& target) {
 
 template <>
 UInt getDomainSize<SetDomain>(const SetDomain& domain) {
-    return 1 << getDomainSize(domain.inner);
+    UInt innerDomainSize = getDomainSize(domain.inner);
+    if (innerDomainSize > (sizeof(UInt) * 4) - 1) {
+        return MAX_DOMAIN_SIZE;
+    } else {
+        return 1 << innerDomainSize;
+    }
 }
 
 void reset(SetValue& val) {

@@ -6,6 +6,7 @@
 using namespace std;
 u_int64_t triggerEventCount = 0;
 UInt LARGE_VIOLATION = ((UInt)1) << ((sizeof(UInt) * 4) - 1);
+UInt MAX_DOMAIN_SIZE = ~((UInt)0);
 
 template <typename View>
 View& ExprInterface<View>::view() {

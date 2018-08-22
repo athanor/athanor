@@ -176,5 +176,5 @@ struct PathExtension {
 };
 
 extern UInt LARGE_VIOLATION;
-
+extern UInt MAX_DOMAIN_SIZE;
 #endif /* SRC_BASE_EXPRREF_H_ */

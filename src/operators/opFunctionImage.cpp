@@ -89,7 +89,6 @@ void OpFunctionImage<FunctionMemberViewType>::evaluateImpl() {
         functionOperand->evaluate();
     invoke(preImageOperand, evaluate());
     reevaluate();
-    this->dumpState(cout) << endl;
 
 }
 

@@ -36,7 +36,7 @@ struct Iterator : public ExprInterface<View> {
                               triggers, true);
             } else if (!newValUndefined) {
                 visitTriggers(
-                    [&](auto& t) {
+                    [&](auto t) {
                         t->valueChanged();
                         t->reattachTrigger();
                     },

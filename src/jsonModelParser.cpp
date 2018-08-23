@@ -1071,7 +1071,6 @@ void parseGenerator(json& generatorParent,
 
 template <typename Quantifier>
 AnyDomainRef addExprToQuantifier(json& comprExpr, Quantifier& quantifier,
-                                 size_t generatorIndex,
                                  ParsedModel& parsedModel) {
     auto expr = parseExpr(comprExpr[0], parsedModel);
     quantifier->setExpression(expr.second);
@@ -1142,8 +1141,8 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> buildQuant(
         quantifier->setExpression(innerQuantifier.second);
         returnValue = makeFlatten(make_pair(innerQuantifier.first, quantifier));
     } else {
-        AnyDomainRef innerDomain = addExprToQuantifier(
-            comprExpr, quantifier, generatorIndex, parsedModel);
+        AnyDomainRef innerDomain =
+            addExprToQuantifier(comprExpr, quantifier, parsedModel);
         returnValue = make_pair(fakeSequenceDomain(innerDomain),
                                 ExprRef<SequenceView>(quantifier));
     }

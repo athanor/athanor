@@ -178,12 +178,18 @@ void OpProd::reevaluate() {
     setDefined(true, false);
     value = 1;
     cachedValue = 1;
+    cachedValues.clear();
     numberZeros = 0;
-    for (auto& operandChild : operand->view().getMembers<IntView>()) {
+    auto& members = operand->view().getMembers<IntView>();
+    for (size_t index = 0; index < members.size(); index++) {
+        auto& operandChild = members[index];
         if (operandChild->isUndefined()) {
             setDefined(false, false);
+            cachedValues.insert(index, 1);
         } else {
-            addSingleValue(operandChild->view().value);
+            Int operandValue = operandChild->view().value;
+            addSingleValue(operandValue);
+            cachedValues.insert(index, operandValue);
         }
     }
     evaluationComplete = true;

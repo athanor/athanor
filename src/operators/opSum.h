@@ -1,6 +1,7 @@
 
 #ifndef SRC_OPERATORS_OPSUM_H_
 #define SRC_OPERATORS_OPSUM_H_
+#include "operators/previousValueCache.h"
 #include "operators/simpleOperator.h"
 #include "types/int.h"
 #include "types/sequence.h"
@@ -17,7 +18,9 @@ struct OpSum : public SimpleUnaryOperator<IntView, SequenceView, OpSum> {
     using SimpleUnaryOperator<IntView, SequenceView,
                               OpSum>::SimpleUnaryOperator;
     bool evaluationComplete = false;
+    PreviousValueCache<Int> cachedValues;
     OpSum(OpSum&& other);
+
     void reevaluate();
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;

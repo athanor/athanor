@@ -101,35 +101,19 @@ struct ExprTrigger
     : public OpSetLit::ExprTriggerBase,
       public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>> {
     typedef typename AssociatedViewType<TriggerType>::type View;
-    HashType previousHash;
     using ExprTriggerBase::ExprTriggerBase;
     using ExprTriggerBase::index;
     using ExprTriggerBase::op;
 
+    HashType previousHash() { return op->cachedHashes.get(index); }
     auto& getOperands() { return mpark::get<ExprRefVec<View>>(op->operands); }
-
-    void adapterPossibleValueChange() {
-        debug_log("Possible value change: index=" << index);
-        debug_code(op->dumpState(cout) << endl);
-        debug_code(op->assertValidHashes());
-        if (index < op->numberElements()) {
-            op->template notifyPossibleMemberChange<View>(index);
-        }
-        previousHash = getValueHash(getOperands()[index]->view());
-        debug_log("previousHash=" << previousHash);
-    }
 
     void swapOperands(size_t index1, size_t index2) {
         op->swapHashes<View>(index1, index2);
         swap(getOperands()[index1], getOperands()[index2]);
         swap(op->exprTriggers[index1], op->exprTriggers[index2]);
         swap(op->exprTriggers[index1]->index, op->exprTriggers[index2]->index);
-        swap(static_pointer_cast<ExprTrigger<TriggerType>>(
-                 op->exprTriggers[index1])
-                 ->previousHash,
-             static_pointer_cast<ExprTrigger<TriggerType>>(
-                 op->exprTriggers[index2])
-                 ->previousHash);
+        swap(op->cachedHashes.get(index1), op->cachedHashes.get(index2));
     }
 
     void swapWithOtherOperand(size_t newIndex) {
@@ -138,14 +122,13 @@ struct ExprTrigger
 
     auto manualRemoveOperandFromSetView(HashType newHash,
                                         bool operandIsStillDefined) {
-        op->notifyPossibleSetValueChange();
         auto& members = op->getMembers<View>();
-        op->memberHashes.erase(previousHash);
-        op->cachedHashTotal -= mix(previousHash);
+        op->memberHashes.erase(previousHash());
+        op->cachedHashTotal -= mix(previousHash());
         members[index] = move(members.back());
         members.pop_back();
-        op->notifyMemberRemoved(index, previousHash);
-        auto otherOperandWithSameValue = op->removeHash(previousHash, index);
+        op->notifyMemberRemoved(index, previousHash());
+        auto otherOperandWithSameValue = op->removeHash(previousHash(), index);
         if (operandIsStillDefined) {
             op->addHash(newHash, index);
         }
@@ -154,18 +137,19 @@ struct ExprTrigger
     }
 
     void adapterValueChanged() {
+        todoImpl();
         HashType newHash = getValueHash(getOperands()[index]->view());
-        debug_log("hit, index=" << index << "\npreviousHash=" << previousHash
-                                << "\nnewHash=" << newHash);
+        debug_log("hit, index=" << index << "\npreviousHash()="
+                                << previousHash() << "\nnewHash=" << newHash);
         ;
         debug_log("hashIndicesMap=" << op->hashIndicesMap);
         debug_code(op->dumpState(cout) << endl);
 
-        if (newHash == previousHash) {
+        if (newHash == previousHash()) {
             debug_log("returning");
             return;
         }
-        debug_code(assert(op->hashIndicesMap.count(previousHash)));
+        debug_code(assert(op->hashIndicesMap.count(previousHash())));
         bool operandBeingUsedInSet = index < op->numberElements();
         // if false, then another operand with the same value as this operands
         // old value is in the SetView, this operand was not being tracked as
@@ -178,7 +162,7 @@ struct ExprTrigger
                 // this operand was not in the set view, now it has a unique
                 // value, it must be added
                 op->addMemberAndNotify(getOperands()[index]);
-                op->removeHash(previousHash, index);
+                op->removeHash(previousHash(), index);
                 op->addHash(newHash, index);
                 // now move the operand and trigger into the same index as the
                 // newly added element to the set view
@@ -188,16 +172,17 @@ struct ExprTrigger
                 // this operand was not being used in the set view, it still
                 // can't be as its there is already an operand with its new
                 // value
-                op->removeHash(previousHash, index);
+                op->removeHash(previousHash(), index);
                 op->addHash(newHash, index);
             }
         } else {
             if (!newValueInSet) {
                 // operand was being used in the set view, it now has a new
                 // value, notify the set of the new value
-                op->template memberChangedAndNotify<View>(index, previousHash);
+                op->template memberChangedAndNotify<View>(index,
+                                                          previousHash());
                 auto otherOperandWithSameValue =
-                    op->removeHash(previousHash, index);
+                    op->removeHash(previousHash(), index);
                 op->addHash(newHash, index);
                 // however if other operands have the old value they must be
                 // moved into the set view
@@ -223,7 +208,7 @@ struct ExprTrigger
                 }
             }
         }
-        previousHash = newHash;
+//        previousHash() = newHash;
     }
 
     void reattachTrigger() final {
@@ -259,7 +244,7 @@ struct ExprTrigger
         if (!operandBeingUsedInSet) {
             // this operand was not being used in the set, so parents don't
             // detect the change
-            op->removeHash(previousHash, index);
+            op->removeHash(previousHash(), index);
         } else {
             // operand was being used in the set view, remove it
             auto otherOperandWithSameValue =

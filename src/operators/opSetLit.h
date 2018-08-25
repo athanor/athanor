@@ -1,6 +1,7 @@
 #ifndef SRC_OPERATORS_OPSETLIT_H_
 #define SRC_OPERATORS_OPSETLIT_H_
 #include "base/base.h"
+#include "operators/previousValueCache.h"
 #include "types/set.h"
 #include "utils/fastIterableIntSet.h"
 
@@ -12,6 +13,7 @@ struct OpSetLit : public SetView {
     };
     AnyExprVec operands;
     std::unordered_map<HashType, FastIterableIntSet> hashIndicesMap;
+    PreviousValueCache<HashType> cachedHashes;
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
     UInt numberUndefined = 0;
     OpSetLit(AnyExprVec operands) : operands(std::move(operands)) {}
@@ -21,6 +23,7 @@ struct OpSetLit : public SetView {
 
     void addHash(HashType hash, size_t index) {
         hashIndicesMap[hash].insert(index);
+        cachedHashes.set(index, hash);
     }
 
     std::pair<bool, size_t> removeHash(HashType hash, size_t index) {

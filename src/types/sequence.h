@@ -214,6 +214,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
                 static_cast<void>(deleted);
                 debug_code(assert(deleted));
             }
+            hashOfMembersToBeChanged.clear();
             auto& members = getMembers<InnerViewType>();
             for (size_t i = startIndex; i < endIndex; i++) {
                 HashType hash = getValueHash(members[i]->view());

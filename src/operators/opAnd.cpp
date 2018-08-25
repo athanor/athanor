@@ -28,9 +28,9 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
         }
     }
 
-    void valueRemoved(UInt index, const AnyExprRef& exprIn) final {
+    void valueRemoved(UInt index, const AnyExprRef&) final {
         UInt violationOfRemovedExpr = op->cachedViolations.get(index);
-        debug_code(assert((op->violatingOperands.count(index) &&
+                debug_code(assert((op->violatingOperands.count(index) &&
                            violationOfRemovedExpr > 0) ||
                           (!op->violatingOperands.count(index) &&
                            violationOfRemovedExpr == 0)));
@@ -69,9 +69,14 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
         UInt violationToAdd = 0, violationToRemove = 0;
         for (size_t i = startIndex; i < endIndex; i++) {
             UInt newViolation = getViolation(i);
+            UInt oldViolation = op->cachedViolations.getAndSet(i, newViolation);
             violationToAdd += newViolation;
-            violationToRemove +=
-                op->cachedViolations.getAndSet(i, newViolation);
+            violationToRemove += oldViolation;
+            if (oldViolation > 0 && newViolation == 0) {
+                op->violatingOperands.erase(i);
+            } else if (oldViolation == 0 && newViolation > 0) {
+                op->violatingOperands.insert(i);
+            }
         }
         op->changeValue([&]() {
             op->violation -= violationToRemove;

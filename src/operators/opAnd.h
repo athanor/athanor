@@ -2,6 +2,7 @@
 #ifndef SRC_OPERATORS_OPAND_H_
 #define SRC_OPERATORS_OPAND_H_
 #include <vector>
+#include "operators/previousValueCache.h"
 #include "operators/simpleOperator.h"
 #include "types/bool.h"
 #include "types/sequence.h"
@@ -17,6 +18,7 @@ struct OperatorTrates<OpAnd> {
 struct OpAnd : public SimpleUnaryOperator<BoolView, SequenceView, OpAnd> {
     using SimpleUnaryOperator<BoolView, SequenceView,
                               OpAnd>::SimpleUnaryOperator;
+    PreviousValueCache<UInt> cachedViolations;
     FastIterableIntSet violatingOperands = FastIterableIntSet(0, 0);
 
     inline OpAnd& operator=(const OpAnd& other) {

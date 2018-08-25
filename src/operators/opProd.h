@@ -1,6 +1,7 @@
 
 #ifndef SRC_OPERATORS_OPPROD_H_
 #define SRC_OPERATORS_OPPROD_H_
+#include "operators/previousValueCache.h"
 #include "operators/simpleOperator.h"
 #include "types/int.h"
 #include "types/sequence.h"
@@ -19,6 +20,7 @@ struct OpProd : public SimpleUnaryOperator<IntView, SequenceView, OpProd> {
     bool evaluationComplete = false;
     UInt numberZeros = 0;
     Int cachedValue;
+    PreviousValueCache<Int> cachedValues;
     OpProd(OpProd&& other);
     void reevaluate();
     void updateVarViolationsImpl(const ViolationContext& vioContext,

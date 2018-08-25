@@ -40,7 +40,7 @@ void OpPowerSet::reevaluate() {
 struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
     OpPowerSet* op;
     OperandTrigger(OpPowerSet* op) : op(op) {}
-    void possibleValueChange() final { op->notifyPossibleSetValueChange(); }
+
     void valueChanged() {
         op->reevaluate();
         op->notifyEntireSetChange();
@@ -66,15 +66,11 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
         todoImpl();
         ;
     }
-    void possibleMemberValueChange(UInt) final {
-        // ignore, ;
-    }
+
     void memberValueChanged(UInt) final {
         // ignore;
     }
-    void possibleMemberValuesChange(const vector<UInt>&) final {
-        // ignore, ;
-    }
+
     void memberValuesChanged(const vector<UInt>&) final {
         // ignore;
     }

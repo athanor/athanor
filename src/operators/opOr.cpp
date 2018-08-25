@@ -115,7 +115,6 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
             }
         }
     }
-    inline void possibleSubsequenceChange(UInt, UInt) final {}
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         op->changeValue([&]() {
             for (size_t i = startIndex; i < endIndex; i++) {
@@ -127,7 +126,7 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
             return true;
         });
     }
-    void possibleValueChange() final {}
+
     void valueChanged() final {
         op->changeValue([&]() {
             op->reevaluate();

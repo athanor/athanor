@@ -61,7 +61,6 @@ inline void updateMinValues(OpMinMax<minMode>& op, bool trigger) {
         visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers,
                       true);
     } else if (wasDefined && !op.isDefined()) {
-        visitTriggers([&](auto& t) { t->possibleValueChange(); }, op.triggers);
         visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op.triggers,
                       true);
     } else if (op.isDefined()) {
@@ -160,7 +159,6 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
             }
         }
     }
-    inline void possibleSubsequenceChange(UInt, UInt) final {}
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         op->changeValue([&]() {
             for (size_t i = startIndex; i < endIndex; i++) {
@@ -172,7 +170,6 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
             return true;
         });
     }
-    void possibleValueChange() final {}
     void valueChanged() final {
         op->minValueIndices.clear();
         updateMinValues(*op, true);

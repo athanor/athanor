@@ -38,7 +38,6 @@ struct Trigger
     : public ChangeTriggerAdapter<TriggerType, Trigger<Derived, TriggerType>>,
       public OpIn::ExprTriggerBase {
     using OpIn::ExprTriggerBase::ExprTriggerBase;
-    void adapterPossibleValueChange() {}
     void adapterValueChanged() {
         op->changeValue([&]() {
             op->reevaluate();

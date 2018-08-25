@@ -158,13 +158,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
     using OpSequenceIndexTriggerBase<SequenceMemberViewType>::op;
     using OpSequenceIndexTriggerBase<
         SequenceMemberViewType>::eventForwardedAsDefinednessChange;
-    void possibleValueChange() final {
-        if (!op->defined) {
-            return;
-        }
 
-        visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
-    }
     void valueChanged() final {
         if (!eventForwardedAsDefinednessChange()) {
             visitTriggers(
@@ -203,11 +197,6 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         }
     }
 
-    inline void possibleSubsequenceChange(UInt, UInt) final {
-        // since the parent will already be directly triggering on the sequence
-        // member, this trigger need not be forwarded
-    }
-
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         debug_code(assert((Int)startIndex >= op->cachedIndex &&
                           (Int)endIndex > op->cachedIndex));
@@ -227,12 +216,6 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         }
         if ((Int)index1 != op->cachedIndex) {
             swap(index1, index2);
-        }
-        if (op->defined) {
-            op->cachedIndex = index2;
-            visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                          op->triggers);
-            op->cachedIndex = index1;
         }
         if (!eventForwardedAsDefinednessChange()) {
             visitTriggers(
@@ -286,14 +269,6 @@ struct OpSequenceIndex<SequenceMemberViewType>::IndexTrigger
     using OpSequenceIndexTriggerBase<SequenceMemberViewType>::op;
     using OpSequenceIndexTriggerBase<
         SequenceMemberViewType>::eventForwardedAsDefinednessChange;
-    void possibleValueChange() final {
-        if (!op->defined) {
-            return;
-        }
-
-        visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
-    }
-
     void valueChanged() final {
         op->cachedIndex = op->indexOperand->view().value - 1;
         if (!eventForwardedAsDefinednessChange()) {

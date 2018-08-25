@@ -39,7 +39,6 @@ ostream& prettyPrint<TupleView>(ostream& os, const TupleView& v) {
 
 template <>
 void deepCopy<TupleValue>(const TupleValue& src, TupleValue& target) {
-    target.notifyPossibleEntireTupleChange();
     target.members.clear();
     for (auto& member : src.members) {
         mpark::visit(

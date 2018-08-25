@@ -34,7 +34,6 @@ template <typename InnerViewType>
 void deepCopyImpl(const MSetValue&,
                   const ExprRefVec<InnerViewType>& srcMemnersImpl,
                   MSetValue& target) {
-    target.notifyPossibleMSetValueChange();
     // to be optimised later
     target.silentClear();
 

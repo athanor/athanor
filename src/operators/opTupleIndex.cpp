@@ -113,13 +113,6 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
             op->triggers, true);
     }
 
-    void possibleValueChange() final {
-        if (!op->defined) {
-            return;
-        }
-
-        visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
-    }
     void valueChanged() final {
         if (!eventForwardedAsDefinednessChange()) {
             visitTriggers(
@@ -129,11 +122,6 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
                 },
                 op->triggers);
         }
-    }
-
-    inline void possibleMemberValueChange(UInt) final {
-        // since the parent will already be directly triggering on the tuple
-        // member, this trigger need not be forwarded
     }
 
     inline void memberValueChanged(UInt) final {

@@ -194,14 +194,6 @@ struct ExprChangeTrigger
       ChangeTriggerAdapter<typename AssociatedTriggerType<ViewType>::type,
                            ExprChangeTrigger<ContainerType, ViewType>> {
     using Quantifier<ContainerType>::ExprTriggerBase ::ExprTriggerBase;
-    void adapterPossibleValueChange() {
-        mpark::visit(
-            [&](auto& members) {
-                this->op->template notifyPossibleSubsequenceChange<viewType(
-                    members)>(this->index, this->index + 1);
-            },
-            this->op->members);
-    }
     void adapterValueChanged() {
         mpark::visit(
             [&](auto& members) {
@@ -610,7 +602,6 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
             },
             op->container->view().members);
     }
-    void possibleValueChange() final {}
     void valueRemoved(UInt indexOfRemovedValue, HashType) final {
         if (indexOfRemovedValue < op->numberElements() - 1) {
             op->swapExprs(indexOfRemovedValue, op->numberElements() - 1);
@@ -644,10 +635,9 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
             op->valuesToUnroll);
     }
 
-    void possibleMemberValueChange(UInt) final {}
-    void memberValueChanged(UInt) final{};
-    void possibleMemberValuesChange(const std::vector<UInt>&) final {}
-    void memberValuesChanged(const std::vector<UInt>&) final{};
+    void memberValueChanged(UInt, HashType) final{};
+    void memberValuesChanged(const std::vector<UInt>&,
+                             const vector<HashType>&) final{};
 
     void valueChanged() {
         while (op->numberElements() != 0) {
@@ -731,11 +721,9 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
             op->valuesToUnroll);
     }
 
-    void possibleMemberValueChange(UInt) final {}
     void memberValueChanged(UInt) final{};
-    void possibleMemberValuesChange(const std::vector<UInt>&) final {}
     void memberValuesChanged(const std::vector<UInt>&) final{};
-    void possibleValueChange() final {}
+
     void valueChanged() {
         while (op->numberElements() != 0) {
             this->valueRemoved(op->numberElements() - 1,
@@ -830,9 +818,8 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
             op->valuesToUnroll);
     }
 
-    void possibleSubsequenceChange(UInt, UInt) final {}
     void subsequenceChanged(UInt, UInt) final{};
-    void possibleValueChange() final {}
+
     void valueChanged() {
         while (op->numberElements() != 0) {
             this->valueRemoved(op->numberElements() - 1,
@@ -981,11 +968,11 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     Quantifier<FunctionView>* op;
 
     ContainerTrigger(Quantifier<FunctionView>* op) : op(op) {}
-    void possibleImageChange(UInt) final {}
+
     void imageChanged(UInt) final {}
-    void possibleImageChange(const std::vector<UInt>&) final {}
+
     void imageChanged(const std::vector<UInt>&) final {}
-    void possibleValueChange() final {}
+
     void valueChanged() {
         while (op->numberElements() != 0) {
             op->roll(op->numberElements() - 1);

@@ -16,9 +16,6 @@ struct ExprTrigger
     : public OpTupleLit::ExprTriggerBase,
       public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>> {
     using ExprTriggerBase::ExprTriggerBase;
-    void adapterPossibleValueChange() {
-        this->op->notifyPossibleMemberChange(this->index);
-    }
     void adapterValueChanged() {
         this->op->memberChangedAndNotify(this->index);
     }

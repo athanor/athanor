@@ -7,92 +7,66 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 
+template <typename View>
+void OpSetLit::addValue(size_t index) {
+    auto& expr = getOperands<View>()[index];
+    HashType hash = getValueHash(expr->view());
+    auto& operandGroup = hashIndicesMap[hash];
+    debug_code(assert(!operandGroup.operands.count(index)));
+    operandGroup.operands.insert(index);
+    cachedOperandHashes.set(index, hash);
+    if (operandGroup.operands.size() == 1) {
+        operandGroup.focusOperand = index;
+        addMemberAndNotify(expr);
+        operandGroup.focusOperandSetIndex = numberElements() - 1;
+        cachedSetHashes.insert(numberElements() - 1, hash);
+    }
+}
+
+template <typename View>
+void OpSetLit::removeValue(size_t index, HashType hash) {
+    auto iter = hashIndicesMap.find(hash);
+    debug_code(assert(iter != hashIndicesMap.end()));
+    auto& operandGroup = iter->second;
+    debug_code(assert(operandGroup.operands.count(index)));
+    operandGroup.operands.erase(index);
+    if (operandGroup.focusOperand == index) {
+        UInt setIndex = operandGroup.focusOperandSetIndex;
+        removeMemberAndNotify<View>(setIndex);
+        cachedSetHashes.swapErase(setIndex);
+        if (setIndex < numberElements()) {
+            hashIndicesMap[cachedSetHashes.get(setIndex)].focusOperandSetIndex =
+                setIndex;
+        }
+        if (operandGroup.operands.empty()) {
+            hashIndicesMap.erase(iter);
+        } else {
+            operandGroup.focusOperand = *(operandGroup.operands.begin());
+            addMemberAndNotify(getOperands<View>()[operandGroup.focusOperand]);
+            operandGroup.focusOperandSetIndex = numberElements() - 1;
+        }
+    }
+}
+
 void OpSetLit::evaluateImpl() {
     debug_code(assert(exprTriggers.empty()));
     numberUndefined = 0;
     mpark::visit(
         [&](auto& operands) {
             this->members.emplace<ExprRefVec<viewType(operands)>>();
-            size_t startIndex = 0, endIndex = operands.size() - 1;
-            while (startIndex <= endIndex) {
-                auto& operand = operands[startIndex];
-                operand->evaluate();
-                if (operand->isUndefined()) {
-                    numberUndefined++;
-                    swap(operands[startIndex], operands[endIndex]);
-                    --endIndex;
-                } else if (memberHashes.count(getValueHash(operand->view()))) {
-                    swap(operands[startIndex], operands[endIndex]);
-                    this->addHash(getValueHash(operands[endIndex]->view()),
-                                  endIndex);
-                    --endIndex;
-                } else {
-                    this->addMember(operand);
-                    this->addHash(getValueHash(operand->view()), startIndex);
-                    ++startIndex;
-                }
-            }
-        },
-        operands);
-    debug_code(assertValidHashes());
-}
-
-void OpSetLit::assertValidHashes() {
-    debug_log(hashIndicesMap);
-    size_t sumOfIndexSetSizes = 0;
-    size_t numberUndefined = 0;
-    bool success = true;
-    mpark::visit(
-        [&](auto& operands) {
             for (size_t i = 0; i < operands.size(); i++) {
                 auto& operand = operands[i];
                 if (operand->isUndefined()) {
-                    ++numberUndefined;
-                    continue;
+                    cerr << "Error: not handling OpSetLit with undefined "
+                            "values at the moment.\n";
+                    abort();
                 }
-                HashType hash = getValueHash(operand->view());
-                auto iter = hashIndicesMap.find(hash);
-                if (iter == hashIndicesMap.end()) {
-                    success = false;
-                    cerr << "Error, hash " << hash << " of operand ";
-                    operand->dumpState(cerr);
-                    cerr << " maps to no index set.\n";
-                    break;
-                }
-                if (!iter->second.count(i)) {
-                    success = false;
-                    operand->dumpState(cerr << "error: operand: ")
-                        << " with hash " << hash
-                        << " maps to an index set not containing the operand "
-                           "index "
-                        << i << endl;
-                    cerr << iter->second << endl;
-                    break;
-                }
+                addValue<viewType(operands)>(i);
             }
-            if (success) {
-                for (const auto& hashIndicesPair : hashIndicesMap) {
-                    sumOfIndexSetSizes += hashIndicesPair.second.size();
-                }
-                if (sumOfIndexSetSizes + numberUndefined != operands.size()) {
-                    success = false;
-                    cerr << "numberUndefined(" << numberUndefined
-                         << ") + sumOfIndexSetSizes(" << sumOfIndexSetSizes
-                         << ") should = operands.size(" << operands.size()
-                         << ")\n";
-                }
-            }
-            if (!success) {
-                cerr << "HashIndicesMap: " << hashIndicesMap << endl;
-                cerr << "operands:";
-                for (auto& operand : operands) {
-                    operand->dumpState(cerr << "\n");
-                }
-                cerr << endl;
-                abort();
-            }
+
         },
         operands);
+    debug_code(assertValidHashes());
 }
 
 namespace {
@@ -105,110 +79,9 @@ struct ExprTrigger
     using ExprTriggerBase::index;
     using ExprTriggerBase::op;
 
-    HashType previousHash() { return op->cachedHashes.get(index); }
-    auto& getOperands() { return mpark::get<ExprRefVec<View>>(op->operands); }
-
-    void swapOperands(size_t index1, size_t index2) {
-        op->swapHashes<View>(index1, index2);
-        swap(getOperands()[index1], getOperands()[index2]);
-        swap(op->exprTriggers[index1], op->exprTriggers[index2]);
-        swap(op->exprTriggers[index1]->index, op->exprTriggers[index2]->index);
-        swap(op->cachedHashes.get(index1), op->cachedHashes.get(index2));
-    }
-
-    void swapWithOtherOperand(size_t newIndex) {
-        swapOperands(this->index, newIndex);
-    }
-
-    auto manualRemoveOperandFromSetView(HashType newHash,
-                                        bool operandIsStillDefined) {
-        auto& members = op->getMembers<View>();
-        op->memberHashes.erase(previousHash());
-        op->cachedHashTotal -= mix(previousHash());
-        members[index] = move(members.back());
-        members.pop_back();
-        op->notifyMemberRemoved(index, previousHash());
-        auto otherOperandWithSameValue = op->removeHash(previousHash(), index);
-        if (operandIsStillDefined) {
-            op->addHash(newHash, index);
-        }
-        swapWithOtherOperand(op->numberElements());
-        return otherOperandWithSameValue;
-    }
-
     void adapterValueChanged() {
-        todoImpl();
-        HashType newHash = getValueHash(getOperands()[index]->view());
-        debug_log("hit, index=" << index << "\npreviousHash()="
-                                << previousHash() << "\nnewHash=" << newHash);
-        ;
-        debug_log("hashIndicesMap=" << op->hashIndicesMap);
-        debug_code(op->dumpState(cout) << endl);
-
-        if (newHash == previousHash()) {
-            debug_log("returning");
-            return;
-        }
-        debug_code(assert(op->hashIndicesMap.count(previousHash())));
-        bool operandBeingUsedInSet = index < op->numberElements();
-        // if false, then another operand with the same value as this operands
-        // old value is in the SetView, this operand was not being tracked as
-        // part of the SetView
-        bool newValueInSet = op->memberHashes.count(newHash);
-        // whether or not the new value is already present in the set
-
-        if (!operandBeingUsedInSet) {
-            if (!newValueInSet) {
-                // this operand was not in the set view, now it has a unique
-                // value, it must be added
-                op->addMemberAndNotify(getOperands()[index]);
-                op->removeHash(previousHash(), index);
-                op->addHash(newHash, index);
-                // now move the operand and trigger into the same index as the
-                // newly added element to the set view
-                size_t newIndex = op->numberElements() - 1;
-                swapWithOtherOperand(newIndex);
-            } else {
-                // this operand was not being used in the set view, it still
-                // can't be as its there is already an operand with its new
-                // value
-                op->removeHash(previousHash(), index);
-                op->addHash(newHash, index);
-            }
-        } else {
-            if (!newValueInSet) {
-                // operand was being used in the set view, it now has a new
-                // value, notify the set of the new value
-                op->template memberChangedAndNotify<View>(index,
-                                                          previousHash());
-                auto otherOperandWithSameValue =
-                    op->removeHash(previousHash(), index);
-                op->addHash(newHash, index);
-                // however if other operands have the old value they must be
-                // moved into the set view
-                if (otherOperandWithSameValue.first) {
-                    op->addMemberAndNotify(
-                        getOperands()[otherOperandWithSameValue.second]);
-                    swapOperands(op->numberElements() - 1,
-                                 otherOperandWithSameValue.second);
-                }
-            } else {
-                // operand is in set view and now changed to a value of another
-                // operand in the set,  will remove this one
-                auto otherOperandWithSameValue =
-                    manualRemoveOperandFromSetView(newHash, true);
-                ;
-                // however, if other operand has the old value,  it's put back
-                // in
-                if (otherOperandWithSameValue.first) {
-                    op->addMemberAndNotify(
-                        getOperands()[otherOperandWithSameValue.second]);
-                    debug_code(assert(index == op->numberElements() - 1));
-                    swapWithOtherOperand(otherOperandWithSameValue.second);
-                }
-            }
-        }
-//        previousHash() = newHash;
+        op->removeValue<View>(index, op->cachedOperandHashes.get(index));
+        op->addValue<View>(index);
     }
 
     void reattachTrigger() final {
@@ -219,45 +92,8 @@ struct ExprTrigger
         op->exprTriggers[index] = trigger;
     }
 
-    void adapterHasBecomeDefined() {
-        HashType newHash = getValueHash(getOperands()[index]->view());
-        bool newValueInSet = op->memberHashes.count(newHash);
-        // whether or not the new value is already present in the set
-
-        if (!newValueInSet) {
-            // this operand was not in the set view, now it has a unique value,
-            // it must be added
-            op->addMemberAndNotify(getOperands()[index]);
-            op->addHash(newHash, index);
-            // now move the operand and trigger into the same index as the newly
-            // added element to the set view
-            swapWithOtherOperand(op->numberElements() - 1);
-        } else {
-            // this operand was not being used in the set view, it still can't
-            // be as its there is already an operand with its new value
-            op->addHash(newHash, index);
-        }
-    }
-
-    void adapterHasBecomeUndefined() {
-        bool operandBeingUsedInSet = index < op->numberElements();
-        if (!operandBeingUsedInSet) {
-            // this operand was not being used in the set, so parents don't
-            // detect the change
-            op->removeHash(previousHash(), index);
-        } else {
-            // operand was being used in the set view, remove it
-            auto otherOperandWithSameValue =
-                manualRemoveOperandFromSetView(0, false);
-            // if other operands had the old value, add them in
-            if (otherOperandWithSameValue.first) {
-                op->addMemberAndNotify(
-                    getOperands()[otherOperandWithSameValue.second]);
-                debug_code(assert(index == op->numberElements() - 1));
-                swapWithOtherOperand(otherOperandWithSameValue.second);
-            }
-        }
-    }
+    void adapterHasBecomeDefined() { todoImpl(); }
+    void adapterHasBecomeUndefined() { todoImpl(); }
 };
 }  // namespace
 
@@ -419,6 +255,104 @@ pair<bool, ExprRef<SetView>> OpSetLit::optimise(PathExtension path) {
         this->operands);
     return make_pair(changeMade, returnExpr);
 }
+
+ostream& operator<<(ostream& os, const OpSetLit::OperandGroup& og) {
+    os << "OperandGroup (";
+    os << "focusOperand=" << og.focusOperand << ",\n";
+    os << "focusOperandSetIndex=" << og.focusOperandSetIndex << ",\n";
+    os << "operands=" << og.operands << ")\n";
+    return os;
+}
+
+void OpSetLit::assertValidHashes() {
+    debug_log(hashIndicesMap);
+    bool success = true;
+    mpark::visit(
+        [&](auto& operands) {
+            for (size_t i = 0; i < operands.size(); i++) {
+                auto& operand = operands[i];
+                if (operand->isUndefined()) {
+                    cerr << "Not handling undefined operands in set literals "
+                            "at the moment.\n";
+                    success = false;
+                    break;
+                    continue;
+                }
+                HashType hash = getValueHash(operand->view());
+                if (cachedOperandHashes.get(i) != hash) {
+                    cerr << "Error: cachedOperandHashes at index " << i
+                         << " has value " << cachedOperandHashes.get(i)
+                         << " but operand has value " << hash << endl;
+                    success = false;
+                    break;
+                }
+                auto iter = hashIndicesMap.find(hash);
+                if (iter == hashIndicesMap.end()) {
+                    success = false;
+                    cerr << "Error, hash " << hash << " of operand ";
+                    operand->dumpState(cerr);
+                    cerr << " maps to no operand group.\n";
+                    break;
+                }
+                auto& og = iter->second;
+                if (!og.operands.count(i)) {
+                    success = false;
+                    operand->dumpState(cerr << "error: operand: ")
+                        << " with hash " << hash
+                        << " maps to an operand group not containing the "
+                           "operand "
+                           "index "
+                        << i << endl;
+                    cerr << og << endl;
+                    break;
+                }
+            }
+
+            if (success) {
+                for (const auto& hashIndicesPair : hashIndicesMap) {
+                    HashType hash = hashIndicesPair.first;
+                    auto& og = hashIndicesPair.second;
+                    if (!og.operands.count(og.focusOperand)) {
+                        cerr << "Error: focus operand not in operand group: "
+                             << og << endl;
+                        success = false;
+                        break;
+                    }
+                    if (cachedSetHashes.get(og.focusOperandSetIndex) != hash) {
+                        cerr << "Error: cached set indices does not match up "
+                                "with operand group "
+                             << og << endl;
+                        success = false;
+                        break;
+                    }
+                    for (UInt index : og.operands) {
+                        HashType hash2 = cachedOperandHashes.get(index);
+                        if (hash2 != hash) {
+                            cerr << "Error: index " << index << " maps to hash "
+                                 << hash2 << " but hash " << hash << " maps to "
+                                 << index << endl;
+                            success = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!success) {
+                cerr << "HashIndicesMap: " << hashIndicesMap << endl;
+                cerr << "cachedOperandHashes: " << cachedOperandHashes.contents
+                     << endl;
+                cerr << "cachedSetHashes: " << cachedSetHashes.contents << endl;
+                cerr << "operands:";
+                for (auto& operand : operands) {
+                    operand->dumpState(cerr << "\n");
+                }
+                cerr << endl;
+                abort();
+            }
+        },
+        operands);
+}
+
 template <typename Op>
 struct OpMaker;
 

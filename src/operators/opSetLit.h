@@ -11,9 +11,16 @@ struct OpSetLit : public SetView {
         UInt index;
         ExprTriggerBase(OpSetLit* op, UInt index) : op(op), index(index) {}
     };
+    struct OperandGroup {
+        UInt focusOperand;
+        UInt focusOperandSetIndex;
+        std::unordered_set<UInt> operands;
+    };
     AnyExprVec operands;
-    std::unordered_map<HashType, FastIterableIntSet> hashIndicesMap;
-    PreviousValueCache<HashType> cachedHashes;
+    std::unordered_map<HashType, OperandGroup> hashIndicesMap;
+    PreviousValueCache<HashType> cachedOperandHashes;
+    PreviousValueCache<HashType> cachedSetHashes;
+
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
     UInt numberUndefined = 0;
     OpSetLit(AnyExprVec operands) : operands(std::move(operands)) {}
@@ -21,48 +28,6 @@ struct OpSetLit : public SetView {
     OpSetLit(OpSetLit&& other);
     ~OpSetLit() { this->stopTriggeringOnChildren(); }
 
-    void addHash(HashType hash, size_t index) {
-        hashIndicesMap[hash].insert(index);
-        cachedHashes.set(index, hash);
-    }
-
-    std::pair<bool, size_t> removeHash(HashType hash, size_t index) {
-        auto iter = hashIndicesMap.find(hash);
-        debug_code(assert(iter != hashIndicesMap.end()));
-        auto& indices = iter->second;
-        if (indices.size() == 1) {
-            hashIndicesMap.erase(iter);
-            return std::make_pair(false, 0);
-        } else {
-            indices.erase(index);
-            return std::make_pair(true, *indices.begin());
-        }
-    }
-
-    template <typename OperandView>
-    void swapHashes(size_t index1, size_t index2) {
-        if (index1 == index2) {
-            return;
-        }
-        auto& operands = mpark::get<ExprRefVec<OperandView>>(this->operands);
-        bool operand1Defined = !operands[index1]->isUndefined();
-        bool operand2Defined = !operands[index2]->isUndefined();
-        HashType operand1Hash, operand2Hash;
-        if (operand1Defined) {
-            operand1Hash = getValueHash(operands[index1]->view());
-            removeHash(operand1Hash, index1);
-        }
-        if (operand2Defined) {
-            operand2Hash = getValueHash(operands[index2]->view());
-            removeHash(operand2Hash, index2);
-        }
-        if (operand1Defined) {
-            addHash(operand1Hash, index2);
-        }
-        if (operand2Defined) {
-            addHash(operand2Hash, index1);
-        }
-    }
     void evaluateImpl() final;
     void startTriggeringImpl() final;
     void stopTriggering() final;
@@ -76,6 +41,14 @@ struct OpSetLit : public SetView {
     bool isUndefined() final;
     std::pair<bool, ExprRef<SetView>> optimise(PathExtension path) final;
     void assertValidHashes();
+    template <typename View>
+    ExprRefVec<View>& getOperands() {
+        return mpark::get<ExprRefVec<View>>(operands);
+    }
+    template <typename View>
+    void removeValue(size_t index, HashType hash);
+    template <typename View>
+    void addValue(size_t index);
 };
 
 #endif /* SRC_OPERATORS_OPSETLIT_H_ */

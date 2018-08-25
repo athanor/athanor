@@ -175,7 +175,7 @@ struct SetView : public ExprInterface<SetView> {
     inline ExprRef<InnerViewType> removeMemberAndNotify(UInt index) {
         ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
-        notifyMemberRemoved(index, getValueHash(*removedValue));
+        notifyMemberRemoved(index, getValueHash(removedValue->view()));
         return removedValue;
     }
 

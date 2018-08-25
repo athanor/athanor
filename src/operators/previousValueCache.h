@@ -35,6 +35,12 @@ struct PreviousValueCache {
         contents.erase(contents.begin() + index);
         return oldValue;
     }
+
+    Value swapErase(size_t index) {
+        debug_code(assert(index < contents.size()));
+        std::swap(get(index), get(contents.size() - 1));
+        return erase(contents.size() - 1);
+    }
     void clear() { contents.clear(); }
 };
 #endif /* SRC_OPERATORS_PREVIOUSVALUECACHE_H_ */

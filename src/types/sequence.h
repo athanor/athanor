@@ -49,7 +49,6 @@ struct SequenceOuterTrigger : public virtual TriggerBase {
 };
 
 struct SequenceMemberTrigger : public virtual TriggerBase {
-    virtual void possibleSubsequenceChange(UInt startIndex, UInt endIndex) = 0;
     virtual void subsequenceChanged(UInt startIndex, UInt endIndex) = 0;
     virtual void positionsSwapped(UInt index1, UInt index2) = 0;
 };
@@ -70,7 +69,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
     HashType hashOfPossibleChange;
     std::vector<HashType> hashOfMembersToBeChanged;
     UInt numberUndefined = 0;
-    debug_code(bool posSequenceValueChangeCalled = false);
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline HashType calcMemberHash(UInt index,
@@ -132,9 +130,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
     }
 
     inline void notifyMemberAdded(size_t index, const AnyExprRef& newMember) {
-        debug_code(assert(posSequenceValueChangeCalled);
-                   posSequenceValueChangeCalled = false);
-
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueAdded(index, newMember); },
                       triggers);
@@ -172,9 +167,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
 
     inline void notifyMemberRemoved(UInt index,
                                     const AnyExprRef& removedMember) {
-        debug_code(assert(posSequenceValueChangeCalled);
-                   posSequenceValueChangeCalled = false);
-
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueRemoved(index, removedMember); },
                       triggers);
@@ -191,19 +183,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
             value += this->calcMemberHash(index2, members[index2]);
         });
         debug_code(assertValidState());
-    }
-
-    inline void notifyPossiblePositionsSwapp(UInt index1, UInt index2) {
-        visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                      allMemberTriggers);
-        if (index1 < singleMemberTriggers.size()) {
-            visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                          singleMemberTriggers[index1]);
-        }
-        if (index2 < singleMemberTriggers.size()) {
-            visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                          singleMemberTriggers[index2]);
-        }
     }
 
     inline void notifyPositionsSwapped(UInt index1, UInt index2) {
@@ -256,14 +235,9 @@ struct SequenceView : public ExprInterface<SequenceView> {
             [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
             startIndex, endIndex);
     }
-    inline void notifyPossibleSequenceValueChange() {
-        visitTriggers([](auto& t) { t->possibleValueChange(); }, triggers);
-        debug_code(posSequenceValueChangeCalled = true);
-    }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void swapAndNotify(UInt index1, UInt index2) {
-        notifyPossiblePositionsSwapp(index1, index2);
         swapPositions<InnerViewType>(index1, index2);
         notifyPositionsSwapped(index1, index2);
     }
@@ -305,7 +279,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool addMemberAndNotify(UInt index,
                                    const ExprRef<InnerViewType>& member) {
-        notifyPossibleSequenceValueChange();
         if (addMember(index, member)) {
             notifyMemberAdded(index, getMembers<InnerViewType>()[index]);
             return true;
@@ -316,7 +289,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRef<InnerViewType> removeMemberAndNotify(UInt index) {
-        notifyPossibleSequenceValueChange();
         ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
         notifyMemberRemoved(index, removedValue);
@@ -339,11 +311,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
                     getValueHash(members[i]->view()));
             }
         }
-        visitAllMemberTriggersInRange(
-            [&](auto& t) {
-                t->possibleSubsequenceChange(startIndex, endIndex);
-            },
-            startIndex, endIndex);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -358,8 +325,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
     }
 
     inline void notifyEntireSequenceChange() {
-        debug_code(assert(posSequenceValueChangeCalled);
-                   posSequenceValueChangeCalled = false);
         cachedHashTotal.invalidate();
         if (injective) {
             repopulateMemberHashes();
@@ -435,7 +400,6 @@ struct SequenceValue : public SequenceView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline bool tryAddMember(UInt index, const ValRef<InnerValueType>& member,
                              Func&& func) {
-        notifyPossibleSequenceValueChange();
         bool added = SequenceView::addMember(index, member.asExpr());
         if (!added) {
             return false;
@@ -469,7 +433,6 @@ struct SequenceValue : public SequenceView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline std::pair<bool, ValRef<InnerValueType>> tryRemoveMember(
         UInt index, Func&& func) {
-        notifyPossibleSequenceValueChange();
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         auto removedMember =
             assumeAsValue(SequenceView::removeMember<InnerViewType>(index));
@@ -498,7 +461,6 @@ struct SequenceValue : public SequenceView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline bool trySwapPositions(UInt index1, UInt index2, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        notifyPossiblePositionsSwapp(index1, index2);
         SequenceView::swapPositions<InnerViewType>(index1, index2);
         if (func()) {
             auto& members = getMembers<InnerViewType>();
@@ -574,9 +536,6 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
         this->forwardValueChanged();
     }
 
-    inline void possibleSubsequenceChange(UInt, UInt) final {
-        this->forwardPossibleValueChange();
-    }
     inline void subsequenceChanged(UInt, UInt) final {
         this->forwardValueChanged();
         ;

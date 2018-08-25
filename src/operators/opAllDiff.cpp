@@ -98,7 +98,6 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
         indices2.insert(index1);
         debug_code(op->assertValidState());
     }
-    inline void possibleSubsequenceChange(UInt, UInt) final {}
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         if (!op->allOperandsAreDefined()) {
             return;
@@ -125,7 +124,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
         debug_code(op->assertValidState());
     }
 
-    void possibleValueChange() final {}
+
     void valueChanged() final {
         op->changeValue([&]() {
             op->reevaluate();

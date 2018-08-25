@@ -19,7 +19,6 @@ template <bool isLeft>
 struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
     IntRange* op;
     Trigger(IntRange* op) : op(op) {}
-    void possibleValueChange() final {}
     void valueChanged() final {
         if (!op->isDefined()) {
             return;

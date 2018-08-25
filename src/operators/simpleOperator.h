@@ -8,10 +8,6 @@ struct DefinedContainer {
     bool defined = false;
     void setDefined(bool defined, bool trigger = false) {
         bool triggerChange = trigger && (defined != this->defined);
-        if (triggerChange && !defined) {
-            visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                          static_cast<Derived&>(*this).triggers);
-        }
         this->defined = defined;
         if (triggerChange) {
             if (defined) {

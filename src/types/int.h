@@ -34,9 +34,6 @@ struct IntView : public ExprInterface<IntView> {
         Int oldValue = value;
 
         if (func() && value != oldValue) {
-            std::swap(value, oldValue);
-            visitTriggers([&](auto& t) { t->possibleValueChange(); }, triggers);
-            std::swap(oldValue, value);
             visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
             return true;
         }

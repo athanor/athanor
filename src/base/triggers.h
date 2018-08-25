@@ -12,7 +12,7 @@ struct TriggerBase {
     bool active = true;
     bool acceptDefinednessTriggers = true;
     virtual ~TriggerBase() {}
-    virtual void possibleValueChange() = 0;
+
     virtual void valueChanged() = 0;
     virtual void reattachTrigger() = 0;
     virtual void hasBecomeUndefined() = 0;

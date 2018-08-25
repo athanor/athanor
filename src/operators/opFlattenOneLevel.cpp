@@ -80,12 +80,7 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
         debug_code(op->assertValidStartingIndices());
     }
 
-    inline void possibleSubsequenceChange(UInt startIndex,
-                                          UInt endIndex) final {
-        op->notifyPossibleSubsequenceChange<SequenceInnerType>(
-            op->startingIndices[index] + startIndex,
-            op->startingIndices[index] + endIndex);
-    }
+
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         op->changeSubsequenceAndNotify<SequenceInnerType>(
             op->startingIndices[index] + startIndex,
@@ -111,7 +106,7 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
         op->innerSequenceTriggers[index] = trigger;
     }
     void valueChanged() { todoImpl(); }
-    void possibleValueChange() { op->notifyPossibleSequenceValueChange(); }
+
 };
 
 template <typename SequenceInnerType>
@@ -119,9 +114,8 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
     : public SequenceTrigger {
     OpFlattenOneLevel<SequenceInnerType>* op;
     OperandTrigger(OpFlattenOneLevel<SequenceInnerType>* op) : op(op) {}
-    void possibleValueChange() final {}
+
     void valueChanged() {
-        op->notifyPossibleSequenceValueChange();
 
         op->reevaluate();
         op->reattachAllInnerSequenceTriggers(true);
@@ -211,9 +205,6 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
         correctInnerSequenceTriggerIndices(index + 1);
     }
 
-    void possibleSubsequenceChange(UInt, UInt) final {
-        // ignore
-    }
     void subsequenceChanged(UInt, UInt) final {
         // ignore
     }

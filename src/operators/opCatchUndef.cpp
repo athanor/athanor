@@ -90,13 +90,9 @@ struct ExprTrigger
         ExprViewType, TriggerType,
         ExprTrigger<ExprViewType, TriggerType>>::ExprTriggerHelper;
 
-    void adapterPossibleValueChange() {}
-
     void adapterValueChanged() {}
 
     void adapterHasBecomeDefined() {
-        visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                      this->op->triggers);
         this->op->exprDefined = true;
         visitTriggers(
             [&](auto& t) {

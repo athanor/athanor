@@ -134,15 +134,8 @@ struct ChangeTriggerAdapterBaseHelper<BoolTrigger, Child> : public BoolTrigger {
 template <typename TriggerType, typename Child>
 struct ChangeTriggerAdapterBase
     : public ChangeTriggerAdapterBaseHelper<TriggerType, Child> {
-    inline void forwardPossibleValueChange() {
-        static_cast<Child*>(this)->adapterPossibleValueChange();
-    }
-
     inline void forwardValueChanged() {
         static_cast<Child*>(this)->adapterValueChanged();
-    }
-    inline void possibleValueChange() final {
-        this->forwardPossibleValueChange();
     }
     inline void valueChanged() final { this->forwardValueChanged(); }
 };

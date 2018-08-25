@@ -134,17 +134,11 @@ template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::swapMemberMappings(size_t index1,
                                                                size_t index2) {
     size_t temp = parentSetMapping[index1];
-    if (index1 == index) {
-        notifyPossibleMemberSwap();
-    }
     parentSetMapping[index1] = parentSetMapping[index2];
     if (index1 == index) {
         notifyMemberSwapped();
     }
 
-    if (index2 == index) {
-        notifyPossibleMemberSwap();
-    }
     parentSetMapping[index2] = temp;
     if (index2 == index) {
         notifyMemberSwapped();
@@ -152,11 +146,6 @@ void OpSetIndexInternal<SetMemberViewType>::swapMemberMappings(size_t index1,
 
     swap(setParentMapping[parentSetMapping[index1]],
          setParentMapping[parentSetMapping[index2]]);
-}
-
-template <typename SetMemberViewType>
-void OpSetIndexInternal<SetMemberViewType>::notifyPossibleMemberSwap() {
-    visitTriggers([&](auto& t) { t->possibleValueChange(); }, triggers);
 }
 
 template <typename SetMemberViewType>
@@ -179,10 +168,6 @@ struct OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger
 
     void hasBecomeDefined() final { todoImpl(); }
 
-    void possibleValueChange() final {
-        visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
-    }
-
     void valueChanged() final {
         op->evaluateMappings();
         visitTriggers(
@@ -192,18 +177,9 @@ struct OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger
             },
             op->triggers);
     }
-    inline void possibleMemberValueChange(UInt) final {
-        // since the parent will already be directly triggering on the set
-        // member, this trigger need not be forwarded
-    }
 
     inline void memberValueChanged(UInt index) final {
         op->handleSetMemberValueChange(index);
-    }
-
-    inline void possibleMemberValuesChange(const std::vector<UInt>&) final {
-        // since the parent will already be directly triggering on the set
-        // member, this trigger need not be forwarded
     }
 
     inline void memberValuesChanged(const std::vector<UInt>& indices) final {

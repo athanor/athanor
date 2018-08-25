@@ -26,10 +26,6 @@ struct ExprTrigger
       public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>> {
     typedef typename AssociatedViewType<TriggerType>::type View;
     using ExprTriggerBase::ExprTriggerBase;
-    void adapterPossibleValueChange() {
-        this->op->template notifyPossibleSubsequenceChange<View>(
-            this->index, this->index + 1);
-    }
     void adapterValueChanged() {
         this->op->template changeSubsequenceAndNotify<View>(this->index,
                                                             this->index + 1);

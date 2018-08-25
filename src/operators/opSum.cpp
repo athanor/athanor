@@ -24,6 +24,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         }
         auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
         if (expr->isUndefined()) {
+            op->cachedValues.insert(index, 1);
             if (op->operand->view().numberUndefined == 1) {
                 op->setDefined(false, false);
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },

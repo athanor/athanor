@@ -14,17 +14,15 @@ OpSum::OpSum(OpSum&& other)
       evaluationComplete(std::move(other.evaluationComplete)) {}
 class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
    public:
-    Int previousValue;
-    PreviousValueCache<Int> previousValues;
     OpSum* op;
     OperandsSequenceTrigger(OpSum* op) : op(op) {}
-    void valueAdded(UInt, const AnyExprRef& exprIn) final {
+    void valueAdded(UInt index, const AnyExprRef& exprIn) final {
         if (!op->evaluationComplete) {
             return;
         }
         auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
         if (expr->isUndefined()) {
-            op->cachedValues.insert(index, 1);
+            op->cachedValues.insert(index, 0);
             if (op->operand->view().numberUndefined == 1) {
                 op->setDefined(false, false);
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
@@ -32,19 +30,21 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
             }
             return;
         }
+        auto& operandValue = expr->view().value;
+        op->cachedValues.insert(index, operandValue);
         op->changeValue([&]() {
-            op->value += expr->view().value;
+            op->value += operandValue;
             return true;
         });
     }
 
-    void valueRemoved(UInt, const AnyExprRef& exprIn) final {
-        previousValues.clear();
+    void valueRemoved(UInt index, const AnyExprRef& exprIn) final {
         if (!op->evaluationComplete) {
             return;
         }
 
         const auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
+        Int operandValue = op->cachedValues.erase(index);
         if (expr->isUndefined()) {
             if (op->operand->view().numberUndefined == 0) {
                 op->setDefined(true, false);
@@ -54,12 +54,14 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
             return;
         }
         op->changeValue([&]() {
-            op->value -= expr->view().value;
+            op->value -= operandValue;
             return true;
         });
     }
 
-    inline void positionsSwapped(UInt, UInt) { previousValues.clear(); }
+    inline void positionsSwapped(UInt index1, UInt index2) {
+        swap(op->cachedValues.get(index1), op->cachedValues.get(index2));
+    }
 
     ExprRef<IntView>& getMember(UInt index) {
         return op->operand->view().getMembers<IntView>()[index];
@@ -69,55 +71,25 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         return (member->isUndefined()) ? 0 : member->view().value;
     }
 
-    inline void possibleSubsequenceChange(UInt startIndex,
-                                          UInt endIndex) final {
-        if (!op->evaluationComplete) {
-            return;
-        }
-
-        if (endIndex - startIndex == 1) {
-            previousValues.store(startIndex, getValueCatchUndef(startIndex));
-            return;
-        }
-
-        previousValue = 0;
-        for (size_t i = startIndex; i < endIndex; i++) {
-            previousValue += getValueCatchUndef(i);
-        }
-    }
-
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
-        debug_log("subsequence changed " << startIndex << "," << endIndex);
         if (!op->evaluationComplete) {
             return;
         }
 
-        Int newValue = 0;
+        Int valueToAdd = 0, valueToRemove = 0;
         for (size_t i = startIndex; i < endIndex; i++) {
-            newValue += getValueCatchUndef(i);
+            Int operandValue = getValueCatchUndef(i);
+            valueToAdd += operandValue;
+            valueToRemove += op->cachedValues.getAndSet(i, operandValue);
         }
-        Int valueToRemove;
-        if (endIndex - startIndex == 1) {
-            valueToRemove = previousValues.getAndSet(startIndex, newValue);
-            ;
-        } else {
-            valueToRemove = previousValue;
-        }
-
-        if (!op->isDefined()) {
+        op->changeValue([&]() {
             op->value -= valueToRemove;
-            op->value += newValue;
-        } else {
-            op->changeValue([&]() {
-                op->value -= valueToRemove;
-                op->value += newValue;
-                return true;
-            });
-        }
+            op->value += valueToAdd;
+            return true;
+        });
     }
-    void possibleValueChange() final {}
+
     void valueChanged() final {
-        previousValues.clear();
         if (!op->isDefined()) {
             op->reevaluate();
             if (op->isDefined()) {
@@ -143,17 +115,14 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         op->operand->addTrigger(trigger);
         op->operandTrigger = trigger;
     }
-    void hasBecomeUndefined() final {
-        previousValues.clear();
-        op->setDefined(false, true);
-    }
+    void hasBecomeUndefined() final { op->setDefined(false, true); }
     void hasBecomeDefined() final { op->setDefined(true, true); }
 
     void memberHasBecomeUndefined(UInt index) {
         if (!op->evaluationComplete) {
             return;
         }
-        op->value -= previousValues.get(index);
+        op->value -= op->cachedValues.get(index);
         if (op->operand->view().numberUndefined == 1) {
             op->setDefined(false, false);
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
@@ -168,9 +137,10 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
             }
             return;
         }
-
-        op->value +=
+        Int operandValue =
             op->operand->view().getMembers<IntView>()[index]->view().value;
+        op->value += operandValue;
+        op->cachedValues.set(index, operandValue);
         if (op->operand->view().numberUndefined == 0) {
             op->setDefined(true, false);
             visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
@@ -182,11 +152,16 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
 void OpSum::reevaluate() {
     setDefined(true, false);
     value = 0;
-    for (auto& operandChild : operand->view().getMembers<IntView>()) {
+    auto& members = operand->view().getMembers<IntView>();
+    for (size_t index = 0; index < members.size(); index++) {
+        auto& operandChild = members[index];
         if (operandChild->isUndefined()) {
+            cachedValues.insert(index, 0);
             setDefined(false, false);
         } else {
-            value += operandChild->view().value;
+            Int operandValue = operandChild->view().value;
+            value += operandValue;
+            cachedValues.insert(index, operandValue);
         }
     }
     evaluationComplete = true;
@@ -201,6 +176,7 @@ void OpSum::updateVarViolationsImpl(const ViolationContext& vioContext,
 
 void OpSum::copy(OpSum& newOp) const {
     newOp.value = value;
+    newOp.cachedValues = cachedValues;
     newOp.evaluationComplete = this->evaluationComplete;
 }
 

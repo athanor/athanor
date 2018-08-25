@@ -44,8 +44,8 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
         }
         auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
         if (expr->isUndefined()) {
+            op->cachedValues.insert(index, 1);
             if (op->operand->view().numberUndefined == 1) {
-                op->cachedValues.insert(index, 1);
                 op->setDefined(false, false);
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
                               op->triggers, true);
@@ -163,9 +163,10 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
             }
             return;
         }
-
-        op->addSingleValue(
-            op->operand->view().getMembers<IntView>()[index]->view().value);
+        Int operandValue =
+            op->operand->view().getMembers<IntView>()[index]->view().value;
+        op->addSingleValue(operandValue);
+        op->cachedValues.set(index, operandValue);
         if (op->operand->view().numberUndefined == 0) {
             op->setDefined(true, false);
             visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,

@@ -29,9 +29,6 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     void valueRemoved(UInt index, const AnyExprRef& exprIn) final {
-        debug_code(const auto& expr = mpark::get<ExprRef<BoolView>>(exprIn);
-                   UInt violation = expr->view().violation;
-                   assert(violation == op->cachedViolations.get(index)));
         UInt violationOfRemovedExpr = op->cachedViolations.get(index);
         debug_code(assert((op->violatingOperands.count(index) &&
                            violationOfRemovedExpr > 0) ||

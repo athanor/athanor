@@ -48,7 +48,7 @@ struct OpSetLit : public SetView {
     template <typename View>
     void removeValue(size_t index, HashType hash);
     template <typename View>
-    void addValue(size_t index);
+    void addValue(size_t index, bool insert = false);
 };
 
 #endif /* SRC_OPERATORS_OPSETLIT_H_ */

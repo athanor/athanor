@@ -51,7 +51,6 @@ struct SetView : public ExprInterface<SetView> {
     AnyExprVec members;
     HashType cachedHashTotal = 0;
     std::vector<std::shared_ptr<SetTrigger>> triggers;
-    debug_code(bool posSetValueChangeCalled = false);
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool addMember(const ExprRef<InnerViewType>& member) {
@@ -70,8 +69,6 @@ struct SetView : public ExprInterface<SetView> {
     }
 
     inline void notifyMemberAdded(const AnyExprRef& newMember) {
-        debug_code(assert(posSetValueChangeCalled);
-                   posSetValueChangeCalled = false);
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
     }
@@ -92,8 +89,6 @@ struct SetView : public ExprInterface<SetView> {
     }
 
     inline void notifyMemberRemoved(UInt index, HashType hashOfRemovedMember) {
-        debug_code(assert(posSetValueChangeCalled);
-                   posSetValueChangeCalled = false);
         debug_code(assertValidState());
         visitTriggers(
             [&](auto& t) { t->valueRemoved(index, hashOfRemovedMember); },
@@ -208,8 +203,6 @@ struct SetView : public ExprInterface<SetView> {
     }
 
     inline void notifyEntireSetChange() {
-        debug_code(assert(posSetValueChangeCalled);
-                   posSetValueChangeCalled = false);
 
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);

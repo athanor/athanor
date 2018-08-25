@@ -8,13 +8,17 @@
 using namespace std;
 
 template <typename View>
-void OpSetLit::addValue(size_t index) {
+void OpSetLit::addValue(size_t index, bool insert) {
     auto& expr = getOperands<View>()[index];
     HashType hash = getValueHash(expr->view());
     auto& operandGroup = hashIndicesMap[hash];
     debug_code(assert(!operandGroup.operands.count(index)));
     operandGroup.operands.insert(index);
-    cachedOperandHashes.set(index, hash);
+    if (insert) {
+        cachedOperandHashes.insert(index, hash);
+    } else {
+        cachedOperandHashes.set(index, hash);
+    }
     if (operandGroup.operands.size() == 1) {
         operandGroup.focusOperand = index;
         addMemberAndNotify(expr);
@@ -56,12 +60,13 @@ void OpSetLit::evaluateImpl() {
             this->members.emplace<ExprRefVec<viewType(operands)>>();
             for (size_t i = 0; i < operands.size(); i++) {
                 auto& operand = operands[i];
+                operand->evaluate();
                 if (operand->isUndefined()) {
                     cerr << "Error: not handling OpSetLit with undefined "
                             "values at the moment.\n";
                     abort();
                 }
-                addValue<viewType(operands)>(i);
+                addValue<viewType(operands)>(i, true);
             }
 
         },

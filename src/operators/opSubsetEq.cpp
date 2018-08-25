@@ -15,8 +15,6 @@ void OpSubsetEq::reevaluate() {
 struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
    public:
     OpSubsetEq* op;
-    HashType oldHash;
-    vector<HashType> oldHashes;
 
    public:
     LeftTrigger(OpSubsetEq* op) : op(op) {}
@@ -40,7 +38,6 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
     void valueAdded(const AnyExprRef& member) {
         valueAddedImpl(getValueHash(member), true);
     }
-    void possibleValueChange() final {}
     inline void valueChanged() final {
         op->changeValue([&]() {
             op->reevaluate();
@@ -48,15 +45,7 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
         });
     }
 
-    inline void possibleMemberValueChange(UInt index) final {
-        mpark::visit(
-            [&](auto& members) {
-                oldHash = getValueHash(members[index]->view());
-            },
-            op->left->view().members);
-    }
-
-    inline void memberValueChanged(UInt index) final {
+    inline void memberValueChanged(UInt index, HashType oldHash) final {
         HashType newHash = mpark::visit(
             [&](auto& members) { return getValueHash(members[index]->view()); },
             op->left->view().members);
@@ -65,40 +54,24 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
             valueAddedImpl(newHash, false);
             return true;
         });
-        oldHash = newHash;
     }
 
-    inline void possibleMemberValuesChange(
-        const std::vector<UInt>& indices) final {
-        mpark::visit(
-            [&](auto& members) {
-                oldHashes.resize(indices.size());
-                transform(begin(indices), end(indices), begin(oldHashes),
-                          [&](UInt index) {
-                              return getValueHash(members[index]->view());
-                          });
-            },
-            op->left->view().members);
-    }
-
-    inline void memberValuesChanged(const std::vector<UInt>& indices) final {
+    inline void memberValuesChanged(
+        const std::vector<UInt>& indices,
+        const std::vector<HashType>& oldHashes) final {
         op->changeValue([&]() {
             for (HashType hash : oldHashes) {
                 valueRemovedImpl(hash, false);
             }
-            // repopulate oldHashes with newHashes
             mpark::visit(
                 [&](auto& members) {
-                    oldHashes.resize(indices.size());
-                    transform(begin(indices), end(indices), begin(oldHashes),
-                              [&](UInt index) {
-                                  return getValueHash(members[index]->view());
-                              });
+
+                    for (UInt index : indices) {
+                        valueAddedImpl(getValueHash(members[index]->view()),
+                                       false);
+                    }
                 },
                 op->left->view().members);
-            for (HashType hash : oldHashes) {
-                valueAddedImpl(hash, false);
-            }
             return true;
         });
     }
@@ -141,7 +114,6 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
         valueAddedImpl(getValueHash(member), true);
     }
 
-    void possibleValueChange() final {}
     inline void valueChanged() final {
         op->changeValue([&]() {
             op->reevaluate();
@@ -149,15 +121,7 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
         });
     }
 
-    inline void possibleMemberValueChange(UInt index) final {
-        mpark::visit(
-            [&](auto& members) {
-                oldHash = getValueHash(members[index]->view());
-            },
-            op->right->view().members);
-    }
-
-    inline void memberValueChanged(UInt index) final {
+    inline void memberValueChanged(UInt index, HashType oldHash) final {
         HashType newHash = mpark::visit(
             [&](auto& members) { return getValueHash(members[index]->view()); },
             op->right->view().members);
@@ -166,40 +130,25 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
             valueAddedImpl(newHash, false);
             return true;
         });
-        oldHash = newHash;
     }
 
-    inline void possibleMemberValuesChange(
-        const std::vector<UInt>& indices) final {
-        mpark::visit(
-            [&](auto& members) {
-                oldHashes.resize(indices.size());
-                transform(begin(indices), end(indices), begin(oldHashes),
-                          [&](UInt index) {
-                              return getValueHash(members[index]->view());
-                          });
-            },
-            op->right->view().members);
-    }
-
-    inline void memberValuesChanged(const std::vector<UInt>& indices) final {
+    inline void memberValuesChanged(
+        const std::vector<UInt>& indices,
+        const std::vector<HashType>& oldHashes) final {
         op->changeValue([&]() {
             for (HashType hash : oldHashes) {
                 valueRemovedImpl(hash, false);
             }
-            // repopulate oldHashes with newHashes
             mpark::visit(
                 [&](auto& members) {
-                    oldHashes.resize(indices.size());
-                    transform(begin(indices), end(indices), begin(oldHashes),
-                              [&](UInt index) {
-                                  return getValueHash(members[index]->view());
-                              });
+
+                    for (UInt index : indices) {
+                        valueAddedImpl(getValueHash(members[index]->view()),
+                                       false);
+                    }
+
                 },
                 op->right->view().members);
-            for (HashType hash : oldHashes) {
-                valueAddedImpl(hash, false);
-            }
             return true;
         });
     }

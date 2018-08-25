@@ -34,7 +34,6 @@ template <typename InnerViewType>
 void deepCopyImpl(const SetValue& src,
                   const ExprRefVec<InnerViewType>& srcMemnersImpl,
                   SetValue& target) {
-    target.notifyPossibleSetValueChange();
     auto& targetMembersImpl = target.getMembers<InnerViewType>();
     // to be optimised later
     // cannot just clear vector as other constraints will hold pointers to

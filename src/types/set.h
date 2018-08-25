@@ -39,9 +39,11 @@ struct SetTrigger : public virtual TriggerBase {
     virtual void valueRemoved(UInt indexOfRemovedValue,
                               HashType hashOfRemovedValue) = 0;
     virtual void valueAdded(const AnyExprRef& member) = 0;
-    virtual void memberValueChanged(UInt index) = 0;
+    virtual void memberValueChanged(UInt index, HashType oldHash) = 0;
 
-    virtual void memberValuesChanged(const std::vector<UInt>& indices) = 0;
+    virtual void memberValuesChanged(
+        const std::vector<UInt>& indices,
+        const std::vector<HashType>& oldHashes) = 0;
 };
 struct SetView : public ExprInterface<SetView> {
     friend SetValue;
@@ -134,14 +136,17 @@ struct SetView : public ExprInterface<SetView> {
         debug_code(assertValidState());
     }
 
-    inline void notifyMemberChanged(size_t index) {
+    inline void notifyMemberChanged(size_t index, HashType oldHash) {
         debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->memberValueChanged(index); }, triggers);
-    }
-    inline void notifyMembersChanged(const std::vector<UInt>& indices) {
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->memberValuesChanged(indices); },
+        visitTriggers([&](auto& t) { t->memberValueChanged(index, oldHash); },
                       triggers);
+    }
+    inline void notifyMembersChanged(const std::vector<UInt>& indices,
+                                     const std::vector<HashType>& oldHashes) {
+        debug_code(assertValidState());
+        visitTriggers(
+            [&](auto& t) { t->memberValuesChanged(indices, oldHashes); },
+            triggers);
     }
 
     void silentClear() {
@@ -198,7 +203,7 @@ struct SetView : public ExprInterface<SetView> {
         if (oldHash == newHash) {
             return newHash;
         }
-        notifyMemberChanged(index);
+        notifyMemberChanged(index, oldHash);
         return newHash;
     }
 
@@ -335,7 +340,7 @@ struct SetValue : public SetView, public ValBase {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         HashType newHash = memberChanged<InnerViewType>(oldHash, index);
         if (func()) {
-            SetView::notifyMemberChanged(index);
+            SetView::notifyMemberChanged(index, oldHash);
             return std::make_pair(true, newHash);
         } else {
             if (oldHash != newHash) {
@@ -351,13 +356,14 @@ struct SetValue : public SetView, public ValBase {
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
     inline bool tryMembersChange(const std::vector<UInt>& indices,
-                                 std::vector<HashType>& hashes, Func&& func) {
+                                 const std::vector<HashType>& hashes,
+                                 Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         std::vector<HashType> newHashes(hashes.begin(), hashes.end());
         membersChanged<InnerViewType>(newHashes, indices);
         HashType cachedHashTotalBackup = cachedHashTotal;
         if (func()) {
-            SetView::notifyMembersChanged(indices);
+            SetView::notifyMembersChanged(indices, hashes);
             return true;
         } else {
             cachedHashTotal = cachedHashTotalBackup;
@@ -416,9 +422,9 @@ struct ChangeTriggerAdapter<SetTrigger, Child>
         this->forwardValueChanged();
     }
 
-    inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
+    inline void memberValueChanged(UInt,HashType) final { this->forwardValueChanged(); }
 
-    inline void memberValuesChanged(const std::vector<UInt>&) final {
+    inline void memberValuesChanged(const std::vector<UInt>&,const std::vector<HashType>&) final {
         this->forwardValueChanged();
     }
 };

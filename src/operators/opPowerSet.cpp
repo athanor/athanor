@@ -67,11 +67,12 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
         ;
     }
 
-    void memberValueChanged(UInt) final {
+    void memberValueChanged(UInt, HashType) final {
         // ignore;
     }
 
-    void memberValuesChanged(const vector<UInt>&) final {
+    void memberValuesChanged(const vector<UInt>&,
+                             const vector<HashType>&) final {
         // ignore;
     }
 };

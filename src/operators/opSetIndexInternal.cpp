@@ -178,11 +178,12 @@ struct OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger
             op->triggers);
     }
 
-    inline void memberValueChanged(UInt index) final {
+    inline void memberValueChanged(UInt index, HashType) final {
         op->handleSetMemberValueChange(index);
     }
 
-    inline void memberValuesChanged(const std::vector<UInt>& indices) final {
+    inline void memberValuesChanged(const std::vector<UInt>& indices,
+                                    const std::vector<HashType>&) final {
         for (auto index : indices) {
             op->handleSetMemberValueChange(index);
         }

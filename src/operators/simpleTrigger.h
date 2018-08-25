@@ -13,7 +13,6 @@ struct SimpleBinaryTrigger
           TriggerType, SimpleBinaryTrigger<Op, TriggerType, isLeftTrigger>> {
     Op* op;
     SimpleBinaryTrigger(Op* op) : op(op) {}
-    inline void adapterPossibleValueChange() {}
     inline void adapterValueChanged() {
         if (!op->isDefined() || !op->allOperandsAreDefined()) {
             return;
@@ -62,7 +61,6 @@ struct SimpleUnaryTrigger
                                   SimpleUnaryTrigger<Op, TriggerType>> {
     Op* op;
     SimpleUnaryTrigger(Op* op) : op(op) {}
-    inline void adapterPossibleValueChange() {}
     inline void adapterValueChanged() {
         op->changeValue([&]() {
             op->reevaluate();

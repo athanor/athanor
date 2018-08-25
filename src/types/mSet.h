@@ -33,10 +33,7 @@ struct MSetTrigger : public virtual TriggerBase {
     virtual void valueRemoved(UInt indexOfRemovedValue,
                               const AnyExprRef& removedExpr) = 0;
     virtual void valueAdded(const AnyExprRef& member) = 0;
-    virtual void possibleMemberValueChange(UInt index) = 0;
     virtual void memberValueChanged(UInt index) = 0;
-    virtual void possibleMemberValuesChange(
-        const std::vector<UInt>& indices) = 0;
     virtual void memberValuesChanged(const std::vector<UInt>& indices) = 0;
 };
 
@@ -133,21 +130,14 @@ struct MSetView : public ExprInterface<MSetView> {
     }
 
    public:
-    inline void notifyPossibleMSetValueChange() {
-        visitTriggers([](auto& t) { t->possibleValueChange(); }, triggers);
-        debug_code(posMSetValueChangeCalled = true);
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void addMemberAndNotify(const ExprRef<InnerViewType>& member) {
-        notifyPossibleMSetValueChange();
         addMember(member);
         notifyMemberAdded(getMembers<InnerViewType>().back());
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRef<InnerViewType> removeMemberAndNotify(UInt index) {
-        notifyPossibleMSetValueChange();
         ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
         notifyMemberRemoved(index, removedValue);
@@ -159,8 +149,6 @@ struct MSetView : public ExprInterface<MSetView> {
         auto& members = getMembers<InnerViewType>();
         debug_code(assertValidState());
         HashType memberHash = getValueHash(members[index]->view());
-        visitTriggers([&](auto& t) { t->possibleMemberValueChange(index); },
-                      triggers);
         return memberHash;
     }
 
@@ -173,8 +161,6 @@ struct MSetView : public ExprInterface<MSetView> {
             indices.begin(), indices.end(), hashes.begin(),
             [&](UInt index) { return getValueHash(members[index]->view()); });
         debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->possibleMemberValuesChange(indices); },
-                      triggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -237,7 +223,6 @@ struct MSetValue : public MSetView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline bool tryAddMember(const ValRef<InnerValueType>& member,
                              Func&& func) {
-        notifyPossibleMSetValueChange();
         MSetView::addMember(member.asExpr());
         if (func()) {
             valBase(*member).container = this;
@@ -270,7 +255,6 @@ struct MSetValue : public MSetView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline std::pair<bool, ValRef<InnerValueType>> tryRemoveMember(
         UInt index, Func&& func) {
-        notifyPossibleMSetValueChange();
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         auto removedMember =
             assumeAsValue(MSetView::removeMember<InnerViewType>(index));
@@ -385,13 +369,9 @@ struct ChangeTriggerAdapter<MSetTrigger, Child>
     inline void valueAdded(const AnyExprRef&) final {
         this->forwardValueChanged();
     }
-    inline void possibleMemberValueChange(UInt) final {
-        this->forwardPossibleValueChange();
-    }
+
     inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
-    inline void possibleMemberValuesChange(const std::vector<UInt>&) final {
-        this->forwardPossibleValueChange();
-    }
+
     inline void memberValuesChanged(const std::vector<UInt>&) final {
         this->forwardValueChanged();
     }

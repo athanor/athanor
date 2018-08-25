@@ -86,10 +86,9 @@ void OpFunctionImage<FunctionMemberViewType>::reevaluate(
 
 template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::evaluateImpl() {
-        functionOperand->evaluate();
+    functionOperand->evaluate();
     invoke(preImageOperand, evaluate());
     reevaluate();
-
 }
 
 template <typename FunctionMemberViewType>
@@ -142,8 +141,6 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
     FunctionOperandTrigger(OpFunctionImage<FunctionMemberViewType>* op)
         : op(op) {}
 
-    void possibleImageChange(UInt) {}
-    void possibleImageChange(const std::vector<UInt>&) {}
     void imageChanged(UInt) {
         // ignore, already triggering on member
     }
@@ -164,12 +161,6 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
         if ((Int)index1 != op->cachedIndex) {
             swap(index1, index2);
         }
-        if (op->defined) {
-            op->cachedIndex = index2;
-            visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                          op->triggers);
-            op->cachedIndex = index1;
-        }
         if (!op->eventForwardedAsDefinednessChange(false)) {
             visitTriggers(
                 [&](auto& t) {
@@ -181,13 +172,6 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
         }
     }
 
-    void possibleValueChange() final {
-        if (!op->defined) {
-            return;
-        }
-
-        visitTriggers([&](auto& t) { t->possibleValueChange(); }, op->triggers);
-    }
     void valueChanged() final {
         if (!op->eventForwardedAsDefinednessChange(true)) {
             visitTriggers(
@@ -273,15 +257,6 @@ struct PreImageTrigger
         FunctionMemberViewType, TriggerType,
         PreImageTrigger<FunctionMemberViewType,
                         TriggerType>>::PreImageTriggerHelper;
-
-    void adapterPossibleValueChange() {
-        if (!this->op->locallyDefined) {
-            return;
-        }
-
-        visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                      this->op->triggers);
-    }
 
     void adapterValueChanged() {
         if (!this->op->eventForwardedAsDefinednessChange(true)) {

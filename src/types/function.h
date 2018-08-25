@@ -55,9 +55,8 @@ struct FunctionOuterTrigger : public virtual TriggerBase {
 };
 
 struct FunctionMemberTrigger : public virtual TriggerBase {
-    virtual void possibleImageChange(UInt index) = 0;
     virtual void imageChanged(UInt index) = 0;
-    virtual void possibleImageChange(const std::vector<UInt>& indices) = 0;
+
     virtual void imageChanged(const std::vector<UInt>& indices) = 0;
     virtual void imageSwap(UInt index1, UInt index2) = 0;
 };
@@ -165,9 +164,9 @@ struct FunctionView : public ExprInterface<FunctionView> {
     }
 
     inline void notifyPossibleImageChange(UInt index) {
+        ignoreUnused(index);
         debug_code(assertValidState());
-        visitMemberTriggers([&](auto& t) { t->possibleImageChange(index); },
-                            index);
+        // later fill in this function for injective functions
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -181,9 +180,9 @@ struct FunctionView : public ExprInterface<FunctionView> {
     }
 
     inline void notifyPossibleImagesChange(const std::vector<UInt>& indices) {
+        ignoreUnused(indices);
         debug_code(assertValidState());
-        visitMemberTriggers([&](auto& t) { t->possibleImageChange(indices); },
-                            indices);
+        // later fill in this function for injective functions
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -197,19 +196,6 @@ struct FunctionView : public ExprInterface<FunctionView> {
                             indices);
     }
 
-    void notifyPossibleSwapImages(UInt index1, UInt index2) {
-        debug_code(posFunctionValueChangeCalled = true);
-        visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                      allMemberTriggers);
-        if (index1 < singleMemberTriggers.size()) {
-            visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                          singleMemberTriggers[index1]);
-        }
-        if (index2 < singleMemberTriggers.size()) {
-            visitTriggers([&](auto& t) { t->possibleValueChange(); },
-                          singleMemberTriggers[index2]);
-        }
-    }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void swapImages(UInt index1, UInt index2) {
         auto& range = getRange<InnerViewType>();
@@ -233,10 +219,6 @@ struct FunctionView : public ExprInterface<FunctionView> {
         }
     }
 
-    inline void notifyPossibleFunctionValueChange() {
-        visitTriggers([](auto& t) { t->possibleValueChange(); }, triggers);
-        debug_code(posFunctionValueChangeCalled = true);
-    }
     inline void notifyEntireFunctionChange() {
         debug_code(assert(posFunctionValueChangeCalled);
                    posFunctionValueChangeCalled = false);
@@ -286,7 +268,6 @@ struct FunctionValue : public FunctionView, public ValBase {
               EnableIfValue<InnerValueType> = 0>
     inline bool trySwapImages(UInt index1, UInt index2, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        notifyPossibleSwapImages(index1, index2);
         FunctionView::swapImages<InnerViewType>(index1, index2);
         if (func()) {
             auto& range = getRange<InnerViewType>();
@@ -360,12 +341,6 @@ struct FunctionValue : public FunctionView, public ValBase {
 template <typename Child>
 struct ChangeTriggerAdapter<FunctionTrigger, Child>
     : public ChangeTriggerAdapterBase<FunctionTrigger, Child> {
-    inline void possibleImageChange(UInt) final {
-        this->forwardPossibleValueChange();
-    }
-    inline void possibleImageChange(const std::vector<UInt>&) final {
-        this->forwardPossibleValueChange();
-    }
     inline void imageChanged(UInt) final { this->forwardValueChanged(); }
     inline void imageChanged(const std::vector<UInt>&) final {
         this->forwardValueChanged();

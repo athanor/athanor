@@ -17,7 +17,6 @@ struct TupleDomain {
 };
 struct TupleView;
 struct TupleTrigger : public virtual TriggerBase {
-    virtual void possibleMemberValueChange(UInt index) = 0;
     virtual void memberValueChanged(UInt index) = 0;
     virtual void memberHasBecomeUndefined(UInt) = 0;
     virtual void memberHasBecomeDefined(UInt) = 0;
@@ -39,18 +38,9 @@ struct TupleView : public ExprInterface<TupleView> {
     }
 
    public:
-    inline void notifyPossibleMemberChange(UInt index) {
-        visitTriggers([&](auto& t) { t->possibleMemberValueChange(index); },
-                      triggers);
-    }
-
     inline void memberChangedAndNotify(UInt index) {
         memberChanged(index);
         notifyMemberChanged(index);
-    }
-
-    inline void notifyPossibleEntireTupleChange() {
-        visitTriggers([&](auto& t) { t->possibleValueChange(); }, triggers);
     }
 
     inline void entireTupleChangeAndNotify() {
@@ -99,8 +89,6 @@ struct TupleValue : public TupleView, public ValBase {
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
     inline bool tryMemberChange(size_t index, Func&& func) {
-        TupleView::notifyPossibleMemberChange(index);
-
         if (func()) {
             TupleView::memberChanged(index);
             TupleView::notifyMemberChanged(index);
@@ -140,9 +128,6 @@ struct TupleValue : public TupleView, public ValBase {
 template <typename Child>
 struct ChangeTriggerAdapter<TupleTrigger, Child>
     : public ChangeTriggerAdapterBase<TupleTrigger, Child> {
-    inline void possibleMemberValueChange(UInt) final {
-        this->forwardPossibleValueChange();
-    }
     inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
     inline void memberHasBecomeDefined(UInt) {}
     inline void memberHasBecomeUndefined(UInt) {}

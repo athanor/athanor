@@ -64,6 +64,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     ExprRef<IntView>& getMember(UInt index) {
+        debug_code(assert(index < op->operand->view().numberElements()));
         return op->operand->view().getMembers<IntView>()[index];
     }
     Int getValueCatchUndef(UInt index) {

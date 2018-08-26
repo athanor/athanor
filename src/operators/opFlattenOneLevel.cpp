@@ -375,6 +375,8 @@ OpFlattenOneLevel<SequenceInnerType>::deepCopySelfForUnrollImpl(
     const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
     auto newOp = make_shared<OpFlattenOneLevel<SequenceInnerType>>(
         operand->deepCopySelfForUnroll(operand, iterator));
+    newOp->members = members;
+    newOp->numberUndefined = numberUndefined;
     newOp->defined = defined;
     newOp->startingIndices = startingIndices;
     return newOp;

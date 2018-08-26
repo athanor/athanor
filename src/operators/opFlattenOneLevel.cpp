@@ -41,13 +41,12 @@ void OpFlattenOneLevel<SequenceInnerType>::assertValidStartingIndices() const {
 
 template <typename SequenceInnerType>
 void OpFlattenOneLevel<SequenceInnerType>::reevaluate() {
-    auto& operandMembers =
-        mpark::get<ExprRefVec<SequenceView>>(operand->view().members);
+    auto& operandMembers = operand->view().getMembers<SequenceView>();
     startingIndices.resize(operandMembers.size());
     silentClear();
     for (size_t i = 0; i < operandMembers.size(); i++) {
-        auto& innerSequenceMembers = mpark::get<ExprRefVec<SequenceInnerType>>(
-            operandMembers[i]->view().members);
+        auto& innerSequenceMembers =
+            operandMembers[i]->view().getMembers<SequenceInnerType>();
         startingIndices[i] = numberElements();
         for (auto& member : innerSequenceMembers) {
             addMember(numberElements(), member);
@@ -80,7 +79,6 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
         debug_code(op->assertValidStartingIndices());
     }
 
-
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         op->changeSubsequenceAndNotify<SequenceInnerType>(
             op->startingIndices[index] + startIndex,
@@ -106,7 +104,6 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
         op->innerSequenceTriggers[index] = trigger;
     }
     void valueChanged() { todoImpl(); }
-
 };
 
 template <typename SequenceInnerType>
@@ -116,7 +113,6 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
     OperandTrigger(OpFlattenOneLevel<SequenceInnerType>* op) : op(op) {}
 
     void valueChanged() {
-
         op->reevaluate();
         op->reattachAllInnerSequenceTriggers(true);
         op->notifyEntireSequenceChange();
@@ -313,6 +309,7 @@ std::ostream& OpFlattenOneLevel<SequenceInnerType>::dumpState(
 
 template <typename SequenceInnerType>
 void OpFlattenOneLevel<SequenceInnerType>::evaluateImpl() {
+    members.emplace<ExprRefVec<SequenceInnerType>>();
     operand->evaluate();
     defined = !operand->isUndefined();
     if (defined) {
@@ -376,7 +373,7 @@ template <typename SequenceInnerType>
 ExprRef<SequenceView>
 OpFlattenOneLevel<SequenceInnerType>::deepCopySelfForUnrollImpl(
     const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
-    auto newOp = make_shared<OpFlattenOneLevel<SequenceView>>(
+    auto newOp = make_shared<OpFlattenOneLevel<SequenceInnerType>>(
         operand->deepCopySelfForUnroll(operand, iterator));
     newOp->defined = defined;
     newOp->startingIndices = startingIndices;

@@ -42,7 +42,7 @@ template <typename InnerViewType>
 void deepCopyImpl(const SequenceValue&,
                   const ExprRefVec<InnerViewType>& srcMemnersImpl,
                   SequenceValue& target) {
-        auto& targetMembersImpl = target.getMembers<InnerViewType>();
+    auto& targetMembersImpl = target.getMembers<InnerViewType>();
     // to be optimised later
     targetMembersImpl.clear();
     target.cachedHashTotal.invalidate();
@@ -77,6 +77,7 @@ void matchInnerType(const SequenceValue& src, SequenceValue& target) {
     mpark::visit(
         [&](auto& srcMembersImpl) {
             target.setInnerType<viewType(srcMembersImpl)>();
+            target.injective = src.injective;
         },
         src.members);
 }
@@ -188,13 +189,13 @@ bool largerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
         },
         u.members);
 }
+
 void SequenceView::assertValidState() {
     mpark::visit(
         [&](auto& valMembersImpl) {
             UInt numberUndefinedFound = 0;
             bool success = true;
             UInt calculatedTotal = 0;
-
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 auto& member = valMembersImpl[i];
                 if (cachedHashTotal.isValid() && !member->isUndefined()) {
@@ -226,6 +227,42 @@ void SequenceView::assertValidState() {
             }
             if (!success) {
                 cerr << "sequence Members: " << valMembersImpl << endl;
+                assert(false);
+                abort();
+            }
+        },
+        members);
+}
+
+void SequenceValue::assertValidState() {
+    mpark::visit(
+        [&](auto& valMembersImpl) {
+            bool success = true;
+            if (injective) {
+                for (size_t i = 0; i < valMembersImpl.size(); i++) {
+                    auto& member = valMembersImpl[i];
+                    HashType hash = getValueHash(member->view());
+                    if (!memberHashes.count(hash)) {
+                        cerr << "Error: member " << member->view()
+                             << " with hash " << hash
+                             << " is not in memberHashes.\n";
+                        success = false;
+                        break;
+                    }
+                }
+                if (success) {
+                    if (memberHashes.size() != numberElements()) {
+                        cerr << "Found member hashes of elements not in the "
+                                "sequence.\n";
+                        success = false;
+                    }
+                }
+            }
+            if (!success) {
+                cerr << "sequence Members: " << valMembersImpl << endl;
+                if (injective) {
+                    cerr << "memberHashes: " << memberHashes << endl;
+                }
                 assert(false);
                 abort();
             }

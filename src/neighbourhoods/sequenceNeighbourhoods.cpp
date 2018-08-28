@@ -83,10 +83,6 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
-                    if (requiresRevert) {
-                        val.notifyPossibleSubsequenceChange<InnerValueType>(
-                            indexToChange, indexToChange + 1);
-                    }
                     return !requiresRevert;
                 };
                 AnyValVec changingMembers;

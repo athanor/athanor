@@ -49,6 +49,35 @@ template <typename Strategy>
 auto makeHillClimbing(std::shared_ptr<Strategy> strategy) {
     return std::make_shared<HillClimbing<Strategy>>(std::move(strategy));
 }
+
+template <typename Strategy>
+class RandomAcceptance {
+    std::shared_ptr<Strategy> strategy;
+    double acceptanceProbability;
+
+   public:
+    RandomAcceptance(std::shared_ptr<Strategy> strategy,
+                     double acceptanceProbability)
+        : strategy(std::move(strategy)),
+          acceptanceProbability(acceptanceProbability) {}
+    void run(State& state, bool) {
+        while (true) {
+            strategy->run(state, [&](const auto& result) {
+                if (!result.foundAssignment) {
+                    return false;
+                }
+                return globalRandom<double>(0, 1) < acceptanceProbability;
+            });
+        }
+    }
+};
+
+template <typename Strategy>
+auto makeRandomAcceptance(std::shared_ptr<Strategy> strategy,
+                          double acceptanceProbability) {
+    return std::make_shared<RandomAcceptance<Strategy>>(std::move(strategy),
+                                                        acceptanceProbability);
+}
 template <typename Integer>
 class ExponentialIncrementer {
     double value;

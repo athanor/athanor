@@ -96,7 +96,7 @@ int main(const int argc, const char** argv) {
     State state(parsedModel.builder->build());
     auto nhSelection = make_shared<RandomNeighbourhood>();
     auto strategy = makeExplorationUsingViolationBackOff(
-        makeHillClimbing(nhSelection), nhSelection);
+        makeRandomAcceptance(nhSelection,0.5), nhSelection);
     signal(SIGINT, sigIntHandler);
     signal(SIGVTALRM, sigAlarmHandler);
     signal(SIGALRM, sigAlarmHandler);

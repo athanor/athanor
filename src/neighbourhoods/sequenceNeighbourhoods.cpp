@@ -67,18 +67,25 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                         : emptyViolations;
                 UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
                     val.numberElements() - 1);
-                val.notifyPossibleSubsequenceChange<InnerValueType>(
-                    indexToChange, indexToChange + 1);
+                HashType previousSubsequenceHash;
+                std::vector<HashType> subsequenceHashes;
+                previousSubsequenceHash =
+                    val.notifyPossibleSubsequenceChange<InnerValueType>(
+                        indexToChange, indexToChange + 1, subsequenceHashes);
                 ParentCheckCallBack parentCheck =
                     [&](const AnyValVec& newValue) {
-                        HashType newHash = getValueHash(
-                            mpark::get<ValRefVec<InnerValueType>>(newValue)
-                                .front());
-                        return !val.memberHashes.count(newHash) &&
-                               val.trySubsequenceChange<InnerValueType>(
-                                   indexToChange, indexToChange + 1, [&]() {
-                                       return params.parentCheck(params.vals);
-                                   });
+                        if (val.injective) {
+                            HashType newHash = getValueHash(
+                                mpark::get<ValRefVec<InnerValueType>>(newValue)
+                                    .front());
+                            if (val.memberHashes.count(newHash)) {
+                                return false;
+                            }
+                        }
+                        return val.trySubsequenceChange<InnerValueType>(
+                            indexToChange, indexToChange + 1, subsequenceHashes,
+                            previousSubsequenceHash,
+                            [&]() { return params.parentCheck(params.vals); });
                     };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
@@ -96,9 +103,13 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                     params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
+                    previousSubsequenceHash =
+                        val.notifyPossibleSubsequenceChange<InnerValueType>(
+                            indexToChange, indexToChange + 1,
+                            subsequenceHashes);
                     val.trySubsequenceChange<InnerValueType>(
-                        indexToChange, indexToChange + 1,
-                        [&]() { return true; });
+                        indexToChange, indexToChange + 1, subsequenceHashes,
+                        previousSubsequenceHash, [&]() { return true; });
                 }
             });
     }

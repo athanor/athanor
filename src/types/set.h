@@ -203,7 +203,6 @@ struct SetView : public ExprInterface<SetView> {
     }
 
     inline void notifyEntireSetChange() {
-
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
     }
@@ -415,9 +414,12 @@ struct ChangeTriggerAdapter<SetTrigger, Child>
         this->forwardValueChanged();
     }
 
-    inline void memberValueChanged(UInt,HashType) final { this->forwardValueChanged(); }
+    inline void memberValueChanged(UInt, HashType) final {
+        this->forwardValueChanged();
+    }
 
-    inline void memberValuesChanged(const std::vector<UInt>&,const std::vector<HashType>&) final {
+    inline void memberValuesChanged(const std::vector<UInt>&,
+                                    const std::vector<HashType>&) final {
         this->forwardValueChanged();
     }
 };

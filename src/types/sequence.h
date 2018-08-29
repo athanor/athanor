@@ -383,7 +383,9 @@ struct SequenceValue : public SequenceView, public ValBase {
         }
         SequenceView::addMember(index, member.asExpr());
         if (func()) {
-            memberHashes.insert(newMemberHash);
+            if (injective) {
+                memberHashes.insert(newMemberHash);
+            }
             valBase(*member).container = this;
             reassignIndicesToEnd<InnerValueType>(index);
             SequenceView::notifyMemberAdded(index, member.asExpr());
@@ -515,12 +517,14 @@ struct SequenceValue : public SequenceView, public ValBase {
         SequenceView::changeSubsequence<InnerViewType>(start, end,
                                                        previousSubsequenceHash);
         if (func()) {
-            for (HashType hash : hashes) {
-                memberHashes.erase(hash);
-            }
-            auto& members = getMembers<InnerViewType>();
-            for (size_t i = start; i < end; i++) {
-                memberHashes.insert(getValueHash(members[i]->view()));
+            if (injective) {
+                for (HashType hash : hashes) {
+                    memberHashes.erase(hash);
+                }
+                auto& members = getMembers<InnerViewType>();
+                for (size_t i = start; i < end; i++) {
+                    memberHashes.insert(getValueHash(members[i]->view()));
+                }
             }
             debug_code(assertValidState());
             SequenceView::notifySubsequenceChanged(start, end);

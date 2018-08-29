@@ -42,10 +42,8 @@ template <typename InnerViewType>
 void deepCopyImpl(const SequenceValue&,
                   const ExprRefVec<InnerViewType>& srcMemnersImpl,
                   SequenceValue& target) {
-    auto& targetMembersImpl = target.getMembers<InnerViewType>();
     // to be optimised later
-    targetMembersImpl.clear();
-    target.cachedHashTotal.invalidate();
+    target.silentClear();
     for (auto& member : srcMemnersImpl) {
         target.addMember(target.numberElements(),
                          deepCopy(*assumeAsValue(member)));

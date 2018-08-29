@@ -90,6 +90,12 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
+                    if (requiresRevert) {
+                        previousSubsequenceHash =
+                            val.notifyPossibleSubsequenceChange<InnerValueType>(
+                                indexToChange, indexToChange + 1,
+                                subsequenceHashes);
+                    }
                     return !requiresRevert;
                 };
                 AnyValVec changingMembers;
@@ -103,10 +109,6 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                     params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
-                    previousSubsequenceHash =
-                        val.notifyPossibleSubsequenceChange<InnerValueType>(
-                            indexToChange, indexToChange + 1,
-                            subsequenceHashes);
                     val.trySubsequenceChange<InnerValueType>(
                         indexToChange, indexToChange + 1, subsequenceHashes,
                         previousSubsequenceHash, [&]() { return true; });
@@ -146,11 +148,11 @@ void sequenceAddGenImpl(const SequenceDomain& domain,
             const int tryLimit = params.parentCheckTryLimit;
             debug_neighbourhood_action("Looking for value to add");
             bool success;
+            size_t indexOfNewMember;
             do {
                 assignRandomValueInDomain(*innerDomainPtr, *newMember,
                                           params.stats);
-                size_t indexOfNewMember =
-                    globalRandom<UInt>(0, val.numberElements());
+                indexOfNewMember = globalRandom<UInt>(0, val.numberElements());
                 success = val.tryAddMember(indexOfNewMember, newMember, [&]() {
                     return params.parentCheck(params.vals);
                 });
@@ -163,7 +165,7 @@ void sequenceAddGenImpl(const SequenceDomain& domain,
             debug_neighbourhood_action("Added value: " << newMember);
             if (!params.changeAccepted()) {
                 debug_neighbourhood_action("Change rejected");
-                val.tryRemoveMember<InnerValueType>(val.numberElements() - 1,
+                val.tryRemoveMember<InnerValueType>(indexOfNewMember,
                                                     []() { return true; });
             }
         });
@@ -201,6 +203,7 @@ void sequenceRemoveGenImpl(const SequenceDomain& domain, InnerDomainPtrType&,
             ValRef<InnerValueType> removedMember(nullptr);
             bool success;
             debug_neighbourhood_action("Looking for value to remove");
+
             do {
                 ++params.stats.minorNodeCount;
                 indexToRemove =
@@ -260,6 +263,7 @@ void sequencePositionsSwapGenImpl(const SequenceDomain& domain,
             int numberTries = 0;
             const int tryLimit = params.parentCheckTryLimit;
             debug_neighbourhood_action("Looking for indices to swap");
+
             bool success;
             UInt index1, index2;
             do {

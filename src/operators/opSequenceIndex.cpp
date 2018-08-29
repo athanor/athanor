@@ -87,7 +87,8 @@ OpSequenceIndex<SequenceMemberViewType>::OpSequenceIndex(
       sequenceTrigger(move(other.sequenceTrigger)),
       sequenceMemberTrigger(move(other.sequenceMemberTrigger)),
       indexTrigger(move(other.indexTrigger)) {
-    setTriggerParent(this, indexTrigger, sequenceTrigger);
+    setTriggerParent(this, sequenceTrigger, sequenceMemberTrigger,
+                     indexTrigger);
 }
 
 template <typename SequenceMemberViewType>

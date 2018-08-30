@@ -9,7 +9,7 @@ void IntRange::reevaluate() {
     cachedLower = left->view().value;
     cachedUpper = right->view().value;
     this->silentClear();
-    for (Int i = lower(); i <= upper(); i++) {
+    for (Int i = cachedLower; i <= cachedUpper; i++) {
         auto val = make<IntValue>();
         val->value = i;
         this->addMember(this->numberElements(), val.asExpr());
@@ -55,8 +55,11 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
         Int newLower = op->left->view().value;
         while (op->cachedLower > newLower) {
             --op->cachedLower;
+            if (op->cachedLower > op->cachedUpper) {
+                continue;
+            }
             auto val = make<IntValue>();
-            val->value = op->lower();
+            val->value = op->cachedLower;
             if (trigger) {
                 op->addMemberAndNotify(0, val.asExpr());
             } else {
@@ -65,6 +68,9 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
         }
         while (op->cachedLower < newLower) {
             ++op->cachedLower;
+            if (op->cachedLower > op->cachedUpper + 1) {
+                continue;
+            }
             if (trigger) {
                 op->removeMemberAndNotify<IntView>(0);
             } else {
@@ -76,8 +82,11 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
         Int newUpper = op->right->view().value;
         while (op->cachedUpper < newUpper) {
             ++op->cachedUpper;
+            if (op->cachedUpper < op->cachedLower) {
+                continue;
+            }
             auto val = make<IntValue>();
-            val->value = op->upper();
+            val->value = op->cachedUpper;
             if (trigger) {
                 op->addMemberAndNotify(op->numberElements(), val.asExpr());
             } else {
@@ -86,6 +95,9 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
         }
         while (op->cachedUpper > newUpper) {
             --op->cachedUpper;
+            if (op->cachedUpper < op->cachedLower - 1) {
+                continue;
+            }
             if (trigger) {
                 op->removeMemberAndNotify<IntView>(op->numberElements() - 1);
             } else {
@@ -125,8 +137,6 @@ void IntRange::copy(IntRange& newOp) const {
     newOp.members = this->members;
     newOp.cachedLower = cachedLower;
     newOp.cachedUpper = cachedUpper;
-    newOp.lowerExclusive = lowerExclusive;
-    newOp.upperExclusive = upperExclusive;
 }
 
 ostream& IntRange::dumpState(ostream& os) const {
@@ -143,17 +153,12 @@ template <typename Op>
 struct OpMaker;
 template <>
 struct OpMaker<IntRange> {
-    static ExprRef<SequenceView> make(ExprRef<IntView> l, ExprRef<IntView> r,
-                                      bool lowerExclusive = false,
-                                      bool upperExclusive = false);
+    static ExprRef<SequenceView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
 
 ExprRef<SequenceView> OpMaker<IntRange>::make(ExprRef<IntView> l,
-                                              ExprRef<IntView> r,
-                                              bool lowerExclusive,
-                                              bool upperExclusive) {
-    return make_shared<IntRange>(move(l), move(r), lowerExclusive,
-                                 upperExclusive);
+                                              ExprRef<IntView> r) {
+    return make_shared<IntRange>(move(l), move(r));
 }
 
 template <>

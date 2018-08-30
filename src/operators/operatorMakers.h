@@ -111,9 +111,7 @@ struct OpMaker<OpMinMax<minMode>> {
 struct IntRange;
 template <>
 struct OpMaker<IntRange> {
-    static ExprRef<SequenceView> make(ExprRef<IntView> l, ExprRef<IntView> r,
-                                      bool lowerExclusive = false,
-                                      bool upperExclusive = false);
+    static ExprRef<SequenceView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
 
 struct OpToInt;

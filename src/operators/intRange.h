@@ -16,17 +16,10 @@ struct OperatorTrates<IntRange> {
 struct IntRange : public SimpleBinaryOperator<SequenceView, IntView, IntRange> {
     Int cachedLower;
     Int cachedUpper;
-    bool lowerExclusive;
-    bool upperExclusive;
 
-    IntRange(ExprRef<IntView> left, ExprRef<IntView> right,
-             bool lowerExclusive = false, bool upperExclusive = false)
+    IntRange(ExprRef<IntView> left, ExprRef<IntView> right)
         : SimpleBinaryOperator<SequenceView, IntView, IntRange>(
-              std::move(left), std::move(right)),
-          lowerExclusive(lowerExclusive),
-          upperExclusive(upperExclusive) {}
-    inline Int lower() { return cachedLower - lowerExclusive; }
-    inline Int upper() { return cachedUpper + upperExclusive; }
+              std::move(left), std::move(right)) {}
 
     void setInnerType() { this->members.emplace<ExprRefVec<IntView>>(); }
     void reevaluate();

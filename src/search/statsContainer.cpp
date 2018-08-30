@@ -6,6 +6,10 @@ Int NeighbourhoodResult::getDeltaViolation() const {
 Int NeighbourhoodResult::getDeltaObjective() const {
     return model.getObjective() - statsMarkPoint.lastObjective;
 }
+Int NeighbourhoodResult::getDeltaDefinedness() const {
+    bool currentDefined = !model.objective->isUndefined();
+    return currentDefined - statsMarkPoint.lastObjectiveDefined;
+}
 
 StatsContainer::StatsContainer(Model& model)
     : optimiseMode(model.optimiseMode),
@@ -16,7 +20,10 @@ StatsContainer::StatsContainer(Model& model)
 #include <iostream>
 void StatsContainer::initialSolution(Model& model) {
     lastViolation = model.csp->view().violation;
-    lastObjective = model.objective->view().value;
+    lastObjectiveDefined = !model.objective->isUndefined();
+    if (lastObjectiveDefined) {
+        lastObjective = model.getObjective();
+    }
     bestViolation = lastViolation;
     bestObjective = lastObjective;
     checkForBestSolution(true, true, model);
@@ -36,7 +43,10 @@ void StatsContainer::reportResult(bool solutionAccepted,
         return;
     }
     lastViolation = result.model.csp->view().violation;
-    lastObjective = result.model.getObjective();
+    lastObjectiveDefined = !result.model.objective->isUndefined();
+    if (lastObjectiveDefined) {
+        lastObjective = result.model.getObjective();
+    }
     bool vioImproved = lastViolation < bestViolation;
     bool objImproved = lastObjective < bestObjective;
     checkForBestSolution(vioImproved, objImproved, result.model);

@@ -13,11 +13,12 @@ struct StatsMarkPoint {
     UInt lastViolation;
     Int bestObjective;
     Int lastObjective;
+    bool lastObjectiveDefined;
 
     StatsMarkPoint(u_int64_t numberIterations, u_int64_t minorNodeCount,
                    u_int64_t triggerEventCount, double cpuTime,
                    UInt bestViolation, UInt lastViolation, Int bestObjective,
-                   Int lastObjective)
+                   Int lastObjective, bool lastObjectiveDefined)
         : numberIterations(numberIterations),
           minorNodeCount(minorNodeCount),
           triggerEventCount(triggerEventCount),
@@ -25,7 +26,8 @@ struct StatsMarkPoint {
           bestViolation(bestViolation),
           lastViolation(lastViolation),
           bestObjective(bestObjective),
-          lastObjective(lastObjective) {}
+          lastObjective(lastObjective),
+          lastObjectiveDefined(lastObjectiveDefined) {}
 };
 
 struct NeighbourhoodResult {
@@ -43,7 +45,9 @@ struct NeighbourhoodResult {
 
     Int getDeltaViolation() const;
     Int getDeltaObjective() const;
+    Int getDeltaDefinedness() const;
 };
+
 #ifndef CLASS_OPTIMISEMODE
 #define CLASS_OPTIMISEMODE
 enum class OptimiseMode { NONE, MAXIMISE, MINIMISE };
@@ -66,12 +70,14 @@ struct StatsContainer {
     UInt lastViolation;
     Int bestObjective;
     Int lastObjective;
+    bool lastObjectiveDefined;
     StatsContainer(Model& model);
 
     inline StatsMarkPoint getMarkPoint() {
         return StatsMarkPoint(numberIterations, minorNodeCount,
                               triggerEventCount, getCpuTime(), bestViolation,
-                              lastViolation, bestObjective, lastObjective);
+                              lastViolation, bestObjective, lastObjective,
+                              lastObjectiveDefined);
     }
     inline void startTimer() {
         startTime = std::chrono::high_resolution_clock::now();

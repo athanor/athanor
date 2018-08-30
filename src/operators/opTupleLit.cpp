@@ -7,7 +7,14 @@
 using namespace std;
 void OpTupleLit::evaluateImpl() {
     for (auto& member : members) {
-        mpark::visit([&](auto& member) { member->evaluate(); }, member);
+        mpark::visit(
+            [&](auto& member) {
+                member->evaluate();
+                if (member->isUndefined()) {
+                    ++numberUndefined;
+                }
+            },
+            member);
     }
 }
 namespace {

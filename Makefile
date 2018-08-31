@@ -9,4 +9,4 @@ build/Makefile:
 	git submodule init
 	git submodule update --depth=10
 	mkdir -p build
-	cd build ; cmake ..
+	cd build ; export CXX=clang++ ; cmake ..

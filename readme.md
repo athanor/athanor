@@ -41,7 +41,13 @@ Then make a build directory and build athanor there
 ```
 mkdir build
 cd build
+export CXX=clang++
 cmake ..
 make
 ```
 For parallel build, `make -jn` replacing n with number of cores.
+
+# Usage:
+Athanor does not currently support direct parsing of Essence.  It requires a Essence to JSON translator, as provided by [conjure](https://github.com/conjure-cp/conjure).  Conjure is a much larger tool for automated modelling.  However, a script `script/buildAthanorInput.sh` is included in this repository which invokes the essence to json translator.  A stand alone parser will hopefully be included into Athanor soon.
+
+Instructions TBC

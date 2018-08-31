@@ -19,6 +19,8 @@ git clone https://github.com/athanor/athanor
 cd athanor
 make
 ```
+For parallel build, `make -jn` replacing n with number of cores.
+
 ### Manual install:
 ```
 git clone https://github.com/athanor/athanor
@@ -42,3 +44,4 @@ cd build
 cmake ..
 make
 ```
+For parallel build, `make -jn` replacing n with number of cores.

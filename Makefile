@@ -1,7 +1,7 @@
 all: athanor
 
 athanor: build/Makefile
-	make -C build
+	@$(MAKE) -C build
 
 
 build/Makefile:

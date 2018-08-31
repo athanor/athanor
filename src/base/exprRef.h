@@ -41,7 +41,7 @@ template <typename View>
 struct ExprInterface : public Undefinable<View> {
     char flags = 0;
     typedef typename AssociatedTriggerType<View>::type TriggerType;
-
+    virtual ~ExprInterface() {}
     inline bool isEvaluated() { return flags & 1; }
     inline void setEvaluated(bool set) {
         flags &= ~((char)1);

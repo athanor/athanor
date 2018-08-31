@@ -43,19 +43,18 @@ void assignRandomValueInDomain<SequenceDomain>(const SequenceDomain& domain,
 
 template <typename InnerDomainPtrType>
 void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
-                               const InnerDomainPtrType& innerDomainPtr,
+                               const InnerDomainPtrType&,
                                int numberValsRequired,
                                std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(1, domain.inner, innerDomainNeighbourhoods);
-    UInt innerDomainSize = getDomainSize(domain.inner);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
         neighbourhoods.emplace_back(
             "sequenceLiftSingle_" + innerNh.name, numberValsRequired,
-            [innerNhApply{std::move(innerNh.apply)}, innerDomainSize, &domain,
-             &innerDomainPtr](NeighbourhoodParams& params) {
+            [innerNhApply{std::move(innerNh.apply)}](
+                NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<SequenceValue>().front());
                 if (val.numberElements() == 0) {
                     ++params.stats.minorNodeCount;
@@ -245,8 +244,7 @@ void sequenceRemoveGen(const SequenceDomain& domain, int numberValsRequired,
 }
 
 template <typename InnerDomainPtrType>
-void sequencePositionsSwapGenImpl(const SequenceDomain& domain,
-                                  InnerDomainPtrType& innerDomainPtr,
+void sequencePositionsSwapGenImpl(const SequenceDomain&, InnerDomainPtrType&,
                                   int numberValsRequired,
                                   std::vector<Neighbourhood>& neighbourhoods) {
     typedef typename AssociatedValueType<
@@ -254,7 +252,7 @@ void sequencePositionsSwapGenImpl(const SequenceDomain& domain,
 
     neighbourhoods.emplace_back(
         "sequencePositionsSwap", numberValsRequired,
-        [&domain, &innerDomainPtr](NeighbourhoodParams& params) {
+        [](NeighbourhoodParams& params) {
             auto& val = *(params.getVals<SequenceValue>().front());
             if (val.numberElements() < 2) {
                 ++params.stats.minorNodeCount;

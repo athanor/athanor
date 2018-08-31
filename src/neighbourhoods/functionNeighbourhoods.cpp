@@ -38,19 +38,18 @@ void assignRandomValueInDomain<FunctionDomain>(const FunctionDomain& domain,
 
 template <typename InnerDomainPtrType>
 void functionLiftSingleGenImpl(const FunctionDomain& domain,
-                               const InnerDomainPtrType& innerDomainPtr,
+                               const InnerDomainPtrType&,
                                int numberValsRequired,
                                std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(1, domain.to, innerDomainNeighbourhoods);
-    UInt innerDomainSize = getDomainSize(domain.to);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
         neighbourhoods.emplace_back(
             "functionLiftSingle_" + innerNh.name, numberValsRequired,
-            [innerNhApply{std::move(innerNh.apply)}, innerDomainSize, &domain,
-             &innerDomainPtr](NeighbourhoodParams& params) {
+            [innerNhApply{std::move(innerNh.apply)}](
+                NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<FunctionValue>().front());
                 if (val.rangeSize() == 0) {
                     ++params.stats.minorNodeCount;
@@ -106,12 +105,11 @@ void functionLiftSingleGen(const FunctionDomain& domain, int numberValsRequired,
 
 template <typename InnerDomainPtrType>
 void functionLiftMultipleGenImpl(const FunctionDomain& domain,
-                                 const InnerDomainPtrType& innerDomainPtr,
+                                 const InnerDomainPtrType&,
                                  int numberValsRequired,
                                  std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(0, domain.to, innerDomainNeighbourhoods);
-    UInt innerDomainSize = getDomainSize(domain.to);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
@@ -122,9 +120,8 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
         neighbourhoods.emplace_back(
             "functionLiftMultiple_" + innerNh.name, numberValsRequired,
             [innerNhApply{std::move(innerNh.apply)},
-             innerNhNumberValsRequired{innerNh.numberValsRequired},
-             innerDomainSize, &domain,
-             &innerDomainPtr](NeighbourhoodParams& params) {
+             innerNhNumberValsRequired{innerNh.numberValsRequired}](
+                NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<FunctionValue>().front());
                 if (val.rangeSize() < (size_t)innerNhNumberValsRequired) {
                     ++params.stats.minorNodeCount;
@@ -184,8 +181,7 @@ void functionLiftMultipleGen(const FunctionDomain& domain,
 }
 
 template <typename InnerDomainPtrType>
-void functionImagesSwapGenImpl(const FunctionDomain& domain,
-                               InnerDomainPtrType& innerDomainPtr,
+void functionImagesSwapGenImpl(const FunctionDomain&, InnerDomainPtrType&,
                                int numberValsRequired,
                                std::vector<Neighbourhood>& neighbourhoods) {
     typedef typename AssociatedValueType<
@@ -193,7 +189,7 @@ void functionImagesSwapGenImpl(const FunctionDomain& domain,
 
     neighbourhoods.emplace_back(
         "functionImagesSwap", numberValsRequired,
-        [&domain, &innerDomainPtr](NeighbourhoodParams& params) {
+        [](NeighbourhoodParams& params) {
             auto& val = *(params.getVals<FunctionValue>().front());
             if (val.rangeSize() < 2) {
                 ++params.stats.minorNodeCount;
@@ -255,15 +251,14 @@ inline int getTryLimit(UInt numberMembers, UInt domainSize) {
     return (int)(ceil(NUMBER_TRIES_CONSTANT_MULTIPLIER / successChance));
 }
 
-void functionUnifyImagesGenImpl(const FunctionDomain& domain,
+void functionUnifyImagesGenImpl(const FunctionDomain&,
                                 const shared_ptr<IntDomain>& innerDomainPtr,
                                 int numberValsRequired,
                                 std::vector<Neighbourhood>& neighbourhoods) {
     UInt innerDomainSize = innerDomainPtr->domainSize;
     neighbourhoods.emplace_back(
         "functionUnifyImages", numberValsRequired,
-        [&domain, &innerDomainPtr,
-         innerDomainSize](NeighbourhoodParams& params) {
+        [innerDomainSize](NeighbourhoodParams& params) {
             auto& val = *(params.getVals<FunctionValue>().front());
             if (val.rangeSize() < 2) {
                 ++params.stats.minorNodeCount;
@@ -340,15 +335,14 @@ void functionUnifyImagesGen(const FunctionDomain& domain,
                  domain.to);
 }
 
-void functionSplitImagesGenImpl(const FunctionDomain& domain,
+void functionSplitImagesGenImpl(const FunctionDomain&,
                                 const shared_ptr<IntDomain>& innerDomainPtr,
                                 int numberValsRequired,
                                 std::vector<Neighbourhood>& neighbourhoods) {
     UInt innerDomainSize = innerDomainPtr->domainSize;
     neighbourhoods.emplace_back(
         "functionSplitImages", numberValsRequired,
-        [&domain, &innerDomainPtr,
-         innerDomainSize](NeighbourhoodParams& params) {
+        [innerDomainSize, &innerDomainPtr](NeighbourhoodParams& params) {
             auto& val = *(params.getVals<FunctionValue>().front());
             if (val.rangeSize() < 2) {
                 ++params.stats.minorNodeCount;

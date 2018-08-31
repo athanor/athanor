@@ -42,8 +42,7 @@ void assignRandomValueInDomain<MSetDomain>(const MSetDomain& domain,
 inline int getTryLimit(UInt, UInt) { return 1; }
 
 template <typename InnerDomainPtrType>
-void mSetLiftSingleGenImpl(const MSetDomain& domain,
-                           const InnerDomainPtrType& innerDomainPtr,
+void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
                            int numberValsRequired,
                            std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
@@ -54,8 +53,8 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain,
     for (auto& innerNh : innerDomainNeighbourhoods) {
         neighbourhoods.emplace_back(
             "mSetLiftSingle_" + innerNh.name, numberValsRequired,
-            [innerNhApply{std::move(innerNh.apply)}, innerDomainSize, &domain,
-             &innerDomainPtr](NeighbourhoodParams& params) {
+            [innerNhApply{std::move(innerNh.apply)},
+             innerDomainSize](NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<MSetValue>().front());
                 if (val.numberElements() == 0) {
                     ++params.stats.minorNodeCount;
@@ -117,8 +116,7 @@ void mSetLiftSingleGen(const MSetDomain& domain, int numberValsRequired,
 }
 
 template <typename InnerDomainPtrType>
-void mSetLiftMultipleGenImpl(const MSetDomain& domain,
-                             const InnerDomainPtrType& innerDomainPtr,
+void mSetLiftMultipleGenImpl(const MSetDomain& domain, const InnerDomainPtrType,
                              int numberValsRequired,
                              std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
@@ -135,8 +133,7 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain,
             "mSetLiftMultiple_" + innerNh.name, numberValsRequired,
             [innerNhApply{std::move(innerNh.apply)},
              innerNhNumberValsRequired{innerNh.numberValsRequired},
-             innerDomainSize, &domain,
-             &innerDomainPtr](NeighbourhoodParams& params) {
+             innerDomainSize](NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<MSetValue>().front());
                 if (val.numberElements() < (size_t)innerNhNumberValsRequired) {
                     ++params.stats.minorNodeCount;

@@ -102,7 +102,7 @@ void setAddGen(const SetDomain& domain, int numberValsRequired,
         domain.inner);
 }
 template <typename InnerDomainPtrType>
-void setMoveGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
+void setMoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
                     int numberValsRequired,
                     std::vector<Neighbourhood>& neighbourhoods) {
     typedef typename AssociatedValueType<
@@ -112,8 +112,7 @@ void setMoveGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
 
     neighbourhoods.emplace_back(
         "setMove", numberValsRequired,
-        [innerDomainSize, &domain,
-         &innerDomainPtr](NeighbourhoodParams& params) {
+        [innerDomainSize, &domain](NeighbourhoodParams& params) {
             auto& vals = params.getVals<SetValue>();
             debug_code(assert(vals.size() == 2));
             auto& fromVal = *(vals[0]);
@@ -241,8 +240,7 @@ void setRemoveGen(const SetDomain& domain, int numberValsRequired,
 }
 
 template <typename InnerDomainPtrType>
-void setLiftSingleGenImpl(const SetDomain& domain,
-                          const InnerDomainPtrType& innerDomainPtr,
+void setLiftSingleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                           int numberValsRequired,
                           std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
@@ -253,8 +251,8 @@ void setLiftSingleGenImpl(const SetDomain& domain,
     for (auto& innerNh : innerDomainNeighbourhoods) {
         neighbourhoods.emplace_back(
             "setLiftSingle_" + innerNh.name, numberValsRequired,
-            [innerNhApply{std::move(innerNh.apply)}, innerDomainSize, &domain,
-             &innerDomainPtr](NeighbourhoodParams& params) {
+            [innerNhApply{std::move(innerNh.apply)},
+             innerDomainSize](NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<SetValue>().front());
                 if (val.numberElements() == 0) {
                     ++params.stats.minorNodeCount;
@@ -340,8 +338,7 @@ bool setDoesNotContain(SetValue& val,
     return lastInsertedIndex == newMembers.size();
 }
 template <typename InnerDomainPtrType>
-void setLiftMultipleGenImpl(const SetDomain& domain,
-                            const InnerDomainPtrType& innerDomainPtr,
+void setLiftMultipleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                             int numberValsRequired,
                             std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
@@ -357,8 +354,7 @@ void setLiftMultipleGenImpl(const SetDomain& domain,
             "setLiftMultiple_" + innerNh.name, numberValsRequired,
             [innerNhApply{std::move(innerNh.apply)},
              innerNhNumberValsRequired{innerNh.numberValsRequired},
-             innerDomainSize, &domain,
-             &innerDomainPtr](NeighbourhoodParams& params) {
+             innerDomainSize](NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<SetValue>().front());
                 if (val.numberElements() < (size_t)innerNhNumberValsRequired) {
                     ++params.stats.minorNodeCount;

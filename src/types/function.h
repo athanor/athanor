@@ -91,7 +91,7 @@ void functionIndexToDomain<IntView>(const DimensionVec& dimensions, UInt index,
 template <>
 void functionIndexToDomain<TupleView>(const DimensionVec& dimensions, UInt,
                                       TupleView&);
-
+Int getAsIntForFunctionIndex(const AnyExprRef& expr);
 struct FunctionView : public ExprInterface<FunctionView> {
     friend FunctionValue;
     DimensionVec dimensions;
@@ -105,6 +105,8 @@ struct FunctionView : public ExprInterface<FunctionView> {
 
     std::pair<bool, UInt> domainToIndex(const IntView& intV);
     std::pair<bool, UInt> domainToIndex(const TupleView& tupleV);
+    std::pair<bool, UInt> domainToIndex(
+        const std::vector<Int>& cachedMemberValues);
 
     template <typename View, EnableIfView<BaseType<View>> = 0>
     std::pair<bool, UInt> domainToIndex(const View&) {

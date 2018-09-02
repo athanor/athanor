@@ -56,14 +56,14 @@ struct OpMaker<OpTupleLit> {
     static ExprRef<TupleView> make(std::vector<AnyExprRef> members);
 };
 
-namespace {
 pair<bool, UInt> translateValueFromDimension(Int value,
                                              const Dimension& dimension) {
     return (value >= dimension.lower && value <= dimension.upper)
                ? pair<bool, UInt>(true, value - dimension.lower)
                : pair<bool, UInt>(false, 0);
 }
-Int getAsInt(const AnyExprRef& expr) {
+
+Int getAsIntForFunctionIndex(const AnyExprRef& expr) {
     const ExprRef<IntView>* intTest = mpark::get_if<ExprRef<IntView>>(&expr);
     if (intTest) {
         return (*intTest)->view().value;
@@ -77,7 +77,6 @@ Int getAsInt(const AnyExprRef& expr) {
             "int/bool\n";
     abort();
 }
-}  // namespace
 
 pair<bool, UInt> FunctionView::domainToIndex(const IntView& intV) {
     debug_code(assert(dimensions.size() == 1));
@@ -89,7 +88,24 @@ pair<bool, UInt> FunctionView::domainToIndex(const TupleView& tupleV) {
     size_t index = 0;
     for (size_t i = 0; i < tupleV.members.size(); i++) {
         auto boolIndexPair = translateValueFromDimension(
-            getAsInt(tupleV.members[i]), dimensions[i]);
+            getAsIntForFunctionIndex(tupleV.members[i]), dimensions[i]);
+        if (!boolIndexPair.first) {
+            return boolIndexPair;
+        }
+        index += dimensions[i].blockSize * boolIndexPair.second;
+    }
+    debug_code(assert(index < rangeSize()));
+    return make_pair(true, index);
+}
+
+pair<bool, UInt> FunctionView::domainToIndex(
+    const std::vector<Int>& cachedMemberValues) {
+    debug_code(assert(dimensions.size() == cachedMemberValues.size()));
+
+    size_t index = 0;
+    for (size_t i = 0; i < cachedMemberValues.size(); i++) {
+        auto boolIndexPair =
+            translateValueFromDimension(cachedMemberValues[i], dimensions[i]);
         if (!boolIndexPair.first) {
             return boolIndexPair;
         }
@@ -155,6 +171,7 @@ HashType getValueHash<FunctionView>(const FunctionView& val) {
 template <>
 ostream& prettyPrint<FunctionView>(ostream& os, const FunctionView& v) {
     os << "function(";
+    return os << ")";
     mpark::visit(
         [&](auto& rangeImpl) {
             for (size_t i = 0; i < rangeImpl.size(); i++) {

@@ -60,6 +60,8 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
         PathExtension path) final;
 
     void reattachFunctionMemberTrigger(bool deleteFirst);
+    bool eventForwardedAsDefinednessChange(bool wasDefined,
+                                           bool wasLocallyDefined);
     bool eventForwardedAsDefinednessChange(bool recalculateIndex);
 };
 

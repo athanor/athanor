@@ -8,6 +8,11 @@
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"
 using namespace std;
+
+OpAnd::OpAnd(OpAnd&& other)
+    : SimpleUnaryOperator<BoolView, SequenceView, OpAnd>(move(other)),
+      cachedViolations(move(other.cachedViolations)),
+      violatingOperands(move(other.violatingOperands)) {}
 using OperandsSequenceTrigger = OperatorTrates<OpAnd>::OperandsSequenceTrigger;
 class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
    public:
@@ -30,7 +35,7 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
 
     void valueRemoved(UInt index, const AnyExprRef&) final {
         UInt violationOfRemovedExpr = op->cachedViolations.get(index);
-                debug_code(assert((op->violatingOperands.count(index) &&
+        debug_code(assert((op->violatingOperands.count(index) &&
                            violationOfRemovedExpr > 0) ||
                           (!op->violatingOperands.count(index) &&
                            violationOfRemovedExpr == 0)));
@@ -155,7 +160,5 @@ struct OpMaker<OpAnd> {
 ExprRef<BoolView> OpMaker<OpAnd>::make(ExprRef<SequenceView> o) {
     return make_shared<OpAnd>(move(o));
 }
-
-void initialiseOpAnd(OpAnd&) {}
 
 template struct SimpleUnaryOperator<BoolView, SequenceView, OpAnd>;

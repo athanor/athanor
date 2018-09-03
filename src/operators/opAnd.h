@@ -26,7 +26,7 @@ struct OpAnd : public SimpleUnaryOperator<BoolView, SequenceView, OpAnd> {
         violatingOperands = other.violatingOperands;
         return *this;
     }
-
+OpAnd(OpAnd&& other);
     void reevaluate();
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;

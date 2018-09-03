@@ -11,7 +11,9 @@ using namespace std;
 using OperandsSequenceTrigger = OperatorTrates<OpSum>::OperandsSequenceTrigger;
 OpSum::OpSum(OpSum&& other)
     : SimpleUnaryOperator<IntView, SequenceView, OpSum>(std::move(other)),
-      evaluationComplete(std::move(other.evaluationComplete)) {}
+      evaluationComplete(std::move(other.evaluationComplete)),
+      cachedValues(move(other.cachedValues)) {}
+
 class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
    public:
     OpSum* op;

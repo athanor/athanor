@@ -84,6 +84,10 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     inline void positionsSwapped(UInt index1, UInt index2) {
+        if (!op->evaluationComplete) {
+            return;
+        }
+
         swap(op->cachedValues.get(index1), op->cachedValues.get(index2));
     }
 

@@ -73,7 +73,14 @@ HashType getValueHash(const AnyExprRef& ref) {
 
 ostream& prettyPrint(ostream& os, const AnyExprRef& expr) {
     return mpark::visit(
-        [&](auto& ref) -> ostream& { return prettyPrint(os, ref->view()); },
+        [&](auto& ref) -> ostream& {
+            if (ref->isUndefined()) {
+                os << "undefined";
+            } else {
+                prettyPrint(os, ref->view());
+            }
+            return os;
+        },
         expr);
 }
 template <typename Value>

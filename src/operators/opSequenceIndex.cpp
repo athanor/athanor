@@ -99,6 +99,7 @@ struct OpSequenceIndexTriggerBase {
     OpSequenceIndex<SequenceMemberViewType>* op;
     OpSequenceIndexTriggerBase(OpSequenceIndex<SequenceMemberViewType>* op)
         : op(op) {}
+    virtual ~OpSequenceIndexTriggerBase() {}
     bool eventForwardedAsDefinednessChange() {
         bool wasDefined = op->defined;
         bool wasLocallyDefined = op->locallyDefined;

@@ -230,6 +230,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
     }
 
     void reattachTrigger() final {
+        deleteTrigger(op->sequenceTrigger);
         if (op->sequenceMemberTrigger) {
             deleteTrigger(op->sequenceMemberTrigger);
         }

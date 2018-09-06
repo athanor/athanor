@@ -188,7 +188,9 @@ void OpSum::copy(OpSum& newOp) const {
 }
 
 std::ostream& OpSum::dumpState(std::ostream& os) const {
+
     os << "OpSum: value=" << value << endl;
+    os << "defined=" << defined << endl;
     return operand->dumpState(os);
 }
 

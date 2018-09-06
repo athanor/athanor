@@ -30,7 +30,6 @@ OpFunctionImage<FunctionMemberViewType>::getMember() {
                       cachedIndex < (Int)functionOperand->view().rangeSize()));
     auto& member =
         functionOperand->view().getRange<FunctionMemberViewType>()[cachedIndex];
-    debug_code(assert(!member->isUndefined()));
     return member;
 }
 
@@ -44,7 +43,6 @@ OpFunctionImage<FunctionMemberViewType>::getMember() const {
 
     const auto& member =
         functionOperand->view().getRange<FunctionMemberViewType>()[cachedIndex];
-    debug_code(assert(!member->isUndefined()));
     return member;
 }
 
@@ -374,6 +372,7 @@ struct PreImageTrigger<FunctionMemberViewType, TupleTrigger>
         } else {
             op->locallyDefined = true;
             op->cachedIndex = boolIndexPair.second;
+            op->reevaluate(false);
         }
         if (op->defined) {
             visitTriggers(

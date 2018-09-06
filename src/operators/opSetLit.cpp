@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include "operators/opSetIndexInternal.h"
 #include "operators/simpleOperator.hpp"
-#include "types/allTypes.h"
+#include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 

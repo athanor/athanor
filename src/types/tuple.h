@@ -3,6 +3,7 @@
 #include <vector>
 #include "base/base.h"
 #include "common/common.h"
+#include "triggers/tupleTrigger.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
 #include "utils/simpleCache.h"
@@ -16,11 +17,6 @@ struct TupleDomain {
     TupleDomain(std::vector<AnyDomainRef> inners) : inners(std::move(inners)) {}
 };
 struct TupleView;
-struct TupleTrigger : public virtual TriggerBase {
-    virtual void memberValueChanged(UInt index) = 0;
-    virtual void memberHasBecomeUndefined(UInt) = 0;
-    virtual void memberHasBecomeDefined(UInt) = 0;
-};
 struct TupleValue;
 struct TupleView : public ExprInterface<TupleView> {
     friend TupleValue;
@@ -123,14 +119,6 @@ struct TupleValue : public TupleView, public ValBase {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
     std::pair<bool, ExprRef<TupleView>> optimise(PathExtension) final;
-};
-
-template <typename Child>
-struct ChangeTriggerAdapter<TupleTrigger, Child>
-    : public ChangeTriggerAdapterBase<TupleTrigger, Child> {
-    inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
-    inline void memberHasBecomeDefined(UInt) {}
-    inline void memberHasBecomeUndefined(UInt) {}
 };
 
 #endif /* SRC_TYPES_TUPLE_H_ */

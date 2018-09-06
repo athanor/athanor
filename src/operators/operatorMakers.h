@@ -84,11 +84,11 @@ template <>
 struct OpMaker<OpTupleLit> {
     static ExprRef<TupleView> make(std::vector<AnyExprRef> members);
 };
-
+template <typename View>
 struct OpIsDefined;
-template <>
-struct OpMaker<OpIsDefined> {
-    static ExprRef<BoolView> make(ExprRef<IntView> o);
+template <typename View>
+struct OpMaker<OpIsDefined<View>> {
+    static ExprRef<BoolView> make(ExprRef<View> o);
 };
 template <typename View>
 struct OpFunctionImage;

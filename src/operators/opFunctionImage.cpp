@@ -1,7 +1,8 @@
 #include "operators/opFunctionImage.h"
 #include <iostream>
 #include <memory>
-#include "types/allTypes.h"
+#include "triggers/allTriggers.h"
+#include "types/tuple.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 #define invoke(expr, func) \
@@ -345,7 +346,7 @@ struct PreImageTrigger<FunctionMemberViewType, TupleTrigger>
         }
     }
 
-    void memberHasBecomeUndefined(UInt index) final {
+    void memberHasBecomeUndefined(UInt) final {
         auto& tuple =
             mpark::get<ExprRef<TupleView>>(op->preImageOperand)->view();
         if (tuple.numberUndefined == 1) {

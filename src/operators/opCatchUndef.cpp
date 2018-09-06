@@ -1,7 +1,8 @@
 #include "operators/opCatchUndef.h"
 #include <iostream>
 #include <memory>
-#include "types/allTypes.h"
+#include "triggers/allTriggers.h"
+#include "types/tuple.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 

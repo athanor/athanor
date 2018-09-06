@@ -5,15 +5,18 @@
 #include "operators/simpleTrigger.h"
 #include "types/bool.h"
 #include "types/int.h"
+template <typename View>
 struct OpIsDefined;
-template <>
-struct OperatorTrates<OpIsDefined> {
-    typedef SimpleUnaryTrigger<OpIsDefined, IntTrigger> OperandTrigger;
+template <typename View>
+struct OperatorTrates<OpIsDefined<View>> {
+    typedef typename AssociatedTriggerType<View>::type TriggerType;
+    typedef SimpleUnaryTrigger<OpIsDefined<View>, TriggerType> OperandTrigger;
 };
+template <typename View>
 struct OpIsDefined
-    : public SimpleUnaryOperator<BoolView, IntView, OpIsDefined> {
-    using SimpleUnaryOperator<BoolView, IntView,
-                              OpIsDefined>::SimpleUnaryOperator;
+    : public SimpleUnaryOperator<BoolView, View, OpIsDefined<View>> {
+    using SimpleUnaryOperator<BoolView, View,
+                              OpIsDefined<View>>::SimpleUnaryOperator;
 
     void reevaluate();
     void updateVarViolationsImpl(const ViolationContext& vioContext,

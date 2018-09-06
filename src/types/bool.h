@@ -2,6 +2,7 @@
 #define SRC_TYPES_BOOL_H_
 #include <utility>
 #include <vector>
+#include "triggers/boolTrigger.h"
 #include "utils/ignoreUnused.h"
 
 #include "base/base.h"
@@ -38,9 +39,5 @@ struct BoolValue : public BoolView, ValBase {
     bool isUndefined();
     std::pair<bool, ExprRef<BoolView>> optimise(PathExtension) final;
 };
-
-template <typename Child>
-struct ChangeTriggerAdapter<BoolTrigger, Child>
-    : public ChangeTriggerAdapterBase<BoolTrigger, Child> {};
 
 #endif /* SRC_TYPES_BOOL_H_ */

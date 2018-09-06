@@ -5,6 +5,7 @@
 #include <vector>
 #include "base/base.h"
 #include "common/common.h"
+#include "triggers/setTrigger.h"
 #include "types/sizeAttr.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
@@ -35,16 +36,6 @@ struct SetDomain {
     }
 };
 
-struct SetTrigger : public virtual TriggerBase {
-    virtual void valueRemoved(UInt indexOfRemovedValue,
-                              HashType hashOfRemovedValue) = 0;
-    virtual void valueAdded(const AnyExprRef& member) = 0;
-    virtual void memberValueChanged(UInt index, HashType oldHash) = 0;
-
-    virtual void memberValuesChanged(
-        const std::vector<UInt>& indices,
-        const std::vector<HashType>& oldHashes) = 0;
-};
 struct SetView : public ExprInterface<SetView> {
     friend SetValue;
     std::unordered_set<HashType> memberHashes;
@@ -404,24 +395,6 @@ struct SetValue : public SetView, public ValBase {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
     std::pair<bool, ExprRef<SetView>> optimise(PathExtension) final;
-};
-
-template <typename Child>
-struct ChangeTriggerAdapter<SetTrigger, Child>
-    : public ChangeTriggerAdapterBase<SetTrigger, Child> {
-    inline void valueRemoved(UInt, HashType) { this->forwardValueChanged(); }
-    inline void valueAdded(const AnyExprRef&) final {
-        this->forwardValueChanged();
-    }
-
-    inline void memberValueChanged(UInt, HashType) final {
-        this->forwardValueChanged();
-    }
-
-    inline void memberValuesChanged(const std::vector<UInt>&,
-                                    const std::vector<HashType>&) final {
-        this->forwardValueChanged();
-    }
 };
 
 #endif /* SRC_TYPES_SET_H_ */

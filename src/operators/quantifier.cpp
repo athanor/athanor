@@ -12,6 +12,7 @@
 #include "operators/opToInt.h"
 #include "operators/opTupleIndex.h"
 #include "operators/opTupleLit.h"
+#include "triggers/allTriggers.h"
 #include "types/allTypes.h"
 
 template <typename Op>

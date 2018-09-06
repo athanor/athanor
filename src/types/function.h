@@ -3,6 +3,7 @@
 #include <vector>
 #include "base/base.h"
 #include "common/common.h"
+#include "triggers/functionTrigger.h"
 #include "types/sizeAttr.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
@@ -48,21 +49,6 @@ struct Dimension {
     Dimension(Int lower, Int upper) : lower(lower), upper(upper) {}
 };
 typedef std::vector<Dimension> DimensionVec;
-
-struct FunctionOuterTrigger : public virtual TriggerBase {
-    // later will have more specific triggers, currently only those inherited
-    // from TriggerBase
-};
-
-struct FunctionMemberTrigger : public virtual TriggerBase {
-    virtual void imageChanged(UInt index) = 0;
-
-    virtual void imageChanged(const std::vector<UInt>& indices) = 0;
-    virtual void imageSwap(UInt index1, UInt index2) = 0;
-};
-
-struct FunctionTrigger : public virtual FunctionOuterTrigger,
-                         public virtual FunctionMemberTrigger {};
 
 template <typename View>
 ExprRef<View> functionIndexToDomain(const DimensionVec&, UInt) {
@@ -338,16 +324,6 @@ struct FunctionValue : public FunctionView, public ValBase {
     std::pair<bool, ExprRef<FunctionView>> optimise(PathExtension) final;
 
     void assertValidVarBases();
-};
-
-template <typename Child>
-struct ChangeTriggerAdapter<FunctionTrigger, Child>
-    : public ChangeTriggerAdapterBase<FunctionTrigger, Child> {
-    inline void imageChanged(UInt) final { this->forwardValueChanged(); }
-    inline void imageChanged(const std::vector<UInt>&) final {
-        this->forwardValueChanged();
-    }
-    inline void imageSwap(UInt, UInt) final { this->forwardValueChanged(); }
 };
 
 #endif /* SRC_TYPES_FUNCTION_H_ */

@@ -4,6 +4,7 @@
 #include <numeric>
 #include <utility>
 #include <vector>
+#include "triggers/intTrigger.h"
 #include "utils/ignoreUnused.h"
 
 #include "base/base.h"
@@ -20,8 +21,6 @@ struct IntDomain {
                   return total + (range.second - range.first) + 1;
               })) {}
 };
-
-struct IntTrigger : public virtual TriggerBase {};
 
 struct IntView : public ExprInterface<IntView> {
     Int value;
@@ -55,10 +54,6 @@ struct IntValue : public IntView, ValBase {
     bool isUndefined();
     std::pair<bool, ExprRef<IntView>> optimise(PathExtension) final;
 };
-
-template <typename Child>
-struct ChangeTriggerAdapter<IntTrigger, Child>
-    : public ChangeTriggerAdapterBase<IntTrigger, Child> {};
 
 struct IntViolationContext : public ViolationContext {
     enum class Reason { TOO_LARGE, TOO_SMALL };

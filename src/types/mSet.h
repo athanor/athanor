@@ -4,6 +4,7 @@
 #include <vector>
 #include "base/base.h"
 #include "common/common.h"
+#include "triggers/mSetTrigger.h"
 #include "types/sizeAttr.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
@@ -27,14 +28,6 @@ struct MSetDomain {
             abort();
         }
     }
-};
-
-struct MSetTrigger : public virtual TriggerBase {
-    virtual void valueRemoved(UInt indexOfRemovedValue,
-                              const AnyExprRef& removedExpr) = 0;
-    virtual void valueAdded(const AnyExprRef& member) = 0;
-    virtual void memberValueChanged(UInt index) = 0;
-    virtual void memberValuesChanged(const std::vector<UInt>& indices) = 0;
 };
 
 struct MSetView : public ExprInterface<MSetView> {
@@ -359,22 +352,4 @@ struct MSetValue : public MSetView, public ValBase {
     bool isUndefined();
     std::pair<bool, ExprRef<MSetView>> optimise(PathExtension) final;
 };
-
-template <typename Child>
-struct ChangeTriggerAdapter<MSetTrigger, Child>
-    : public ChangeTriggerAdapterBase<MSetTrigger, Child> {
-    inline void valueRemoved(UInt, const AnyExprRef&) {
-        this->forwardValueChanged();
-    }
-    inline void valueAdded(const AnyExprRef&) final {
-        this->forwardValueChanged();
-    }
-
-    inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
-
-    inline void memberValuesChanged(const std::vector<UInt>&) final {
-        this->forwardValueChanged();
-    }
-};
-
 #endif /* SRC_TYPES_MSET_H_ */

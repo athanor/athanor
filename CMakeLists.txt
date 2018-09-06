@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.0)
 project(athanor)
 
+if ("${CMAKE_CURRENT_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
+message(FATAL_ERROR "**Error: do not invoke cmake from the root directory.  Create a build directory and run cmake from their.
+Alternatively, run `make` for an automated build.
+**Warning, you may need to clean some files first.  To do this, run the following command from the project root:
+rm -fr CMakeFiles CMakeCache.txt")
+
+endif()
+
 #libs
 #auto arg parse
 

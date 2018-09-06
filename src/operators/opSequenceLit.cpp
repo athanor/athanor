@@ -2,7 +2,7 @@
 #include <cassert>
 #include <cstdlib>
 #include "operators/simpleOperator.hpp"
-#include "types/allTypes.h"
+#include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 void OpSequenceLit::evaluateImpl() {

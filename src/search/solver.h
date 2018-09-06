@@ -4,7 +4,7 @@
 #include <cassert>
 #include "search/model.h"
 #include "search/statsContainer.h"
-#include "types/allTypes.h"
+#include "triggers/allTriggers.h"
 void dumpVarViolations(const ViolationContainer& vioContainer);
 extern bool sigIntActivated, sigAlarmActivated;
 extern u_int64_t iterationLimit;

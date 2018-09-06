@@ -2,7 +2,7 @@
 #include <iostream>
 #include <memory>
 #include "operators/simpleOperator.hpp"
-#include "types/allTypes.h"
+#include "triggers/allTriggers.h"
 
 using namespace std;
 

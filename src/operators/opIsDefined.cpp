@@ -2,35 +2,46 @@
 #include <iostream>
 #include <memory>
 #include "operators/simpleOperator.hpp"
+#include "triggers/allTriggers.h"
 
 using namespace std;
-
-void OpIsDefined::reevaluate() { violation = 0; }
-void OpIsDefined::updateVarViolationsImpl(const ViolationContext&,
-                                          ViolationContainer& vioContainer) {
-    if (violation > 0) {
-        operand->updateVarViolations(violation, vioContainer);
+template <typename View>
+void OpIsDefined<View>::reevaluate() {
+    this->violation = 0;
+}
+template <typename View>
+void OpIsDefined<View>::updateVarViolationsImpl(
+    const ViolationContext&, ViolationContainer& vioContainer) {
+    if (this->violation > 0) {
+        this->operand->updateVarViolations(this->violation, vioContainer);
     }
 }
-
-void OpIsDefined::copy(OpIsDefined& newOp) const {
-    newOp.violation = violation;
+template <typename View>
+void OpIsDefined<View>::copy(OpIsDefined& newOp) const {
+    newOp.violation = this->violation;
 }
-
-std::ostream& OpIsDefined::dumpState(std::ostream& os) const {
-    os << "OpIsDefined: violation=" << violation << "\noperand: ";
-    operand->dumpState(os);
+template <typename View>
+std::ostream& OpIsDefined<View>::dumpState(std::ostream& os) const {
+    os << "OpIsDefined: violation=" << this->violation << "\noperand: ";
+    this->operand->dumpState(os);
     return os;
 }
 
 template <typename Op>
 struct OpMaker;
 
-template <>
-struct OpMaker<OpIsDefined> {
-    static ExprRef<BoolView> make(ExprRef<IntView> o);
+template <typename View>
+struct OpMaker<OpIsDefined<View>> {
+    static ExprRef<BoolView> make(ExprRef<View> o);
 };
-
-ExprRef<BoolView> OpMaker<OpIsDefined>::make(ExprRef<IntView> o) {
-    return make_shared<OpIsDefined>(move(o));
+template <typename View>
+ExprRef<BoolView> OpMaker<OpIsDefined<View>>::make(ExprRef<View> o) {
+    return make_shared<OpIsDefined<View>>(move(o));
 }
+
+#define opIsDefinedInstantiators(name)       \
+    template struct OpIsDefined<name##View>; \
+    template struct OpMaker<OpIsDefined<name##View>>;
+
+buildForAllTypes(opIsDefinedInstantiators, );
+#undef opIsDefinedInstantiators

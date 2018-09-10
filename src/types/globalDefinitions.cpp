@@ -12,11 +12,20 @@ vector<shared_ptr<DelayedTrigger>> delayedTriggerStack;
 
 inline pair<bool, ViolationContainer&> registerViolations(
     const ValBase* val, const UInt violation, ViolationContainer& vioContainer);
+namespace {
+template <typename Value>
+void invokeSetDefined(ValRef<Value>& val) {
+    val->setLocallyDefined(true);
+}
+template <>
+void invokeSetDefined<BoolValue>(ValRef<BoolValue>&) {}
+}  // namespace
 #define specialised(name)                                                    \
     template <>                                                              \
     ValRef<name##Value> make<name##Value>() {                                \
         ValRef<name##Value> val(make_shared<name##Value>());                 \
         val->setEvaluated(true);                                             \
+        invokeSetDefined(val);                                               \
         return val;                                                          \
     }                                                                        \
     const string TypeAsString<name##Value>::value = quote(name##Value);      \

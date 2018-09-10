@@ -22,7 +22,7 @@ struct IntRange : public SimpleBinaryOperator<SequenceView, IntView, IntRange> {
               std::move(left), std::move(right)) {}
 
     void setInnerType() { this->members.emplace<ExprRefVec<IntView>>(); }
-    void reevaluate();
+    void reevaluateImpl(IntView& leftView, IntView& rightView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(IntRange& newOp) const;

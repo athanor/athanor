@@ -7,11 +7,20 @@ template <typename View, typename OperandView, typename Derived>
 void SimpleBinaryOperator<View, OperandView, Derived>::evaluateImpl() {
     left->evaluate();
     right->evaluate();
-    bool defined = !(left->isUndefined() || right->isUndefined());
-    this->setDefined(defined);
-    if (defined) {
-        derived().reevaluate();
+    reevaluate();
+}
+template <typename View, typename OperandView, typename Derived>
+void SimpleBinaryOperator<View, OperandView, Derived>::reevaluate() {
+    auto leftView = left->view();
+    if (leftView) {
+        auto rightView = right->view();
+        if (rightView) {
+            this->setDefined(true);
+            derived().reevaluateImpl(*leftView, *rightView);
+            return;
+        }
     }
+    this->setDefined(false);
 }
 
 template <typename View, typename OperandView, typename Derived>
@@ -66,10 +75,6 @@ void SimpleBinaryOperator<View, OperandView, Derived>::findAndReplaceSelf(
 }
 
 template <typename View, typename OperandView, typename Derived>
-bool SimpleBinaryOperator<View, OperandView, Derived>::isUndefined() {
-    return !this->isDefined();
-}
-template <typename View, typename OperandView, typename Derived>
 bool SimpleBinaryOperator<View, OperandView, Derived>::optimiseImpl() {
     return false;
 }
@@ -104,11 +109,16 @@ SimpleBinaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
 template <typename View, typename OperandView, typename Derived>
 void SimpleUnaryOperator<View, OperandView, Derived>::evaluateImpl() {
     operand->evaluate();
-    bool defined = !operand->isUndefined();
-    this->setDefined(defined);
-    if (defined) {
-        derived().reevaluate();
+    reevaluate();
+}
+template <typename View, typename OperandView, typename Derived>
+void SimpleUnaryOperator<View, OperandView, Derived>::reevaluate() {
+    auto view = operand->view();
+    if (view) {
+        this->setDefined(true);
+        derived().reevaluateImpl(*view);
     }
+    this->setDefined(false);
 }
 
 template <typename View, typename OperandView, typename Derived>
@@ -154,10 +164,6 @@ void SimpleUnaryOperator<View, OperandView, Derived>::findAndReplaceSelf(
     this->operand = findAndReplace(operand, func);
 }
 
-template <typename View, typename OperandView, typename Derived>
-bool SimpleUnaryOperator<View, OperandView, Derived>::isUndefined() {
-    return !this->isDefined();
-}
 template <typename View, typename OperandView, typename Derived>
 bool SimpleUnaryOperator<View, OperandView, Derived>::optimiseImpl() {
     return false;

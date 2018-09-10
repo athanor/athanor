@@ -57,7 +57,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
         HashType input[2];
         HashType result[2];
         input[0] = index;
-        input[1] = getValueHash(expr->view());
+        input[1] = getValueHash(expr->view().get());
         MurmurHash3_x64_128(((void*)input), sizeof(input), 0, result);
         return result[0] ^ result[1];
     }
@@ -87,7 +87,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
     inline void addMember(size_t index, const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();
         members.insert(members.begin() + index, member);
-        bool memberUndefined = member->isUndefined();
+        bool memberUndefined = !member->isLocallyDefined();
         if (!memberUndefined && index == members.size() - 1) {
             cachedHashTotal.applyIfValid([&](auto& value) {
                 value += this->calcMemberHash(index, member);
@@ -120,7 +120,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
         } else {
             cachedHashTotal.invalidate();
         }
-        if (removedMember->isUndefined()) {
+        if (!removedMember->isLocallyDefined()) {
             numberUndefined--;
         }
         if (members.size() < singleMemberTriggers.size()) {
@@ -553,7 +553,6 @@ struct SequenceValue : public SequenceView, public ValBase {
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    bool isUndefined();
     std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension) final;
     void assertValidState();
 };

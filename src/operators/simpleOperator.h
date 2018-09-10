@@ -5,49 +5,48 @@
 
 template <typename View, typename Derived>
 struct DefinedContainer {
-    bool defined = false;
     void setDefined(bool defined, bool trigger = false) {
-        bool triggerChange = trigger && (defined != this->defined);
-        this->defined = defined;
+        auto& op = static_cast<Derived&>(*this);
+        bool triggerChange = trigger && (defined != op.isLocallyDefined());
+        op.setLocallyDefined(defined);
         if (triggerChange) {
             if (defined) {
-                static_cast<Derived&>(*this).reevaluate();
+                op.reevaluate();
                 visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                              static_cast<Derived&>(*this).triggers, true);
+                              op.triggers, true);
             } else {
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                              static_cast<Derived&>(*this).triggers, true);
+                              op.triggers, true);
             }
         }
     }
-    bool isDefined() { return defined; }
-    void copyDefinedStatus(DefinedContainer<View, Derived>& other) const {
-        other.defined = defined;
-    }
+    bool isDefined() { return static_cast<Derived&>(*this).isLocallyDefined(); }
+    void copyDefinedStatus(DefinedContainer<View, Derived>&) const {}
     inline bool allOperandsAreDefined() { return isDefined(); }
 };
 template <typename Derived>
 struct DefinedContainer<BoolView, Derived> {
     bool allOperandsDefined = false;
     void setDefined(bool defined, bool triggerChange = false) {
+        auto& op = static_cast<Derived&>(*this);
         allOperandsDefined = defined;
         if (defined) {
             if (triggerChange) {
-                static_cast<Derived&>(*this).changeValue([&]() {
-                    static_cast<Derived&>(*this).reevaluate();
+                op.changeValue([&]() {
+                    op.reevaluate();
                     return true;
                 });
             } else {
-                static_cast<Derived&>(*this).reevaluate();
+                op.reevaluate();
             }
         } else {
             if (triggerChange) {
-                static_cast<Derived&>(*this).changeValue([&]() {
-                    static_cast<Derived&>(*this).violation = LARGE_VIOLATION;
+                op.changeValue([&]() {
+                    op.violation = LARGE_VIOLATION;
                     return true;
                 });
             } else {
-                static_cast<Derived&>(*this).violation = LARGE_VIOLATION;
+                op.violation = LARGE_VIOLATION;
             }
         }
     }
@@ -108,13 +107,13 @@ struct SimpleBinaryOperator : public View,
     virtual ~SimpleBinaryOperator() { this->stopTriggeringOnChildren(); }
 
     void evaluateImpl() final;
+    void reevaluate();
     void startTriggeringImpl() final;
     void stopTriggeringOnChildren();
     void stopTriggering() final;
     ExprRef<View> deepCopySelfForUnrollImpl(
         const ExprRef<View>&, const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
-    bool isUndefined();
     bool optimiseImpl();
     std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
 };
@@ -158,13 +157,13 @@ struct SimpleUnaryOperator : public View,
     }
     virtual ~SimpleUnaryOperator() { this->stopTriggeringOnChildren(); }
     void evaluateImpl() final;
+    void reevaluate();
     void startTriggeringImpl() final;
     void stopTriggeringOnChildren();
     void stopTriggering() final;
     ExprRef<View> deepCopySelfForUnrollImpl(
         const ExprRef<View>&, const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
-    bool isUndefined();
     bool optimiseImpl();
     std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
 };

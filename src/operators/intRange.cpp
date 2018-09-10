@@ -5,12 +5,13 @@
 
 using namespace std;
 
-void IntRange::reevaluate() {
-    cachedLower = left->view().value;
-    cachedUpper = right->view().value;
+void IntRange::reevaluateImpl(IntView& leftView, IntView& rightView) {
+    cachedLower = leftView.value;
+    cachedUpper = rightView.value;
     this->silentClear();
     for (Int i = cachedLower; i <= cachedUpper; i++) {
         auto val = make<IntValue>();
+        val->setConstant(true);
         val->value = i;
         this->addMember(this->numberElements(), val.asExpr());
     }
@@ -24,35 +25,43 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
             return;
         }
         if (isLeft) {
-            adjustLower(true);
+            auto leftView = op->left->view();
+            if (!leftView) {
+                hasBecomeUndefined();
+                return;
+            }
+            adjustLower(*leftView, true);
         } else {
-            adjustUpper(true);
+            auto rightView = op->right->view();
+            if (!rightView) {
+                hasBecomeUndefined();
+                return;
+            }
+            adjustUpper(*rightView, true);
         }
     }
 
-    void hasBecomeUndefined() final {
-        if (op->isDefined()) {
-            op->setDefined(false, false);
-            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers, true);
-        }
-    }
+    void hasBecomeUndefined() final { op->setDefined(false, true); }
     void hasBecomeDefined() {
-        op->setDefined((isLeft && !op->right->isUndefined()) ||
-                           (!isLeft && !op->left->isUndefined()),
-                       false);
-        if (op->isDefined()) {
-            if (isLeft) {
-                adjustLower(false);
-            } else {
-                adjustUpper(false);
-            }
-            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
-                          true);
+        auto leftView = op->left->view();
+        if (!leftView) {
+            return;
         }
+        auto rightView = op->right->view();
+        if (!rightView) {
+            return;
+        }
+        op->setDefined(true);
+        if (isLeft) {
+            adjustLower(*leftView, false);
+        } else {
+            adjustUpper(*rightView, false);
+        }
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
+                      true);
     }
-    inline void adjustLower(bool trigger) {
-        Int newLower = op->left->view().value;
+    inline void adjustLower(const IntView& leftView, bool trigger) {
+        Int newLower = leftView.value;
         while (op->cachedLower > newLower) {
             --op->cachedLower;
             if (op->cachedLower > op->cachedUpper) {
@@ -78,8 +87,8 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
             }
         }
     }
-    inline void adjustUpper(bool trigger) {
-        Int newUpper = op->right->view().value;
+    inline void adjustUpper(const IntView& rightView, bool trigger) {
+        Int newUpper = rightView.value;
         while (op->cachedUpper < newUpper) {
             ++op->cachedUpper;
             if (op->cachedUpper < op->cachedLower) {

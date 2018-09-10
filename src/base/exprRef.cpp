@@ -9,12 +9,21 @@ UInt LARGE_VIOLATION = ((UInt)1) << ((sizeof(UInt) * 4) - 1);
 UInt MAX_DOMAIN_SIZE = ~((UInt)0);
 
 template <typename View>
-View& ExprInterface<View>::view() {
-    return *static_cast<View*>(this);
+OptionalRef<View> ExprInterface<View>::view() {
+    if (isLocallyDefined()) {
+        return makeOptional(*static_cast<View*>(this));
+    } else {
+        return EmptyOptional();
+    }
 }
+
 template <typename View>
-const View& ExprInterface<View>::view() const {
-    return *static_cast<const View*>(this);
+OptionalRef<const View> ExprInterface<View>::view() const {
+    if (isLocallyDefined()) {
+        return makeOptional(*static_cast<const View*>(this));
+    } else {
+        return EmptyOptional();
+    }
 }
 
 template <typename View, typename Trigger>
@@ -38,7 +47,7 @@ template <typename View>
 void ExprInterface<View>::addTriggerImpl(
     const std::shared_ptr<typename ExprInterface<View>::TriggerType>& trigger,
     bool includeMembers, Int memberIndex) {
-    this->view().triggers.emplace_back(trigger);
+    this->view().get().triggers.emplace_back(trigger);
     if (includeMembers) {
         addAsMemberTrigger(this->view(), trigger, memberIndex);
     }
@@ -50,7 +59,7 @@ bool smallerValue(const AnyExprRef& u, const AnyExprRef& v) {
             mpark::visit(
                 [&v](auto& uImpl) {
                     auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v);
-                    return smallerValue(uImpl->view(), vImpl->view());
+                    return smallerValue(*uImpl->view(), *vImpl->view());
                 },
                 u));
 }
@@ -61,28 +70,30 @@ bool largerValue(const AnyExprRef& u, const AnyExprRef& v) {
             mpark::visit(
                 [&v](auto& uImpl) {
                     auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v);
-                    return largerValue(uImpl->view(), vImpl->view());
+                    return largerValue(*uImpl->view(), *vImpl->view());
                 },
                 u));
 }
 
 HashType getValueHash(const AnyExprRef& ref) {
-    return mpark::visit([&](auto& ref) { return getValueHash(ref->view()); },
+    return mpark::visit([&](auto& ref) { return getValueHash(*ref->view()); },
                         ref);
 }
 
 ostream& prettyPrint(ostream& os, const AnyExprRef& expr) {
     return mpark::visit(
         [&](auto& ref) -> ostream& {
-            if (ref->isUndefined()) {
+            auto optionView = ref->view();
+            if (!optionView) {
                 os << "undefined";
             } else {
-                prettyPrint(os, ref->view());
+                prettyPrint(os, *optionView);
             }
             return os;
         },
         expr);
 }
+
 template <typename Value>
 ExprRef<typename AssociatedViewType<Value>::type> ValRef<Value>::asExpr() {
     typedef typename AssociatedViewType<Value>::type View;

@@ -6,6 +6,7 @@
 #include <utility>
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
+#include "utils/OptionalRef.h"
 
 template <typename View>
 struct ExprRef;
@@ -27,34 +28,50 @@ typedef std::function<std::pair<bool, AnyExprRef>(AnyExprRef)>
 struct AnyIterRef;
 struct PathExtension;
 struct ViolationContext;
-
+template <typename View>
+struct ExprInterface;
 template <typename View>
 struct Undefinable {
-    virtual bool isUndefined() = 0;
+    inline bool isLocallyDefined() const {
+        const char& flags =
+            static_cast<const ExprInterface<View>&>(*this).flags;
+        return flags & 3;
+    }
+    inline void setLocallyDefined(bool set) {
+        char& flags = static_cast<ExprInterface<View>&>(*this).flags;
+        flags &= ~((char)3);
+        flags |= ((char)set) << 3;
+    }
 };
 template <>
 struct Undefinable<BoolView> {
-    inline bool isUndefined() { return false; }
+    inline bool isLocallyDefined() const { return true; }
 };
 
 template <typename View>
 struct ExprInterface : public Undefinable<View> {
-    char flags = 0;
     typedef typename AssociatedTriggerType<View>::type TriggerType;
-    virtual ~ExprInterface() {}
-    inline bool isEvaluated() { return flags & 1; }
+
+   private:
+    friend struct Undefinable<View>;
+    char flags = 0;
+
+   public:
+    using Undefinable<View>::isLocallyDefined;
+    inline bool isEvaluated() const { return flags & 1; }
     inline void setEvaluated(bool set) {
         flags &= ~((char)1);
         flags |= set;
     }
-    inline bool isConstant() { return flags & 2; }
+    inline bool isConstant() const { return flags & 2; }
     inline void setConstant(bool set) {
         flags &= ~((char)2);
         flags |= ((char)set) << 1;
     }
 
-    virtual View& view();
-    virtual const View& view() const;
+    virtual ~ExprInterface() {}
+    virtual OptionalRef<View> view();
+    virtual OptionalRef<const View> view() const;
     void addTrigger(const std::shared_ptr<TriggerType>& trigger,
                     bool includeMembers = true, Int memberIndex = -1) {
         if (!isConstant()) {

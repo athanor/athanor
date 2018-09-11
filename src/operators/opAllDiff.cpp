@@ -43,16 +43,28 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
         }
     }
 
+    pair<bool, HashType> getHashIfDefined(const AnyExprRef& expr) {
+        return mpark::visit(
+            [&](auto& expr) -> pair<bool, HashType> {
+                auto view = expr->view();
+                if (!view) {
+                    return make_pair(false, 0);
+                }
+                return make_pair(true, getValueHash(*view));
+            },
+            expr);
+    }
     void valueAdded(UInt index, const AnyExprRef& exprIn) final {
-        if (!op->allOperandsAreDefined()) {
+        shiftIndices(index, true);
+        shiftIndicesUp(index, op->operand->view().get().numberElements(),
+                       op->violatingOperands);
+        auto boolHashPair = getHashIfDefined(exprIn);
+        if (!boolHashPair.first) {
+            memberHasBecomeUndefined(index);
             return;
         }
-        shiftIndices(index, true);
-        shiftIndicesUp(index, op->operand->view().numberElements(),
-                       op->violatingOperands);
 
-        HashType newMemberHash = getValueHash(exprIn);
-        if (op->addHash(newMemberHash, index) > 1) {
+        if (op->addHash(boolHashPair.second, index) > 1) {
             op->changeValue([&]() {
                 ++op->violation;
                 return true;
@@ -62,21 +74,22 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
     }
 
     void valueRemoved(UInt index, const AnyExprRef& exprIn) final {
-        if (!op->allOperandsAreDefined()) {
+        auto boolHashPair = getHashIfDefined(exprIn);
+        if (boolHashPair.first) {
+            if (op->removeHash(boolHashPair.second, index) >= 1) {
+                op->changeValue([&]() {
+                    --op->violation;
+                    return true;
+                });
+            }
+        } else if (op->operand->view().get().numberUndefined == 0) {
+            op->setDefined(true, true);
             return;
         }
 
-        HashType hash = getValueHash(exprIn);
-        if (op->removeHash(hash, index) >= 1) {
-            op->changeValue([&]() {
-                --op->violation;
-                return true;
-            });
-        }
         shiftIndices(index, false);
-        shiftIndicesDown(index, op->operand->view().numberElements(),
+        shiftIndicesDown(index, op->operand->view().get().numberElements(),
                          op->violatingOperands);
-
         debug_code(op->assertValidState());
     }
 
@@ -109,11 +122,19 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
             return;
         }
         Int violationDelta = 0;
+        bool foundUndefined = false;
         mpark::visit(
             [&](auto& members) {
                 for (size_t i = startIndex; i < endIndex; i++) {
+                    auto memberView = members[i]->view();
+                    if (!memberView) {
+                        // value has become undefined, that trigger will
+                        // eventually reach this op, ignore this event
+                        foundUndefined = true;
+                        return;
+                    }
                     HashType oldHash = op->indicesHashMap[i];
-                    HashType newHash = getValueHash(members[i]->view());
+                    HashType newHash = getValueHash(*memberView);
                     if (op->removeHash(oldHash, i) >= 1) {
                         --violationDelta;
                     }
@@ -122,7 +143,10 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
                     }
                 }
             },
-            op->operand->view().members);
+            op->operand->view().get().members);
+        if (foundUndefined) {
+            return;
+        }
         op->changeValue([&]() {
             op->violation += violationDelta;
             return true;
@@ -133,7 +157,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
     void valueChanged() final {
         op->changeValue([&]() {
             op->reevaluate();
-            return true;
+            return op->allOperandsAreDefined();
         });
     }
 
@@ -145,24 +169,25 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
     }
 
     void hasBecomeUndefined() final { op->setDefined(false, true); }
-    void hasBecomeDefined() final {
-        op->reevaluate();
-        op->setDefined(true, true);
-    }
+    void hasBecomeDefined() final { op->setDefined(true, true); }
     void memberHasBecomeUndefined(UInt) final {
-        if (op->operand->view().numberUndefined == 1) {
+        if (op->operand->view().get().numberUndefined == 1) {
             op->setDefined(false, true);
         }
     }
     void memberHasBecomeDefined(UInt) final {
-        if (op->operand->view().numberUndefined == 0) {
+        if (op->operand->view().get().numberUndefined == 0) {
             op->reevaluate();
             op->setDefined(true, true);
         }
     }
 };
 
-void OpAllDiff::reevaluate() {
+void OpAllDiff::reevaluateImpl(SequenceView& operandView) {
+    if (operandView.numberUndefined > 0) {
+        setDefined(false, false);
+        return;
+    }
     violation = 0;
     hashIndicesMap.clear();
     indicesHashMap.clear();
@@ -171,16 +196,18 @@ void OpAllDiff::reevaluate() {
             indicesHashMap.resize(members.size());
             for (size_t i = 0; i < members.size(); i++) {
                 auto& member = members[i];
-                if (member->isUndefined()) {
+                auto memberView = member->view();
+                if (!memberView) {
+                    setDefined(false, false);
                     return;
                 }
-                HashType hash = getValueHash(member->view());
+                HashType hash = getValueHash(*memberView);
                 if (addHash(hash, i) > 1) {
                     ++violation;
                 }
             }
         },
-        operand->view().members);
+        operandView.members);
     debug_code(assertValidState());
 }
 
@@ -193,7 +220,7 @@ void OpAllDiff::updateVarViolationsImpl(const ViolationContext&,
                     hashIndicesMap[indicesHashMap[index]].size(), vioContainer);
             }
         },
-        operand->view().members);
+        operand->view().get().members);
 }
 
 void OpAllDiff::copy(OpAllDiff& newOp) const {
@@ -239,10 +266,10 @@ void OpAllDiff::assertValidState() {
         }
         auto& indices = iter->second;
         if (!indices.count(i)) {
-            cerr
-                << "Error: index " << i << " maps to hash "
-                << " hash "
-                << " but hashIndicesMap does not have the hash index mapping\n";
+            cerr << "Error: index " << i << " maps to hash "
+                 << " hash "
+                 << " but hashIndicesMap does not have the hash index "
+                    "mapping\n";
             cerr << "Error: Hash " << hash << " maps to " << indices << endl;
             success = false;
             break;
@@ -263,7 +290,8 @@ void OpAllDiff::assertValidState() {
         }
         if (total != indicesHashMap.size()) {
             cerr << "Error: found " << total
-                 << " indices in hashIndicesMap but indicesHashMap has a size "
+                 << " indices in hashIndicesMap but indicesHashMap has a "
+                    "size "
                     "of "
                  << indicesHashMap.size() << endl;
             success = false;

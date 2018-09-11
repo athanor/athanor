@@ -13,11 +13,16 @@
 
 class EmptyOptional {};
 template <typename T>
-class OptionalRef {
+ class OptionalRef {
+//    friend class OptionalRef<typename std::remove_cv<T>::type>;
+    friend class OptionalRef<const T>;
     T* ptr;
 
    public:
     OptionalRef(T& val) : ptr(&val) {}
+    // allow casting from non const to const
+    OptionalRef(const OptionalRef<typename std::remove_cv<T>::type>& other)
+        : ptr(other.ptr) {}
     OptionalRef(T&&) = delete;
     OptionalRef(EmptyOptional) : ptr(NULL) {}
     OptionalRef() : ptr(NULL) {}

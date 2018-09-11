@@ -10,12 +10,16 @@ struct DefinedContainer {
         bool triggerChange = trigger && (defined != op.isLocallyDefined());
         op.setLocallyDefined(defined);
         if (triggerChange) {
-            if (defined) {
-                op.reevaluate();
-                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+            if (!defined) {
+                visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
                               op.triggers, true);
             } else {
-                visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                op.reevaluate();
+                // check still defined after reevaluating
+                if (!isDefined()) {
+                    return;
+                }
+                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
                               op.triggers, true);
             }
         }

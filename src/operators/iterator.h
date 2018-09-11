@@ -15,6 +15,7 @@ struct Iterator : public ExprInterface<View> {
     template <typename Func>
     inline void changeValue(bool triggering, const ExprRef<View>& oldVal,
                             const ExprRef<View>& newVal, Func&& callback) {
+        this->setLocallyDefined(true);
         if (!triggering) {
             ref = newVal;
             callback();
@@ -48,8 +49,8 @@ struct Iterator : public ExprInterface<View> {
     ~Iterator() { this->stopTriggeringOnChildren(); }
     void addTriggerImpl(const std::shared_ptr<TriggerType>& trigger,
                         bool includeMembers, Int memberIndex) final;
-    View& view() final;
-    const View& view() const final;
+    OptionalRef<View> view() final;
+    OptionalRef<const View> view() const final;
 
     void evaluateImpl() final;
     void startTriggeringImpl() final;
@@ -62,7 +63,7 @@ struct Iterator : public ExprInterface<View> {
         const ExprRef<View>& self, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    bool isUndefined();
+
     std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
 };
 

@@ -16,13 +16,12 @@ void Iterator<View>::addTriggerImpl(
 }
 
 template <typename View>
-View& Iterator<View>::view() {
+OptionalRef<View> Iterator<View>::view() {
     debug_code(assert(ref));
     return ref->view();
-    ;
 }
 template <typename View>
-const View& Iterator<View>::view() const {
+OptionalRef<const View> Iterator<View>::view() const {
     debug_code(assert(ref));
     return ref->view();
 }
@@ -86,12 +85,6 @@ void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction& func) {
     if (ref) {
         this->ref = findAndReplace(ref, func);
     }
-}
-
-template <typename View>
-bool Iterator<View>::isUndefined() {
-    debug_code(assert(ref));
-    return ref->isUndefined();
 }
 
 template <typename View>

@@ -58,7 +58,7 @@ struct OpAllDiff
             return indices.size();
         }
     }
-    void reevaluate();
+    void reevaluateImpl(SequenceView& operandView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpAllDiff& newOp) const;

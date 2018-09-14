@@ -25,14 +25,14 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
             return;
         }
         if (isLeft) {
-            auto leftView = op->left->view();
+            auto leftView = op->left->getViewIfDefined();
             if (!leftView) {
                 hasBecomeUndefined();
                 return;
             }
             adjustLower(*leftView, true);
         } else {
-            auto rightView = op->right->view();
+            auto rightView = op->right->getViewIfDefined();
             if (!rightView) {
                 hasBecomeUndefined();
                 return;
@@ -43,12 +43,12 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
 
     void hasBecomeUndefined() final { op->setDefined(false, true); }
     void hasBecomeDefined() {
-        auto leftView = op->left->view();
+        auto leftView = op->left->getViewIfDefined();
         if (!leftView) {
             return;
         }
-        auto rightView = op->right->view();
-        if (!rightView) {
+        auto rightView = op->right->getViewIfDefined();
+        if (!rightView ) {
             return;
         }
         op->setDefined(true);

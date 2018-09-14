@@ -20,9 +20,9 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
     OperandsSequenceTrigger(OpAnd* op) : op(op) {}
     void valueAdded(UInt index, const AnyExprRef& exprIn) final {
         auto& expr = mpark::get<ExprRef<BoolView>>(exprIn);
-        shiftIndicesUp(index, op->operand->view().numberElements(),
+        shiftIndicesUp(index, op->operand->view().get().numberElements(),
                        op->violatingOperands);
-        UInt violation = expr->view().violation;
+        UInt violation = expr->view().get().violation;
         op->cachedViolations.insert(index, violation);
         if (violation > 0) {
             op->violatingOperands.insert(index);
@@ -41,7 +41,7 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
                            violationOfRemovedExpr == 0)));
         op->violatingOperands.erase(index);
         op->cachedViolations.erase(index);
-        shiftIndicesDown(index, op->operand->view().numberElements(),
+        shiftIndicesDown(index, op->operand->view().get().numberElements(),
                          op->violatingOperands);
         op->changeValue([&]() {
             op->violation -= violationOfRemovedExpr;
@@ -66,9 +66,9 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     UInt getViolation(size_t index) {
-        auto& members = op->operand->view().getMembers<BoolView>();
+        auto& members = op->operand->view().get().getMembers<BoolView>();
         debug_code(assert(index < members.size()));
-        return members[index]->view().violation;
+        return members[index]->view().get().violation;
     }
     void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         UInt violationToAdd = 0, violationToRemove = 0;
@@ -109,12 +109,12 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
     void memberHasBecomeDefined(UInt) final { shouldNotBeCalledPanic; }
 };
 
-void OpAnd::reevaluate() {
+void OpAnd::reevaluate(SequenceView& operandView) {
     violation = 0;
     cachedViolations.clear();
-    for (size_t i = 0; i < operand->view().numberElements(); ++i) {
-        auto& operandChild = operand->view().getMembers<BoolView>()[i];
-        UInt operandViolation = operandChild->view().violation;
+    for (size_t i = 0; i < operandView.numberElements(); ++i) {
+        auto& operandChild = operand->view().get().getMembers<BoolView>()[i];
+        UInt operandViolation = operandChild->view().get().violation;
         cachedViolations.insert(i, operandViolation);
         if (operandViolation > 0) {
             violatingOperands.insert(i);
@@ -126,7 +126,8 @@ void OpAnd::reevaluate() {
 void OpAnd::updateVarViolationsImpl(const ViolationContext&,
                                     ViolationContainer& vioContainer) {
     for (size_t violatingOperandIndex : violatingOperands) {
-        operand->view()
+        operand->view() view()
+            .get()
             .getMembers<BoolView>()[violatingOperandIndex]
             ->updateVarViolations(violation, vioContainer);
     }

@@ -11,9 +11,9 @@ void SimpleBinaryOperator<View, OperandView, Derived>::evaluateImpl() {
 }
 template <typename View, typename OperandView, typename Derived>
 void SimpleBinaryOperator<View, OperandView, Derived>::reevaluate() {
-    auto leftView = left->view();
+    auto leftView = left->getViewIfDefined();
     if (leftView) {
-        auto rightView = right->view();
+        auto rightView = right->getViewIfDefined();
         if (rightView) {
             this->setDefined(true);
             derived().reevaluateImpl(*leftView, *rightView);
@@ -113,7 +113,7 @@ void SimpleUnaryOperator<View, OperandView, Derived>::evaluateImpl() {
 }
 template <typename View, typename OperandView, typename Derived>
 void SimpleUnaryOperator<View, OperandView, Derived>::reevaluate() {
-    auto view = operand->view();
+    auto view = operand->getViewIfDefined();
     if (view) {
         this->setDefined(true);
         derived().reevaluateImpl(*view);

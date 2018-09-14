@@ -72,6 +72,22 @@ struct ExprInterface : public Undefinable<View> {
     virtual ~ExprInterface() {}
     virtual OptionalRef<View> view();
     virtual OptionalRef<const View> view() const;
+
+    inline OptionalRef<View> getViewIfDefined() {
+        if (isLocallyDefined()) {
+            return view();
+        } else {
+            return EmptyOptional();
+        }
+    }
+    inline OptionalRef<const View> getViewIfDefined() const {
+        if (isLocallyDefined()) {
+            return view();
+        } else {
+            return EmptyOptional();
+        }
+    }
+
     void addTrigger(const std::shared_ptr<TriggerType>& trigger,
                     bool includeMembers = true, Int memberIndex = -1) {
         if (!isConstant()) {
@@ -193,5 +209,6 @@ struct PathExtension {
 };
 
 extern UInt LARGE_VIOLATION;
+extern BoolView VIOLATING_BOOL_VIEW;
 extern UInt MAX_DOMAIN_SIZE;
 #endif /* SRC_BASE_EXPRREF_H_ */

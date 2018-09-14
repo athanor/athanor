@@ -4,26 +4,26 @@
 #include "types/allTypes.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
+
 u_int64_t triggerEventCount = 0;
 UInt LARGE_VIOLATION = ((UInt)1) << ((sizeof(UInt) * 4) - 1);
 UInt MAX_DOMAIN_SIZE = ~((UInt)0);
+BoolView makeViolatingBoolValue() {
+    BoolValue v;
+    v.violation = LARGE_VIOLATION;
+    return v;
+}
+BoolValue violatingBoolValue = makeViolatingBoolValue();
+BoolView VIOLATING_BOOL_VIEW = violatingBoolValue.view().get();
 
 template <typename View>
 OptionalRef<View> ExprInterface<View>::view() {
-    if (isLocallyDefined()) {
-        return makeOptional(*static_cast<View*>(this));
-    } else {
-        return EmptyOptional();
-    }
+    return makeOptional(*static_cast<View*>(this));
 }
 
 template <typename View>
 OptionalRef<const View> ExprInterface<View>::view() const {
-    if (isLocallyDefined()) {
-        return makeOptional(*static_cast<const View*>(this));
-    } else {
-        return EmptyOptional();
-    }
+    return makeOptional(*static_cast<const View*>(this));
 }
 
 template <typename View, typename Trigger>

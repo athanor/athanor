@@ -26,8 +26,8 @@ struct OpCatchUndef : public ExprInterface<ExprViewType> {
     ~OpCatchUndef() { this->stopTriggeringOnChildren(); }
     void addTriggerImpl(const std::shared_ptr<ExprTriggerType>& trigger,
                         bool includeMembers, Int memberIndex) final;
-    ExprViewType& view() final;
-    const ExprViewType& view() const final;
+    OptionalRef<ExprViewType> view() final;
+    OptionalRef<const ExprViewType> view() const final;
 
     void evaluateImpl() final;
     void startTriggeringImpl() final;

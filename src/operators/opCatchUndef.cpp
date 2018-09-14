@@ -26,23 +26,22 @@ const ExprRef<ExprViewType>& OpCatchUndef<ExprViewType>::getMember() const {
 }
 
 template <typename ExprViewType>
-ExprViewType& OpCatchUndef<ExprViewType>::view() {
+OptionalRef<ExprViewType> OpCatchUndef<ExprViewType>::view() {
     return getMember()->view();
 }
 template <typename ExprViewType>
-const ExprViewType& OpCatchUndef<ExprViewType>::view() const {
+OptionalRef<const ExprViewType> OpCatchUndef<ExprViewType>::view() const {
     return getMember()->view();
 }
 
 template <typename ExprViewType>
 void OpCatchUndef<ExprViewType>::reevaluate() {
-    exprDefined = !expr->isUndefined();
+    exprDefined = expr->getViewIfDefined().hasValue();
 }
 
 template <typename ExprViewType>
 void OpCatchUndef<ExprViewType>::evaluateImpl() {
     replacement->evaluate();
-    ;
     expr->evaluate();
     reevaluate();
 }
@@ -71,12 +70,14 @@ struct ExprTriggerHelper<ExprViewType, TupleTrigger, Derived>
       public ChangeTriggerAdapter<TupleTrigger, Derived> {
     using OpCatchUndef<ExprViewType>::ExprTriggerBase::ExprTriggerBase;
     void memberHasBecomeDefined(UInt) final {
-        if (this->op->expr->view().numberUndefined == 0) {
+        auto view = this->op->expr->view();
+        if (view && view.get().numberUndefined == 0) {
             static_cast<Derived&>(*this).adapterHasBecomeDefined();
         }
     }
     void memberHasBecomeUndefined(UInt) final {
-        if (this->op->expr->view().numberUndefined == 1) {
+        auto view = this->op->expr->view();
+        if (!view || view.get().numberUndefined == 1) {
             static_cast<Derived&>(*this).adapterHasBecomeUndefined();
         }
     }

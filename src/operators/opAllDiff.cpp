@@ -46,7 +46,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
     pair<bool, HashType> getHashIfDefined(const AnyExprRef& expr) {
         return mpark::visit(
             [&](auto& expr) -> pair<bool, HashType> {
-                auto view = expr->view();
+                auto view = expr->getViewIfDefined();
                 if (!view) {
                     return make_pair(false, 0);
                 }
@@ -126,7 +126,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
         mpark::visit(
             [&](auto& members) {
                 for (size_t i = startIndex; i < endIndex; i++) {
-                    auto memberView = members[i]->view();
+                    auto memberView = members[i]->getViewIfDefined();
                     if (!memberView) {
                         // value has become undefined, that trigger will
                         // eventually reach this op, ignore this event
@@ -196,7 +196,7 @@ void OpAllDiff::reevaluateImpl(SequenceView& operandView) {
             indicesHashMap.resize(members.size());
             for (size_t i = 0; i < members.size(); i++) {
                 auto& member = members[i];
-                auto memberView = member->view();
+                auto memberView = member->getViewIfDefined();
                 if (!memberView) {
                     setDefined(false, false);
                     return;

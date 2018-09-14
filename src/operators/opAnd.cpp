@@ -109,7 +109,7 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
     void memberHasBecomeDefined(UInt) final { shouldNotBeCalledPanic; }
 };
 
-void OpAnd::reevaluate(SequenceView& operandView) {
+void OpAnd::reevaluateImpl(SequenceView& operandView) {
     violation = 0;
     cachedViolations.clear();
     for (size_t i = 0; i < operandView.numberElements(); ++i) {
@@ -126,8 +126,7 @@ void OpAnd::reevaluate(SequenceView& operandView) {
 void OpAnd::updateVarViolationsImpl(const ViolationContext&,
                                     ViolationContainer& vioContainer) {
     for (size_t violatingOperandIndex : violatingOperands) {
-        operand->view() view()
-            .get()
+        operand->view().get()
             .getMembers<BoolView>()[violatingOperandIndex]
             ->updateVarViolations(violation, vioContainer);
     }

@@ -18,8 +18,9 @@ struct SimpleBinaryTrigger
             return;
         }
         op->changeValue([&]() {
+            bool defined = op->isDefined();
             op->reevaluate();
-            return true;
+            return op->isDefined() != defined;
         });
     }
 
@@ -48,8 +49,8 @@ struct SimpleBinaryTrigger
     void adapterHasBecomeUndefined() { op->setDefined(false, true); }
 
     void adapterHasBecomeDefined() {
-        if ((isLeftTrigger && !op->right->isUndefined()) ||
-            (!isLeftTrigger && !op->left->isUndefined())) {
+        if ((isLeftTrigger && op->right->isLocallyDefined()) ||
+            (!isLeftTrigger && op->left->isLocallyDefined())) {
             op->setDefined(true, true);
         }
     }
@@ -63,8 +64,9 @@ struct SimpleUnaryTrigger
     SimpleUnaryTrigger(Op* op) : op(op) {}
     inline void adapterValueChanged() {
         op->changeValue([&]() {
+            bool defined = op->isDefined();
             op->reevaluate();
-            return true;
+            return defined != op->isDefined();
         });
     }
 

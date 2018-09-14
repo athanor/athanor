@@ -12,7 +12,7 @@ struct OperatorTrates<OpDiv> {
 };
 struct OpDiv : public SimpleBinaryOperator<IntView, IntView, OpDiv> {
     using SimpleBinaryOperator<IntView, IntView, OpDiv>::SimpleBinaryOperator;
-    void reevaluate();
+    void reevaluateImpl(IntView& leftView, IntView& rightView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpDiv& newOp) const;

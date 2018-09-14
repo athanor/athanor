@@ -1,16 +1,27 @@
 #include "operators/opDiv.h"
 #include "operators/simpleOperator.hpp"
 using namespace std;
-void OpDiv::reevaluate() {
-    value = left->view().value / right->view().value;
-    if (value < 0 && left->view().value % right->view().value != 0) {
+void OpDiv::reevaluateImpl(IntView& leftView, IntView& rightView) {
+    if (rightView.value == 0) {
+        setDefined(false, true);
+        return;
+    }
+    value = leftView.value / rightView.value;
+    if (value < 0 && leftView.value % rightView.value != 0) {
         --value;
+    }
+    if (!isDefined()) {
+        setDefined(true, true);
     }
 }
 
 void OpDiv::updateVarViolationsImpl(const ViolationContext& vioContext,
                                     ViolationContainer& vioContainer) {
     left->updateVarViolations(vioContext, vioContainer);
+    auto rightView = right->getViewIfDefined();
+    if (rightView && rightView.get().value == 0) {
+        right->updateVarViolations(LARGE_VIOLATION, vioContainer);
+    }
     right->updateVarViolations(vioContext, vioContainer);
 }
 

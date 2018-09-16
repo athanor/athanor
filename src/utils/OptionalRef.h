@@ -1,6 +1,7 @@
 
 #ifndef SRC_UTILS_OPTIONALREF_H_
 #define SRC_UTILS_OPTIONALREF_H_
+#include <string>
 
 /**
  * Class to hold an optional reference.  Class stores a pointer to an object, it
@@ -13,8 +14,8 @@
 
 class EmptyOptional {};
 template <typename T>
- class OptionalRef {
-//    friend class OptionalRef<typename std::remove_cv<T>::type>;
+class OptionalRef {
+    //    friend class OptionalRef<typename std::remove_cv<T>::type>;
     friend class OptionalRef<const T>;
     T* ptr;
 
@@ -28,9 +29,27 @@ template <typename T>
     OptionalRef() : ptr(NULL) {}
     inline bool hasValue() const { return ptr != NULL; }
     inline operator bool() const { return hasValue(); }
+    inline T& get() {
+        debug_code(assert(hasValue()));
+        return *ptr;
+    }
     inline T& get() const {
         debug_code(assert(hasValue()));
+        return *ptr;
+    }
 
+    inline T& checkedGet(const std::string& errorMessage) {
+        if (!hasValue()) {
+            std::cerr << errorMessage << std::endl;
+            abort();
+        }
+        return *ptr;
+    }
+    inline T& checkedGet(const std::string& errorMessage) const {
+        if (!hasValue()) {
+            std::cerr << errorMessage << std::endl;
+            abort();
+        }
         return *ptr;
     }
     inline T& operator*() const { return get(); }

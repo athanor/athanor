@@ -5,9 +5,14 @@
 #include "utils/ignoreUnused.h"
 
 using namespace std;
+const string OP_FLATTEN_DEFAULT_ERROR =
+    "View appears to be undefined.  OpFlattenOneLevel does not handle this "
+    "case yet.\n";
 template <typename SequenceInnerType>
 void OpFlattenOneLevel<SequenceInnerType>::assertValidStartingIndices() const {
-    auto& innerSequences = operand->view().getMembers<SequenceView>();
+    auto& innerSequences = operand->view()
+                               .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
+                               .getMembers<SequenceView>();
     UInt total = 0;
     bool success = true;
     if (innerSequences.size() != startingIndices.size()) {
@@ -23,17 +28,23 @@ void OpFlattenOneLevel<SequenceInnerType>::assertValidStartingIndices() const {
                      << " to be " << total;
                 break;
             }
-            total += innerSequences[i]->view().numberElements();
+            total += innerSequences[i]
+                         ->view()
+                         .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
+                         .numberElements();
         }
     }
     if (!success) {
         cerr << "\nOperand sequences:\n";
         for (auto& innerSequence : innerSequences) {
-            prettyPrint(cerr, innerSequence->view()) << endl;
+            prettyPrint(cerr, innerSequence->view().checkedGet(
+                                  OP_FLATTEN_DEFAULT_ERROR))
+                << endl;
         }
         cerr << "startingIndices: " << startingIndices << endl;
         cerr << "Flattened value: ";
-        prettyPrint(cerr, this->view()) << endl;
+        prettyPrint(cerr, this->view().checkedGet(OP_FLATTEN_DEFAULT_ERROR))
+            << endl;
         assert(false);
         abort();
     }
@@ -41,12 +52,16 @@ void OpFlattenOneLevel<SequenceInnerType>::assertValidStartingIndices() const {
 
 template <typename SequenceInnerType>
 void OpFlattenOneLevel<SequenceInnerType>::reevaluate() {
-    auto& operandMembers = operand->view().getMembers<SequenceView>();
+    auto& operandMembers = operand->view()
+                               .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
+                               .getMembers<SequenceView>();
     startingIndices.resize(operandMembers.size());
     silentClear();
     for (size_t i = 0; i < operandMembers.size(); i++) {
-        auto& innerSequenceMembers =
-            operandMembers[i]->view().getMembers<SequenceInnerType>();
+        auto& innerSequenceMembers = operandMembers[i]
+                                         ->view()
+                                         .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
+                                         .getMembers<SequenceInnerType>();
         startingIndices[i] = numberElements();
         for (auto& member : innerSequenceMembers) {
             addMember(numberElements(), member);
@@ -99,6 +114,7 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
             OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger>(op,
                                                                         index);
         op->operand->view()
+            .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
             .template getMembers<SequenceView>()[index]
             ->addTrigger(trigger);
         op->innerSequenceTriggers[index] = trigger;
@@ -187,8 +203,12 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
     }
     void valueAdded(UInt index, const AnyExprRef& newOperand) final {
         auto& sequence = mpark::get<ExprRef<SequenceView>>(newOperand);
-        shiftStartingIndicesUp(index, sequence->view().numberElements());
-        auto& members = sequence->view().getMembers<SequenceInnerType>();
+        shiftStartingIndicesUp(index, sequence->view()
+                                          .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
+                                          .numberElements());
+        auto& members = sequence->view()
+                            .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
+                            .getMembers<SequenceInnerType>();
         for (size_t i = 0; i < members.size(); i++) {
             op->addMemberAndNotify(op->startingIndices[index] + i, members[i]);
         }
@@ -298,7 +318,7 @@ template <typename SequenceInnerType>
 std::ostream& OpFlattenOneLevel<SequenceInnerType>::dumpState(
     std::ostream& os) const {
     os << "OpFlattenOneLevel<SequenceInnerType>: value=";
-    prettyPrint(os, this->view());
+    prettyPrint(os, this->view().checkedGet(OP_FLATTEN_DEFAULT_ERROR));
     os << "\nstartingIndices: " << startingIndices;
     debug_code(assertValidStartingIndices());
     os << "\noperand: ";
@@ -311,7 +331,7 @@ template <typename SequenceInnerType>
 void OpFlattenOneLevel<SequenceInnerType>::evaluateImpl() {
     members.emplace<ExprRefVec<SequenceInnerType>>();
     operand->evaluate();
-    defined = !operand->isUndefined();
+    defined = operand->getViewIfDefined().hasValue();
     if (defined) {
         reevaluate();
     }
@@ -325,7 +345,9 @@ void OpFlattenOneLevel<SequenceInnerType>::reattachAllInnerSequenceTriggers(
         }
         innerSequenceTriggers.clear();
     }
-    auto& innerSequences = operand->view().getMembers<SequenceView>();
+    auto& innerSequences = operand->view()
+                               .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
+                               .getMembers<SequenceView>();
     for (UInt i = 0; i < innerSequences.size(); i++) {
         innerSequenceTriggers.emplace_back(
             make_shared<InnerSequenceTrigger>(this, i));
@@ -340,7 +362,9 @@ void OpFlattenOneLevel<SequenceInnerType>::startTriggeringImpl() {
         operand->addTrigger(operandTrigger);
         reattachAllInnerSequenceTriggers(false);
         operand->startTriggering();
-        for (auto& innerSequence : operand->view().getMembers<SequenceView>()) {
+        for (auto& innerSequence : operand->view()
+                                       .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
+                                       .getMembers<SequenceView>()) {
             innerSequence->startTriggering();
         }
     }
@@ -363,7 +387,9 @@ void OpFlattenOneLevel<SequenceInnerType>::stopTriggering() {
     if (operandTrigger) {
         stopTriggeringOnChildren();
         operand->stopTriggering();
-        for (auto& innerSequence : operand->view().getMembers<SequenceView>()) {
+        for (auto& innerSequence : operand->view()
+                                       .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
+                                       .getMembers<SequenceView>()) {
             innerSequence->stopTriggering();
         }
     }

@@ -16,44 +16,61 @@ void OpFunctionImage<FunctionMemberViewType>::addTriggerImpl(
     const shared_ptr<FunctionMemberTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));
-    if (locallyDefined) {
-        getMember()->addTrigger(trigger, includeMembers, memberIndex);
+    if (isLocallyDefined()) {
+        getMember().get()->addTrigger(trigger, includeMembers, memberIndex);
     }
 }
 
 template <typename FunctionMemberViewType>
-ExprRef<FunctionMemberViewType>&
+OptionalRef<ExprRef<FunctionMemberViewType>>
 OpFunctionImage<FunctionMemberViewType>::getMember() {
-    debug_code(assert(locallyDefined));
-    debug_code(assert(!invoke(preImageOperand, isUndefined()) &&
-                      cachedIndex >= 0 && !functionOperand->isUndefined() &&
-                      cachedIndex < (Int)functionOperand->view().rangeSize()));
+    debug_code(assert(isLocallyDefined()));
+    debug_code(assert(invoke(preImageOperand, isLocallyDefined()));
+                      debug_code(assert(cachedIndex >= 0));
+auto view = functionOperand->getViewIfDefined();
+if (!view || cachedIndex >= (Int)(*view).rangeSize()) {
+        return EmptyOptional();
+}
+
     auto& member =
-        functionOperand->view().getRange<FunctionMemberViewType>()[cachedIndex];
+        (*view).getRange<FunctionMemberViewType>()[cachedIndex];
     return member;
 }
 
 template <typename FunctionMemberViewType>
-const ExprRef<FunctionMemberViewType>&
+OptionalRef<const ExprRef<FunctionMemberViewType>>
 OpFunctionImage<FunctionMemberViewType>::getMember() const {
-    debug_code(assert(locallyDefined));
-    debug_code(assert(!invoke(preImageOperand, isUndefined()) &&
-                      cachedIndex >= 0 && !functionOperand->isUndefined() &&
-                      cachedIndex < (Int)functionOperand->view().rangeSize()));
-
+    debug_code(assert(isLocallyDefined()));
+    debug_code(assert(invoke(preImageOperand, isLocallyDefined()));
+                      debug_code(assert(cachedIndex >= 0));
+auto view = functionOperand->getViewIfDefined();
+if (!view || cachedIndex >= (Int)(*view).rangeSize()) {
+        return EmptyOptional();
+}
     const auto& member =
-        functionOperand->view().getRange<FunctionMemberViewType>()[cachedIndex];
+        (*view).getRange<FunctionMemberViewType>()[cachedIndex];
     return member;
 }
 
 template <typename FunctionMemberViewType>
-FunctionMemberViewType& OpFunctionImage<FunctionMemberViewType>::view() {
-    return getMember()->view();
+OptionalRef<FunctionMemberViewType>
+OpFunctionImage<FunctionMemberViewType>::view() {
+    auto member = getMember();
+    if (member) {
+        return (*member)->view();
+    } else {
+        return EmptyOptional();
+    }
 }
 template <typename FunctionMemberViewType>
-const FunctionMemberViewType& OpFunctionImage<FunctionMemberViewType>::view()
-    const {
-    return getMember()->view();
+OptionalRef<const FunctionMemberViewType>
+OpFunctionImage<FunctionMemberViewType>::view() const {
+    auto member = getMember();
+    if (member) {
+        return (*member)->view();
+    } else {
+        return EmptyOptional();
+    }
 }
 template <typename FunctionMemberViewType, typename TriggerType>
 struct PreImageTrigger;
@@ -237,45 +254,14 @@ struct PreImageTrigger<FunctionMemberViewType, TupleTrigger>
     using PreImageTriggerBase =
         typename OpFunctionImage<FunctionMemberViewType>::PreImageTriggerBase;
     using OpFunctionImage<FunctionMemberViewType>::PreImageTriggerBase::op;
-    std::vector<Int> cachedTupleMembers;
 
-    PreImageTrigger(OpFunctionImage<FunctionMemberViewType>* op,
-                    std::vector<Int> cachedTupleMembers = {})
-        : PreImageTriggerBase(op),
-          cachedTupleMembers(move(cachedTupleMembers)) {}
+    PreImageTrigger(OpFunctionImage<FunctionMemberViewType>* op)
+        : PreImageTriggerBase(op) {}
 
-    vector<AnyExprRef>& getTupleMembers() {
-        return mpark::get<ExprRef<TupleView>>(op->preImageOperand)
-            ->view()
-            .members;
-    }
-    inline void recacheAllTupleMemberValues() {
-        auto& members = getTupleMembers();
-        cachedTupleMembers.clear();
-        cachedTupleMembers.resize(members.size());
-        for (size_t index = 0; index < cachedTupleMembers.size(); index++) {
-            cachedTupleMembers[index] =
-                getAsIntForFunctionIndex(members[index]);
-        }
-    }
     void valueChanged() final {
-        recacheAllTupleMemberValues();
-        bool wasDefined = op->defined;
-        bool wasLocallyDefined = op->locallyDefined;
-        auto boolIndexPair =
-            op->functionOperand->view().domainToIndex(cachedTupleMembers);
-        if (!boolIndexPair.first) {
-            op->locallyDefined = false;
-            op->defined = false;
-        } else {
-            op->locallyDefined = true;
-            op->cachedIndex = boolIndexPair.second;
-        }
-
-        if (!op->eventForwardedAsDefinednessChange(wasDefined,
-                                                   wasLocallyDefined)) {
+        if (!op->eventForwardedAsDefinednessChange(true)) {
             visitTriggers(
-                [&](auto t) {
+                [&](auto& t) {
                     t->valueChanged();
                     t->reattachTrigger();
                 },
@@ -297,7 +283,7 @@ struct PreImageTrigger<FunctionMemberViewType, TupleTrigger>
     }
     void hasBecomeDefined() final {
         op->reevaluate();
-        if (!op->defined) {
+        if (!op->isLocallyDefined()) {
             return;
         }
         visitTriggers(
@@ -309,7 +295,7 @@ struct PreImageTrigger<FunctionMemberViewType, TupleTrigger>
     }
 
     void hasBecomeUndefined() final {
-        if (!op->defined) {
+        if (!op->isLocallyDefined()) {
             return;
         }
         op->locallyDefined = false;

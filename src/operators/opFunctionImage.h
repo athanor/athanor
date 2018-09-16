@@ -21,8 +21,6 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     ExprRef<FunctionView> functionOperand;
     AnyExprRef preImageOperand;
     Int cachedIndex;
-    bool defined = false;
-    bool locallyDefined = false;
     std::shared_ptr<FunctionOperandTrigger> functionOperandTrigger;
     std::shared_ptr<FunctionOperandTrigger> functionMemberTrigger;
     std::shared_ptr<PreImageTriggerBase> preImageTrigger;
@@ -37,8 +35,8 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     void addTriggerImpl(
         const std::shared_ptr<FunctionMemberTriggerType>& trigger,
         bool includeMembers, Int memberIndex) final;
-    FunctionMemberViewType& view() final;
-    const FunctionMemberViewType& view() const final;
+    OptionalRef<FunctionMemberViewType> view() final;
+    OptionalRef<const FunctionMemberViewType> view() const final;
 
     void evaluateImpl() final;
     void startTriggeringImpl() final;
@@ -53,8 +51,8 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
-    ExprRef<FunctionMemberViewType>& getMember();
-    const ExprRef<FunctionMemberViewType>& getMember() const;
+    OptionalRef<ExprRef<FunctionMemberViewType>> getMember();
+    OptionalRef<const ExprRef<FunctionMemberViewType>> getMember() const;
     void reevaluate(bool recalculateCachedIndex = true);
     std::pair<bool, ExprRef<FunctionMemberViewType>> optimise(
         PathExtension path) final;

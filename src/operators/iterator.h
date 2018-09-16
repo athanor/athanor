@@ -15,7 +15,7 @@ struct Iterator : public ExprInterface<View> {
     template <typename Func>
     inline void changeValue(bool triggering, const ExprRef<View>& oldVal,
                             const ExprRef<View>& newVal, Func&& callback) {
-        this->setLocallyDefined(true);
+        this->setAppearsDefined(true);
         if (!triggering) {
             ref = newVal;
             callback();

@@ -318,8 +318,8 @@ template <typename SequenceInnerType>
 void OpFlattenOneLevel<SequenceInnerType>::evaluateImpl() {
     members.emplace<ExprRefVec<SequenceInnerType>>();
     operand->evaluate();
-    this->setLocallyDefined(operand->getViewIfDefined().hasValue());
-    if (this->isLocallyDefined()) {
+    this->setAppearsDefined(operand->getViewIfDefined().hasValue());
+    if (this->appearsDefined()) {
         reevaluate();
     }
 }

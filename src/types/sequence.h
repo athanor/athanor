@@ -87,7 +87,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
     inline void addMember(size_t index, const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();
         members.insert(members.begin() + index, member);
-        bool memberUndefined = !member->isLocallyDefined();
+        bool memberUndefined = !member->appearsDefined();
         if (!memberUndefined && index == members.size() - 1) {
             cachedHashTotal.applyIfValid([&](auto& value) {
                 value += this->calcMemberHash(index, member);
@@ -120,7 +120,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
         } else {
             cachedHashTotal.invalidate();
         }
-        if (!removedMember->isLocallyDefined()) {
+        if (!removedMember->appearsDefined()) {
             numberUndefined--;
         }
         if (members.size() < singleMemberTriggers.size()) {

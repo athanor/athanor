@@ -7,8 +7,8 @@ template <typename View, typename Derived>
 struct DefinedContainer {
     void setDefined(bool defined, bool trigger = false) {
         auto& op = static_cast<Derived&>(*this);
-        bool triggerChange = trigger && (defined != op.isLocallyDefined());
-        op.setLocallyDefined(defined);
+        bool triggerChange = trigger && (defined != op.appearsDefined());
+        op.setAppearsDefined(defined);
         if (triggerChange) {
             if (!defined) {
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
@@ -24,7 +24,7 @@ struct DefinedContainer {
             }
         }
     }
-    bool isDefined() { return static_cast<Derived&>(*this).isLocallyDefined(); }
+    bool isDefined() { return static_cast<Derived&>(*this).appearsDefined(); }
     void copyDefinedStatus(DefinedContainer<View, Derived>&) const {}
     inline bool allOperandsAreDefined() { return isDefined(); }
 };

@@ -15,7 +15,7 @@ inline pair<bool, ViolationContainer&> registerViolations(
 namespace {
 template <typename Value>
 void invokeSetDefined(ValRef<Value>& val) {
-    val->setLocallyDefined(true);
+    val->setAppearsDefined(true);
 }
 template <>
 void invokeSetDefined<BoolValue>(ValRef<BoolValue>&) {}

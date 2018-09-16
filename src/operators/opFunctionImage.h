@@ -21,6 +21,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     ExprRef<FunctionView> functionOperand;
     AnyExprRef preImageOperand;
     Int cachedIndex;
+    bool locallyDefined = false;
     std::shared_ptr<FunctionOperandTrigger> functionOperandTrigger;
     std::shared_ptr<FunctionOperandTrigger> functionMemberTrigger;
     std::shared_ptr<PreImageTriggerBase> preImageTrigger;
@@ -54,6 +55,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     OptionalRef<ExprRef<FunctionMemberViewType>> getMember();
     OptionalRef<const ExprRef<FunctionMemberViewType>> getMember() const;
     void reevaluate(bool recalculateCachedIndex = true);
+    std::pair<bool, Int> calculateIndex();
     std::pair<bool, ExprRef<FunctionMemberViewType>> optimise(
         PathExtension path) final;
 

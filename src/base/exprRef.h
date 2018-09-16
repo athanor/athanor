@@ -32,12 +32,12 @@ template <typename View>
 struct ExprInterface;
 template <typename View>
 struct Undefinable {
-    inline bool isLocallyDefined() const {
+    inline bool appearsDefined() const {
         const char& flags =
             static_cast<const ExprInterface<View>&>(*this).flags;
         return flags & 3;
     }
-    inline void setLocallyDefined(bool set) {
+    inline void setAppearsDefined(bool set) {
         char& flags = static_cast<ExprInterface<View>&>(*this).flags;
         flags &= ~((char)3);
         flags |= ((char)set) << 3;
@@ -45,7 +45,7 @@ struct Undefinable {
 };
 template <>
 struct Undefinable<BoolView> {
-    inline bool isLocallyDefined() const { return true; }
+    inline bool appearsDefined() const { return true; }
 };
 
 template <typename View>
@@ -57,7 +57,7 @@ struct ExprInterface : public Undefinable<View> {
     char flags = 0;
 
    public:
-    using Undefinable<View>::isLocallyDefined;
+    using Undefinable<View>::appearsDefined;
     inline bool isEvaluated() const { return flags & 1; }
     inline void setEvaluated(bool set) {
         flags &= ~((char)1);
@@ -74,14 +74,14 @@ struct ExprInterface : public Undefinable<View> {
     virtual OptionalRef<const View> view() const;
 
     inline OptionalRef<View> getViewIfDefined() {
-        if (isLocallyDefined()) {
+        if (appearsDefined()) {
             return view();
         } else {
             return EmptyOptional();
         }
     }
     inline OptionalRef<const View> getViewIfDefined() const {
-        if (isLocallyDefined()) {
+        if (appearsDefined()) {
             return view();
         } else {
             return EmptyOptional();

@@ -49,8 +49,8 @@ struct SimpleBinaryTrigger
     void adapterHasBecomeUndefined() { op->setDefined(false, true); }
 
     void adapterHasBecomeDefined() {
-        if ((isLeftTrigger && op->right->isLocallyDefined()) ||
-            (!isLeftTrigger && op->left->isLocallyDefined())) {
+        if ((isLeftTrigger && op->right->appearsDefined()) ||
+            (!isLeftTrigger && op->left->appearsDefined())) {
             op->setDefined(true, true);
         }
     }

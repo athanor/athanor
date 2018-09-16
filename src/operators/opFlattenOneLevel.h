@@ -10,7 +10,6 @@ struct OpFlattenOneLevel : public SequenceView {
     struct OperandTrigger;
     struct InnerSequenceTrigger;
     ExprRef<SequenceView> operand;
-    bool defined = false;
     std::vector<UInt> startingIndices;
     std::shared_ptr<OperandTrigger> operandTrigger;
     std::vector<std::shared_ptr<InnerSequenceTrigger>> innerSequenceTriggers;
@@ -32,7 +31,6 @@ struct OpFlattenOneLevel : public SequenceView {
         const ExprRef<SequenceView>& self,
         const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    bool isUndefined();
 
     std::ostream& dumpState(std::ostream& os) const final;
     std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension path) final;

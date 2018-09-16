@@ -104,8 +104,8 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
             op->startingIndices[index] + index1,
             op->startingIndices[index] + index2);
     }
-    inline void memberHasBecomeDefined(UInt) {}
-    inline void memberHasBecomeUndefined(UInt) {}
+    inline void memberHasBecomeDefined(UInt) { todoImpl(); }
+    inline void memberHasBecomeUndefined(UInt) { todoImpl(); }
     void hasBecomeUndefined() {}
     void hasBecomeDefined() {}
     void reattachTrigger() {
@@ -134,17 +134,8 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
         op->notifyEntireSequenceChange();
     }
 
-    void hasBecomeUndefined() final {
-        op->defined = false;
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers,
-                      true);
-    }
-    void hasBecomeDefined() final {
-        op->defined = true;
-        op->reevaluate();
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
-                      true);
-    }
+    void hasBecomeUndefined() final { todoImpl(); }
+    void hasBecomeDefined() final { todoImpl(); }
 
     inline void correctInnerSequenceTriggerIndices(UInt index) {
         for (size_t i = index; i < op->innerSequenceTriggers.size(); i++) {
@@ -224,12 +215,8 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
     void subsequenceChanged(UInt, UInt) final {
         // ignore
     }
-    void memberHasBecomeDefined(UInt index) {
-        op->notifyMemberDefined<SequenceInnerType>(index);
-    }
-    void memberHasBecomeUndefined(UInt index) {
-        op->notifyMemberUndefined<SequenceInnerType>(index);
-    }
+    void memberHasBecomeDefined(UInt index) { todoImpl(index); }
+    void memberHasBecomeUndefined(UInt index) { todoImpl(index); }
     void positionsSwapped(UInt index1, UInt index2) {
         std::swap(op->innerSequenceTriggers[index1],
                   op->innerSequenceTriggers[index2]);
@@ -331,8 +318,8 @@ template <typename SequenceInnerType>
 void OpFlattenOneLevel<SequenceInnerType>::evaluateImpl() {
     members.emplace<ExprRefVec<SequenceInnerType>>();
     operand->evaluate();
-    defined = operand->getViewIfDefined().hasValue();
-    if (defined) {
+    this->setLocallyDefined(operand->getViewIfDefined().hasValue());
+    if (this->isLocallyDefined()) {
         reevaluate();
     }
 }
@@ -403,7 +390,6 @@ OpFlattenOneLevel<SequenceInnerType>::deepCopySelfForUnrollImpl(
         operand->deepCopySelfForUnroll(operand, iterator));
     newOp->members = members;
     newOp->numberUndefined = numberUndefined;
-    newOp->defined = defined;
     newOp->startingIndices = startingIndices;
     return newOp;
 }
@@ -414,10 +400,6 @@ void OpFlattenOneLevel<SequenceInnerType>::findAndReplaceSelf(
     this->operand = findAndReplace(operand, func);
 }
 
-template <typename SequenceInnerType>
-bool OpFlattenOneLevel<SequenceInnerType>::isUndefined() {
-    return !defined || this->numberUndefined > 0;
-}
 template <typename SequenceInnerType>
 std::pair<bool, ExprRef<SequenceView>>
 OpFlattenOneLevel<SequenceInnerType>::optimise(PathExtension path) {

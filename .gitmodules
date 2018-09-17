@@ -7,3 +7,6 @@
 [submodule "include/PicoSHA2"]
 	path = include/PicoSHA2
 	url = https://github.com/okdshin/PicoSHA2.git
+[submodule "include/Optional"]
+	path = include/Optional
+	url = https://github.com/akrzemi1/Optional

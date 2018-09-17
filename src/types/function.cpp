@@ -56,63 +56,60 @@ struct OpMaker<OpTupleLit> {
     static ExprRef<TupleView> make(std::vector<AnyExprRef> members);
 };
 
-pair<bool, UInt> translateValueFromDimension(Int value,
-                                             const Dimension& dimension) {
-    return (value >= dimension.lower && value <= dimension.upper)
-               ? pair<bool, UInt>(true, value - dimension.lower)
-               : pair<bool, UInt>(false, 0);
+lib::optional<UInt> translateValueFromDimension(Int value,
+                                                const Dimension& dimension) {
+    if (value >= dimension.lower && value <= dimension.upper) {
+        return value - dimension.lower;
+    }
+    return lib::nullopt;
 }
 
-Int getAsIntForFunctionIndex(const AnyExprRef& expr) {
+lib::optional<Int> getAsIntForFunctionIndex(const AnyExprRef& expr) {
     const ExprRef<IntView>* intTest = mpark::get_if<ExprRef<IntView>>(&expr);
     if (intTest) {
-        return (*intTest)->view().value;
+        auto view = (*intTest)->view();
+        if (view) {
+            return (*view).value;
+        } else {
+            return lib::nullopt;
+        }
     }
 
     const ExprRef<BoolView>* boolTest = mpark::get_if<ExprRef<BoolView>>(&expr);
     if (boolTest) {
-        return (*boolTest)->view().violation == 0;
+        auto view = (*boolTest)->view();
+        if (view) {
+            return (*view).violation == 0;
+        } else {
+            return lib::nullopt;
+        }
     }
     cerr << "Error: sorry only handling function from int, bool or tuples of "
             "int/bool\n";
     abort();
 }
 
-pair<bool, UInt> FunctionView::domainToIndex(const IntView& intV) {
+lib::optional<UInt> FunctionView::domainToIndex(const IntView& intV) {
     debug_code(assert(dimensions.size() == 1));
     return translateValueFromDimension(intV.value, dimensions[0]);
 }
 
-pair<bool, UInt> FunctionView::domainToIndex(const TupleView& tupleV) {
+lib::optional<UInt> FunctionView::domainToIndex(const TupleView& tupleV) {
     debug_code(assert(dimensions.size() == tupleV.members.size()));
-    size_t index = 0;
+    size_t indexTotal = 0;
     for (size_t i = 0; i < tupleV.members.size(); i++) {
-        auto boolIndexPair = translateValueFromDimension(
-            getAsIntForFunctionIndex(tupleV.members[i]), dimensions[i]);
-        if (!boolIndexPair.first) {
-            return boolIndexPair;
+        auto asInt = getAsIntForFunctionIndex(tupleV.members[i]);
+        if (!asInt) {
+            return lib::nullopt;
         }
-        index += dimensions[i].blockSize * boolIndexPair.second;
-    }
-    debug_code(assert(index < rangeSize()));
-    return make_pair(true, index);
-}
-
-pair<bool, UInt> FunctionView::domainToIndex(
-    const std::vector<Int>& cachedMemberValues) {
-    debug_code(assert(dimensions.size() == cachedMemberValues.size()));
-
-    size_t index = 0;
-    for (size_t i = 0; i < cachedMemberValues.size(); i++) {
-        auto boolIndexPair =
-            translateValueFromDimension(cachedMemberValues[i], dimensions[i]);
-        if (!boolIndexPair.first) {
-            return boolIndexPair;
+        auto index = translateValueFromDimension(*asInt, dimensions[i]);
+        if (!index) {
+            return lib::nullopt;
         }
-        index += dimensions[i].blockSize * boolIndexPair.second;
+        indexTotal += dimensions[i].blockSize * (*index);
     }
-    debug_code(assert(index < rangeSize()));
-    return make_pair(true, index);
+    debug_code(assert(indexTotal < rangeSize()));
+    return indexTotal;
 }
 
 template <>
@@ -153,11 +150,12 @@ void functionIndexToDomain<TupleView>(const DimensionVec& dimensions,
                                       UInt index, TupleView& view) {
     for (size_t dimIndex = 0; dimIndex < dimensions.size(); dimIndex++) {
         auto& dim = dimensions[dimIndex];
-        auto& memberView = mpark::get<ExprRef<IntView>>(view.members[dimIndex]);
+        auto& memberExpr = mpark::get<ExprRef<IntView>>(view.members[dimIndex]);
+        auto& memberView = memberExpr->view().get();
         UInt row = index / dim.blockSize;
         index %= dim.blockSize;
-        memberView->view().changeValue([&]() {
-            memberView->view().value = row + dim.lower;
+        memberView.changeValue([&]() {
+            memberView.value = row + dim.lower;
             return true;
         });
     }

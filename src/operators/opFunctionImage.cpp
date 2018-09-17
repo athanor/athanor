@@ -25,15 +25,14 @@ template <typename FunctionMemberViewType>
 OptionalRef<ExprRef<FunctionMemberViewType>>
 OpFunctionImage<FunctionMemberViewType>::getMember() {
     debug_code(assert(appearsDefined()));
-    debug_code(assert(invoke(preImageOperand, appearsDefined()));
-                      debug_code(assert(cachedIndex >= 0));
-auto view = functionOperand->getViewIfDefined();
-if (!view || cachedIndex >= (Int)(*view).rangeSize()) {
+    debug_code(assert(invoke(preImageOperand, appearsDefined())));
+    debug_code(assert(cachedIndex >= 0));
+    auto view = functionOperand->getViewIfDefined();
+    if (!view || cachedIndex >= (Int)(*view).rangeSize()) {
         return EmptyOptional();
-}
+    }
 
-    auto& member =
-        (*view).getRange<FunctionMemberViewType>()[cachedIndex];
+    auto& member = (*view).getRange<FunctionMemberViewType>()[cachedIndex];
     return member;
 }
 
@@ -222,7 +221,8 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
             return;
         }
         op->setAppearsDefined(false);
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers, true);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers,
+                      true);
     }
 
     void hasBecomeDefined() {
@@ -254,7 +254,7 @@ struct PreImageTrigger
     : public ChangeTriggerAdapter<
           TriggerType, PreImageTrigger<FunctionMemberViewType, TriggerType>>,
       public OpFunctionImage<FunctionMemberViewType>::PreImageTriggerBase {
-    typedef typename AssociatedViewType<TriggerType>::type PreImageType;
+    s typedef typename AssociatedViewType<TriggerType>::type PreImageType;
     using OpFunctionImage<
         FunctionMemberViewType>::PreImageTriggerBase::PreImageTriggerBase;
     using OpFunctionImage<FunctionMemberViewType>::PreImageTriggerBase::op;

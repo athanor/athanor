@@ -168,8 +168,31 @@ inline std::ostream& operator<<(std::ostream& os, const ExprRef<T>& ref) {
 
 HashType getValueHash(const AnyExprRef& ref);
 std::ostream& prettyPrint(std::ostream& os, const AnyExprRef& expr);
+
+template <typename View>
+inline std::ostream& prettyPrint(std::ostream& os,
+                                 const OptionalRef<View>& ref) {
+    if (ref) {
+        return prettyPrint(os, *ref);
+    } else {
+        return os << "undefined";
+    }
+}
+
 bool smallerValue(const AnyExprRef& u, const AnyExprRef& v);
+
+template <typename View>
+bool smallerValue(const OptionalRef<View>& left,
+                  const OptionalRef<View>& right) {
+    return left && right && smallerValue(*left, *right);
+}
 bool largerValue(const AnyExprRef& u, const AnyExprRef& v);
+
+template <typename View>
+bool largerValue(const OptionalRef<View>& left,
+                 const OptionalRef<View>& right) {
+    return left && right && largerValue(*left, *right);
+}
 
 template <typename T>
 inline ExprRef<T> findAndReplace(ExprRef<T>& expr,

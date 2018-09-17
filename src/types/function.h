@@ -3,6 +3,7 @@
 #include <vector>
 #include "base/base.h"
 #include "common/common.h"
+#include "optional.hpp"
 #include "triggers/functionTrigger.h"
 #include "types/sizeAttr.h"
 #include "utils/hashUtils.h"
@@ -39,7 +40,6 @@ struct FunctionDomain {
         }
     }
 };
-struct FunctionView;
 
 struct Dimension {
     // dimensions are like int domain bounds, lower and upper inclusive
@@ -77,7 +77,13 @@ void functionIndexToDomain<IntView>(const DimensionVec& dimensions, UInt index,
 template <>
 void functionIndexToDomain<TupleView>(const DimensionVec& dimensions, UInt,
                                       TupleView&);
-Int getAsIntForFunctionIndex(const AnyExprRef& expr);
+namespace lib {
+using std::experimental::make_optional;
+using std::experimental::nullopt;
+using std::experimental::optional;
+}  // namespace lib
+lib::optional<Int> getAsIntForFunctionIndex(const AnyExprRef& expr);
+
 struct FunctionView : public ExprInterface<FunctionView> {
     friend FunctionValue;
     DimensionVec dimensions;
@@ -89,13 +95,11 @@ struct FunctionView : public ExprInterface<FunctionView> {
         singleMemberTriggers;
     debug_code(bool posFunctionValueChangeCalled = false);
 
-    std::pair<bool, UInt> domainToIndex(const IntView& intV);
-    std::pair<bool, UInt> domainToIndex(const TupleView& tupleV);
-    std::pair<bool, UInt> domainToIndex(
-        const std::vector<Int>& cachedMemberValues);
+    lib::optional<UInt> domainToIndex(const IntView& intV);
+    lib::optional<UInt> domainToIndex(const TupleView& tupleV);
 
     template <typename View, EnableIfView<BaseType<View>> = 0>
-    std::pair<bool, UInt> domainToIndex(const View&) {
+    lib::optional<UInt> domainToIndex(const View&) {
         shouldNotBeCalledPanic;
     }
 

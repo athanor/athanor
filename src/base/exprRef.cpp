@@ -82,15 +82,7 @@ HashType getValueHash(const AnyExprRef& ref) {
 
 ostream& prettyPrint(ostream& os, const AnyExprRef& expr) {
     return mpark::visit(
-        [&](auto& ref) -> ostream& {
-            auto optionView = ref->view();
-            if (!optionView) {
-                os << "undefined";
-            } else {
-                prettyPrint(os, *optionView);
-            }
-            return os;
-        },
+        [&](auto& ref) -> ostream& { return prettyPrint(os, ref->view()); },
         expr);
 }
 

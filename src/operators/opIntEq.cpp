@@ -1,8 +1,8 @@
 #include "operators/opIntEq.h"
 #include "operators/simpleOperator.hpp"
 using namespace std;
-void OpIntEq::reevaluate() {
-    violation = abs(left->view().value - right->view().value);
+void OpIntEq::reevaluateImpl(IntView& leftView, IntView& rightView) {
+    violation = abs(leftView.value - rightView.value);
 }
 
 void OpIntEq::updateVarViolationsImpl(const ViolationContext&,
@@ -10,7 +10,7 @@ void OpIntEq::updateVarViolationsImpl(const ViolationContext&,
     if (violation == 0) {
         return;
     } else if (allOperandsAreDefined()) {
-        Int diff = left->view().value - right->view().value;
+        Int diff = left->view().get().value - right->view().get().value;
         left->updateVarViolations(
             IntViolationContext(
                 violation,

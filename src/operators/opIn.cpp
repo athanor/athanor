@@ -10,12 +10,18 @@ using namespace std;
     mpark::visit([&](auto& expr) -> ret { return func; }, expr)
 
 void OpIn::reevaluate() {
-    if (setOperand->isUndefined() || invoke(expr, expr->isUndefined())) {
-        violation = LARGE_VIOLATION;
-        return;
-    }
-    auto hash = invoke_r(expr, getValueHash(expr->view()), HashType);
-    violation = (setOperand->view().memberHashes.count(hash)) ? 0 : 1;
+    mpark::visit(
+        [&](auto& expr) {
+            auto exprView = expr->getViewIfDefined();
+            auto setView = setOperand->getViewIfDefined();
+            if (!exprView || !setView) {
+                violation = LARGE_VIOLATION;
+                return;
+            }
+            HashType hash = getValueHash(*exprView);
+            violation = ((*setView).memberHashes.count(hash)) ? 0 : 1;
+        },
+        expr);
 }
 
 void OpIn::evaluateImpl() {
@@ -34,9 +40,8 @@ OpIn::OpIn(OpIn&& other)
 namespace {
 
 template <typename Derived, typename TriggerType>
-struct Trigger
-    : public ChangeTriggerAdapter<TriggerType, Trigger<Derived, TriggerType>>,
-      public OpIn::ExprTriggerBase {
+struct Trigger : public ChangeTriggerAdapter<TriggerType, Derived>,
+                 public OpIn::ExprTriggerBase {
     using OpIn::ExprTriggerBase::ExprTriggerBase;
     void adapterValueChanged() {
         op->changeValue([&]() {
@@ -60,7 +65,11 @@ struct Trigger
 template <typename ExprTriggerType>
 struct ExprTrigger
     : public Trigger<ExprTrigger<ExprTriggerType>, ExprTriggerType> {
+    typedef typename AssociatedViewType<ExprTriggerType>::type ExprType;
     using Trigger<ExprTrigger<ExprTriggerType>, ExprTriggerType>::Trigger;
+    ExprRef<ExprType>& getTriggeringOperand() {
+        return mpark::get<ExprRef<ExprType>>(this->op->expr);
+    }
     void reattachTrigger() {
         deleteTrigger(this->op->exprTrigger);
         typedef typename AssociatedViewType<ExprTriggerType>::type View;

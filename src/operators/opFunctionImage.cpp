@@ -254,11 +254,8 @@ struct PreImageTrigger
         FunctionMemberViewType>::PreImageTriggerBase::PreImageTriggerBase;
     using OpFunctionImage<FunctionMemberViewType>::PreImageTriggerBase::op;
 
-    template <typename Trigger = TriggerType,
-              typename enable_if<is_same<Trigger, TupleTrigger>::value,
-                                 int>::type = 0>
-    ExprRef<TupleView>& getTriggeringTuple() {
-        return mpark::get<ExprRef<TupleView>>(op->preImageOperand);
+    ExprRef<PreImageType>& getTriggeringOperand() {
+        return mpark::get<ExprRef<PreImageType>>(op->preImageOperand);
     }
     void adapterValueChanged() {
         if (!op->eventForwardedAsDefinednessChange(true)) {

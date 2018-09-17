@@ -18,7 +18,7 @@ struct ChangeTriggerAdapter<TupleTrigger, Child>
     inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
     inline void memberHasBecomeDefined(UInt) {
         ExprRef<TupleView> tuple =
-            static_cast<Child*>(this)->getTriggeringTuple();
+            static_cast<Child*>(this)->getTriggeringOperand();
         auto view = tuple->view();
         if (!view) {
             return;
@@ -29,7 +29,7 @@ struct ChangeTriggerAdapter<TupleTrigger, Child>
     }
     inline void memberHasBecomeUndefined(UInt) {
         ExprRef<TupleView> tuple =
-            static_cast<Child*>(this)->getTriggeringTuple();
+            static_cast<Child*>(this)->getTriggeringOperand();
         auto view = tuple->view();
         if (view && numberUndefinedMembers(view.get()) == 1) {
             this->forwardHasBecomeUndefined();

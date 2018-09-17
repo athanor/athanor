@@ -55,7 +55,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     OptionalRef<ExprRef<FunctionMemberViewType>> getMember();
     OptionalRef<const ExprRef<FunctionMemberViewType>> getMember() const;
     void reevaluate(bool recalculateCachedIndex = true);
-    std::pair<bool, Int> calculateIndex();
+    lib::optional<Int> calculateIndex();
     std::pair<bool, ExprRef<FunctionMemberViewType>> optimise(
         PathExtension path) final;
 

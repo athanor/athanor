@@ -67,7 +67,7 @@ lib::optional<UInt> translateValueFromDimension(Int value,
 lib::optional<Int> getAsIntForFunctionIndex(const AnyExprRef& expr) {
     const ExprRef<IntView>* intTest = mpark::get_if<ExprRef<IntView>>(&expr);
     if (intTest) {
-        auto view = (*intTest)->view();
+        auto view = (*intTest)->getViewIfDefined();
         if (view) {
             return (*view).value;
         } else {
@@ -77,7 +77,7 @@ lib::optional<Int> getAsIntForFunctionIndex(const AnyExprRef& expr) {
 
     const ExprRef<BoolView>* boolTest = mpark::get_if<ExprRef<BoolView>>(&expr);
     if (boolTest) {
-        auto view = (*boolTest)->view();
+        auto view = (*boolTest)->getViewIfDefined();
         if (view) {
             return (*view).violation == 0;
         } else {

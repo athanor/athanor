@@ -24,7 +24,7 @@ void OpFunctionImage<FunctionMemberViewType>::addTriggerImpl(
 template <typename FunctionMemberViewType>
 OptionalRef<ExprRef<FunctionMemberViewType>>
 OpFunctionImage<FunctionMemberViewType>::getMember() {
-    debug_code(assert(appearsDefined()));
+    debug_code(assert(this->appearsDefined()));
     debug_code(assert(invoke(preImageOperand, appearsDefined())));
     debug_code(assert(cachedIndex >= 0));
     auto view = functionOperand->getViewIfDefined();
@@ -39,7 +39,7 @@ OpFunctionImage<FunctionMemberViewType>::getMember() {
 template <typename FunctionMemberViewType>
 OptionalRef<const ExprRef<FunctionMemberViewType>>
 OpFunctionImage<FunctionMemberViewType>::getMember() const {
-    debug_code(assert(appearsDefined()));
+    debug_code(assert(this->appearsDefined()));
     debug_code(assert(invoke(preImageOperand, appearsDefined())));
     debug_code(assert(cachedIndex >= 0));
     auto view = functionOperand->getViewIfDefined();
@@ -76,29 +76,28 @@ template <typename FunctionMemberViewType, typename TriggerType>
 struct PreImageTrigger;
 
 template <typename FunctionMemberViewType>
-lib::optional<Int> void
-OpFunctionImage<FunctionMemberViewType>::calculateIndex() {
+lib::optional<UInt> OpFunctionImage<FunctionMemberViewType>::calculateIndex() {
     auto functionView = functionOperand->view();
-    if (!functionView( {
+    if (!functionView) {
         return lib::nullopt;
     }
-
     return mpark::visit(
-            [&](auto& preImageOperand) -> lib::optional<Int> {
-        auto view = preImageOperand->view();
-        if (!view) {
-            return lib::nullopt;
-        }
-        return (*functionView).domainToIndex(*view);
-            },
+        [&](auto& preImageOperand) -> lib::optional<UInt> {
+            auto view = preImageOperand->view();
+            if (!view) {
+                return lib::nullopt;
+            }
+            return (*functionView).domainToIndex(*view);
+        },
         preImageOperand);
 }
+
 template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::reevaluate(
     bool recalculateCachedIndex) {
     if (!invoke(preImageOperand, appearsDefined())) {
         locallyDefined = false;
-        setAppearsDefined(false);
+        this->setAppearsDefined(false);
         return;
     }
     if (recalculateCachedIndex) {
@@ -139,31 +138,26 @@ OpFunctionImage<FunctionMemberViewType>::OpFunctionImage(
 template <typename FunctionMemberViewType>
 bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
     bool recalculateIndex) {
-    bool wasDefined = defined;
+    bool wasDefined = this->appearsDefined();
     bool wasLocallyDefined = locallyDefined;
     reevaluate(recalculateIndex);
-    return eventForwardedAsDefinednessChange(wasDefined, wasLocallyDefined);
-}
-template <typename FunctionMemberViewType>
-bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
-    bool wasDefined, bool wasLocallyDefined) {
     if (!wasLocallyDefined && locallyDefined) {
         reattachFunctionMemberTrigger(true);
     }
-    if (wasDefined && !defined) {
+    if (wasDefined && !this->appearsDefined()) {
         visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers,
                       true);
         return true;
-    } else if (!wasDefined && defined) {
+    } else if (!wasDefined && this->appearsDefined()) {
         visitTriggers(
-            [&](auto& t) {
+            [&](auto t) {
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
             triggers, true);
         return true;
     } else {
-        return !defined;
+        return !this->appearsDefined();
     }
 }
 
@@ -255,10 +249,17 @@ struct PreImageTrigger
     : public ChangeTriggerAdapter<
           TriggerType, PreImageTrigger<FunctionMemberViewType, TriggerType>>,
       public OpFunctionImage<FunctionMemberViewType>::PreImageTriggerBase {
-    s typedef typename AssociatedViewType<TriggerType>::type PreImageType;
+    typedef typename AssociatedViewType<TriggerType>::type PreImageType;
     using OpFunctionImage<
         FunctionMemberViewType>::PreImageTriggerBase::PreImageTriggerBase;
     using OpFunctionImage<FunctionMemberViewType>::PreImageTriggerBase::op;
+
+    template <typename Trigger = TriggerType,
+              typename enable_if<is_same<Trigger, TupleTrigger>::value,
+                                 int>::type = 0>
+    ExprRef<TupleView>& getTriggeringTuple() {
+        return mpark::get<ExprRef<TupleView>>(op->preImageOperand);
+    }
     void adapterValueChanged() {
         if (!op->eventForwardedAsDefinednessChange(true)) {
             visitTriggers(
@@ -270,9 +271,6 @@ struct PreImageTrigger
             op->reattachFunctionMemberTrigger(true);
         }
     }
-void memberHasBecomeUndefined(UInt) {
-
-}
     void reattachTrigger() final {
         deleteTrigger(static_pointer_cast<
                       PreImageTrigger<FunctionMemberViewType, TriggerType>>(
@@ -286,7 +284,7 @@ void memberHasBecomeUndefined(UInt) {
     }
     void adapterHasBecomeDefined() {
         op->reevaluate();
-        if (!op->defined) {
+        if (op->appearsDefined()) {
             return;
         }
         visitTriggers(
@@ -298,11 +296,11 @@ void memberHasBecomeUndefined(UInt) {
     }
 
     void adapterHasBecomeUndefined() {
-        if (!op->defined) {
+        if (!op->appearsDefined()) {
             return;
         }
         op->locallyDefined = false;
-        op->defined = false;
+        op->setAppearsDefined(false);
         visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers,
                       true);
     }
@@ -317,7 +315,6 @@ void OpFunctionImage<FunctionMemberViewType>::startTriggeringImpl() {
                     preImageOperand)>::type TriggerType;
                 auto trigger = make_shared<
                     PreImageTrigger<FunctionMemberViewType, TriggerType>>(this);
-                trigger->recacheAllTupleMemberValues();
                 preImageTrigger = trigger;
                 preImageOperand->addTrigger(trigger);
                 preImageOperand->startTriggering();
@@ -377,8 +374,9 @@ template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::updateVarViolationsImpl(
     const ViolationContext& vioContext, ViolationContainer& vioContainer) {
     invoke(preImageOperand, updateVarViolationsImpl(vioContext, vioContainer));
-    if (locallyDefined) {
-        getMember()->updateVarViolations(vioContext, vioContainer);
+    auto functionMember = getMember();
+    if (locallyDefined && functionMember) {
+        (*functionMember)->updateVarViolations(vioContext, vioContainer);
     } else {
         functionOperand->updateVarViolations(vioContext, vioContainer);
     }
@@ -396,7 +394,6 @@ OpFunctionImage<FunctionMemberViewType>::deepCopySelfForUnrollImpl(
                      AnyExprRef));
     newOpFunctionImage->cachedIndex = cachedIndex;
     newOpFunctionImage->locallyDefined = locallyDefined;
-    newOpFunctionImage->defined = defined;
     return newOpFunctionImage;
 }
 
@@ -404,11 +401,7 @@ template <typename FunctionMemberViewType>
 std::ostream& OpFunctionImage<FunctionMemberViewType>::dumpState(
     std::ostream& os) const {
     os << "opFunctionImage(value=";
-    if (defined) {
-        prettyPrint(os, getMember()->view());
-    } else {
-        os << "undefined";
-    }
+    prettyPrint(os, this->getViewIfDefined());
     os << ",\n";
 
     os << "function=";
@@ -428,12 +421,6 @@ void OpFunctionImage<FunctionMemberViewType>::findAndReplaceSelf(
         },
         preImageOperand);
 }
-
-template <typename FunctionMemberViewType>
-bool OpFunctionImage<FunctionMemberViewType>::isUndefined() {
-    return !defined;
-}
-
 template <typename FunctionMemberViewType>
 pair<bool, ExprRef<FunctionMemberViewType>>
 OpFunctionImage<FunctionMemberViewType>::optimise(PathExtension path) {

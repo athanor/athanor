@@ -29,7 +29,15 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     OpFunctionImage(ExprRef<FunctionView> functionOperand,
                     AnyExprRef preImageOperand)
         : functionOperand(std::move(functionOperand)),
-          preImageOperand(std::move(preImageOperand)) {}
+          preImageOperand(std::move(preImageOperand)) {
+        if (std::is_same<BoolView, FunctionMemberViewType>::value) {
+            std::cerr << "I've temperarily disabled functions to booleans as "
+                         "I'm not correctly handling relational semantics "
+                         "forthe case where the function pre image becomes "
+                         "undefined.\n";
+            abort();
+        }
+    }
     OpFunctionImage(const OpFunctionImage<FunctionMemberViewType>&) = delete;
     OpFunctionImage(OpFunctionImage<FunctionMemberViewType>&& other);
     ~OpFunctionImage() { this->stopTriggeringOnChildren(); }
@@ -51,18 +59,30 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    bool isUndefined();
+
     OptionalRef<ExprRef<FunctionMemberViewType>> getMember();
     OptionalRef<const ExprRef<FunctionMemberViewType>> getMember() const;
     void reevaluate(bool recalculateCachedIndex = true);
-    lib::optional<Int> calculateIndex();
+    lib::optional<UInt> calculateIndex();
     std::pair<bool, ExprRef<FunctionMemberViewType>> optimise(
         PathExtension path) final;
 
     void reattachFunctionMemberTrigger(bool deleteFirst);
-    bool eventForwardedAsDefinednessChange(bool wasDefined,
-                                           bool wasLocallyDefined);
     bool eventForwardedAsDefinednessChange(bool recalculateIndex);
+    template <typename View = FunctionMemberViewType,
+              typename std::enable_if<std::is_same<BoolView, View>::value,
+                                      int>::type = 0>
+    void setAppearsDefined(bool) {
+        std::cerr << "Not handling function to bools where a function member "
+                     "becomes undefined.\n";
+        todoImpl();
+    }
+    template <typename View = FunctionMemberViewType,
+              typename std::enable_if<!std::is_same<BoolView, View>::value,
+                                      int>::type = 0>
+    void setAppearsDefined(bool set) {
+        Undefinable<View>::setAppearsDefined(set);
+    }
 };
 
 #endif /* SRC_OPERATORS_OPFUNCTIONIMAGE_H_ */

@@ -23,7 +23,7 @@ struct TupleView : public ExprInterface<TupleView> {
     std::vector<AnyExprRef> members;
     std::vector<std::shared_ptr<TupleTrigger>> triggers;
     SimpleCache<HashType> cachedHashTotal;
-    UInt numberUndefined = 0;
+    u_int32_t numberUndefined = 0;
     TupleView() {}
     TupleView(std::vector<AnyExprRef> members) : members(members) {}
 

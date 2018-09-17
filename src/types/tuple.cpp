@@ -4,7 +4,9 @@
 #include "common/common.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-
+size_t numberUndefinedMembers(const TupleView& view) {
+    return view.numberUndefined;
+}
 template <>
 HashType getValueHash<TupleView>(const TupleView& val) {
     return val.cachedHashTotal.getOrSet([&]() {

@@ -119,12 +119,14 @@ struct BoolTrigger : public virtual TriggerBase {
 
 template <typename TriggerType, typename Child>
 struct ChangeTriggerAdapterBaseHelper : public TriggerType {
-    inline void hasBecomeDefined() final {
+    inline void forwardHasBecomeDefined() {
         static_cast<Child*>(this)->adapterHasBecomeDefined();
     }
-    inline void hasBecomeUndefined() final {
+    inline void hasBecomeDefined() final { forwardHasBecomeDefined(); }
+    inline void forwardHasBecomeUndefined() {
         static_cast<Child*>(this)->adapterHasBecomeUndefined();
     }
+    inline void hasBecomeUndefined() final { forwardHasBecomeUndefined(); }
 };
 
 template <typename Child>

@@ -1,8 +1,8 @@
 #include "operators/opLessEq.h"
 #include "operators/simpleOperator.hpp"
 using namespace std;
-void OpLessEq::reevaluate() {
-    Int diff = right->view().value - left->view().value;
+void OpLessEq::reevaluateImpl(IntView& leftView, IntView& rightView) {
+    Int diff = rightView.value - leftView.value;
     violation = abs(min<Int>(diff, 0));
 }
 

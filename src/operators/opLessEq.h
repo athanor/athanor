@@ -16,7 +16,7 @@ struct OpLessEq : public SimpleBinaryOperator<BoolView, IntView, OpLessEq> {
     using SimpleBinaryOperator<BoolView, IntView,
                                OpLessEq>::SimpleBinaryOperator;
 
-    void reevaluate();
+    void reevaluateImpl(IntView& leftView, IntView& rightView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpLessEq& newOp) const;

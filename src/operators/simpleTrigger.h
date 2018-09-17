@@ -11,8 +11,12 @@ template <typename Op, typename TriggerType, bool isLeftTrigger>
 struct SimpleBinaryTrigger
     : public ChangeTriggerAdapter<
           TriggerType, SimpleBinaryTrigger<Op, TriggerType, isLeftTrigger>> {
+    typedef typename AssociatedViewType<TriggerType>::type OperandType;
     Op* op;
     SimpleBinaryTrigger(Op* op) : op(op) {}
+    ExprRef<OperandType>& getTriggeringOperand() {
+        return (isLeftTrigger) ? op->left : op->right;
+    }
     inline void adapterValueChanged() {
         if (!op->isDefined() || !op->allOperandsAreDefined()) {
             return;
@@ -60,8 +64,11 @@ template <typename Op, typename TriggerType>
 struct SimpleUnaryTrigger
     : public ChangeTriggerAdapter<TriggerType,
                                   SimpleUnaryTrigger<Op, TriggerType>> {
+    typedef typename AssociatedViewType<TriggerType>::type OperandType;
     Op* op;
     SimpleUnaryTrigger(Op* op) : op(op) {}
+
+    ExprRef<OperandType>& getTriggeringOperand() { return op->operand; }
     inline void adapterValueChanged() {
         op->changeValue([&]() {
             bool defined = op->isDefined();

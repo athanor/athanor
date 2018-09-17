@@ -6,7 +6,7 @@
 
 using namespace std;
 template <typename View>
-void OpIsDefined<View>::reevaluate() {
+void OpIsDefined<View>::reevaluateImpl(View&) {
     this->violation = 0;
 }
 template <typename View>

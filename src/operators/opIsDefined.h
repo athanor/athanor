@@ -18,7 +18,7 @@ struct OpIsDefined
     using SimpleUnaryOperator<BoolView, View,
                               OpIsDefined<View>>::SimpleUnaryOperator;
 
-    void reevaluate();
+    void reevaluateImpl(View& view);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpIsDefined& newOp) const;

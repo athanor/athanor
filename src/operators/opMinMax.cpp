@@ -22,41 +22,13 @@ bool OpMinMax<minMode>::compare(Int u, Int v) {
 }
 
 template <bool minMode>
-void OpMinMax<minMode>::reevaluate() {
+void OpMinMax<minMode>::reevaluateImpl(SequenceView&) {
     minValueIndices.clear();
-    this->setDefined(!this->operand->isUndefined(), false);
+    this->setDefined(true, false);
     updateMinValues(*this, false);
 }
-
 template <bool minMode>
-inline void updateMinValues(OpMinMax<minMode>& op, bool trigger) {
-    auto& members = op.operand->view().template getMembers<IntView>();
-    bool foundUndefined = false;
-    Int oldValue = op.value;
-    bool wasDefined = op.isDefined();
-    for (size_t i = 0; i < members.size(); ++i) {
-        auto& operandChild = members[i];
-        if (operandChild->isUndefined()) {
-            foundUndefined = true;
-            continue;
-        }
-        Int operandValue = operandChild->view().value;
-        if (op.minValueIndices.empty() || op.compare(operandValue, op.value)) {
-            op.value = operandValue;
-            op.minValueIndices.clear();
-            op.minValueIndices.insert(i);
-        } else if (operandValue == op.value) {
-            op.minValueIndices.insert(i);
-        }
-    }
-    if (op.minValueIndices.empty()) {
-        op.setDefined(false, false);
-    } else if (!foundUndefined) {
-        op.setDefined(true, false);
-    }
-    if (!trigger) {
-        return;
-    }
+void triggerChange(OpMinMax<minMode>& op, bool wasDefined, Int oldValue) {
     if (!wasDefined && !op.isDefined()) {
         visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers,
                       true);
@@ -72,17 +44,57 @@ inline void updateMinValues(OpMinMax<minMode>& op, bool trigger) {
     }
 }
 
+template <bool minMode>
+inline void updateMinValues(OpMinMax<minMode>& op, bool trigger) {
+    bool wasDefined = op.isDefined();
+
+    auto operandView = op.operand->getViewIfDefined();
+    if (!operandView) {
+        op.setDefined(false);
+        triggerChange(op, wasDefined, op.value);
+        return;
+    }
+    auto& members = (*operandView).template getMembers<IntView>();
+    bool foundUndefined = false;
+    Int oldValue = op.value;
+    for (size_t i = 0; i < members.size(); ++i) {
+        auto& operandChild = members[i];
+        auto operandChildView = operandChild->getViewIfDefined();
+        if (!operandChildView) {
+            foundUndefined = true;
+            continue;
+        }
+        Int operandValue = (*operandChildView).value;
+        if (op.minValueIndices.empty() || op.compare(operandValue, op.value)) {
+            op.value = operandValue;
+            op.minValueIndices.clear();
+            op.minValueIndices.insert(i);
+        } else if (operandValue == op.value) {
+            op.minValueIndices.insert(i);
+        }
+    }
+    op.setDefined(!foundUndefined && !op.minValueIndices.empty());
+    if (trigger) {
+        triggerChange(op, wasDefined, oldValue);
+    }
+}
+
 // returns true if the function did a full revaluate of the OpMinMax node
 template <bool minMode>
 inline bool handleOperandValueChange(OpMinMax<minMode>& op, Int index) {
     const ExprRef<IntView> expr =
-        op.operand->view().template getMembers<IntView>()[index];
+        op.operand->view().get().template getMembers<IntView>()[index];
+    auto exprView = expr->view();
+    if (!exprView) {
+        op.handleMemberUndefined(index);
+        return false;
+    }
     bool fullReevaluate = false;
-    if (op.compare(expr->view().value, op.value)) {
-        op.value = expr->view().value;
+    if (op.compare((*exprView).value, op.value)) {
+        op.value = (*exprView).value;
         op.minValueIndices.clear();
         op.minValueIndices.insert(index);
-    } else if (expr->view().value == op.value) {
+    } else if ((*exprView).value == op.value) {
         op.minValueIndices.insert(index);
     } else {
         // otherwise value is greater, needs to be removed
@@ -96,39 +108,76 @@ inline bool handleOperandValueChange(OpMinMax<minMode>& op, Int index) {
     return fullReevaluate;
 }
 template <bool minMode>
+void OpMinMax<minMode>::handleMemberUndefined(UInt index) {
+    this->setDefined(false, true);
+    if (minValueIndices.count(index)) {
+        minValueIndices.erase(index);
+    }
+    if (minValueIndices.empty()) {
+        updateMinValues(*this, true);
+    }
+}
+template <bool minMode>
+void OpMinMax<minMode>::handleMemberDefined(UInt index) {
+    auto& expr =
+        this->operand->view().get().template getMembers<IntView>()[index];
+    auto exprView = expr->getViewIfDefined();
+    if (!exprView) {
+        return;
+    }
+    if (minValueIndices.empty() || compare((*exprView).value, this->value)) {
+        minValueIndices.clear();
+        minValueIndices.insert(index);
+        this->value = (*exprView).value;
+    } else if ((*exprView).value == this->value) {
+        minValueIndices.insert(index);
+    }
+    this->setDefined(this->operand->appearsDefined());
+}
+
+template <bool minMode>
 class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
     : public SequenceTrigger {
    public:
     OpMinMax<minMode>* op;
     OperandsSequenceTrigger(OpMinMax<minMode>* op) : op(op) {}
+    void setNewValue(Int value) {
+        if (!op->isDefined()) {
+            op->value = value;
+            op->setDefined(op->operand->appearsDefined());
+            if (op->isDefined()) {
+                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                              op->triggers, true);
+            }
+        } else {
+            op->changeValue([&]() {
+                op->value = value;
+                return true;
+            });
+        }
+    }
+
     void valueAdded(UInt index, const AnyExprRef& exprIn) final {
         auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
-        bool exprDefined = !expr->isUndefined();
+        auto view = expr->getViewIfDefined();
 
-        if (exprDefined && (op->minValueIndices.empty() ||
-                            op->compare(expr->view().value, op->value))) {
+        // if is better
+        if (view && (op->minValueIndices.empty() ||
+                     op->compare((*view).value, op->value))) {
             op->minValueIndices.clear();
             op->minValueIndices.insert(index);
-            if (!op->isDefined()) {
-                op->value = expr->view().value;
-                op->setDefined(!op->operand->isUndefined(), true);
-            } else {
-                op->changeValue([&]() {
-                    op->value = expr->view().value;
-                    return true;
-                });
-            }
-        } else if (exprDefined && expr->view().value == op->value) {
-            // value is equal to min value
+            setNewValue((*view).value);
+            // if is equal
+        } else if (view && (*view).value == op->value) {
             // need to add this index to set of min value indices.
             // must shift other indices up
-            shiftIndicesUp(index, op->operand->view().numberElements(),
+            shiftIndicesUp(index, op->operand->view().get().numberElements(),
                            op->minValueIndices);
             op->minValueIndices.insert(index);
+            // if is worse
         } else if (!op->minValueIndices.empty()) {
-            // expr is not less, so it is ignored, need to shift indices of mins
-            // up though
-            shiftIndicesUp(index, op->operand->view().numberElements(),
+            // it is ignored, still need to shift indices
+            shiftIndicesUp(index, op->operand->view().get().numberElements(),
                            op->minValueIndices);
             return;
         }
@@ -139,7 +188,7 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
             op->minValueIndices.erase(index);
         }
         if (!op->minValueIndices.empty()) {
-            shiftIndicesDown(index, op->operand->view().numberElements(),
+            shiftIndicesDown(index, op->operand->view().get().numberElements(),
                              op->minValueIndices);
         } else {
             updateMinValues(*op, true);
@@ -167,9 +216,10 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
                     break;
                 }
             }
-            return true;
+            return op->isDefined();
         });
     }
+
     void valueChanged() final {
         op->minValueIndices.clear();
         updateMinValues(*op, true);
@@ -184,39 +234,23 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
     void hasBecomeUndefined() final { op->setDefined(false, true); }
     void hasBecomeDefined() final { op->setDefined(true, true); }
     void memberHasBecomeUndefined(UInt index) final {
-        op->setDefined(false, true);
-        if (op->minValueIndices.count(index)) {
-            op->minValueIndices.erase(index);
-        }
-        if (op->minValueIndices.empty()) {
-            updateMinValues(*op, true);
-        }
+        op->handleMemberUndefined(index);
     }
 
     void memberHasBecomeDefined(UInt index) final {
-        auto& expr = op->operand->view().template getMembers<IntView>()[index];
-
-        if ((op->minValueIndices.empty() ||
-             op->compare(expr->view().value, op->value))) {
-            op->minValueIndices.clear();
-            op->minValueIndices.insert(index);
-            op->value = expr->view().value;
-            op->setDefined(!op->operand->isUndefined(), true);
-        } else if (expr->view().value == op->value) {
-            op->minValueIndices.insert(index);
-        }
+        op->handleMemberDefined(index);
     }
 };
 
 template <bool minMode>
 void OpMinMax<minMode>::updateVarViolationsImpl(
     const ViolationContext& vioContext, ViolationContainer& vioContainer) {
-    if (this->operand->isUndefined()) {
+    auto operandView = this->operand->getViewIfDefined();
+    if (!operandView) {
         this->operand->updateVarViolations(vioContext, vioContainer);
         return;
     }
-    for (auto& operandChild :
-         this->operand->view().template getMembers<IntView>()) {
+    for (auto& operandChild : (*operandView).template getMembers<IntView>()) {
         operandChild->updateVarViolations(vioContext, vioContainer);
     }
 }

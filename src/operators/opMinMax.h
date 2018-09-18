@@ -21,13 +21,15 @@ struct OpMinMax
                               OpMinMax<minMode>>::SimpleUnaryOperator;
     FastIterableIntSet minValueIndices = FastIterableIntSet(0, 0);
 
-    void reevaluate();
+    void reevaluateImpl(SequenceView& sequenceView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpMinMax& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
 
     bool compare(Int u, Int v);
+    void handleMemberUndefined(UInt);
+    void handleMemberDefined(UInt);
     bool optimiseImpl();
 };
 typedef OpMinMax<true> OpMin;

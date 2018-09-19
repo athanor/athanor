@@ -185,7 +185,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
 
 void OpAllDiff::reevaluateImpl(SequenceView& operandView) {
     if (operandView.numberUndefined > 0) {
-        setDefined(false, false);
+        setDefined(false);
         return;
     }
     violation = 0;
@@ -198,7 +198,7 @@ void OpAllDiff::reevaluateImpl(SequenceView& operandView) {
                 auto& member = members[i];
                 auto memberView = member->getViewIfDefined();
                 if (!memberView) {
-                    setDefined(false, false);
+                    setDefined(false);
                     return;
                 }
                 HashType hash = getValueHash(*memberView);

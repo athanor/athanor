@@ -24,7 +24,7 @@ bool OpMinMax<minMode>::compare(Int u, Int v) {
 template <bool minMode>
 void OpMinMax<minMode>::reevaluateImpl(SequenceView&) {
     minValueIndices.clear();
-    this->setDefined(true, false);
+    this->setDefined(true);
     updateMinValues(*this, false);
 }
 template <bool minMode>

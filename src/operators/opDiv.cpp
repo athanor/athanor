@@ -3,16 +3,14 @@
 using namespace std;
 void OpDiv::reevaluateImpl(IntView& leftView, IntView& rightView) {
     if (rightView.value == 0) {
-        setDefined(false, true);
+        setDefined(false);
         return;
     }
     value = leftView.value / rightView.value;
     if (value < 0 && leftView.value % rightView.value != 0) {
         --value;
     }
-    if (!isDefined()) {
-        setDefined(true, true);
-    }
+    setDefined(true);
 }
 
 void OpDiv::updateVarViolationsImpl(const ViolationContext& vioContext,

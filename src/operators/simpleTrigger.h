@@ -18,14 +18,18 @@ struct SimpleBinaryTrigger
         return (isLeftTrigger) ? op->left : op->right;
     }
     inline void adapterValueChanged() {
-        if (!op->isDefined() || !op->allOperandsAreDefined()) {
-            return;
-        }
+        bool wasDefined = op->isDefined();
         op->changeValue([&]() {
-            bool defined = op->isDefined();
             op->reevaluate();
-            return op->isDefined() != defined;
+            return wasDefined && op->isDefined();
         });
+        if (wasDefined && !op->isDefined()) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                          op->triggers, true);
+        } else if (!wasDefined && op->isDefined()) {
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
+                          true);
+        }
     }
 
     inline void reattachTrigger() final {
@@ -70,11 +74,18 @@ struct SimpleUnaryTrigger
 
     ExprRef<OperandType>& getTriggeringOperand() { return op->operand; }
     inline void adapterValueChanged() {
+        bool wasDefined = op->isDefined();
         op->changeValue([&]() {
-            bool defined = op->isDefined();
             op->reevaluate();
-            return defined != op->isDefined();
+            return wasDefined && op->isDefined();
         });
+        if (wasDefined && !op->isDefined()) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                          op->triggers, true);
+        } else if (!wasDefined && op->isDefined()) {
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
+                          true);
+        }
     }
 
     void reattachTrigger() {

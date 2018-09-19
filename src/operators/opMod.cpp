@@ -1,7 +1,20 @@
 #include "operators/opMod.h"
 #include "operators/simpleOperator.hpp"
 using namespace std;
-void OpMod::reevaluate() { value = left->view().value % right->view().value; }
+void OpMod::reevaluateImpl(IntView& leftView, IntView& rightView) {
+    if (rightView.value == 0) {
+        setDefined(false);
+        return;
+    }
+    value = leftView.value % abs(rightView.value);
+    if (value < 0) {
+        value += abs(rightView.value);
+    }
+    if (rightView.value < 0 && value > 0) {
+        value -= abs(rightView.value);
+    }
+    setDefined(true);
+}
 
 void OpMod::updateVarViolationsImpl(const ViolationContext& vioContext,
                                     ViolationContainer& vioContainer) {

@@ -12,22 +12,28 @@ OpOr::OpOr(OpOr&& other)
     : SimpleUnaryOperator<BoolView, SequenceView, OpOr>(move(other)),
       minViolationIndices(move(other.minViolationIndices)) {}
 UInt findNewMinViolation(OpOr& op, UInt minViolation);
-void OpOr::reevaluate() {
+void OpOr::reevaluateImpl(SequenceView& operandView) {
     minViolationIndices.clear();
-    if (operand->view().numberElements() == 0) {
-        violation = LARGE_VIOLATION;
-    } else {
-        violation = operand->view().getMembers<BoolView>()[0]->view().violation;
-        minViolationIndices.insert(0);
-        violation = findNewMinViolation(*this, violation);
+    if (operandView.numberElements() == 0) {
+        setDefined(false);
+        return;
     }
+    violation = operandView.getMembers<BoolView>()[0]->view().get().violation;
+    minViolationIndices.insert(0);
+    violation = findNewMinViolation(*this, violation);
 }
 
 inline UInt findNewMinViolation(OpOr& op, UInt minViolation) {
-    auto& members = op.operand->view().getMembers<BoolView>();
+    auto operandView = op.operand->view();
+    if (!operandView) {
+        op.setDefined(false);
+        op.minViolationIndices.clear();
+        return op.violation;
+    }
+    auto& members = (*operandView).getMembers<BoolView>();
     for (size_t i = 0; i < members.size(); ++i) {
         auto& operandChild = members[i];
-        UInt violation = operandChild->view().violation;
+        UInt violation = operandChild->view().get().violation;
         if (violation < minViolation) {
             minViolation = violation;
             op.minViolationIndices.clear();
@@ -41,14 +47,19 @@ inline UInt findNewMinViolation(OpOr& op, UInt minViolation) {
 
 // returns true if the function did a full revaluate of the OpOr node
 inline bool handleOperandValueChange(OpOr& op, UInt index) {
-    const ExprRef<BoolView> expr =
-        op.operand->view().getMembers<BoolView>()[index];
+    auto operandView = op.operand->view();
+    if (!operandView) {
+        op.setDefined(false);
+        op.minViolationIndices.clear();
+        return true;
+    }
+    const ExprRef<BoolView> expr = (*operandView).getMembers<BoolView>()[index];
     bool fullReevaluate = false;
-    if (expr->view().violation < op.violation) {
-        op.violation = expr->view().violation;
+    if (expr->view().get().violation < op.violation) {
+        op.violation = expr->view().get().violation;
         op.minViolationIndices.clear();
         op.minViolationIndices.insert(index);
-    } else if (expr->view().violation == op.violation) {
+    } else if (expr->view().get().violation == op.violation) {
         op.minViolationIndices.insert(index);
     } else {
         // otherwise violation is greater, needs to be removed
@@ -68,15 +79,15 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
     OperandsSequenceTrigger(OpOr* op) : op(op) {}
     void valueAdded(UInt index, const AnyExprRef& exprIn) final {
         auto& expr = mpark::get<ExprRef<BoolView>>(exprIn);
-        if (expr->view().violation > op->violation) {
-            shiftIndicesUp(index, op->operand->view().numberElements(),
+        if (expr->view().get().violation > op->violation) {
+            shiftIndicesUp(index, op->operand->view().get().numberElements(),
                            op->minViolationIndices);
             return;
-        } else if (expr->view().violation < op->violation) {
+        } else if (expr->view().get().violation < op->violation) {
             op->minViolationIndices.clear();
             op->minViolationIndices.insert(index);
             op->changeValue([&]() {
-                op->violation = expr->view().violation;
+                op->violation = expr->view().get().violation;
                 return true;
             });
             return;
@@ -84,7 +95,7 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
             // violation is equal to min violation
             // need to add this index to set of min violation indices.
             // must shift other indices up
-            shiftIndicesUp(index, op->operand->view().numberElements(),
+            shiftIndicesUp(index, op->operand->view().get().numberElements(),
                            op->minViolationIndices);
             op->minViolationIndices.insert(index);
         }
@@ -95,7 +106,7 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
             op->minViolationIndices.erase(index);
         }
         if (op->minViolationIndices.size() > 0) {
-            shiftIndicesDown(index, op->operand->view().numberElements(),
+            shiftIndicesDown(index, op->operand->view().get().numberElements(),
                              op->minViolationIndices);
         } else {
             op->changeValue([&]() {
@@ -150,7 +161,12 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
 
 void OpOr::updateVarViolationsImpl(const ViolationContext&,
                                    ViolationContainer& vioContainer) {
-    for (auto& operandChild : operand->view().getMembers<BoolView>()) {
+    auto operandView = operand->view();
+    if (!operandView) {
+        operand->updateVarViolations(violation, vioContainer);
+        return;
+    }
+    for (auto& operandChild : (*operandView).getMembers<BoolView>()) {
         operandChild->updateVarViolations(violation, vioContainer);
     }
 }

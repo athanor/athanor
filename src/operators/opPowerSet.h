@@ -15,7 +15,7 @@ struct OpPowerSet : public SimpleUnaryOperator<SetView, SetView, OpPowerSet> {
         : SimpleUnaryOperator<SetView, SetView, OpPowerSet>(std::move(operand)),
           sizeLimit(sizeLimit) {}
     void setInnerType() { members.emplace<ExprRefVec<SetView>>(); }
-    void reevaluate();
+    void reevaluateImpl(SetView& operandView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpPowerSet& newOp) const;

@@ -14,7 +14,7 @@ struct OpMaker<OpSetLit> {
     static ExprRef<SetView> make(AnyExprVec operands);
 };
 
-void OpPowerSet::reevaluate() {
+void OpPowerSet::reevaluateImpl(SetView& operandView) {
     if (sizeLimit != 2) {
         std::cerr << "Only supporting powerset when limiting produced sets "
                      "to exactly size 2.\n";
@@ -34,7 +34,7 @@ void OpPowerSet::reevaluate() {
                 }
             }
         },
-        operand->view().members);
+        operandView.members);
 }
 
 struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {

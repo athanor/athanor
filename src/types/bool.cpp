@@ -5,7 +5,7 @@
 using namespace std;
 template <>
 HashType getValueHash<BoolView>(const BoolView& val) {
-    return val.violation;
+    return val.violation == 0;
 }
 
 template <>

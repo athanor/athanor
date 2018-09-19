@@ -7,11 +7,10 @@
 using namespace std;
 
 template <typename OperandView>
-void OpNotEq<OperandView>::reevaluate() {
+void OpNotEq<OperandView>::reevaluateImpl(OperandView& leftView,
+                                          OperandView& rightView) {
     this->violation =
-        (getValueHash(this->left->view()) == getValueHash(this->right->view()))
-            ? 1
-            : 0;
+        (getValueHash(leftView) == getValueHash(rightView)) ? 1 : 0;
 }
 
 template <typename OperandView>

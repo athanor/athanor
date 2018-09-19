@@ -3,7 +3,7 @@
 using namespace std;
 void OpMod::reevaluateImpl(IntView& leftView, IntView& rightView) {
     if (rightView.value == 0) {
-        setDefined(false);
+        setDefined(false, true);
         return;
     }
     value = leftView.value % abs(rightView.value);

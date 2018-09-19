@@ -1,9 +1,32 @@
+
 #include "operators/opPower.h"
-#include "operators/simpleOperator.hpp"
-using namespace std;
 #include <cmath>
-void OpPower::reevaluate() {
-    value = pow(left->view().value, right->view().value);
+#include "operators/simpleOperator.hpp"
+#include "utils/safePow.h"
+
+using namespace std;
+
+namespace {
+UInt MAX_NUMBER_ALLOWED = (((UInt)1) << 61) - 10;
+}  // namespace
+void OpPower::reevaluateImpl(IntView& leftView, IntView& rightView) {
+    if (leftView.value == 0) {
+        if (rightView.value == 0) {
+            value = 1;
+        } else if (rightView.value > 0) {
+            value = 0;
+        } else {
+            setDefined(false);
+        }
+    } else {
+        auto result =
+            safePow<Int>(leftView.value, rightView.value, MAX_NUMBER_ALLOWED);
+        if (result) {
+            value = *result;
+        } else {
+            setDefined(false);
+        }
+    }
 }
 
 void OpPower::updateVarViolationsImpl(const ViolationContext& vioContext,

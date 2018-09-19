@@ -4,6 +4,7 @@
 #include <cmath>
 #include "common/common.h"
 #include "utils/ignoreUnused.h"
+#include "utils/safePow.h"
 using namespace std;
 size_t numberUndefinedMembers(const SequenceView& view) {
     return view.numberUndefined;
@@ -94,26 +95,17 @@ void matchInnerType(const SequenceDomain& domain, SequenceValue& target) {
         domain.inner);
 }
 
-pair<bool, UInt> safePow(UInt a, UInt b) {
-    if (b * log(a) < log(MAX_DOMAIN_SIZE)) {
-        return make_pair(true, pow(a, b));
-    } else {
-        return make_pair(false, 0);
-    }
-}
-
 template <>
 UInt getDomainSize<SequenceDomain>(const SequenceDomain& domain) {
     UInt innerDomainSize = getDomainSize(domain.inner);
     UInt domainSize = 0;
     for (UInt i = domain.sizeAttr.minSize; i <= domain.sizeAttr.maxSize; i++) {
-        auto boolIntPair = safePow(innerDomainSize, i);
-        if (!boolIntPair.first ||
-            MAX_DOMAIN_SIZE - domainSize < boolIntPair.second) {
+        auto crossProd = safePow<UInt>(innerDomainSize, i, MAX_DOMAIN_SIZE);
+        if (!crossProd || MAX_DOMAIN_SIZE - domainSize < crossProd) {
             domainSize = MAX_DOMAIN_SIZE;
             break;
         }
-        domainSize += boolIntPair.second;
+        domainSize += crossProd;
     }
     return domainSize;
 }

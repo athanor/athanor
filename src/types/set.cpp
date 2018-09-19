@@ -104,12 +104,6 @@ UInt getDomainSize<SetDomain>(const SetDomain& domain) {
     }
 }
 
-void reset(SetValue& val) {
-    val.container = NULL;
-    val.silentClear();
-    val.triggers.clear();
-}
-
 template <typename InnerViewType>
 void normaliseImpl(SetValue&, ExprRefVec<InnerViewType>& valMembersImpl) {
     for (auto& v : valMembersImpl) {

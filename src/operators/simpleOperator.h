@@ -5,54 +5,58 @@
 
 template <typename View, typename Derived>
 struct DefinedContainer {
-    void setDefined(bool defined, bool trigger = false) {
+    inline void setDefined(bool defined) {
         auto& op = static_cast<Derived&>(*this);
-        bool triggerChange = trigger && (defined != op.appearsDefined());
         op.setAppearsDefined(defined);
-        if (triggerChange) {
-            if (!defined) {
-                visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                              op.triggers, true);
-            } else {
-                op.reevaluate();
-                // check still defined after reevaluating
-                if (!isDefined()) {
-                    return;
-                }
+    }
+    inline void setUndefinedAndTrigger() {
+        auto& op = static_cast<Derived&>(*this);
+        bool wasDefined = isDefined();
+        setDefined(false);
+        if (wasDefined) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                          op.triggers, true);
+        }
+    }
+    void reevaluateDefinedAndTrigger() {
+        auto& op = static_cast<Derived&>(*this);
+        if (!isDefined()) {
+            op.reevaluate();
+            if (isDefined()) {
                 visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
                               op.triggers, true);
             }
         }
     }
-    bool isDefined() { return static_cast<Derived&>(*this).appearsDefined(); }
+    inline bool isDefined() {
+        return static_cast<Derived&>(*this).appearsDefined();
+    }
     void copyDefinedStatus(DefinedContainer<View, Derived>&) const {}
     inline bool allOperandsAreDefined() { return isDefined(); }
 };
 template <typename Derived>
 struct DefinedContainer<BoolView, Derived> {
     bool allOperandsDefined = false;
-    void setDefined(bool defined, bool triggerChange = false) {
+    inline void setDefined(bool defined) {
         auto& op = static_cast<Derived&>(*this);
         allOperandsDefined = defined;
-        if (defined) {
-            if (triggerChange) {
-                op.changeValue([&]() {
-                    op.reevaluate();
-                    return true;
-                });
-            } else {
-                op.reevaluate();
-            }
-        } else {
-            if (triggerChange) {
-                op.changeValue([&]() {
-                    op.violation = LARGE_VIOLATION;
-                    return true;
-                });
-            } else {
-                op.violation = LARGE_VIOLATION;
-            }
+        if (!defined) {
+            op.violation = LARGE_VIOLATION;
         }
+    }
+    inline void setUndefinedAndTrigger() {
+        auto& op = static_cast<Derived&>(*this);
+        op.changeValue([&]() {
+            setDefined(false);
+            return true;
+        });
+    }
+    inline void reevaluateDefinedAndTrigger() {
+        auto& op = static_cast<Derived&>(*this);
+        op.changeValue([&]() {
+            op.reevaluate();
+            return true;
+        });
     }
     bool isDefined() { return true; }
     void copyDefinedStatus(DefinedContainer<BoolView, Derived>& other) const {

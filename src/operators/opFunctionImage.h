@@ -68,7 +68,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     std::pair<bool, ExprRef<FunctionMemberViewType>> optimise(
         PathExtension path) final;
 
-    void reattachFunctionMemberTrigger(bool deleteFirst);
+    void reattachFunctionMemberTrigger();
     bool eventForwardedAsDefinednessChange(bool recalculateIndex);
     template <typename View = FunctionMemberViewType,
               typename std::enable_if<std::is_same<BoolView, View>::value,

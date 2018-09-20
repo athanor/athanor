@@ -142,7 +142,7 @@ bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
     bool wasLocallyDefined = locallyDefined;
     reevaluate(recalculateIndex);
     if (!wasLocallyDefined && locallyDefined) {
-        reattachFunctionMemberTrigger(true);
+        reattachFunctionMemberTrigger();
     }
     if (wasDefined && !this->appearsDefined()) {
         visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers,
@@ -195,7 +195,7 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
                     t->reattachTrigger();
                 },
                 op->triggers);
-            op->reattachFunctionMemberTrigger(true);
+            op->reattachFunctionMemberTrigger();
         }
     }
 
@@ -225,7 +225,7 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
         if (!op->appearsDefined()) {
             return;
         }
-        op->reattachFunctionMemberTrigger(true);
+        op->reattachFunctionMemberTrigger();
         visitTriggers(
             [&](auto t) {
                 t->hasBecomeDefined();
@@ -235,10 +235,13 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
     }
     void reattachTrigger() final {
         deleteTrigger(op->functionOperandTrigger);
+        if (op->functionMemberTrigger) {
+            deleteTrigger(op->functionMemberTrigger);
+        }
         auto trigger = make_shared<FunctionOperandTrigger>(op);
         op->functionOperand->addTrigger(trigger, false);
         if (op->locallyDefined) {
-            op->reattachFunctionMemberTrigger(true);
+            op->reattachFunctionMemberTrigger();
         }
         op->functionOperandTrigger = trigger;
     }
@@ -265,7 +268,7 @@ struct PreImageTrigger
                     t->reattachTrigger();
                 },
                 op->triggers);
-            op->reattachFunctionMemberTrigger(true);
+            op->reattachFunctionMemberTrigger();
         }
     }
     void reattachTrigger() final {
@@ -321,15 +324,14 @@ void OpFunctionImage<FunctionMemberViewType>::startTriggeringImpl() {
             OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger>(
             this);
         functionOperand->addTrigger(functionOperandTrigger, false);
-        reattachFunctionMemberTrigger(false);
+        reattachFunctionMemberTrigger();
         functionOperand->startTriggering();
     }
 }
 
 template <typename FunctionMemberViewType>
-void OpFunctionImage<FunctionMemberViewType>::reattachFunctionMemberTrigger(
-    bool deleteFirst) {
-    if (deleteFirst) {
+void OpFunctionImage<FunctionMemberViewType>::reattachFunctionMemberTrigger() {
+    if (functionMemberTrigger) {
         deleteTrigger(functionMemberTrigger);
     }
     functionMemberTrigger = make_shared<FunctionOperandTrigger>(this);

@@ -109,7 +109,7 @@ inline bool handleOperandValueChange(OpMinMax<minMode>& op, Int index) {
 }
 template <bool minMode>
 void OpMinMax<minMode>::handleMemberUndefined(UInt index) {
-    this->setDefined(false, true);
+    this->setUndefinedAndTrigger();
     if (minValueIndices.count(index)) {
         minValueIndices.erase(index);
     }
@@ -231,8 +231,8 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
         op->operand->addTrigger(trigger);
         op->operandTrigger = trigger;
     }
-    void hasBecomeUndefined() final { op->setDefined(false, true); }
-    void hasBecomeDefined() final { op->setDefined(true, true); }
+    void hasBecomeUndefined() final { op->setUndefinedAndTrigger(); }
+    void hasBecomeDefined() final { op->reevaluateDefinedAndTrigger(); }
     void memberHasBecomeUndefined(UInt index) final {
         op->handleMemberUndefined(index);
     }

@@ -103,8 +103,8 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
         op->operandTrigger = trigger;
     }
 
-    void hasBecomeUndefined() final { op->setDefined(false, true); }
-    void hasBecomeDefined() final { op->setDefined(true, true); }
+    void hasBecomeUndefined() final { op->setUndefinedAndTrigger(); }
+    void hasBecomeDefined() final { op->reevaluateDefinedAndTrigger(); }
     void memberHasBecomeUndefined(UInt) final { shouldNotBeCalledPanic; }
     void memberHasBecomeDefined(UInt) final { shouldNotBeCalledPanic; }
 };

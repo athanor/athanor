@@ -122,8 +122,8 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         op->operand->addTrigger(trigger);
         op->operandTrigger = trigger;
     }
-    void hasBecomeUndefined() final { op->setDefined(false, true); }
-    void hasBecomeDefined() final { op->setDefined(true, true); }
+    void hasBecomeUndefined() final { op->setUndefinedAndTrigger(); }
+    void hasBecomeDefined() final { op->reevaluateDefinedAndTrigger(); }
 
     void memberHasBecomeUndefined(UInt index) {
         if (!op->evaluationComplete) {
@@ -140,7 +140,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     void memberHasBecomeDefined(UInt index) {
         if (!op->evaluationComplete) {
             if (op->operand->view().numberUndefined == 0) {
-                op->setDefined(true, true);
+                op->reevaluateDefinedAndTrigger();
             }
             return;
         }

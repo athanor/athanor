@@ -83,7 +83,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
                 });
             }
         } else if (op->operand->view().get().numberUndefined == 0) {
-            op->setDefined(true, true);
+            op->reevaluateDefinedAndTrigger();
             return;
         }
 
@@ -168,17 +168,17 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
         op->operandTrigger = trigger;
     }
 
-    void hasBecomeUndefined() final { op->setDefined(false, true); }
-    void hasBecomeDefined() final { op->setDefined(true, true); }
+    void hasBecomeUndefined() final { op->setUndefinedAndTrigger(); }
+    void hasBecomeDefined() final { op->reevaluateDefinedAndTrigger(); }
     void memberHasBecomeUndefined(UInt) final {
         if (op->operand->view().get().numberUndefined == 1) {
-            op->setDefined(false, true);
+            op->setUndefinedAndTrigger();
         }
     }
     void memberHasBecomeDefined(UInt) final {
         if (op->operand->view().get().numberUndefined == 0) {
             op->reevaluate();
-            op->setDefined(true, true);
+            op->reevaluateDefinedAndTrigger();
         }
     }
 };

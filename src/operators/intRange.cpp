@@ -41,7 +41,7 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
         }
     }
 
-    void hasBecomeUndefined() final { op->setDefined(false, true); }
+    void hasBecomeUndefined() final { op->setUndefinedAndTrigger(); }
     void hasBecomeDefined() {
         auto leftView = op->left->getViewIfDefined();
         if (!leftView) {

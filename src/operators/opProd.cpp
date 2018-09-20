@@ -152,10 +152,10 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     void hasBecomeUndefined() final {
-        op->setDefined(false, true);
+        op->setUndefinedAndTrigger();
         op->evaluationComplete = false;
     }
-    void hasBecomeDefined() final { op->setDefined(true, true); }
+    void hasBecomeDefined() final { op->reevaluateDefinedAndTrigger(); }
 
     void memberHasBecomeUndefined(UInt index) {
         if (!op->evaluationComplete) {
@@ -168,7 +168,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
             return;
         }
         if ((*view).numberUndefined == 1) {
-            op->setDefined(false, true);
+            op->setUndefinedAndTrigger();
         }
     }
 
@@ -180,7 +180,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
         }
         if (!op->evaluationComplete) {
             if ((*operandView).numberUndefined == 0) {
-                op->setDefined(true, true);
+                op->reevaluateDefinedAndTrigger();
             }
             return;
         }

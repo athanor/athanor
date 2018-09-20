@@ -22,7 +22,7 @@ struct OpProd : public SimpleUnaryOperator<IntView, SequenceView, OpProd> {
     Int cachedValue;
     PreviousValueCache<Int> cachedValues;
     OpProd(OpProd&& other);
-    void reevaluate();
+    void reevaluateImpl(SequenceView& operandView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpProd& newOp) const;

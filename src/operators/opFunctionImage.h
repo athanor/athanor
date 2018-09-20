@@ -31,7 +31,8 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
         : functionOperand(std::move(functionOperand)),
           preImageOperand(std::move(preImageOperand)) {
         if (std::is_same<BoolView, FunctionMemberViewType>::value) {
-            std::cerr << "I've temperarily disabled functions to booleans as "
+            std::cerr << "I've temperarily disabled OpFunctionImage for "
+                         "functions to booleans as "
                          "I'm not correctly handling relational semantics "
                          "forthe case where the function pre image becomes "
                          "undefined.\n";

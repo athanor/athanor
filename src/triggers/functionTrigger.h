@@ -16,8 +16,6 @@ struct FunctionMemberTrigger : public virtual TriggerBase {
 
 struct FunctionTrigger : public virtual FunctionOuterTrigger,
                          public virtual FunctionMemberTrigger {};
-
-
 template <typename Child>
 struct ChangeTriggerAdapter<FunctionTrigger, Child>
     : public ChangeTriggerAdapterBase<FunctionTrigger, Child> {

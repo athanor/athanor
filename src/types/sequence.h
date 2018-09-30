@@ -221,6 +221,9 @@ struct SequenceView : public ExprInterface<SequenceView> {
         });
         debug_code(assert(numberUndefined > 0));
         numberUndefined--;
+        if (numberUndefined == 0) {
+            this->setAppearsDefined(true);
+        }
         visitTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
                       triggers);
     }
@@ -236,6 +239,7 @@ struct SequenceView : public ExprInterface<SequenceView> {
         cachedHashTotal.applyIfValid(
             [&](auto& value) { value -= hashOfPossibleChange; });
         numberUndefined++;
+        this->setAppearsDefined(false);
         visitTriggers([&](auto& t) { t->memberHasBecomeUndefined(index); },
                       triggers);
     }

@@ -11,12 +11,13 @@ void OpSequenceLit::evaluateImpl() {
         [&](auto& members) {
             for (auto& member : members) {
                 member->evaluate();
-                if (member->isUndefined()) {
+                if (!member->appearsDefined()) {
                     numberUndefined++;
                 }
             }
         },
         members);
+    this->setAppearsDefined(numberUndefined == 0);
 }
 
 namespace {
@@ -26,6 +27,9 @@ struct ExprTrigger
       public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>> {
     typedef typename AssociatedViewType<TriggerType>::type View;
     using ExprTriggerBase::ExprTriggerBase;
+    ExprRef<View>& getTriggeringOperand() {
+        return op->getMembers<View>()[index];
+    }
     void adapterValueChanged() {
         this->op->template changeSubsequenceAndNotify<View>(this->index,
                                                             this->index + 1);
@@ -158,7 +162,7 @@ void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         },
         members);
 }
-bool OpSequenceLit::isUndefined() { return this->numberUndefined > 0; }
+
 pair<bool, ExprRef<SequenceView>> OpSequenceLit::optimise(PathExtension path) {
     bool changeMade = false;
     mpark::visit(

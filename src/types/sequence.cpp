@@ -105,7 +105,7 @@ UInt getDomainSize<SequenceDomain>(const SequenceDomain& domain) {
             domainSize = MAX_DOMAIN_SIZE;
             break;
         }
-        domainSize += crossProd;
+        domainSize += *crossProd;
     }
     return domainSize;
 }
@@ -191,10 +191,13 @@ void SequenceView::assertValidState() {
             UInt calculatedTotal = 0;
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 auto& member = valMembersImpl[i];
-                if (cachedHashTotal.isValid() && !member->isUndefined()) {
-                    calculatedTotal += this->calcMemberHash(i, member);
+                if (cachedHashTotal.isValid()) {
+                    auto view = member->getViewIfDefined();
+                    if (view) {
+                        calculatedTotal += this->calcMemberHash(i, member);
+                    }
                 }
-                if (member->isUndefined()) {
+                if (!member->appearsDefined()) {
                     numberUndefinedFound++;
                 }
             }
@@ -234,7 +237,7 @@ void SequenceValue::assertValidState() {
             if (injective) {
                 for (size_t i = 0; i < valMembersImpl.size(); i++) {
                     auto& member = valMembersImpl[i];
-                    HashType hash = getValueHash(member->view());
+                    HashType hash = getValueHash(member->view().get());
                     if (!memberHashes.count(hash)) {
                         cerr << "Error: member " << member->view()
                              << " with hash " << hash

@@ -162,7 +162,7 @@ struct SetView : public ExprInterface<SetView> {
     inline ExprRef<InnerViewType> removeMemberAndNotify(UInt index) {
         ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
-        notifyMemberRemoved(index, getValueHash(removedValue->view()));
+        notifyMemberRemoved(index, getValueHash(removedValue->view().checkedGet(NO_SET_UNDEFINED_MEMBERS)));
         return removedValue;
     }
 

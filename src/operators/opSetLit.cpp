@@ -6,11 +6,14 @@
 #include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
+static const char* ERROR_NO_UNDEFINED_MEMBERS =
+    "Error: not handling OpSetLit with undefined values at the moment.\n";
 
 template <typename View>
 void OpSetLit::addValue(size_t index, bool insert) {
     auto& expr = getOperands<View>()[index];
-    HashType hash = getValueHash(expr->view());
+    HashType hash =
+        getValueHash(expr->view().checkedGet(ERROR_NO_UNDEFINED_MEMBERS));
     auto& operandGroup = hashIndicesMap[hash];
     debug_code(assert(!operandGroup.operands.count(index)));
     operandGroup.operands.insert(index);
@@ -61,9 +64,8 @@ void OpSetLit::evaluateImpl() {
             for (size_t i = 0; i < operands.size(); i++) {
                 auto& operand = operands[i];
                 operand->evaluate();
-                if (operand->isUndefined()) {
-                    cerr << "Error: not handling OpSetLit with undefined "
-                            "values at the moment.\n";
+                if (!operand->appearsDefined()) {
+                    cerr << ERROR_NO_UNDEFINED_MEMBERS;
                     abort();
                 }
                 addValue<viewType(operands)>(i, true);
@@ -83,7 +85,9 @@ struct ExprTrigger
     using ExprTriggerBase::ExprTriggerBase;
     using ExprTriggerBase::index;
     using ExprTriggerBase::op;
-
+    ExprRef<View> getTriggeringOperand() {
+        return mpark::get<ExprRefVec<View>>(op->operands)[this->index];
+    }
     void adapterValueChanged() {
         op->removeValue<View>(index, op->cachedOperandHashes.get(index));
         op->addValue<View>(index);
@@ -224,7 +228,7 @@ void OpSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         },
         operands);
 }
-bool OpSetLit::isUndefined() { return this->numberUndefined > 0; }
+
 pair<bool, ExprRef<SetView>> OpSetLit::optimise(PathExtension path) {
     auto returnExpr = mpark::get<ExprRef<SetView>>(path.expr);
     bool changeMade = false;
@@ -276,14 +280,14 @@ void OpSetLit::assertValidHashes() {
         [&](auto& operands) {
             for (size_t i = 0; i < operands.size(); i++) {
                 auto& operand = operands[i];
-                if (operand->isUndefined()) {
-                    cerr << "Not handling undefined operands in set literals "
-                            "at the moment.\n";
+                if (!operand->appearsDefined()) {
+                    cerr << NO_SET_UNDEFINED_MEMBERS;
                     success = false;
                     break;
                     continue;
                 }
-                HashType hash = getValueHash(operand->view());
+                HashType hash = getValueHash(
+                    operand->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
                 if (cachedOperandHashes.get(i) != hash) {
                     cerr << "Error: cachedOperandHashes at index " << i
                          << " has value " << cachedOperandHashes.get(i)

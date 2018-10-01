@@ -18,6 +18,15 @@ struct DefinedContainer {
                           op.triggers, true);
         }
     }
+    inline void setDefinedAndTrigger() {
+        auto& op = static_cast<Derived&>(*this);
+        bool wasDefined = isDefined();
+        setDefined(true);
+        if (!wasDefined) {
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers,
+                          true);
+        }
+    }
     void reevaluateDefinedAndTrigger() {
         auto& op = static_cast<Derived&>(*this);
         if (!isDefined()) {
@@ -51,6 +60,7 @@ struct DefinedContainer<BoolView, Derived> {
             return true;
         });
     }
+    inline void setDefinedAndTrigger() {}
     inline void reevaluateDefinedAndTrigger() {
         auto& op = static_cast<Derived&>(*this);
         op.changeValue([&]() {

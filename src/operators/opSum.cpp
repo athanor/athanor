@@ -9,10 +9,13 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 using OperandsSequenceTrigger = OperatorTrates<OpSum>::OperandsSequenceTrigger;
+
 OpSum::OpSum(OpSum&& other)
     : SimpleUnaryOperator<IntView, SequenceView, OpSum>(std::move(other)),
       evaluationComplete(std::move(other.evaluationComplete)),
       cachedValues(move(other.cachedValues)) {}
+void OpSum::addSingleValue(Int exprValue) { value += exprValue; }
+void OpSum::removeSingleValue(Int exprValue) { value -= exprValue; }
 
 class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
    public:
@@ -23,19 +26,18 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
             return;
         }
         auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
-        if (expr->isUndefined()) {
+        auto view = expr->getViewIfDefined();
+        if (!view) {
             op->cachedValues.insert(index, 0);
-            if (op->operand->view().numberUndefined == 1) {
-                op->setDefined(false, false);
-                visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                              op->triggers, true);
+            if (op->operand->view().get().numberUndefined == 1) {
+                op->setUndefinedAndTrigger();
             }
             return;
         }
-        auto& operandValue = expr->view().value;
+        Int operandValue = (*view).value;
         op->cachedValues.insert(index, operandValue);
         op->changeValue([&]() {
-            op->value += operandValue;
+            op->addSingleValue(operandValue);
             return true;
         });
     }
@@ -44,19 +46,18 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         if (!op->evaluationComplete) {
             return;
         }
-
         const auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
+
         Int operandValue = op->cachedValues.erase(index);
-        if (expr->isUndefined()) {
-            if (op->operand->view().numberUndefined == 0) {
-                op->setDefined(true, false);
-                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                              op->triggers, true);
+
+        if (!expr->appearsDefined()) {
+            if (op->operand->view().get().numberUndefined == 0) {
+                op->setDefinedAndTrigger();
             }
             return;
         }
         op->changeValue([&]() {
-            op->value -= operandValue;
+            op->removeSingleValue(operandValue);
             return true;
         });
     }
@@ -69,50 +70,53 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         swap(op->cachedValues.get(index1), op->cachedValues.get(index2));
     }
 
-    ExprRef<IntView>& getMember(UInt index) {
-        debug_code(assert(index < op->operand->view().numberElements()));
-        return op->operand->view().getMembers<IntView>()[index];
+    ExprRef<IntView>& getMember(SequenceView& operandView, UInt index) {
+        return operandView.getMembers<IntView>()[index];
     }
-    Int getValueCatchUndef(UInt index) {
-        auto& member = getMember(index);
-        return (member->isUndefined()) ? 0 : member->view().value;
+    Int getValueCatchUndef(SequenceView& operandView, UInt index) {
+        auto& member = getMember(operandView, index);
+        auto view = member->getViewIfDefined();
+        return (view) ? (*view).value : 0;
+    }
+
+    inline void handleSingleOperandChange(SequenceView& operandView,
+                                          UInt index) {
+        Int newValue = getValueCatchUndef(operandView, index);
+        Int oldValue = op->cachedValues.getAndSet(index, newValue);
+        op->removeSingleValue(oldValue);
+        op->addSingleValue(newValue);
     }
 
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         if (!op->evaluationComplete) {
             return;
         }
-
-        Int valueToAdd = 0, valueToRemove = 0;
-        for (size_t i = startIndex; i < endIndex; i++) {
-            Int operandValue = getValueCatchUndef(i);
-            valueToAdd += operandValue;
-            valueToRemove += op->cachedValues.getAndSet(i, operandValue);
+        auto view = op->operand->view();
+        if (!view) {
+            hasBecomeUndefined();
+            return;
         }
+        auto& operandView = *view;
         op->changeValue([&]() {
-            op->value -= valueToRemove;
-            op->value += valueToAdd;
+            for (size_t i = startIndex; i < endIndex; i++) {
+                handleSingleOperandChange(operandView, i);
+            }
             return true;
         });
     }
 
     void valueChanged() final {
-        if (!op->isDefined()) {
-            op->reevaluate();
-            if (op->isDefined()) {
-                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                              op->triggers, true);
-            }
-            return;
-        }
-
-        bool isDefined = op->changeValue([&]() {
+        bool wasDefined = op->isDefined();
+        op->changeValue([&]() {
             op->reevaluate();
             return op->isDefined();
         });
-        if (!isDefined) {
+        if (wasDefined && !op->isDefined()) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
                           op->triggers, true);
+        } else if (!wasDefined && op->isDefined()) {
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
+                          true);
         }
     }
 
@@ -122,52 +126,64 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         op->operand->addTrigger(trigger);
         op->operandTrigger = trigger;
     }
-    void hasBecomeUndefined() final { op->setUndefinedAndTrigger(); }
+
+    void hasBecomeUndefined() final {
+        op->setUndefinedAndTrigger();
+        op->evaluationComplete = false;
+    }
     void hasBecomeDefined() final { op->reevaluateDefinedAndTrigger(); }
 
     void memberHasBecomeUndefined(UInt index) {
         if (!op->evaluationComplete) {
             return;
         }
-        op->value -= op->cachedValues.get(index);
-        if (op->operand->view().numberUndefined == 1) {
-            op->setDefined(false, false);
-            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers, true);
+        op->removeSingleValue(op->cachedValues.get(index));
+        auto view = op->operand->view();
+        if (!view) {
+            hasBecomeUndefined();
+            return;
+        }
+        if ((*view).numberUndefined == 1) {
+            op->setUndefinedAndTrigger();
         }
     }
 
     void memberHasBecomeDefined(UInt index) {
+        auto operandView = op->operand->view();
+        if (!operandView) {
+            hasBecomeUndefined();
+            return;
+        }
         if (!op->evaluationComplete) {
-            if (op->operand->view().numberUndefined == 0) {
+            if ((*operandView).numberUndefined == 0) {
                 op->reevaluateDefinedAndTrigger();
             }
             return;
         }
-        Int operandValue =
-            op->operand->view().getMembers<IntView>()[index]->view().value;
-        op->value += operandValue;
+
+        Int operandValue = getValueCatchUndef(*operandView, index);
+        op->addSingleValue(operandValue);
         op->cachedValues.set(index, operandValue);
-        if (op->operand->view().numberUndefined == 0) {
-            op->setDefined(true, false);
-            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
-                          true);
+        if ((*operandView).numberUndefined == 0) {
+            op->setDefinedAndTrigger();
         }
     }
 };
 
-void OpSum::reevaluate() {
-    setDefined(true, false);
+void OpSum::reevaluateImpl(SequenceView& operandView) {
+    setDefined(true);
     value = 0;
-    auto& members = operand->view().getMembers<IntView>();
+    cachedValues.clear();
+    auto& members = operandView.getMembers<IntView>();
     for (size_t index = 0; index < members.size(); index++) {
         auto& operandChild = members[index];
-        if (operandChild->isUndefined()) {
+        auto operandChildView = operandChild->getViewIfDefined();
+        if (!operandChildView) {
+            setDefined(false);
             cachedValues.insert(index, 0);
-            setDefined(false, false);
         } else {
-            Int operandValue = operandChild->view().value;
-            value += operandValue;
+            Int operandValue = (*operandChildView).value;
+            addSingleValue(operandValue);
             cachedValues.insert(index, operandValue);
         }
     }
@@ -176,7 +192,12 @@ void OpSum::reevaluate() {
 
 void OpSum::updateVarViolationsImpl(const ViolationContext& vioContext,
                                     ViolationContainer& vioContainer) {
-    for (auto& operandChild : operand->view().getMembers<IntView>()) {
+    auto operandView = operand->view();
+    if (!operandView) {
+        operand->updateVarViolations(vioContext, vioContainer);
+        return;
+    }
+    for (auto& operandChild : (*operandView).getMembers<IntView>()) {
         operandChild->updateVarViolations(vioContext, vioContainer);
     }
 }
@@ -188,9 +209,7 @@ void OpSum::copy(OpSum& newOp) const {
 }
 
 std::ostream& OpSum::dumpState(std::ostream& os) const {
-
     os << "OpSum: value=" << value << endl;
-    os << "defined=" << defined << endl;
     return operand->dumpState(os);
 }
 

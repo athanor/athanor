@@ -20,13 +20,14 @@ struct OpSum : public SimpleUnaryOperator<IntView, SequenceView, OpSum> {
     bool evaluationComplete = false;
     PreviousValueCache<Int> cachedValues;
     OpSum(OpSum&& other);
-
-    void reevaluate();
+    void reevaluateImpl(SequenceView& operandView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpSum& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
     bool optimiseImpl();
+    void addSingleValue(Int exprValue);
+    void removeSingleValue(Int exprValue);
 };
 
 #endif /* SRC_OPERATORS_OPSUM_H_ */

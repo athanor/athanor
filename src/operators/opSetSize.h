@@ -13,7 +13,7 @@ struct OperatorTrates<OpSetSize> {
 struct OpSetSize : public SimpleUnaryOperator<IntView, SetView, OpSetSize> {
     using SimpleUnaryOperator<IntView, SetView, OpSetSize>::SimpleUnaryOperator;
 
-    void reevaluate();
+    void reevaluateImpl(SetView& operandView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpSetSize& newOp) const;

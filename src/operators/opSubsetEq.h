@@ -14,7 +14,7 @@ struct OpSubsetEq : public SimpleBinaryOperator<BoolView, SetView, OpSubsetEq> {
     using SimpleBinaryOperator<BoolView, SetView,
                                OpSubsetEq>::SimpleBinaryOperator;
 
-    void reevaluate();
+    void reevaluateImpl(SetView& leftView, SetView& rightView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpSubsetEq& newOp) const;

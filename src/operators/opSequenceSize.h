@@ -15,7 +15,7 @@ struct OpSequenceSize
     using SimpleUnaryOperator<IntView, SequenceView,
                               OpSequenceSize>::SimpleUnaryOperator;
 
-    void reevaluate();
+    void reevaluateImpl(SequenceView& s);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpSequenceSize& newOp) const;

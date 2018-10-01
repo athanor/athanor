@@ -12,7 +12,7 @@ void OpSetIndexInternal<SetMemberViewType>::addTriggerImpl(
     const shared_ptr<SetMemberTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));
-    if (!setOperand->isUndefined()) {
+    if (setOperand->appearsDefined()) {
         getMember()->addTrigger(trigger, includeMembers, memberIndex);
     }
 }
@@ -20,8 +20,10 @@ void OpSetIndexInternal<SetMemberViewType>::addTriggerImpl(
 template <typename SetMemberViewType>
 ExprRef<SetMemberViewType>& OpSetIndexInternal<SetMemberViewType>::getMember(
     size_t index) {
-    debug_code(assert(!setOperand->isUndefined()));
-    auto& members = setOperand->view().getMembers<SetMemberViewType>();
+    auto& operandView = setOperand->view().checkedGet(
+        "Error: OpSetIndex can't hanlde some cases where set becomes "
+        "undefined.\n");
+    auto& members = operandView.getMembers<SetMemberViewType>();
     debug_code(assert(index < parentSetMapping.size()));
     debug_code(assert(parentSetMapping[index] < members.size()));
     auto& member = members[parentSetMapping[index]];
@@ -31,8 +33,10 @@ ExprRef<SetMemberViewType>& OpSetIndexInternal<SetMemberViewType>::getMember(
 template <typename SetMemberViewType>
 const ExprRef<SetMemberViewType>&
 OpSetIndexInternal<SetMemberViewType>::getMember(size_t index) const {
-    debug_code(assert(!setOperand->isUndefined()));
-    const auto& members = setOperand->view().getMembers<SetMemberViewType>();
+    auto& operandView = setOperand->view().checkedGet(
+        "Error: OpSetIndex can't hanlde some cases where set becomes "
+        "undefined.\n");
+    const auto& members = operandView.getMembers<SetMemberViewType>();
     debug_code(assert(index < parentSetMapping.size()));
     debug_code(assert(parentSetMapping[index] < members.size()));
     const auto& member = members[parentSetMapping[index]];
@@ -51,19 +55,22 @@ OpSetIndexInternal<SetMemberViewType>::getMember() const {
 }
 
 template <typename SetMemberViewType>
-SetMemberViewType& OpSetIndexInternal<SetMemberViewType>::view() {
+OptionalRef<SetMemberViewType> OpSetIndexInternal<SetMemberViewType>::view() {
     return getMember()->view();
 }
 template <typename SetMemberViewType>
-const SetMemberViewType& OpSetIndexInternal<SetMemberViewType>::view() const {
+OptionalRef<const SetMemberViewType>
+OpSetIndexInternal<SetMemberViewType>::view() const {
     return getMember()->view();
 }
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::reevaluateDefined() {
-    defined = !setOperand->isUndefined() &&
-              parentSetMapping[index] < setOperand->view().numberElements() &&
-              !getMember()->isUndefined();
+    auto operandView = setOperand->getViewIfDefined();
+    this->setAppearsDefined(operandView &&
+                            parentSetMapping[index] <
+                                (*operandView).numberElements() &&
+                            getMember()->appearsDefined());
 }
 
 template <typename SetMemberViewType>
@@ -76,11 +83,20 @@ void OpSetIndexInternal<SetMemberViewType>::evaluateImpl() {
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::evaluateMappings() {
-    parentSetMapping.resize(setOperand->view().numberElements());
+    auto operandView = setOperand->getViewIfDefined();
+    if (!operandView) {
+        this->setAppearsDefined(false);
+        parentSetMapping.clear();
+        setParentMapping.clear();
+        return;
+    }
+
+    parentSetMapping.resize((*operandView).numberElements());
     iota(parentSetMapping.begin(), parentSetMapping.end(), 0);
     sort(parentSetMapping.begin(), parentSetMapping.end(),
          [&](size_t u, size_t v) {
-             return smallerValue(getMember(u)->view(), getMember(v)->view());
+             return smallerValue(getMember(u)->getViewIfDefined(),
+                                 getMember(v)->getViewIfDefined());
          });
     setParentMapping.resize(parentSetMapping.size());
     for (size_t i = 0; i < parentSetMapping.size(); i++) {
@@ -95,7 +111,6 @@ OpSetIndexInternal<SetMemberViewType>::OpSetIndexInternal(
       triggers(move(other.triggers)),
       setOperand(move(other.setOperand)),
       index(move(other.index)),
-      defined(move(other.defined)),
       setTrigger(move(other.setTrigger)),
       parentSetMapping(move(other.parentSetMapping)),
       setParentMapping(move(other.setParentMapping)) {
@@ -111,7 +126,7 @@ void OpSetIndexInternal<SetMemberViewType>::handleSetMemberValueChange(
     int increment;
     if (index == 0) {
         increment = 1;
-    } else if (index == setOperand->view().numberElements() - 1) {
+    } else if (index == setOperand->view().get().numberElements() - 1) {
         increment = -1;
     } else {
         increment = (smallerValue(getMember(index - 1)->view(),
@@ -119,7 +134,8 @@ void OpSetIndexInternal<SetMemberViewType>::handleSetMemberValueChange(
                         ? 1
                         : -1;
     }
-    size_t limit = (increment == 1) ? setOperand->view().numberElements() : 0;
+    size_t limit =
+        (increment == 1) ? setOperand->view().get().numberElements() : 0;
     bool shouldBeSmaller = (increment == 1) ? false : true;
     for (size_t i = index;
          i != limit &&
@@ -231,7 +247,7 @@ void OpSetIndexInternal<SetMemberViewType>::stopTriggering() {
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::updateVarViolationsImpl(
     const ViolationContext& vioContext, ViolationContainer& vioContainer) {
-    if (defined) {
+    if (this->appearsDefined()) {
         getMember()->updateVarViolations(vioContext, vioContainer);
     } else {
         setOperand->updateVarViolations(vioContext, vioContainer);
@@ -246,7 +262,6 @@ OpSetIndexInternal<SetMemberViewType>::deepCopySelfForUnrollImpl(
         setOperand->deepCopySelfForUnroll(setOperand, iterator), index);
     newOpSetIndex->parentSetMapping = parentSetMapping;
     newOpSetIndex->setParentMapping = setParentMapping;
-    newOpSetIndex->defined = defined;
     return newOpSetIndex;
 }
 
@@ -264,11 +279,6 @@ template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::findAndReplaceSelf(
     const FindAndReplaceFunction& func) {
     this->setOperand = findAndReplace(setOperand, func);
-}
-
-template <typename SetMemberViewType>
-bool OpSetIndexInternal<SetMemberViewType>::isUndefined() {
-    return !defined;
 }
 
 template <typename SetMemberViewType>

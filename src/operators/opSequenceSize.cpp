@@ -6,7 +6,9 @@
 
 using namespace std;
 
-void OpSequenceSize::reevaluate() { value = operand->view().numberElements(); }
+void OpSequenceSize::reevaluateImpl(SequenceView& operandView) {
+    value = operandView.numberElements();
+}
 void OpSequenceSize::updateVarViolationsImpl(const ViolationContext& vioContext,
                                              ViolationContainer& vioContainer) {
     operand->updateVarViolations(vioContext, vioContainer);

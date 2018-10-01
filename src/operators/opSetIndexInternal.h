@@ -12,7 +12,6 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     std::vector<std::shared_ptr<TriggerBase>> triggers;
     ExprRef<SetView> setOperand;
     UInt index;
-    bool defined = false;
     std::shared_ptr<SetOperandTrigger> setTrigger;
     std::vector<size_t> parentSetMapping;
     std::vector<size_t> setParentMapping;
@@ -24,8 +23,8 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     ~OpSetIndexInternal() { this->stopTriggeringOnChildren(); }
     void addTriggerImpl(const std::shared_ptr<SetMemberTriggerType>& trigger,
                         bool includeMembers, Int memberIndex) final;
-    SetMemberViewType& view() final;
-    const SetMemberViewType& view() const final;
+    OptionalRef<SetMemberViewType> view() final;
+    OptionalRef<const SetMemberViewType> view() const final;
 
     void evaluateImpl() final;
     void startTriggeringImpl() final;
@@ -39,7 +38,6 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    bool isUndefined();
     std::pair<bool, ExprRef<SetMemberViewType>> optimise(
         PathExtension path) final;
     ExprRef<SetMemberViewType>& getMember();
@@ -52,6 +50,22 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     void swapMemberMappings(size_t index1, size_t index2);
     ExprRef<SetMemberViewType>& getMember(size_t index);
     const ExprRef<SetMemberViewType>& getMember(size_t index) const;
+
+    template <typename View = SetMemberViewType,
+              typename std::enable_if<std::is_same<BoolView, View>::value,
+                                      int>::type = 0>
+    void setAppearsDefined(bool) {
+        std::cerr << "Not handling OpSetIndexInternal with set of bools where "
+                     "a set member "
+                     "becomes undefined.\n";
+        todoImpl();
+    }
+    template <typename View = SetMemberViewType,
+              typename std::enable_if<!std::is_same<BoolView, View>::value,
+                                      int>::type = 0>
+    void setAppearsDefined(bool set) {
+        Undefinable<View>::setAppearsDefined(set);
+    }
 };
 
 #endif /* SRC_OPERATORS_OPSETINDEXINTERNAL_H_ */

@@ -1,6 +1,7 @@
 #include "operators/opTupleIndex.h"
 #include <iostream>
 #include <memory>
+#include "types/tuple.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 
@@ -9,48 +10,63 @@ void OpTupleIndex<TupleMemberViewType>::addTriggerImpl(
     const shared_ptr<TupleMemberTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));
-    if (!tupleOperand->isUndefined()) {
-        getMember()->addTrigger(trigger, includeMembers, memberIndex);
+    getMember().get()->addTrigger(trigger, includeMembers, memberIndex);
+}
+
+template <typename TupleMemberViewType>
+OptionalRef<ExprRef<TupleMemberViewType>>
+OpTupleIndex<TupleMemberViewType>::getMember() {
+    debug_code(assert(this->appearsDefined()));
+    auto view = tupleOperand->getViewIfDefined();
+    if (!view) {
+        return EmptyOptional();
+    }
+
+    return mpark::get<ExprRef<TupleMemberViewType>>(
+        (*view).members[indexOperand]);
+}
+
+template <typename TupleMemberViewType>
+OptionalRef<const ExprRef<TupleMemberViewType>>
+OpTupleIndex<TupleMemberViewType>::getMember() const {
+    debug_code(assert(this->appearsDefined()));
+    auto view = tupleOperand->getViewIfDefined();
+    if (!view) {
+        return EmptyOptional();
+    }
+    return mpark::get<ExprRef<TupleMemberViewType>>(
+        (*view).members[indexOperand]);
+}
+
+template <typename TupleMemberViewType>
+OptionalRef<TupleMemberViewType> OpTupleIndex<TupleMemberViewType>::view() {
+    auto member = getMember();
+    if (member) {
+        return (*member)->view();
+    } else {
+        return EmptyOptional();
+    }
+}
+template <typename TupleMemberViewType>
+OptionalRef<const TupleMemberViewType> OpTupleIndex<TupleMemberViewType>::view()
+    const {
+    auto member = getMember();
+    if (member) {
+        return (*member)->view();
+    } else {
+        return EmptyOptional();
     }
 }
 
 template <typename TupleMemberViewType>
-ExprRef<TupleMemberViewType>& OpTupleIndex<TupleMemberViewType>::getMember() {
-    debug_code(assert(!tupleOperand->isUndefined()));
-    auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
-        tupleOperand->view().members[index]);
-    debug_code(assert(!member->isUndefined()));
-    return member;
-}
-
-template <typename TupleMemberViewType>
-const ExprRef<TupleMemberViewType>&
-OpTupleIndex<TupleMemberViewType>::getMember() const {
-    debug_code(assert(!tupleOperand->isUndefined()));
-
-    const auto& member = mpark::get<ExprRef<TupleMemberViewType>>(
-        tupleOperand->view().members[index]);
-    debug_code(assert(!member->isUndefined()));
-    return member;
-}
-
-template <typename TupleMemberViewType>
-TupleMemberViewType& OpTupleIndex<TupleMemberViewType>::view() {
-    return getMember()->view();
-}
-template <typename TupleMemberViewType>
-const TupleMemberViewType& OpTupleIndex<TupleMemberViewType>::view() const {
-    return getMember()->view();
-}
-template <typename TupleMemberViewType>
-void OpTupleIndex<TupleMemberViewType>::reevaluateDefined() {
-    defined = !tupleOperand->isUndefined() && !getMember()->isUndefined();
+void OpTupleIndex<TupleMemberViewType>::reevaluate() {
+    setAppearsDefined(getMember().get()->appearsDefined());
 }
 
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::evaluateImpl() {
     tupleOperand->evaluate();
-    reevaluateDefined();
+    reevaluate();
 }
 
 template <typename TupleMemberViewType>
@@ -59,10 +75,31 @@ OpTupleIndex<TupleMemberViewType>::OpTupleIndex(
     : ExprInterface<TupleMemberViewType>(move(other)),
       triggers(move(other.triggers)),
       tupleOperand(move(other.tupleOperand)),
-      index(move(other.index)),
-      defined(move(other.defined)),
-      tupleTrigger(move(other.tupleTrigger)) {
-    setTriggerParent(this, tupleTrigger);
+      indexOperand(move(other.indexOperand)),
+      tupleOperandTrigger(move(other.tupleOperandTrigger)),
+      tupleMemberTrigger(move(other.tupleMemberTrigger)) {
+    setTriggerParent(this, tupleOperandTrigger, tupleMemberTrigger);
+}
+
+template <typename TupleMemberViewType>
+bool OpTupleIndex<TupleMemberViewType>::eventForwardedAsDefinednessChange() {
+    bool wasDefined = this->appearsDefined();
+    reevaluate();
+    if (wasDefined && !this->appearsDefined()) {
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers,
+                      true);
+        return true;
+    } else if (!wasDefined && this->appearsDefined()) {
+        visitTriggers(
+            [&](auto t) {
+                t->hasBecomeDefined();
+                t->reattachTrigger();
+            },
+            triggers, true);
+        return true;
+    } else {
+        return !this->appearsDefined();
+    }
 }
 
 template <typename TupleMemberViewType>
@@ -70,51 +107,29 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
     : public TupleTrigger {
     OpTupleIndex<TupleMemberViewType>* op;
     TupleOperandTrigger(OpTupleIndex<TupleMemberViewType>* op) : op(op) {}
-
-    bool eventForwardedAsDefinednessChange() {
-        bool wasDefined = op->defined;
-        op->reevaluateDefined();
-        if (wasDefined && !op->defined) {
-            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers, true);
-            return true;
-        } else if (!wasDefined && op->defined) {
-            visitTriggers(
-                [&](auto& t) {
-                    t->hasBecomeDefined();
-                    t->reattachTrigger();
-                },
-                op->triggers, true);
-            return true;
-        } else {
-            return !op->defined;
-        }
+    void memberValueChanged(UInt) {
+        // ignore, already triggering on member
     }
 
-    inline void hasBecomeUndefined() final {
-        if (!op->defined) {
+    void memberHasBecomeUndefined(UInt index) final {
+        debug_code(assert(index == op->indexOperand));
+        ignoreUnused(index);
+        if (!op->appearsDefined()) {
             return;
         }
-        op->defined = false;
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers,
-                      true);
+        op->setAppearsDefined(false);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
     }
 
-    void hasBecomeDefined() final {
-        op->reevaluateDefined();
-        if (!op->defined) {
-            return;
-        }
-        visitTriggers(
-            [&](auto& t) {
-                t->hasBecomeDefined();
-                t->reattachTrigger();
-            },
-            op->triggers, true);
+    void memberHasBecomeDefined(UInt index) final {
+        debug_code(assert(index == op->indexOperand));
+        ignoreUnused(index);
+        op->setAppearsDefined(true);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
     }
 
     void valueChanged() final {
-        if (!eventForwardedAsDefinednessChange()) {
+        if (!op->eventForwardedAsDefinednessChange()) {
             visitTriggers(
                 [&](auto& t) {
                     t->valueChanged();
@@ -124,58 +139,74 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
         }
     }
 
-    inline void memberValueChanged(UInt) final {
-        // since the parent will already be directly triggering on the tuple
-        // member, this trigger need not be forwarded
+    inline void hasBecomeUndefined() {
+        if (!op->appearsDefined()) {
+            return;
+        }
+        op->setAppearsDefined(false);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers,
+                      true);
     }
 
+    void hasBecomeDefined() {
+        op->reevaluate();
+        if (!op->appearsDefined()) {
+            return;
+        }
+        op->reattachTupleMemberTrigger();
+        visitTriggers(
+            [&](auto t) {
+                t->hasBecomeDefined();
+                t->reattachTrigger();
+            },
+            op->triggers, true);
+    }
     void reattachTrigger() final {
-        deleteTrigger(op->tupleTrigger);
-        auto trigger =
-            make_shared<OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger>(
-                op);
-        op->tupleOperand->addTrigger(trigger);
-        op->tupleTrigger = trigger;
-    }
-
-    void memberHasBecomeUndefined(UInt index) final {
-        if (index != op->index) {
-            return;
+        deleteTrigger(op->tupleOperandTrigger);
+        if (op->tupleMemberTrigger) {
+            deleteTrigger(op->tupleMemberTrigger);
         }
-        debug_code(assert(op->defined));
-        op->defined = false;
-    }
-
-    void memberHasBecomeDefined(UInt index) final {
-        if (index != op->index) {
-            return;
-        }
-        debug_code(assert(!op->defined));
-        op->defined = true;
+        auto trigger = make_shared<TupleOperandTrigger>(op);
+        op->tupleOperand->addTrigger(trigger, false);
+        op->reattachTupleMemberTrigger();
+        op->tupleOperandTrigger = trigger;
     }
 };
 
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::startTriggeringImpl() {
-    if (!tupleTrigger) {
-        tupleTrigger =
+    if (!tupleOperandTrigger) {
+        tupleOperandTrigger =
             make_shared<OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger>(
                 this);
-        tupleOperand->addTrigger(tupleTrigger);
+        tupleOperand->addTrigger(tupleOperandTrigger, false);
+        reattachTupleMemberTrigger();
         tupleOperand->startTriggering();
     }
 }
 
 template <typename TupleMemberViewType>
+void OpTupleIndex<TupleMemberViewType>::reattachTupleMemberTrigger() {
+    if (tupleMemberTrigger) {
+        deleteTrigger(tupleMemberTrigger);
+    }
+    tupleMemberTrigger = make_shared<TupleOperandTrigger>(this);
+    tupleOperand->addTrigger(tupleMemberTrigger, true, indexOperand);
+}
+
+template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::stopTriggeringOnChildren() {
-    if (tupleTrigger) {
-        deleteTrigger(tupleTrigger);
-        tupleTrigger = nullptr;
+    if (tupleOperandTrigger) {
+        deleteTrigger(tupleOperandTrigger);
+        deleteTrigger(tupleMemberTrigger);
+        tupleOperandTrigger = nullptr;
+        tupleMemberTrigger = nullptr;
     }
 }
+
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::stopTriggering() {
-    if (tupleTrigger) {
+    if (tupleOperandTrigger) {
         stopTriggeringOnChildren();
         tupleOperand->stopTriggering();
     }
@@ -184,8 +215,9 @@ void OpTupleIndex<TupleMemberViewType>::stopTriggering() {
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::updateVarViolationsImpl(
     const ViolationContext& vioContext, ViolationContainer& vioContainer) {
-    if (defined) {
-        getMember()->updateVarViolations(vioContext, vioContainer);
+    auto tupleMember = getMember();
+    if (tupleMember) {
+        (*tupleMember)->updateVarViolations(vioContext, vioContainer);
     } else {
         tupleOperand->updateVarViolations(vioContext, vioContainer);
     }
@@ -196,18 +228,22 @@ ExprRef<TupleMemberViewType>
 OpTupleIndex<TupleMemberViewType>::deepCopySelfForUnrollImpl(
     const ExprRef<TupleMemberViewType>&, const AnyIterRef& iterator) const {
     auto newOpTupleIndex = make_shared<OpTupleIndex<TupleMemberViewType>>(
-        tupleOperand->deepCopySelfForUnroll(tupleOperand, iterator), index);
-    newOpTupleIndex->defined = defined;
-
+        tupleOperand->deepCopySelfForUnroll(tupleOperand, iterator),
+        indexOperand);
     return newOpTupleIndex;
 }
 
 template <typename TupleMemberViewType>
 std::ostream& OpTupleIndex<TupleMemberViewType>::dumpState(
     std::ostream& os) const {
-    os << "opTupleIndex(tuple=";
+    os << "opTupleIndex(value=";
+    prettyPrint(os, this->getViewIfDefined());
+    os << ",\n";
+
+    os << "tuple=";
     tupleOperand->dumpState(os) << ",\n";
-    os << "index=" << index << ")";
+    os << "index=";
+    os << indexOperand << ")";
     return os;
 }
 
@@ -218,16 +254,13 @@ void OpTupleIndex<TupleMemberViewType>::findAndReplaceSelf(
 }
 
 template <typename TupleMemberViewType>
-bool OpTupleIndex<TupleMemberViewType>::isUndefined() {
-    return !defined;
-}
-
-template <typename TupleMemberViewType>
 pair<bool, ExprRef<TupleMemberViewType>>
 OpTupleIndex<TupleMemberViewType>::optimise(PathExtension path) {
+    bool changeMade = false;
     auto optResult = tupleOperand->optimise(path.extend(tupleOperand));
+    changeMade |= optResult.first;
     tupleOperand = optResult.second;
-    return make_pair(optResult.first,
+    return make_pair(changeMade,
                      mpark::get<ExprRef<TupleMemberViewType>>(path.expr));
 }
 

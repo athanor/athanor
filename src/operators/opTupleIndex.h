@@ -12,18 +12,29 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
         TupleMemberTriggerType;
     std::vector<std::shared_ptr<TriggerBase>> triggers;
     ExprRef<TupleView> tupleOperand;
-    UInt index;
-    bool defined = false;
-    std::shared_ptr<TupleOperandTrigger> tupleTrigger;
-    OpTupleIndex(ExprRef<TupleView> tupleOperand, UInt index)
-        : tupleOperand(std::move(tupleOperand)), index(index) {}
+    UInt indexOperand;
+    std::shared_ptr<TupleOperandTrigger> tupleOperandTrigger;
+    std::shared_ptr<TupleOperandTrigger> tupleMemberTrigger;
+
+    OpTupleIndex(ExprRef<TupleView> tupleOperand, UInt indexOperand)
+        : tupleOperand(std::move(tupleOperand)),
+          indexOperand(std::move(indexOperand)) {
+        if (std::is_same<BoolView, TupleMemberViewType>::value) {
+            std::cerr << "I've temperarily disabled OpTupleIndex for "
+                         "tuples of booleans as "
+                         "I'm not correctly handling relational semantics "
+                         "forthe case where the tuple indexbecomes "
+                         "undefined.\n";
+            abort();
+        }
+    }
     OpTupleIndex(const OpTupleIndex<TupleMemberViewType>&) = delete;
     OpTupleIndex(OpTupleIndex<TupleMemberViewType>&& other);
     ~OpTupleIndex() { this->stopTriggeringOnChildren(); }
     void addTriggerImpl(const std::shared_ptr<TupleMemberTriggerType>& trigger,
                         bool includeMembers, Int memberIndex) final;
-    TupleMemberViewType& view() final;
-    const TupleMemberViewType& view() const final;
+    OptionalRef<TupleMemberViewType> view() final;
+    OptionalRef<const TupleMemberViewType> view() const final;
 
     void evaluateImpl() final;
     void startTriggeringImpl() final;
@@ -37,12 +48,29 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    bool isUndefined();
+
+    OptionalRef<ExprRef<TupleMemberViewType>> getMember();
+    OptionalRef<const ExprRef<TupleMemberViewType>> getMember() const;
+    void reevaluate();
     std::pair<bool, ExprRef<TupleMemberViewType>> optimise(
         PathExtension path) final;
-    ExprRef<TupleMemberViewType>& getMember();
-    const ExprRef<TupleMemberViewType>& getMember() const;
-    void reevaluateDefined();
+
+    void reattachTupleMemberTrigger();
+    bool eventForwardedAsDefinednessChange();
+    template <typename View = TupleMemberViewType,
+              typename std::enable_if<std::is_same<BoolView, View>::value,
+                                      int>::type = 0>
+    void setAppearsDefined(bool) {
+        std::cerr << "Not handling tuple to bools where a tuple member "
+                     "becomes undefined.\n";
+        todoImpl();
+    }
+    template <typename View = TupleMemberViewType,
+              typename std::enable_if<!std::is_same<BoolView, View>::value,
+                                      int>::type = 0>
+    void setAppearsDefined(bool set) {
+        Undefinable<View>::setAppearsDefined(set);
+    }
 };
 
 #endif /* SRC_OPERATORS_OPTUPLEINDEX_H_ */

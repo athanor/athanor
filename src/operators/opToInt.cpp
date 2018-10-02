@@ -6,7 +6,9 @@
 
 using namespace std;
 
-void OpToInt::reevaluate() { value = (operand->view().violation == 0) ? 1 : 0; }
+void OpToInt::reevaluateImpl(BoolView& operandView) {
+    value = (operandView.violation == 0) ? 1 : 0;
+}
 void OpToInt::updateVarViolationsImpl(const ViolationContext& vioContext,
                                       ViolationContainer& vioContainer) {
     const IntViolationContext* intVioContextTest =

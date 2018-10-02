@@ -21,16 +21,29 @@ struct TupleValue;
 struct TupleView : public ExprInterface<TupleView> {
     friend TupleValue;
     std::vector<AnyExprRef> members;
-    std::vector<std::shared_ptr<TupleTrigger>> triggers;
+    std::vector<std::shared_ptr<TupleOuterTrigger>> triggers;
+
+    std::vector<std::shared_ptr<TupleMemberTrigger>> allMemberTriggers;
+    std::vector<std::vector<std::shared_ptr<TupleMemberTrigger>>>
+        singleMemberTriggers;
+
     SimpleCache<HashType> cachedHashTotal;
     u_int32_t numberUndefined = 0;
     TupleView() {}
     TupleView(std::vector<AnyExprRef> members) : members(members) {}
 
     inline void memberChanged(UInt) { cachedHashTotal.invalidate(); }
+    template <typename Func>
+    void visitMemberTriggers(Func&& func, UInt index) {
+        visitTriggers(func, allMemberTriggers);
+        if (index < singleMemberTriggers.size()) {
+            visitTriggers(func, singleMemberTriggers[index]);
+        }
+    }
 
     inline void notifyMemberChanged(UInt index) {
-        visitTriggers([&](auto& t) { t->memberValueChanged(index); }, triggers);
+        visitMemberTriggers([&](auto& t) { t->memberValueChanged(index); },
+                            index);
     }
 
    public:
@@ -48,15 +61,15 @@ struct TupleView : public ExprInterface<TupleView> {
         cachedHashTotal.invalidate();
         debug_code(assert(numberUndefined > 0));
         numberUndefined--;
-        visitTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
-                      triggers);
+        visitMemberTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
+                            index);
     }
 
     inline void notifyMemberUndefined(UInt index) {
         cachedHashTotal.invalidate();
         numberUndefined++;
-        visitTriggers([&](auto& t) { t->memberHasBecomeUndefined(index); },
-                      triggers);
+        visitMemberTriggers(
+            [&](auto& t) { t->memberHasBecomeUndefined(index); }, index);
     }
 
     inline void initFrom(TupleView&) {

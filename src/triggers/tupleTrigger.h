@@ -2,14 +2,18 @@
 #ifndef SRC_TRIGGERS_TUPLETRIGGER_H_
 #define SRC_TRIGGERS_TUPLETRIGGER_H_
 #include "base/base.h"
-struct TupleTrigger : public virtual TriggerBase {
+struct TupleOuterTrigger : public virtual TriggerBase {};
+
+struct TupleMemberTrigger : public virtual TriggerBase {
     virtual void memberValueChanged(UInt index) = 0;
-    virtual void memberHasBecomeUndefined(UInt) = 0;
-    virtual void memberHasBecomeDefined(UInt) = 0;
+
+    virtual void memberHasBecomeDefined(UInt index) = 0;
+    virtual void memberHasBecomeUndefined(UInt index) = 0;
 };
 
-/* don't want to import tuple view here but need access to internal field so a
- * function has been created for that purpose*/
+struct TupleTrigger : public virtual TupleOuterTrigger,
+                      public virtual TupleMemberTrigger {};
+
 size_t numberUndefinedMembers(const TupleView& view);
 
 template <typename Child>
@@ -36,5 +40,4 @@ struct ChangeTriggerAdapter<TupleTrigger, Child>
         }
     }
 };
-
 #endif /* SRC_TRIGGERS_TUPLETRIGGER_H_ */

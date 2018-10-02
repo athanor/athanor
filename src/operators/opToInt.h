@@ -13,7 +13,7 @@ struct OperatorTrates<OpToInt> {
 struct OpToInt : public SimpleUnaryOperator<IntView, BoolView, OpToInt> {
     using SimpleUnaryOperator<IntView, BoolView, OpToInt>::SimpleUnaryOperator;
 
-    void reevaluate();
+    void reevaluateImpl(BoolView& operandView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpToInt& newOp) const;

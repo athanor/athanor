@@ -10,7 +10,7 @@ void OpTupleLit::evaluateImpl() {
         mpark::visit(
             [&](auto& member) {
                 member->evaluate();
-                if (member->isUndefined()) {
+                if (!member->appearsDefined()) {
                     ++numberUndefined;
                 }
             },
@@ -22,7 +22,11 @@ template <typename TriggerType>
 struct ExprTrigger
     : public OpTupleLit::ExprTriggerBase,
       public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>> {
+    typedef typename AssociatedViewType<TriggerType>::type View;
     using ExprTriggerBase::ExprTriggerBase;
+    ExprRef<View>& getTriggeringOperand() {
+        return mpark::get<ExprRef<View>>(this->op->members[this->index]);
+    }
     void adapterValueChanged() {
         this->op->memberChangedAndNotify(this->index);
     }
@@ -135,8 +139,6 @@ void OpTupleLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
             member);
     }
 }
-
-bool OpTupleLit::isUndefined() { return numberUndefined > 0; }
 
 pair<bool, ExprRef<TupleView>> OpTupleLit::optimise(PathExtension path) {
     bool changeMade = false;

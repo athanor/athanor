@@ -7,6 +7,7 @@
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
 #include "utils/OptionalRef.h"
+#include "utils/flagSet.h"
 
 template <typename View>
 struct ExprRef;
@@ -33,14 +34,15 @@ struct ExprInterface;
 template <typename View>
 struct Undefinable {
     inline bool appearsDefined() const {
-        const char& flags =
-            static_cast<const ExprInterface<View>&>(*this).flags;
-        return flags & 3;
+        const auto& child = static_cast<const ExprInterface<View>&>(*this);
+        return child.flags
+            .template get<typename ExprInterface<View>::AppearsDefinedFlag>();
     }
     inline void setAppearsDefined(bool set) {
-        char& flags = static_cast<ExprInterface<View>&>(*this).flags;
-        flags &= ~((char)3);
-        flags |= ((char)set) << 3;
+        auto& child = static_cast<ExprInterface<View>&>(*this);
+        child.flags
+            .template get<typename ExprInterface<View>::AppearsDefinedFlag>() =
+            set;
     }
 };
 template <>
@@ -54,19 +56,19 @@ struct ExprInterface : public Undefinable<View> {
 
    private:
     friend struct Undefinable<View>;
-    char flags = 0;
+    // flags for all ExprRefs
+    struct EvaluatedFlag;
+    struct IsConstantFlag;
+    struct AppearsDefinedFlag;
+    FlagSet<EvaluatedFlag, IsConstantFlag, AppearsDefinedFlag> flags;
 
    public:
     using Undefinable<View>::appearsDefined;
-    inline bool isEvaluated() const { return flags & 1; }
-    inline void setEvaluated(bool set) {
-        flags &= ~((char)1);
-        flags |= set;
-    }
-    inline bool isConstant() const { return flags & 2; }
+    inline bool isEvaluated() const { return flags.template get<EvaluatedFlag>(); }
+    inline void setEvaluated(bool set) { flags.template get<EvaluatedFlag>() = set; }
+    inline bool isConstant() const { return flags.template get<IsConstantFlag>(); }
     inline void setConstant(bool set) {
-        flags &= ~((char)2);
-        flags |= ((char)set) << 1;
+        flags.template get<IsConstantFlag>() = set;
     }
 
     virtual ~ExprInterface() {}

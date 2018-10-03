@@ -22,6 +22,7 @@ class FlagSet {
     struct Index<T, U, Ts...> {
         static const std::size_t value = 1 + Index<T, Ts...>::value;
     };
+
     /*retrieve value given a array index and a bit index into the array element
      */
     template <int arrayIndex, int bitIndex>
@@ -63,6 +64,35 @@ class FlagSet {
         typedef Reference<Index<T, Flags...>::value> Ref;
         return value<Ref::arrayIndex, Ref::bitIndex>();
     }
+
+    /* default constructor, zero initialise bits */
+    FlagSet() {}
+    /*Constructor Initialise from array of booleans*/
+    template <typename T, int N>
+    FlagSet(const T (&initArray)[N]) : bits() {
+        static_assert(std::is_same<bool, T>::value,
+                      "If giving a value to each flag, values must be given as "
+                      "booleans.");
+        static_assert(N == NUMBER_FLAGS,
+                      "Not enough values given, a value for each flag is "
+                      "required.  Alternatively use the default constructor to "
+                      "initialise all flags to false.");
+        init<0>(initArray);
+    }
+
+   private:
+    template <int index,
+              typename std::enable_if<index<NUMBER_FLAGS, int>::type = 0> void
+                  init(const bool (&initArray)[NUMBER_FLAGS]) {
+        if (index < NUMBER_FLAGS) {
+            auto r = Reference<index>(*this);
+            r = initArray[index];
+            init<index + 1>(initArray);
+        }
+    }
+    template <int index,
+              typename std::enable_if<index == NUMBER_FLAGS, int>::type = 0>
+    void init(const bool (&)[NUMBER_FLAGS]) {}
 };
 
 #endif /* SRC_UTILS_FLAGSET_H_ */

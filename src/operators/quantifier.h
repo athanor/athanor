@@ -78,7 +78,7 @@ struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
     template <typename ViewType>
     void stopTriggeringOnExpr(UInt oldIndex);
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    bool isUndefined();
+
     std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension path);
 };
 

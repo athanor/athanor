@@ -23,9 +23,9 @@ struct Iterator : public ExprInterface<View> {
         } else {
             ref = oldVal;
             callback();
-            bool oldValUndefined = oldVal->isUndefined();
+            bool oldValUndefined = !oldVal->appearsDefined();
             ref = newVal;
-            bool newValUndefined = newVal->isUndefined();
+            bool newValUndefined = !newVal->appearsDefined();
             if (oldValUndefined && !newValUndefined) {
                 visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, triggers,
                               true);

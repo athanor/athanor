@@ -4,13 +4,19 @@
 #include <memory>
 #include "base/exprRef.h"
 #include "base/typeDecls.h"
+#include "utils/flagSet.h"
 #include "utils/ignoreUnused.h"
 template <typename T>
 struct ExprRef;
 extern u_int64_t triggerEventCount;
 struct TriggerBase {
-    bool active = true;
-    bool acceptDefinednessTriggers = true;
+    struct TRIGGER_ACTIVE;
+    struct ALLOW_DEFINEDNESS_TRIGGERS;
+    struct ALLOW_ONLY_DEFINEDNESS_TRIGGERS;
+    FlagSet<TRIGGER_ACTIVE, ALLOW_DEFINEDNESS_TRIGGERS,
+            ALLOW_ONLY_DEFINEDNESS_TRIGGERS>
+        flags = {{true, true, false}};
+
     virtual ~TriggerBase() {}
 
     virtual void valueChanged() = 0;
@@ -48,22 +54,29 @@ template <typename Visitor, typename Trigger>
 void visitTriggers(Visitor&& func,
                    std::vector<std::shared_ptr<Trigger>>& triggers,
                    bool isDefinednessTrigger = false) {
+    using ALLOW_DEFINEDNESS_TRIGGERS = TriggerBase::ALLOW_DEFINEDNESS_TRIGGERS;
+    using ALLOW_ONLY_DEFINEDNESS_TRIGGERS =
+        TriggerBase::ALLOW_ONLY_DEFINEDNESS_TRIGGERS;
+    using TRIGGER_ACTIVE = TriggerBase::TRIGGER_ACTIVE;
+
     size_t size = triggers.size();
     size_t triggerNullCount = 0;
     // triggers may be changed, insure that new triggers are ignored
     for (size_t i = 0; i < size && i < triggers.size(); i++) {
         auto& trigger = triggers[i];
-        if (trigger && trigger->active) {
-            if (isDefinednessTrigger && !trigger->acceptDefinednessTriggers) {
+        if (trigger && trigger->flags.template get<TRIGGER_ACTIVE>()) {
+            if ((isDefinednessTrigger &&
+                 !trigger->flags.template get<ALLOW_DEFINEDNESS_TRIGGERS>()) ||
+                (!isDefinednessTrigger &&
+                 trigger->flags
+                     .template get<ALLOW_ONLY_DEFINEDNESS_TRIGGERS>())) {
                 continue;
             }
             ++triggerEventCount;
             func(trigger);
         } else {
             ++triggerNullCount;
-            if (trigger && !trigger->active) {
-                trigger = nullptr;
-            }
+            trigger = nullptr;
         }
     }
     if (((double)triggerNullCount) / triggers.size() > 0.2) {
@@ -74,7 +87,7 @@ void visitTriggers(Visitor&& func,
         while (!delayedTriggerStack.empty()) {
             auto trigger = std::move(delayedTriggerStack.back());
             delayedTriggerStack.pop_back();
-            if (trigger && trigger->active) {
+            if (trigger && trigger->flags.template get<TRIGGER_ACTIVE>()) {
                 trigger->trigger();
             }
         }
@@ -89,7 +102,7 @@ void addDelayedTrigger(const std::shared_ptr<Trigger>& trigger) {
 
 template <typename Trigger>
 void deleteTrigger(const std::shared_ptr<Trigger>& trigger) {
-    trigger->active = false;
+    trigger->flags.template get<TriggerBase::TRIGGER_ACTIVE>() = false;
 }
 
 template <typename Op, typename Trigger>

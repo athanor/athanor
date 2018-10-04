@@ -11,7 +11,8 @@ void OpCatchUndef<ExprViewType>::addTriggerImpl(
     const shared_ptr<ExprTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
     triggers.emplace_back(getTriggerBase(trigger));
-    trigger->acceptDefinednessTriggers = false;
+    trigger->flags.template get<TriggerBase::ALLOW_DEFINEDNESS_TRIGGERS>() =
+        false;
     getMember()->addTrigger(trigger, includeMembers, memberIndex);
 }
 
@@ -57,70 +58,42 @@ OpCatchUndef<ExprViewType>::OpCatchUndef(OpCatchUndef<ExprViewType>&& other)
     setTriggerParent(this, exprTrigger);
 }
 namespace {
-template <typename ExprViewType, typename ExprTriggerType, typename Derived>
-struct ExprTriggerHelper
-    : public OpCatchUndef<ExprViewType>::ExprTriggerBase,
-      public ChangeTriggerAdapter<ExprTriggerType, Derived> {
-    using OpCatchUndef<ExprViewType>::ExprTriggerBase::ExprTriggerBase;
-};
-
-template <typename ExprViewType, typename Derived>
-struct ExprTriggerHelper<ExprViewType, TupleTrigger, Derived>
-    : public OpCatchUndef<ExprViewType>::ExprTriggerBase,
-      public ChangeTriggerAdapter<TupleTrigger, Derived> {
-    using OpCatchUndef<ExprViewType>::ExprTriggerBase::ExprTriggerBase;
-    void memberHasBecomeDefined(UInt) final {
-        auto view = this->op->expr->view();
-        if (view && view.get().numberUndefined == 0) {
-            static_cast<Derived&>(*this).adapterHasBecomeDefined();
-        }
-    }
-    void memberHasBecomeUndefined(UInt) final {
-        auto view = this->op->expr->view();
-        if (!view || view.get().numberUndefined == 1) {
-            static_cast<Derived&>(*this).adapterHasBecomeUndefined();
-        }
-    }
-};
 
 template <typename ExprViewType, typename TriggerType>
 struct ExprTrigger
-    : public ExprTriggerHelper<ExprViewType, TriggerType,
-                               ExprTrigger<ExprViewType, TriggerType>> {
-    typedef typename AssociatedViewType<TriggerType>::type ExprType;
-    using ExprTriggerHelper<
-        ExprViewType, TriggerType,
-        ExprTrigger<ExprViewType, TriggerType>>::ExprTriggerHelper;
-
+    : public OpCatchUndef<ExprViewType>::ExprTriggerBase,
+      public ChangeTriggerAdapter<TriggerType,
+                                  ExprTrigger<ExprViewType, TriggerType>> {
+    using OpCatchUndef<ExprViewType>::ExprTriggerBase::ExprTriggerBase;
+    using OpCatchUndef<ExprViewType>::ExprTriggerBase::op;
+    ExprRef<ExprViewType>& getTriggeringOperand() { return op->expr; }
     void adapterValueChanged() {}
-
     void adapterHasBecomeDefined() {
-        this->op->exprDefined = true;
+        op->exprDefined = true;
         visitTriggers(
             [&](auto& t) {
                 t->valueChanged();
                 t->reattachTrigger();
             },
-            this->op->triggers);
+            op->triggers);
     }
 
     void adapterHasBecomeUndefined() {
-        this->op->exprDefined = false;
+        op->exprDefined = false;
         visitTriggers(
             [&](auto& t) {
                 t->valueChanged();
                 t->reattachTrigger();
             },
-            this->op->triggers);
+            op->triggers);
     }
     void reattachTrigger() final {
         deleteTrigger(
             static_pointer_cast<ExprTrigger<ExprViewType, TriggerType>>(
-                this->op->exprTrigger));
-        auto trigger =
-            make_shared<ExprTrigger<ExprViewType, TriggerType>>(this->op);
-        this->op->expr->addTrigger(trigger);
-        this->op->exprTrigger = trigger;
+                op->exprTrigger));
+        auto trigger = make_shared<ExprTrigger<ExprViewType, TriggerType>>(op);
+        op->expr->addTrigger(trigger);
+        op->exprTrigger = trigger;
     }
 };
 }  // namespace

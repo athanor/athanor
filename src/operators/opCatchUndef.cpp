@@ -64,8 +64,13 @@ struct ExprTrigger
     : public OpCatchUndef<ExprViewType>::ExprTriggerBase,
       public ChangeTriggerAdapter<TriggerType,
                                   ExprTrigger<ExprViewType, TriggerType>> {
-    using OpCatchUndef<ExprViewType>::ExprTriggerBase::ExprTriggerBase;
     using OpCatchUndef<ExprViewType>::ExprTriggerBase::op;
+    ExprTrigger(OpCatchUndef<ExprViewType>* op)
+        : OpCatchUndef<ExprViewType>::ExprTriggerBase(op) {
+        this->flags
+            .template get<TriggerBase::ALLOW_ONLY_DEFINEDNESS_TRIGGERS>() =
+            true;
+    }
     ExprRef<ExprViewType>& getTriggeringOperand() { return op->expr; }
     void adapterValueChanged() {}
     void adapterHasBecomeDefined() {

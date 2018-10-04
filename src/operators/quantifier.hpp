@@ -128,9 +128,14 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnrollImpl(
         container->deepCopySelfForUnroll(container, iterator), quantId);
 
     mpark::visit(
-        [&](const auto& expr) {
-            newQuantifier->setExpression(
+        [&](const auto& expr, auto& vToUnroll) {
+            newQuantifier->template setInnerTypeAndExpression<
+                BaseType<decltype(vToUnroll)>>(
                 expr->deepCopySelfForUnroll(expr, iterator));
+        },
+        this->expr, this->valuesToUnroll);
+    mpark::visit(
+        [&](const auto& expr) {
             auto& members = this->template getMembers<viewType(expr)>();
             for (size_t i = 0; i < members.size(); ++i) {
                 auto& member = members[i];

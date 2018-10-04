@@ -39,8 +39,10 @@ struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
     Quantifier(ExprRef<ContainerType> container, const int id = nextQuantId())
         : quantId(id), container(std::move(container)) {}
     Quantifier(Quantifier<ContainerType>&& other);
-    inline void setExpression(AnyExprRef exprIn) {
+    template <typename T>
+    inline void setInnerTypeAndExpression(AnyExprRef exprIn) {
         expr = std::move(exprIn);
+        valuesToUnroll.emplace<ExprRefVec<T>>();
         mpark::visit(
             [&](auto& expr) {
                 members.emplace<ExprRefVec<viewType(expr)>>();

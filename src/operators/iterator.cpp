@@ -1,6 +1,7 @@
 #include "operators/iterator.h"
 #include <iostream>
 #include <memory>
+#include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"
 
 using namespace std;
@@ -10,8 +11,9 @@ void Iterator<View>::addTriggerImpl(
     const shared_ptr<typename Iterator<View>::TriggerType>& trigger,
     bool includeMembers, Int memberIndex) {
     debug_code(assert(ref));
-    auto otherTrigger = trigger;
-    triggers.emplace_back(getTriggerBase(otherTrigger));
+    triggers.emplace_back(getTriggerBase(trigger));
+    trigger->flags.template get<TriggerBase::ALLOW_DEFINEDNESS_TRIGGERS>() =
+        false;
     ref->addTrigger(trigger, includeMembers, memberIndex);
 }
 
@@ -27,9 +29,37 @@ OptionalRef<const View> Iterator<View>::view() const {
 }
 
 template <typename View>
+struct Iterator<View>::RefTrigger
+    : public ChangeTriggerAdapter<typename Iterator<View>::TriggerType,
+                                  typename Iterator<View>::RefTrigger> {
+    Iterator<View>* op;
+    RefTrigger(Iterator<View>* op) : op(op) {
+        this->flags
+            .template get<TriggerBase::ALLOW_ONLY_DEFINEDNESS_TRIGGERS>() =
+            true;
+    }
+    void adapterValueChanged() {}
+    void adapterHasBecomeUndefined() {
+        this->op->setAppearsDefined(false);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
+    }
+    void adapterHasBecomeDefined() {
+        this->op->setAppearsDefined(true);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
+    }
+    ExprRef<View>& getTriggeringOperand() { return op->ref; }
+    void reattachTrigger() {
+        deleteTrigger(op->refTrigger);
+        auto trigger = make_shared<typename Iterator<View>::RefTrigger>(op);
+        op->ref->addTrigger(trigger);
+        op->refTrigger = trigger;
+    }
+};
+template <typename View>
 void Iterator<View>::evaluateImpl() {
     debug_code(assert(ref));
     ref->evaluate();
+    this->setAppearsDefined(ref->appearsDefined());
 }
 
 template <typename View>
@@ -42,13 +72,28 @@ Iterator<View>::Iterator(Iterator<View>&& other)
 template <typename View>
 void Iterator<View>::startTriggeringImpl() {
     debug_code(assert(ref));
-    ref->startTriggering();
+    if (!refTrigger) {
+        refTrigger = make_shared<RefTrigger>(this);
+        ref->addTrigger(refTrigger);
+        ref->startTriggering();
+    }
+}
+
+template <typename View>
+void Iterator<View>::stopTriggeringOnChildren() {
+    if (refTrigger) {
+        deleteTrigger(refTrigger);
+        refTrigger = nullptr;
+    }
 }
 
 template <typename View>
 void Iterator<View>::stopTriggering() {
     debug_code(assert(ref));
-    ref->stopTriggering();
+    if (refTrigger) {
+        stopTriggeringOnChildren();
+        ref->stopTriggering();
+    }
 }
 template <typename View>
 void Iterator<View>::updateVarViolationsImpl(const ViolationContext& vioContext,

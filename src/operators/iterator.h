@@ -7,10 +7,11 @@
 template <typename View>
 struct Iterator : public ExprInterface<View> {
     typedef typename AssociatedTriggerType<View>::type TriggerType;
+    struct RefTrigger;
     std::vector<std::shared_ptr<TriggerBase>> triggers;
     u_int64_t id;
     ExprRef<View> ref;
-
+    std::shared_ptr<RefTrigger> refTrigger;
     Iterator(u_int64_t id, ExprRef<View> ref) : id(id), ref(std::move(ref)) {}
     template <typename Func>
     inline void changeValue(bool triggering, const ExprRef<View>& oldVal,
@@ -55,7 +56,7 @@ struct Iterator : public ExprInterface<View> {
     void evaluateImpl() final;
     void startTriggeringImpl() final;
     void stopTriggering() final;
-    void stopTriggeringOnChildren() {}
+    void stopTriggeringOnChildren();
 
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer&) final;
@@ -65,6 +66,16 @@ struct Iterator : public ExprInterface<View> {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 
     std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
+    template <typename IterView = View,
+              typename std::enable_if<std::is_same<BoolView, IterView>::value,
+                                      int>::type = 0>
+    void setAppearsDefined(bool) {}
+    template <typename IterView = View,
+              typename std::enable_if<!std::is_same<BoolView, IterView>::value,
+                                      int>::type = 0>
+    void setAppearsDefined(bool set) {
+        Undefinable<IterView>::setAppearsDefined(set);
+    }
 };
 
 template <typename T>

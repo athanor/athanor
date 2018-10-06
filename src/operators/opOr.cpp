@@ -18,7 +18,7 @@ void OpOr::reevaluateImpl(SequenceView& operandView) {
         setDefined(false);
         return;
     }
-    violation = operandView.getMembers<BoolView>()[0]->view().get().violation;
+    violation = operandView.getMembers<BoolView>()[0]->view()->violation;
     minViolationIndices.insert(0);
     violation = findNewMinViolation(*this, violation);
 }
@@ -33,7 +33,7 @@ inline UInt findNewMinViolation(OpOr& op, UInt minViolation) {
     auto& members = (*operandView).getMembers<BoolView>();
     for (size_t i = 0; i < members.size(); ++i) {
         auto& operandChild = members[i];
-        UInt violation = operandChild->view().get().violation;
+        UInt violation = operandChild->view()->violation;
         if (violation < minViolation) {
             minViolation = violation;
             op.minViolationIndices.clear();
@@ -55,11 +55,11 @@ inline bool handleOperandValueChange(OpOr& op, UInt index) {
     }
     const ExprRef<BoolView> expr = (*operandView).getMembers<BoolView>()[index];
     bool fullReevaluate = false;
-    if (expr->view().get().violation < op.violation) {
-        op.violation = expr->view().get().violation;
+    if (expr->view()->violation < op.violation) {
+        op.violation = expr->view()->violation;
         op.minViolationIndices.clear();
         op.minViolationIndices.insert(index);
-    } else if (expr->view().get().violation == op.violation) {
+    } else if (expr->view()->violation == op.violation) {
         op.minViolationIndices.insert(index);
     } else {
         // otherwise violation is greater, needs to be removed
@@ -79,15 +79,15 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
     OperandsSequenceTrigger(OpOr* op) : op(op) {}
     void valueAdded(UInt index, const AnyExprRef& exprIn) final {
         auto& expr = mpark::get<ExprRef<BoolView>>(exprIn);
-        if (expr->view().get().violation > op->violation) {
-            shiftIndicesUp(index, op->operand->view().get().numberElements(),
+        if (expr->view()->violation > op->violation) {
+            shiftIndicesUp(index, op->operand->view()->numberElements(),
                            op->minViolationIndices);
             return;
-        } else if (expr->view().get().violation < op->violation) {
+        } else if (expr->view()->violation < op->violation) {
             op->minViolationIndices.clear();
             op->minViolationIndices.insert(index);
             op->changeValue([&]() {
-                op->violation = expr->view().get().violation;
+                op->violation = expr->view()->violation;
                 return true;
             });
             return;
@@ -95,7 +95,7 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
             // violation is equal to min violation
             // need to add this index to set of min violation indices.
             // must shift other indices up
-            shiftIndicesUp(index, op->operand->view().get().numberElements(),
+            shiftIndicesUp(index, op->operand->view()->numberElements(),
                            op->minViolationIndices);
             op->minViolationIndices.insert(index);
         }
@@ -106,7 +106,7 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
             op->minViolationIndices.erase(index);
         }
         if (op->minViolationIndices.size() > 0) {
-            shiftIndicesDown(index, op->operand->view().get().numberElements(),
+            shiftIndicesDown(index, op->operand->view()->numberElements(),
                              op->minViolationIndices);
         } else {
             op->changeValue([&]() {

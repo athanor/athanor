@@ -47,7 +47,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
         auto view = expr->getViewIfDefined();
         if (!view) {
             op->cachedValues.insert(index, 1);
-            if (op->operand->view().get().numberUndefined == 1) {
+            if (op->operand->view()->numberUndefined == 1) {
                 op->setDefined(false);
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
                               op->triggers, true);
@@ -71,7 +71,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
         Int operandValue = op->cachedValues.erase(index);
 
         if (!expr->appearsDefined()) {
-            if (op->operand->view().get().numberUndefined == 0) {
+            if (op->operand->view()->numberUndefined == 0) {
                 op->setDefinedAndTrigger();
             }
             return;

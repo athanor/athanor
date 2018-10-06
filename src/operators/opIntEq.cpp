@@ -10,7 +10,7 @@ void OpIntEq::updateVarViolationsImpl(const ViolationContext&,
     if (violation == 0) {
         return;
     } else if (allOperandsAreDefined()) {
-        Int diff = left->view().get().value - right->view().get().value;
+        Int diff = left->view()->value - right->view()->value;
         left->updateVarViolations(
             IntViolationContext(
                 violation,

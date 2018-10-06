@@ -126,7 +126,7 @@ void OpSetIndexInternal<SetMemberViewType>::handleSetMemberValueChange(
     int increment;
     if (index == 0) {
         increment = 1;
-    } else if (index == setOperand->view().get().numberElements() - 1) {
+    } else if (index == setOperand->view()->numberElements() - 1) {
         increment = -1;
     } else {
         increment = (smallerValue(getMember(index - 1)->view(),
@@ -135,7 +135,7 @@ void OpSetIndexInternal<SetMemberViewType>::handleSetMemberValueChange(
                         : -1;
     }
     size_t limit =
-        (increment == 1) ? setOperand->view().get().numberElements() : 0;
+        (increment == 1) ? setOperand->view()->numberElements() : 0;
     bool shouldBeSmaller = (increment == 1) ? false : true;
     for (size_t i = index;
          i != limit &&

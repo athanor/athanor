@@ -56,7 +56,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
     }
     void valueAdded(UInt index, const AnyExprRef& exprIn) final {
         shiftIndices(index, true);
-        shiftIndicesUp(index, op->operand->view().get().numberElements(),
+        shiftIndicesUp(index, op->operand->view()->numberElements(),
                        op->violatingOperands);
         auto boolHashPair = getHashIfDefined(exprIn);
         if (!boolHashPair.first) {
@@ -82,13 +82,13 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
                     return true;
                 });
             }
-        } else if (op->operand->view().get().numberUndefined == 0) {
+        } else if (op->operand->view()->numberUndefined == 0) {
             op->reevaluateDefinedAndTrigger();
             return;
         }
 
         shiftIndices(index, false);
-        shiftIndicesDown(index, op->operand->view().get().numberElements(),
+        shiftIndicesDown(index, op->operand->view()->numberElements(),
                          op->violatingOperands);
         debug_code(op->assertValidState());
     }
@@ -143,7 +143,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
                     }
                 }
             },
-            op->operand->view().get().members);
+            op->operand->view()->members);
         if (foundUndefined) {
             return;
         }
@@ -171,12 +171,12 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
     void hasBecomeUndefined() final { op->setUndefinedAndTrigger(); }
     void hasBecomeDefined() final { op->reevaluateDefinedAndTrigger(); }
     void memberHasBecomeUndefined(UInt) final {
-        if (op->operand->view().get().numberUndefined == 1) {
+        if (op->operand->view()->numberUndefined == 1) {
             op->setUndefinedAndTrigger();
         }
     }
     void memberHasBecomeDefined(UInt) final {
-        if (op->operand->view().get().numberUndefined == 0) {
+        if (op->operand->view()->numberUndefined == 0) {
             op->reevaluate();
             op->reevaluateDefinedAndTrigger();
         }
@@ -220,7 +220,7 @@ void OpAllDiff::updateVarViolationsImpl(const ViolationContext&,
                     hashIndicesMap[indicesHashMap[index]].size(), vioContainer);
             }
         },
-        operand->view().get().members);
+        operand->view()->members);
 }
 
 void OpAllDiff::copy(OpAllDiff& newOp) const {

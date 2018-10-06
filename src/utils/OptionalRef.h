@@ -33,11 +33,19 @@ class OptionalRef {
         debug_code(assert(hasValue()));
         return *ptr;
     }
+    inline T* operator->() {
+        debug_code(assert(hasValue()));
+        return ptr;
+    }
+
     inline T& get() const {
         debug_code(assert(hasValue()));
         return *ptr;
     }
-
+    inline T* operator->() const {
+        debug_code(assert(hasValue()));
+        return ptr;
+    }
     inline T& checkedGet(const std::string& errorMessage) {
         if (!hasValue()) {
             std::cerr << errorMessage << std::endl;

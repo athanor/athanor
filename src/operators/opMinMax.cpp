@@ -83,7 +83,7 @@ inline void updateMinValues(OpMinMax<minMode>& op, bool trigger) {
 template <bool minMode>
 inline bool handleOperandValueChange(OpMinMax<minMode>& op, Int index) {
     const ExprRef<IntView> expr =
-        op.operand->view().get().template getMembers<IntView>()[index];
+        op.operand->view()->template getMembers<IntView>()[index];
     auto exprView = expr->view();
     if (!exprView) {
         op.handleMemberUndefined(index);
@@ -120,7 +120,7 @@ void OpMinMax<minMode>::handleMemberUndefined(UInt index) {
 template <bool minMode>
 void OpMinMax<minMode>::handleMemberDefined(UInt index) {
     auto& expr =
-        this->operand->view().get().template getMembers<IntView>()[index];
+        this->operand->view()->template getMembers<IntView>()[index];
     auto exprView = expr->getViewIfDefined();
     if (!exprView) {
         return;
@@ -171,13 +171,13 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
         } else if (view && (*view).value == op->value) {
             // need to add this index to set of min value indices.
             // must shift other indices up
-            shiftIndicesUp(index, op->operand->view().get().numberElements(),
+            shiftIndicesUp(index, op->operand->view()->numberElements(),
                            op->minValueIndices);
             op->minValueIndices.insert(index);
             // if is worse
         } else if (!op->minValueIndices.empty()) {
             // it is ignored, still need to shift indices
-            shiftIndicesUp(index, op->operand->view().get().numberElements(),
+            shiftIndicesUp(index, op->operand->view()->numberElements(),
                            op->minValueIndices);
             return;
         }
@@ -188,7 +188,7 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
             op->minValueIndices.erase(index);
         }
         if (!op->minValueIndices.empty()) {
-            shiftIndicesDown(index, op->operand->view().get().numberElements(),
+            shiftIndicesDown(index, op->operand->view()->numberElements(),
                              op->minValueIndices);
         } else {
             updateMinValues(*op, true);

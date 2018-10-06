@@ -17,7 +17,7 @@ void OpDiv::updateVarViolationsImpl(const ViolationContext& vioContext,
                                     ViolationContainer& vioContainer) {
     left->updateVarViolations(vioContext, vioContainer);
     auto rightView = right->getViewIfDefined();
-    if (rightView && rightView.get().value == 0) {
+    if (rightView && rightView->value == 0) {
         right->updateVarViolations(LARGE_VIOLATION, vioContainer);
     }
     right->updateVarViolations(vioContext, vioContainer);

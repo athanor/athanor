@@ -34,14 +34,14 @@ struct ContainerTrigger<FunctionView>;
 
 template <typename ContainerType>
 Quantifier<ContainerType>::Quantifier(Quantifier<ContainerType>&& other)
-    : SequenceView(move(other)),
+    : SequenceView(std::move(other)),
       quantId(other.quantId),
-      container(move(other.container)),
-      expr(move(other.expr)),
-      unrolledIterVals(move(other.unrolledIterVals)),
-      containerTrigger(move(other.containerTrigger)),
-      containerDelayedTrigger(move(other.containerDelayedTrigger)),
-      exprTriggers(move(other.exprTriggers)) {
+      container(std::move(other.container)),
+      expr(std::move(other.expr)),
+      unrolledIterVals(std::move(other.unrolledIterVals)),
+      containerTrigger(std::move(other.containerTrigger)),
+      containerDelayedTrigger(std::move(other.containerDelayedTrigger)),
+      exprTriggers(std::move(other.exprTriggers)) {
     setTriggerParent(this, containerTrigger, containerDelayedTrigger,
                      exprTriggers);
 }
@@ -129,9 +129,9 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnrollImpl(
 
     mpark::visit(
         [&](const auto& expr, auto& vToUnroll) {
-            newQuantifier->template setInnerTypeAndExpression<
-                BaseType<decltype(vToUnroll)>>(
-                expr->deepCopySelfForUnroll(expr, iterator));
+            newQuantifier
+                ->template setInnerTypeAndExpression<viewType(vToUnroll)>(
+                    expr->deepCopySelfForUnroll(expr, iterator));
         },
         this->expr, this->valuesToUnroll);
     mpark::visit(

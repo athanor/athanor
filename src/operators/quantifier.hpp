@@ -58,7 +58,7 @@ void Quantifier<ContainerType>::unroll(UInt index,
     mpark::visit(
         [&](auto& members) {
             debug_log("unrolling " << newView << " at index " << index);
-            auto iterRef = this->newIterRef<ViewType>();
+            auto iterRef = this->newIterRef<ViewType, false>();
             // choose which expr to copy from
             // use previously unrolled expr if available as  can be most
             // efficiently updated to new unrolled value  otherwise use expr
@@ -128,14 +128,16 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnrollImpl(
         container->deepCopySelfForUnroll(container, iterator), quantId);
 
     mpark::visit(
-        [&](const auto& expr, auto& vToUnroll) {
-            newQuantifier
-                ->template setInnerTypeAndExpression<viewType(vToUnroll)>(
-                    expr->deepCopySelfForUnroll(expr, iterator));
+        [&](const auto& vToUnroll) {
+            newQuantifier->valuesToUnroll
+                .template emplace<ExprRefVec<viewType(vToUnroll)>>();
         },
-        this->expr, this->valuesToUnroll);
+        this->valuesToUnroll);
+
     mpark::visit(
         [&](const auto& expr) {
+            newQuantifier->setExpression(
+                expr->deepCopySelfForUnroll(expr, iterator));
             auto& members = this->template getMembers<viewType(expr)>();
             for (size_t i = 0; i < members.size(); ++i) {
                 auto& member = members[i];

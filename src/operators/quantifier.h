@@ -39,15 +39,10 @@ struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
     Quantifier(ExprRef<ContainerType> container, const int id = nextQuantId())
         : quantId(id), container(std::move(container)) {}
     Quantifier(Quantifier<ContainerType>&& other);
-    template <typename T>
-    inline void setInnerTypeAndExpression(AnyExprRef exprIn) {
+    inline void setExpression(AnyExprRef exprIn) {
         expr = std::move(exprIn);
-        valuesToUnroll.emplace<ExprRefVec<T>>();
         mpark::visit(
-            [&](auto& expr) {
-                members.emplace<ExprRefVec<viewType(expr)>>();
-
-            },
+            [&](auto& expr) { members.emplace<ExprRefVec<viewType(expr)>>(); },
             expr);
     }
 
@@ -65,8 +60,11 @@ struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
         const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
 
-    template <typename T>
+    template <typename T, bool resetValuesToUnroll = true>
     inline IterRef<T> newIterRef() {
+        if (resetValuesToUnroll) {
+            valuesToUnroll.emplace<ExprRefVec<T>>();
+        }
         return std::make_shared<Iterator<T>>(quantId, nullptr);
     }
 

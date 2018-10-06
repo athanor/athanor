@@ -81,7 +81,7 @@ template <>
 struct InitialUnroller<MSetView> {
     template <typename Quant>
     static void initialUnroll(Quant& quantifier) {
-        auto containerView = quantifier.container->view();
+        auto containerView = quantifier.container->getViewIfDefined();
         if (!containerView) {
             quantifier.setAppearsDefined(false);
             return;

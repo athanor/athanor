@@ -80,12 +80,7 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
 template <>
 struct InitialUnroller<MSetView> {
     template <typename Quant>
-    static void initialUnroll(Quant& quantifier) {
-        auto containerView = quantifier.container->getViewIfDefined();
-        if (!containerView) {
-            quantifier.setAppearsDefined(false);
-            return;
-        }
+    static void initialUnroll(Quant& quantifier, MSetView& containerView) {
         mpark::visit(
             [&](auto& membersImpl) {
 
@@ -93,7 +88,7 @@ struct InitialUnroller<MSetView> {
                     quantifier.unroll(quantifier.numberElements(), member);
                 }
             },
-            (*containerView).members);
+            containerView.members);
     }
 };
 

@@ -87,7 +87,11 @@ void Quantifier<ContainerType>::unroll(UInt index,
                 newMember->startTriggering();
             });
             unrolledIterVals.insert(unrolledIterVals.begin() + index, iterRef);
-            this->addMemberAndNotify(index, newMember);
+            if (containerDefined) {
+                this->addMemberAndNotify(index, newMember);
+            } else {
+                this->addMember(index, newMember);
+            }
             this->startTriggeringOnExpr(index, newMember);
         },
         members);
@@ -112,7 +116,11 @@ void Quantifier<ContainerType>::roll(UInt index) {
                                 << unrolledIterVals[index]);
     mpark::visit(
         [&](auto& members) {
-            this->template removeMemberAndNotify<viewType(members)>(index);
+            if (containerDefined) {
+                this->template removeMemberAndNotify<viewType(members)>(index);
+            } else {
+                this->template removeMember<viewType(members)>(index);
+            }
             if (this->triggering()) {
                 this->stopTriggeringOnExpr<viewType(members)>(index);
             }
@@ -291,7 +299,13 @@ void Quantifier<ContainerType>::evaluateImpl() {
     debug_code(assert(unrolledIterVals.empty()));
     debug_code(assert(this->numberElements() == 0));
     container->evaluate();
-    InitialUnroller<ContainerType>::initialUnroll(*this);
+    auto view = container->getViewIfDefined();
+    if (!view) {
+        containerDefined = false;
+        this->setAppearsDefined(false);
+    } else {
+        InitialUnroller<ContainerType>::initialUnroll(*this, *view);
+    }
 }
 template <typename ContainerType>
 std::ostream& Quantifier<ContainerType>::dumpState(std::ostream& os) const {

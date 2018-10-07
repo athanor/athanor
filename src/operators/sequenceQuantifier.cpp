@@ -113,8 +113,7 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
         debug_log("Correcting tuple index " << index);
         auto& tuple =
             mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
-        auto& intView =
-            mpark::get<ExprRef<IntView>>(tuple->view()->members[0]);
+        auto& intView = mpark::get<ExprRef<IntView>>(tuple->view()->members[0]);
         auto& intVal = static_cast<IntValue&>(*intView);
         intVal.changeValue([&]() {
             intVal.value = index + 1;
@@ -140,11 +139,7 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
 template <>
 struct InitialUnroller<SequenceView> {
     template <typename Quant>
-    static void initialUnroll(Quant& quantifier) {
-        auto containerView = quantifier.container->getViewIfDefined();
-        if (!containerView) {
-            quantifier.setAppearsDefined(false);
-        }
+    static void initialUnroll(Quant& quantifier, SequenceView& containerView) {
         mpark::visit(
             [&](auto& membersImpl) {
                 for (size_t i = 0; i < membersImpl.size(); i++) {
@@ -155,7 +150,7 @@ struct InitialUnroller<SequenceView> {
                     quantifier.unroll(i, unrolledExpr);
                 }
             },
-            (*containerView).members);
+            containerView.members);
     }
 };
 

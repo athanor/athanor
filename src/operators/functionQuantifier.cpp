@@ -15,32 +15,26 @@ using namespace std;
 template <>
 struct InitialUnroller<FunctionView> {
     template <typename Quant>
-    static void initialUnroll(Quant& quantifier) {
-        auto containerView = quantifier.container->getViewIfDefined();
-        if (!containerView) {
-            quantifier.setAppearsDefined(false);
-            return;
-        }
+    static void initialUnroll(Quant& quantifier, FunctionView& containerView) {
         mpark::visit(
             [&](auto& membersImpl) {
                 for (size_t i = 0; i < membersImpl.size(); i++) {
-                    if ((*containerView).dimensions.size() == 1) {
+                    if (containerView.dimensions.size() == 1) {
                         auto tupleFirstMember =
-                            (*containerView).template indexToDomain<IntView>(i);
+                            containerView.template indexToDomain<IntView>(i);
                         auto unrolledExpr = OpMaker<OpTupleLit>::make(
                             {tupleFirstMember, membersImpl[i]});
                         quantifier.unroll(i, unrolledExpr);
                     } else {
                         auto tupleFirstMember =
-                            (*containerView)
-                                .template indexToDomain<TupleView>(i);
+                            containerView.template indexToDomain<TupleView>(i);
                         auto unrolledExpr = OpMaker<OpTupleLit>::make(
                             {tupleFirstMember, membersImpl[i]});
                         quantifier.unroll(i, unrolledExpr);
                     }
                 }
             },
-            (*containerView).range);
+            containerView.range);
     }
 };
 
@@ -58,7 +52,10 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
         while (op->numberElements() != 0) {
             op->roll(op->numberElements() - 1);
         }
-        InitialUnroller<FunctionView>::initialUnroll(*op);
+        auto view = op->container->getViewIfDefined();
+        if (!view) {
+        }
+        InitialUnroller<FunctionView>::initialUnroll(*op, *view);
     }
 
     void imageSwap(UInt index1, UInt index2) final {
@@ -74,13 +71,11 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
         if (op->container->view()->dimensions.size() == 1) {
             auto& preImage =
                 mpark::get<ExprRef<IntView>>(tuple->view()->members[0]);
-            op->container->view()->indexToDomain(index,
-                                                      (*preImage->view()));
+            op->container->view()->indexToDomain(index, (*preImage->view()));
         } else {
             auto& preImage =
                 mpark::get<ExprRef<TupleView>>(tuple->view()->members[0]);
-            op->container->view()->indexToDomain(index,
-                                                      (*preImage->view()));
+            op->container->view()->indexToDomain(index, (*preImage->view()));
         }
     }
     void hasBecomeUndefined() {

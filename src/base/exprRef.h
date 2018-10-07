@@ -64,9 +64,15 @@ struct ExprInterface : public Undefinable<View> {
 
    public:
     using Undefinable<View>::appearsDefined;
-    inline bool isEvaluated() const { return flags.template get<EvaluatedFlag>(); }
-    inline void setEvaluated(bool set) { flags.template get<EvaluatedFlag>() = set; }
-    inline bool isConstant() const { return flags.template get<IsConstantFlag>(); }
+    inline bool isEvaluated() const {
+        return flags.template get<EvaluatedFlag>();
+    }
+    inline void setEvaluated(bool set) {
+        flags.template get<EvaluatedFlag>() = set;
+    }
+    inline bool isConstant() const {
+        return flags.template get<IsConstantFlag>();
+    }
     inline void setConstant(bool set) {
         flags.template get<IsConstantFlag>() = set;
     }
@@ -169,6 +175,11 @@ inline std::ostream& operator<<(std::ostream& os, const ExprRef<T>& ref) {
 }
 
 HashType getValueHash(const AnyExprRef& ref);
+
+inline bool appearsDefined(const AnyExprRef& expr) {
+    return mpark::visit([&](auto& expr) { return expr->appearsDefined(); },
+                        expr);
+}
 std::ostream& prettyPrint(std::ostream& os, const AnyExprRef& expr);
 
 template <typename View>

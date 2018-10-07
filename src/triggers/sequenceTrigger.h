@@ -25,38 +25,57 @@ struct SequenceTrigger : public virtual SequenceOuterTrigger,
 template <typename Child>
 struct ChangeTriggerAdapter<SequenceTrigger, Child>
     : public ChangeTriggerAdapterBase<SequenceTrigger, Child> {
+   private:
+    bool wasDefined;
+    inline bool eventHandledAsDefinednessChange() {
+        auto view = getOp()->view();
+        bool defined = view && view->appearsDefined() &&
+                       numberUndefinedMembers(*view) == 0;
+        if (wasDefined && !defined) {
+            this->forwardHasBecomeUndefined();
+            wasDefined = defined;
+            return true;
+        } else if (!wasDefined && defined) {
+            this->forwardHasBecomeDefined();
+            wasDefined = defined;
+            return true;
+        } else {
+            wasDefined = defined;
+            return !defined;
+        }
+    }
+
+    inline auto& getOp() {
+        return static_cast<Child*>(this)->getTriggeringOperand();
+    }
+
+   public:
     inline void valueRemoved(UInt, const AnyExprRef&) {
-        this->forwardValueChanged();
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
     }
     inline void valueAdded(UInt, const AnyExprRef&) final {
-        this->forwardValueChanged();
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
     }
 
     inline void subsequenceChanged(UInt, UInt) final {
-        this->forwardValueChanged();
-        ;
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
     }
     inline void positionsSwapped(UInt, UInt) final {
-        this->forwardValueChanged();
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
     }
     inline void memberHasBecomeDefined(UInt) {
-        ExprRef<SequenceView> sequence =
-            static_cast<Child*>(this)->getTriggeringOperand();
-        auto view = sequence->view();
-        if (!view) {
-            return;
-        }
-        if (numberUndefinedMembers(view.get()) == 0) {
-            this->forwardHasBecomeDefined();
-        }
+        eventHandledAsDefinednessChange();
     }
     inline void memberHasBecomeUndefined(UInt) {
-        ExprRef<SequenceView> sequence =
-            static_cast<Child*>(this)->getTriggeringOperand();
-        auto view = sequence->view();
-        if (view && numberUndefinedMembers(view.get()) == 1) {
-            this->forwardHasBecomeUndefined();
-        }
+        eventHandledAsDefinednessChange();
     }
 };
 

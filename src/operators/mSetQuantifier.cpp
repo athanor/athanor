@@ -64,16 +64,21 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
         op->container->addTrigger(trigger);
         op->containerTrigger = trigger;
     }
+
     void hasBecomeUndefined() {
         op->containerDefined = false;
-        if (op->numberUndefined == 0) {
+        if (op->appearsDefined()) {
+            op->setAppearsDefined(false);
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
                           op->triggers, true);
         }
     }
     void hasBecomeDefined() {
-        op->containerDefined = true;
         this->valueChanged();
+        op->containerDefined = true;
+        op->setAppearsDefined(op->numberUndefined == 0);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
+                      true);
     }
 };
 

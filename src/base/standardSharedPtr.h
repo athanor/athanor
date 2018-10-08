@@ -1,6 +1,7 @@
 
 #ifndef SRC_BASE_STANDARDSHAREDPTR_H_
 #define SRC_BASE_STANDARDSHAREDPTR_H_
+#include <cassert>
 #include <memory>
 #include "common/common.h"
 template <typename T>

@@ -135,11 +135,11 @@ struct ChangeTriggerAdapterBaseHelper : public TriggerType {
     inline void forwardHasBecomeDefined() {
         static_cast<Child*>(this)->adapterHasBecomeDefined();
     }
-    inline void hasBecomeDefined() final { forwardHasBecomeDefined(); }
+    inline void hasBecomeDefined() { forwardHasBecomeDefined(); }
     inline void forwardHasBecomeUndefined() {
         static_cast<Child*>(this)->adapterHasBecomeUndefined();
     }
-    inline void hasBecomeUndefined() final { forwardHasBecomeUndefined(); }
+    inline void hasBecomeUndefined() { forwardHasBecomeUndefined(); }
 };
 
 template <typename Child>

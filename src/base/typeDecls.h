@@ -119,6 +119,8 @@ template <typename Val>
 EnableIfViewAndReturn<Val, bool> largerValue(const Val& u, const Val& v);
 template <typename View>
 EnableIfViewAndReturn<View, HashType> getValueHash(const View&);
+template <typename View>
+EnableIfViewAndReturn<View, bool> appearsDefined(const View&);
 template <typename Val>
 EnableIfValueAndReturn<Val, void> normalise(Val& v);
 template <typename Val>

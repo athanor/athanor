@@ -29,8 +29,8 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
     bool wasDefined;
     inline bool eventHandledAsDefinednessChange() {
         auto view = getOp()->view();
-        bool defined = view && view->appearsDefined() &&
-                       numberUndefinedMembers(*view) == 0;
+        bool defined =
+            view && appearsDefined(*view) && numberUndefinedMembers(*view) == 0;
         if (wasDefined && !defined) {
             this->forwardHasBecomeUndefined();
             wasDefined = defined;
@@ -77,6 +77,8 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
     inline void memberHasBecomeUndefined(UInt) {
         eventHandledAsDefinednessChange();
     }
+    inline void hasBecomeDefined() { eventHandledAsDefinednessChange(); }
+    inline void hasBecomeUndefined() { eventHandledAsDefinednessChange(); }
 };
 
 #endif /* SRC_TRIGGERS_SEQUENCETRIGGER_H_ */

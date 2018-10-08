@@ -8,13 +8,13 @@ using namespace std;
 u_int64_t triggerEventCount = 0;
 UInt LARGE_VIOLATION = ((UInt)1) << ((sizeof(UInt) * 4) - 1);
 UInt MAX_DOMAIN_SIZE = ~((UInt)0);
-BoolView makeViolatingBoolValue() {
+BoolValue makeViolatingBoolValue() {
     BoolValue v;
     v.violation = LARGE_VIOLATION;
     return v;
 }
 BoolValue violatingBoolValue = makeViolatingBoolValue();
-BoolView VIOLATING_BOOL_VIEW = violatingBoolValue.view().get();
+BoolView& VIOLATING_BOOL_VIEW = violatingBoolValue.view().get();
 
 template <typename View>
 OptionalRef<View> ExprInterface<View>::view() {
@@ -131,7 +131,11 @@ const std::shared_ptr<TriggerBase> getTriggerBase(
     template const ValRef<name##Value> assumeAsValue<name##View>(              \
         const ExprRef<name##View>&);                                           \
     template const std::shared_ptr<TriggerBase> getTriggerBase<name##Trigger>( \
-        const std::shared_ptr<name##Trigger>& trigger);
+        const std::shared_ptr<name##Trigger>& trigger);                        \
+    template <>                                                                \
+    bool appearsDefined<name##View>(const name##View& view) {                  \
+        return view.appearsDefined();                                          \
+    }
 
 buildForAllTypes(exprInstantiators, );
 #undef exprInstantiators

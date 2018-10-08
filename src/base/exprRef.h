@@ -245,6 +245,6 @@ struct PathExtension {
 };
 
 extern UInt LARGE_VIOLATION;
-extern BoolView VIOLATING_BOOL_VIEW;
+extern BoolView& VIOLATING_BOOL_VIEW;
 extern UInt MAX_DOMAIN_SIZE;
 #endif /* SRC_BASE_EXPRREF_H_ */

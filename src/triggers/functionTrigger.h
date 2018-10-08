@@ -19,11 +19,47 @@ struct FunctionTrigger : public virtual FunctionOuterTrigger,
 template <typename Child>
 struct ChangeTriggerAdapter<FunctionTrigger, Child>
     : public ChangeTriggerAdapterBase<FunctionTrigger, Child> {
-    inline void imageChanged(UInt) final { this->forwardValueChanged(); }
-    inline void imageChanged(const std::vector<UInt>&) final {
-        this->forwardValueChanged();
+   private:
+    bool wasDefined;
+    inline bool eventHandledAsDefinednessChange() {
+        auto view = getOp()->view();
+        bool defined = view && appearsDefined(*view);
+        if (wasDefined && !defined) {
+            this->forwardHasBecomeUndefined();
+            wasDefined = defined;
+            return true;
+        } else if (!wasDefined && defined) {
+            this->forwardHasBecomeDefined();
+            wasDefined = defined;
+            return true;
+        } else {
+            wasDefined = defined;
+            return !defined;
+        }
     }
-    inline void imageSwap(UInt, UInt) final { this->forwardValueChanged(); }
+
+    inline auto& getOp() {
+        return static_cast<Child*>(this)->getTriggeringOperand();
+    }
+
+   public:
+    inline void imageChanged(UInt) final {
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
+    }
+    inline void imageChanged(const std::vector<UInt>&) final {
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
+    }
+    inline void imageSwap(UInt, UInt) final {
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
+    }
+    inline void hasBecomeDefined() { eventHandledAsDefinednessChange(); }
+    inline void hasBecomeUndefined() { eventHandledAsDefinednessChange(); }
 };
 
 #endif /* SRC_TRIGGERS_FUNCTIONTRIGGER_H_ */

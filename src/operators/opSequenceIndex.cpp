@@ -1,6 +1,7 @@
 #include "operators/opSequenceIndex.h"
 #include <iostream>
 #include <memory>
+#include "triggers/allTriggers.h"
 #include "types/tuple.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
@@ -9,6 +10,9 @@ template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::addTriggerImpl(
     const shared_ptr<SequenceMemberTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
+    trigger->flags.template get<TriggerBase::ALLOW_DEFINEDNESS_TRIGGERS>() =
+        false;
+
     triggers.emplace_back(getTriggerBase(trigger));
     if (locallyDefined) {
         getMember().get()->addTrigger(trigger, includeMembers, memberIndex);
@@ -177,6 +181,8 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
             return;
         }
         op->setAppearsDefined(false);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers,
+                      true);
     }
 
     void memberHasBecomeDefined(UInt index) final {
@@ -184,6 +190,8 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
             return;
         }
         op->setAppearsDefined(true);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
+                      true);
     }
 
     void positionsSwapped(UInt index1, UInt index2) final {

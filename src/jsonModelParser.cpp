@@ -81,34 +81,22 @@ pair<AnyDomainRef, AnyExprRef> parseExpr(json& essenceExpr,
     }
 }
 
-AnyValRef toValRef(const AnyExprRef& op) {
-    return mpark::visit(
-        [&](auto& ref) -> AnyValRef {
-            typedef typename AssociatedValueType<viewType(ref)>::type ValType;
-            auto val = make<ValType>();
-            val.asExpr()->view() = ref->view();
-            return val;
-        },
-        op);
+inline Int parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel,
+                           const string& errorMessage) {
+    return parseExprAsInt(parseExpr(essenceExpr, parsedModel).second,
+                          errorMessage);
 }
 
-Int parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel,
-                    const string& errorMessage) {
-    auto intExpr = expect<IntView>(
-        parseExpr(essenceExpr, parsedModel).second, [&](auto&&) {
-            cerr << "Error: Expected int expression " << errorMessage << endl;
-            cerr << essenceExpr << endl;
-        });
-    intExpr->evaluate();
-    return intExpr->view().value;
-}
-
-Int parseValueAsInt(AnyExprRef expr, const string& errorMessage) {
+inline Int parseValueAsInt(AnyExprRef expr, const string& errorMessage) {
     auto intExpr = expect<IntView>(expr, [&](auto&&) {
         cerr << "Error: Expected int expression " << errorMessage << endl;
     });
     intExpr->evaluate();
-    return intExpr->view().value;
+    return intExpr->getViewIfDefined()
+        .checkedGet(
+            "Could not parse this expression into a constant int.  Value is "
+            "undefined.\n")
+        .value;
 }
 
 AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {

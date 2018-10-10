@@ -37,7 +37,7 @@ struct Model {
     std::unordered_map<size_t, AnyExprRef> definingExpressions;
 
    private:
-    Model() { objective->view().value = 0; }
+    Model() { objective->view()->value = 0; }
 
    public:
     void printVariables() const {
@@ -55,9 +55,9 @@ struct Model {
     }
 
    public:
-    inline UInt getViolation() const { return csp->view().violation; }
+    inline UInt getViolation() const { return csp->view()->violation; }
     inline Int getObjective() const {
-        return transposeObjective(optimiseMode, objective->view().value);
+        return transposeObjective(optimiseMode, objective->view()->value);
     }
 };
 
@@ -113,7 +113,7 @@ class ModelBuilder {
     }
 
     inline bool constraintHandledByDefine(ExprRef<BoolView>& constraint) {
-        BoolView* eqExprTester = &(constraint->view());
+        BoolView* eqExprTester = &(constraint->view().get());
         OpIntEq* opIntEq = dynamic_cast<OpIntEq*>(eqExprTester);
         if (opIntEq != NULL) {
             ValRef<IntValue> definedVar = getIfNonConstValue(opIntEq->left);

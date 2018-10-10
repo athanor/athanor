@@ -1,6 +1,7 @@
 #include "operators/opTupleIndex.h"
 #include <iostream>
 #include <memory>
+#include "triggers/allTriggers.h"
 #include "types/tuple.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
@@ -9,6 +10,8 @@ template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::addTriggerImpl(
     const shared_ptr<TupleMemberTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
+    trigger->flags.template get<TriggerBase::ALLOW_DEFINEDNESS_TRIGGERS>() =
+        false;
     triggers.emplace_back(getTriggerBase(trigger));
     getMember().get()->addTrigger(trigger, includeMembers, memberIndex);
 }

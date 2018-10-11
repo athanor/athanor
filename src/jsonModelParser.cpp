@@ -12,7 +12,13 @@
 #include "types/allTypes.h"
 
 using namespace std;
+using namespace lib;
 using namespace nlohmann;
+namespace {
+const std::string ERROR_UNDEFINED =
+    "Error in parsing, unexpected undefined value\n";
+}
+
 auto fakeIntDomain =
     make_shared<IntDomain>(vector<pair<Int, Int>>({intBound(0, 0)}));
 auto fakeBoolDomain = make_shared<BoolDomain>();
@@ -47,47 +53,37 @@ typedef function<AnyDomainRef(json&, ParsedModel&)> ParseDomainFunction;
 
 template <typename RetType, typename Constraint, typename Func>
 ExprRef<RetType> expect(Constraint&& constraint, Func&& func);
-template <typename Function, typename DefaultValue,
+template <typename Function,
           typename ReturnType = typename Function::result_type>
-pair<bool, ReturnType> stringMatch(const vector<pair<string, Function>>& match,
-                                   const DefaultValue& defaultValue,
-                                   json& essenceExpr,
-                                   ParsedModel& parsedModel) {
+optional<ReturnType> stringMatch(const vector<pair<string, Function>>& match,
+                                 json& essenceExpr, ParsedModel& parsedModel) {
     for (auto& matchCase : match) {
         if (essenceExpr.count(matchCase.first)) {
-            return make_pair(
-                true,
-                matchCase.second(essenceExpr[matchCase.first], parsedModel));
+            return matchCase.second(essenceExpr[matchCase.first], parsedModel);
         }
     }
-    return make_pair(false, defaultValue);
+    return nullopt;
 }
 pair<AnyDomainRef, AnyExprRef> parseDomainGenerator(json& domainExpr,
                                                     ParsedModel& parsedModel);
 
-pair<bool, AnyDomainRef> tryParseDomain(json& essenceExpr,
-                                        ParsedModel& parsedModel);
-pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
-    json& essenceExpr, ParsedModel& parsedModel);
+optional<AnyDomainRef> tryParseDomain(json& essenceExpr,
+                                      ParsedModel& parsedModel);
+optional<pair<AnyDomainRef, AnyExprRef>> tryParseExpr(json& essenceExpr,
+                                                      ParsedModel& parsedModel);
 
 pair<AnyDomainRef, AnyExprRef> parseExpr(json& essenceExpr,
                                          ParsedModel& parsedModel) {
-    auto boolConstraintPair = tryParseExpr(essenceExpr, parsedModel);
-    if (boolConstraintPair.first) {
-        return move(boolConstraintPair.second);
+    auto constraint = tryParseExpr(essenceExpr, parsedModel);
+    if (constraint) {
+        return move(*constraint);
     } else {
         cerr << "Failed to parse expression: " << essenceExpr << endl;
         abort();
     }
 }
 
-inline Int parseValueAsInt(json& essenceExpr, ParsedModel& parsedModel,
-                           const string& errorMessage) {
-    return parseExprAsInt(parseExpr(essenceExpr, parsedModel).second,
-                          errorMessage);
-}
-
-inline Int parseValueAsInt(AnyExprRef expr, const string& errorMessage) {
+inline Int parseExprAsInt(AnyExprRef expr, const string& errorMessage) {
     auto intExpr = expect<IntView>(expr, [&](auto&&) {
         cerr << "Error: Expected int expression " << errorMessage << endl;
     });
@@ -99,10 +95,16 @@ inline Int parseValueAsInt(AnyExprRef expr, const string& errorMessage) {
         .value;
 }
 
+inline Int parseExprAsInt(json& essenceExpr, ParsedModel& parsedModel,
+                          const string& errorMessage) {
+    return parseExprAsInt(parseExpr(essenceExpr, parsedModel).second,
+                          errorMessage);
+}
+
 AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {
-    auto boolDomainPair = tryParseDomain(essenceExpr, parsedModel);
-    if (boolDomainPair.first) {
-        return move(boolDomainPair.second);
+    auto domain = tryParseDomain(essenceExpr, parsedModel);
+    if (domain) {
+        return move(*domain);
     } else {
         cerr << "Failed to parse domain: " << essenceExpr << endl;
         abort();
@@ -161,7 +163,7 @@ void updateDimensions(AnyExprRef preImage, DimensionVec& dimVec) {
     mpark::visit(
         overloaded(
             [&](ExprRef<IntView>& expr) {
-                Int v = expr->view().value;
+                Int v = expr->view().checkedGet(ERROR_UNDEFINED).value;
                 if (dimVec.empty()) {
                     dimVec.emplace_back(v, v);
                 } else {
@@ -171,16 +173,23 @@ void updateDimensions(AnyExprRef preImage, DimensionVec& dimVec) {
             },
             [&](ExprRef<TupleView>& tuple) {
                 if (dimVec.empty()) {
-                    for (auto& member : tuple->view().members) {
-                        Int v = parseValueAsInt(member, errorMessage);
+                    for (auto& member :
+                         tuple->view().checkedGet(ERROR_UNDEFINED).members) {
+                        Int v = parseExprAsInt(member, errorMessage);
                         dimVec.emplace_back(v, v);
                     }
                 } else {
-                    debug_code(
-                        assert(tuple->view().members.size() == dimVec.size()));
-                    for (size_t i = 0; i < tuple->view().members.size(); i++) {
-                        Int v = parseValueAsInt(tuple->view().members[i],
-                                                errorMessage);
+                    debug_code(assert(tuple->view()
+                                          .checkedGet(ERROR_UNDEFINED)
+                                          .members.size() == dimVec.size()));
+                    for (size_t i = 0; i < tuple->view()
+                                               .checkedGet(ERROR_UNDEFINED)
+                                               .members.size();
+                         i++) {
+                        Int v = parseExprAsInt(tuple->view()
+                                                   .checkedGet(ERROR_UNDEFINED)
+                                                   .members[i],
+                                               errorMessage);
                         auto& dim = dimVec[i];
                         dim.lower = min(dim.lower, v);
                         dim.upper = max(dim.upper, v);
@@ -241,11 +250,10 @@ pair<shared_ptr<FunctionDomain>, ExprRef<FunctionView>> parseConstantFunction(
                             "literals.\n";
                     abort();
                 }
-                auto boolIndexPair =
-                    function->domainToIndex(defined[i]->view());
-                assert(boolIndexPair.first);
-                function->assignImage(boolIndexPair.second,
-                                      assumeAsValue(range[i]));
+                auto index = function->domainToIndex(
+                    defined[i]->view().checkedGet(ERROR_UNDEFINED));
+                assert(index);
+                function->assignImage(*index, assumeAsValue(range[i]));
             }
         },
         defined, range);
@@ -317,13 +325,13 @@ shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
         Int from, to;
 
         if (rangeExpr.count("RangeBounded")) {
-            from = parseValueAsInt(rangeExpr["RangeBounded"][0], parsedModel,
-                                   errorMessage);
-            to = parseValueAsInt(rangeExpr["RangeBounded"][1], parsedModel,
-                                 errorMessage);
+            from = parseExprAsInt(rangeExpr["RangeBounded"][0], parsedModel,
+                                  errorMessage);
+            to = parseExprAsInt(rangeExpr["RangeBounded"][1], parsedModel,
+                                errorMessage);
         } else if (rangeExpr.count("RangeSingle")) {
-            from = parseValueAsInt(rangeExpr["RangeSingle"], parsedModel,
-                                   errorMessage);
+            from = parseExprAsInt(rangeExpr["RangeSingle"], parsedModel,
+                                  errorMessage);
             to = from;
         } else {
             cerr << "Unrecognised type of int range: " << rangeExpr << endl;
@@ -343,19 +351,19 @@ SizeAttr parseSizeAttr(json& sizeAttrExpr, ParsedModel& parsedModel) {
     if (sizeAttrExpr.count("SizeAttr_None")) {
         return noSize();
     } else if (sizeAttrExpr.count("SizeAttr_MinSize")) {
-        return minSize(parseValueAsInt(sizeAttrExpr["SizeAttr_MinSize"],
-                                       parsedModel, errorMessage));
+        return minSize(parseExprAsInt(sizeAttrExpr["SizeAttr_MinSize"],
+                                      parsedModel, errorMessage));
     } else if (sizeAttrExpr.count("SizeAttr_MaxSize")) {
-        return maxSize(parseValueAsInt(sizeAttrExpr["SizeAttr_MaxSize"],
-                                       parsedModel, errorMessage));
+        return maxSize(parseExprAsInt(sizeAttrExpr["SizeAttr_MaxSize"],
+                                      parsedModel, errorMessage));
     } else if (sizeAttrExpr.count("SizeAttr_Size")) {
-        return exactSize(parseValueAsInt(sizeAttrExpr["SizeAttr_Size"],
-                                         parsedModel, errorMessage));
+        return exactSize(parseExprAsInt(sizeAttrExpr["SizeAttr_Size"],
+                                        parsedModel, errorMessage));
     } else if (sizeAttrExpr.count("SizeAttr_MinMaxSize")) {
         auto& sizeRangeExpr = sizeAttrExpr["SizeAttr_MinMaxSize"];
         return sizeRange(
-            parseValueAsInt(sizeRangeExpr[0], parsedModel, errorMessage),
-            parseValueAsInt(sizeRangeExpr[1], parsedModel, errorMessage));
+            parseExprAsInt(sizeRangeExpr[0], parsedModel, errorMessage),
+            parseExprAsInt(sizeRangeExpr[1], parsedModel, errorMessage));
     } else {
         cerr << "Could not parse this as a size attribute: " << sizeAttrExpr
              << endl;
@@ -457,8 +465,8 @@ AnyDomainRef parseDomainReference(json& domainReference,
     }
 }
 
-pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
-                                        ParsedModel& parsedModel) {
+optional<AnyDomainRef> tryParseDomain(json& domainExpr,
+                                      ParsedModel& parsedModel) {
     return stringMatch<ParseDomainFunction>(
         {{"DomainInt", parseDomainInt},
          {"DomainBool", parseDomainBool},
@@ -469,7 +477,7 @@ pair<bool, AnyDomainRef> tryParseDomain(json& domainExpr,
          {"DomainFunction", parseDomainFunction},
 
          {"DomainReference", parseDomainReference}},
-        AnyDomainRef(fakeIntDomain), domainExpr, parsedModel);
+        domainExpr, parsedModel);
 }
 
 template <typename RetType, typename Constraint, typename Func>
@@ -655,7 +663,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpTupleIndex(
     shared_ptr<TupleDomain>& tupleDomain, ExprRef<TupleView>& tuple,
     json& indexExpr, ParsedModel& parsedModel) {
     string errorMessage = "within tuple index expression.";
-    UInt index = parseValueAsInt(indexExpr[0], parsedModel, errorMessage) - 1;
+    UInt index = parseExprAsInt(indexExpr[0], parsedModel, errorMessage) - 1;
     return mpark::visit(
         [&](auto& innerDomain) -> pair<AnyDomainRef, AnyExprRef> {
             typedef typename BaseType<decltype(innerDomain)>::element_type
@@ -1104,7 +1112,7 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> makeFlatten(
         sequenceExpr.first->inner);
 }
 
-pair<bool, pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>>>
+optional<pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>>>
 parseComprehensionImpl(json& comprExpr, ParsedModel& parsedModel,
                        size_t generatorIndex);
 template <typename ContainerReturnType, typename ContainerDomainType>
@@ -1122,12 +1130,12 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> buildQuant(
         make_pair(fakeSequenceDomain(fakeBoolDomain),
                   ExprRef<SequenceView>(nullptr));
 
-    auto boolInnerQuantPair =
+    auto innerQuantifier =
         parseComprehensionImpl(comprExpr, parsedModel, generatorIndex + 1);
-    if (boolInnerQuantPair.first) {
-        auto& innerQuantifier = boolInnerQuantPair.second;
-        quantifier->setExpression(innerQuantifier.second);
-        returnValue = makeFlatten(make_pair(innerQuantifier.first, quantifier));
+    if (innerQuantifier) {
+        quantifier->setExpression(innerQuantifier->second);
+        returnValue =
+            makeFlatten(make_pair(innerQuantifier->first, quantifier));
     } else {
         AnyDomainRef innerDomain =
             addExprToQuantifier(comprExpr, quantifier, parsedModel);
@@ -1140,12 +1148,11 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> buildQuant(
     return returnValue;
 }
 
-pair<bool, pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>>>
+optional<pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>>>
 parseComprehensionImpl(json& comprExpr, ParsedModel& parsedModel,
                        size_t generatorIndex) {
     if (generatorIndex == comprExpr[1].size()) {
-        return make_pair(false, make_pair(fakeSequenceDomain(fakeIntDomain),
-                                          ExprRef<SequenceView>(nullptr)));
+        return nullopt;
     }
     if (!comprExpr[1][generatorIndex].count("Generator")) {
         return parseComprehensionImpl(comprExpr, parsedModel,
@@ -1199,14 +1206,14 @@ parseComprehensionImpl(json& comprExpr, ParsedModel& parsedModel,
             },
             move(errorHandler)),
         domainContainerPair.second);
-    return make_pair(true, returnVal);
+    return returnVal;
 }
 
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
     json& comprExpr, ParsedModel& parsedModel) {
-    auto boolComprPair = parseComprehensionImpl(comprExpr, parsedModel, 0);
-    if (boolComprPair.first) {
-        return move(boolComprPair.second);
+    auto compr = parseComprehensionImpl(comprExpr, parsedModel, 0);
+    if (compr) {
+        return move(*compr);
     } else {
         cerr << "Failed to find a generator to parse in the comprehension.\n";
         abort();
@@ -1295,7 +1302,7 @@ pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseOpToInt(
     return make_pair(fakeIntDomain, OpMaker<OpToInt>::make(boolExpr));
 }
 
-pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
+optional<pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
     json& essenceExpr, ParsedModel& parsedModel) {
     if (essenceExpr.count("Constant")) {
         return tryParseExpr(essenceExpr["Constant"], parsedModel);
@@ -1341,8 +1348,6 @@ pair<bool, pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpMin", parseOpMinMax<true>},
              {"MkOpMax", parseOpMinMax<false>},
              {"MkOpToInt", parseOpToInt}},
-            make_pair(AnyDomainRef(fakeIntDomain),
-                      AnyExprRef(ExprRef<IntView>(nullptr))),
             essenceExpr, parsedModel);
     }
 }
@@ -1425,13 +1430,12 @@ pair<AnyDomainRef, AnyExprRef> parseDomainGeneratorReference(
 
 pair<AnyDomainRef, AnyExprRef> parseDomainGenerator(json& domainExpr,
                                                     ParsedModel& parsedModel) {
-    auto boolGeneratorPair = stringMatch<ParseDomainGeneratorFunction>(
+    auto generator = stringMatch<ParseDomainGeneratorFunction>(
         {{"DomainInt", parseDomainGeneratorIntFromExpr},
          {"DomainReference", parseDomainGeneratorReference}},
-        make_pair(AnyDomainRef(fakeIntDomain), ExprRef<IntView>(nullptr)),
         domainExpr, parsedModel);
-    if (boolGeneratorPair.first) {
-        return boolGeneratorPair.second;
+    if (generator) {
+        return *generator;
     } else {
         cerr << "Error: do not yet support unrolling this domain.\n";
         cerr << domainExpr << endl;
@@ -1441,9 +1445,9 @@ pair<AnyDomainRef, AnyExprRef> parseDomainGenerator(json& domainExpr,
 
 void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
     string lettingName = lettingArray[0]["Name"];
-    auto boolValuePair = tryParseExpr(lettingArray[1], parsedModel);
-    if (boolValuePair.first) {
-        parsedModel.namedExprs.emplace(lettingName, boolValuePair.second);
+    auto value = tryParseExpr(lettingArray[1], parsedModel);
+    if (value) {
+        parsedModel.namedExprs.emplace(lettingName, *value);
         return;
     }
     if (lettingArray[1].count("Domain")) {

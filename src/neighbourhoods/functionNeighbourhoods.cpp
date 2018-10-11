@@ -277,16 +277,16 @@ void functionUnifyImagesGenImpl(const FunctionDomain&,
                 ++params.stats.minorNodeCount;
                 index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
                 index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
-                if (val.getRange<IntView>()[index1]->view().value ==
-                    val.getRange<IntView>()[index2]->view().value) {
+                if (val.getRange<IntView>()[index1]->view()->value ==
+                    val.getRange<IntView>()[index2]->view()->value) {
                     continue;
                 }
                 // randomly swap indices
                 if (globalRandom(0, 1)) {
                     swap(index1, index2);
                 }
-                auto& view1 = val.getRange<IntView>()[index1]->view();
-                auto& view2 = val.getRange<IntView>()[index2]->view();
+                auto& view1 = val.getRange<IntView>()[index1]->view().get();
+                auto& view2 = val.getRange<IntView>()[index2]->view().get();
                 val.notifyPossibleImageChange(index2);
                 valueBackup = view2.value;
                 success = val.tryImageChange<IntValue>(index2, [&]() {
@@ -311,7 +311,7 @@ void functionUnifyImagesGenImpl(const FunctionDomain&,
             if (!params.changeAccepted()) {
                 debug_neighbourhood_action("Change rejected");
                 val.notifyPossibleImageChange(index2);
-                auto& view2 = val.getRange<IntView>()[index2]->view();
+                auto& view2 = val.getRange<IntView>()[index2]->view().get();
                 val.tryImageChange<IntValue>(index2, [&]() {
                     return view2.changeValue([&]() {
                         view2.value = valueBackup;
@@ -360,15 +360,15 @@ void functionSplitImagesGenImpl(const FunctionDomain&,
                 ++params.stats.minorNodeCount;
                 index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
                 index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
-                if (val.getRange<IntView>()[index1]->view().value !=
-                    val.getRange<IntView>()[index2]->view().value) {
+                if (val.getRange<IntView>()[index1]->view()->value !=
+                    val.getRange<IntView>()[index2]->view()->value) {
                     continue;
                 }
                 // randomly swap indices
                 if (globalRandom(0, 1)) {
                     swap(index1, index2);
                 }
-                auto& view1 = val.getRange<IntView>()[index1]->view();
+                auto& view1 = val.getRange<IntView>()[index1]->view().get();
                 static_cast<void>(view1);
                 auto value2 = val.member<IntValue>(index2);
                 val.notifyPossibleImageChange(index2);
@@ -397,7 +397,7 @@ void functionSplitImagesGenImpl(const FunctionDomain&,
             if (!params.changeAccepted()) {
                 debug_neighbourhood_action("Change rejected");
                 val.notifyPossibleImageChange(index2);
-                auto& view2 = val.getRange<IntView>()[index2]->view();
+                auto& view2 = val.getRange<IntView>()[index2]->view().get();
                 val.tryImageChange<IntValue>(index2, [&]() {
                     return view2.changeValue([&]() {
                         view2.value = valueBackup;

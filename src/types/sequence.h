@@ -39,6 +39,9 @@ template <>
 HashType getValueHash<SequenceView>(const SequenceView& val);
 ;
 struct SequenceView;
+static const char* NO_SEQUENCE_HASHING_UNDEFINED =
+    "sequence is not correctly handling hashing values that appear "
+    "defined but return undefined views.\n";
 
 struct SequenceView : public ExprInterface<SequenceView> {
     friend SequenceValue;
@@ -57,9 +60,8 @@ struct SequenceView : public ExprInterface<SequenceView> {
         HashType input[2];
         HashType result[2];
         input[0] = index;
-        input[1] = getValueHash(expr->view().checkedGet(
-            "sequence is not correctly handling hashing values that appear "
-            "defined but return undefined views.\n"));
+        input[1] = getValueHash(
+            expr->view().checkedGet(NO_SEQUENCE_HASHING_UNDEFINED));
         MurmurHash3_x64_128(((void*)input), sizeof(input), 0, result);
         return result[0] ^ result[1];
     }
@@ -402,7 +404,7 @@ struct SequenceValue : public SequenceView, public ValBase {
         reassignIndicesToEnd<InnerValueType>(index);
         if (injective) {
             bool deleted =
-                memberHashes.erase(getValueHash(removedMemberExpr->view()));
+                memberHashes.erase(getValueHash(removedMemberExpr->view().get()));
             static_cast<void>(deleted);
             debug_code(assert(deleted));
         }

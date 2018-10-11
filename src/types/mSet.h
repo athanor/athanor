@@ -29,7 +29,8 @@ struct MSetDomain {
         }
     }
 };
-
+static const char* NO_MSET_UNDEFINED_MEMBERS =
+    "Not yet handling multisets with undefined members.\n";
 struct MSetView : public ExprInterface<MSetView> {
     friend MSetValue;
     AnyExprVec members;
@@ -41,7 +42,8 @@ struct MSetView : public ExprInterface<MSetView> {
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void addMember(const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();
-        HashType hash = getValueHash(member->view());
+        HashType hash =
+            getValueHash(member->view().checkedGet(NO_MSET_UNDEFINED_MEMBERS));
         members.emplace_back(member);
         cachedHashTotal += mix(hash);
         debug_code(assertValidState());
@@ -59,7 +61,8 @@ struct MSetView : public ExprInterface<MSetView> {
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
 
-        HashType hash = getValueHash(members[index]->view());
+        HashType hash = getValueHash(
+            members[index]->view().checkedGet(NO_MSET_UNDEFINED_MEMBERS));
         cachedHashTotal -= mix(hash);
         ExprRef<InnerViewType> removedMember = std::move(members[index]);
         members[index] = std::move(members.back());
@@ -77,7 +80,8 @@ struct MSetView : public ExprInterface<MSetView> {
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline UInt memberChanged(HashType oldHash, UInt index) {
         auto& members = getMembers<InnerViewType>();
-        HashType newHash = getValueHash(members[index]->view());
+        HashType newHash = getValueHash(
+            members[index]->view().checkedGet(NO_MSET_UNDEFINED_MEMBERS));
         if (newHash != oldHash) {
             cachedHashTotal -= mix(oldHash);
             cachedHashTotal += mix(newHash);
@@ -94,8 +98,10 @@ struct MSetView : public ExprInterface<MSetView> {
             cachedHashTotal -= mix(oldHash);
         }
         std::transform(
-            indices.begin(), indices.end(), hashes.begin(),
-            [&](UInt index) { return getValueHash(members[index]->view()); });
+            indices.begin(), indices.end(), hashes.begin(), [&](UInt index) {
+                return getValueHash(members[index]->view().checkedGet(
+                    NO_MSET_UNDEFINED_MEMBERS));
+            });
         for (HashType newHash : hashes) {
             cachedHashTotal += mix(newHash);
         }
@@ -141,7 +147,8 @@ struct MSetView : public ExprInterface<MSetView> {
     inline HashType notifyPossibleMemberChange(UInt index) {
         auto& members = getMembers<InnerViewType>();
         debug_code(assertValidState());
-        HashType memberHash = getValueHash(members[index]->view());
+        HashType memberHash = getValueHash(
+            members[index]->view().checkedGet(NO_MSET_UNDEFINED_MEMBERS));
         return memberHash;
     }
 
@@ -151,8 +158,10 @@ struct MSetView : public ExprInterface<MSetView> {
         auto& members = getMembers<InnerViewType>();
         hashes.resize(indices.size());
         std::transform(
-            indices.begin(), indices.end(), hashes.begin(),
-            [&](UInt index) { return getValueHash(members[index]->view()); });
+            indices.begin(), indices.end(), hashes.begin(), [&](UInt index) {
+                return getValueHash(members[index]->view().checkedGet(
+                    NO_MSET_UNDEFINED_MEMBERS));
+            });
         debug_code(assertValidState());
     }
 

@@ -7,7 +7,7 @@ Int NeighbourhoodResult::getDeltaObjective() const {
     return model.getObjective() - statsMarkPoint.lastObjective;
 }
 Int NeighbourhoodResult::getDeltaDefinedness() const {
-    bool currentDefined = !model.objective->isUndefined();
+    bool currentDefined = model.objective->getViewIfDefined().hasValue();
     return currentDefined - statsMarkPoint.lastObjectiveDefined;
 }
 
@@ -19,8 +19,8 @@ StatsContainer::StatsContainer(Model& model)
       nhTotalCpuTimes(model.neighbourhoods.size(), 0) {}
 #include <iostream>
 void StatsContainer::initialSolution(Model& model) {
-    lastViolation = model.csp->view().violation;
-    lastObjectiveDefined = !model.objective->isUndefined();
+    lastViolation = model.csp->view()->violation;
+    lastObjectiveDefined = model.objective->getViewIfDefined().hasValue();
     if (lastObjectiveDefined) {
         lastObjective = model.getObjective();
     }
@@ -42,8 +42,9 @@ void StatsContainer::reportResult(bool solutionAccepted,
     if (!solutionAccepted) {
         return;
     }
-    lastViolation = result.model.csp->view().violation;
-    lastObjectiveDefined = !result.model.objective->isUndefined();
+    lastViolation = result.model.csp->view()->violation;
+    lastObjectiveDefined =
+        result.model.objective->getViewIfDefined().hasValue();
     if (lastObjectiveDefined) {
         lastObjective = result.model.getObjective();
     }

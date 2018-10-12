@@ -13,9 +13,7 @@ HashType getValueHash<TupleView>(const TupleView& val) {
         HashType result[2];
         HashType input[val.members.size()];
         for (size_t i = 0; i < val.members.size(); i++) {
-            input[i] = mpark::visit(
-                [&](auto& expr) { return getValueHash(expr->view()); },
-                val.members[i]);
+            input[i] = getValueHash(val.members[i]);
         }
         MurmurHash3_x64_128(((void*)input), sizeof(input), 0, result);
         return result[0] ^ result[1];

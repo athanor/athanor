@@ -85,7 +85,7 @@ struct ExprTrigger
     using ExprTriggerBase::ExprTriggerBase;
     using ExprTriggerBase::index;
     using ExprTriggerBase::op;
-    ExprRef<View> getTriggeringOperand() {
+    ExprRef<View>& getTriggeringOperand() {
         return mpark::get<ExprRefVec<View>>(op->operands)[this->index];
     }
     void adapterValueChanged() {

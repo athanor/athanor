@@ -10,7 +10,8 @@
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
 
-static const char* NO_SET_UNDEFINED_MEMBERS = "Not yet handling sets with undefined members.\n";
+static const char* NO_SET_UNDEFINED_MEMBERS =
+    "Not yet handling sets with undefined members.\n";
 struct SetDomain {
     SizeAttr sizeAttr;
     AnyDomainRef inner;
@@ -51,7 +52,8 @@ struct SetView : public ExprInterface<SetView> {
             return false;
         }
 
-        HashType hash = getValueHash(member->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
+        HashType hash =
+            getValueHash(member->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
         debug_code(assert(!memberHashes.count(hash)));
         members.emplace_back(member);
         memberHashes.insert(hash);
@@ -70,7 +72,8 @@ struct SetView : public ExprInterface<SetView> {
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
 
-        HashType hash = getValueHash(members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
+        HashType hash = getValueHash(
+            members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
         debug_code(assert(memberHashes.count(hash)));
         memberHashes.erase(hash);
         cachedHashTotal -= mix(hash);
@@ -90,7 +93,8 @@ struct SetView : public ExprInterface<SetView> {
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline HashType memberChanged(HashType oldHash, UInt index) {
         auto& members = getMembers<InnerViewType>();
-        HashType newHash = getValueHash(members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
+        HashType newHash = getValueHash(
+            members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
         if (newHash != oldHash) {
             debug_code(assert(!memberHashes.count(newHash)));
             memberHashes.erase(oldHash);
@@ -113,8 +117,10 @@ struct SetView : public ExprInterface<SetView> {
             debug_code(assert(erased));
         }
         std::transform(
-            indices.begin(), indices.end(), hashes.begin(),
-            [&](UInt index) { return getValueHash(members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS)); });
+            indices.begin(), indices.end(), hashes.begin(), [&](UInt index) {
+                return getValueHash(members[index]->view().checkedGet(
+                    NO_SET_UNDEFINED_MEMBERS));
+            });
         for (HashType newHash : hashes) {
             cachedHashTotal += mix(newHash);
             debug_code(assert(!memberHashes.count(newHash)));
@@ -162,7 +168,8 @@ struct SetView : public ExprInterface<SetView> {
     inline ExprRef<InnerViewType> removeMemberAndNotify(UInt index) {
         ExprRef<InnerViewType> removedValue =
             removeMember<InnerViewType>(index);
-        notifyMemberRemoved(index, getValueHash(removedValue->view().checkedGet(NO_SET_UNDEFINED_MEMBERS)));
+        notifyMemberRemoved(index, getValueHash(removedValue->view().checkedGet(
+                                       NO_SET_UNDEFINED_MEMBERS)));
         return removedValue;
     }
 
@@ -170,7 +177,8 @@ struct SetView : public ExprInterface<SetView> {
     inline HashType notifyPossibleMemberChange(UInt index) {
         auto& members = getMembers<InnerViewType>();
         debug_code(assertValidState());
-        HashType memberHash = getValueHash(members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
+        HashType memberHash = getValueHash(
+            members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
         return memberHash;
     }
     template <typename InnerViewType>
@@ -179,8 +187,10 @@ struct SetView : public ExprInterface<SetView> {
         auto& members = getMembers<InnerViewType>();
         hashes.resize(indices.size());
         std::transform(
-            indices.begin(), indices.end(), hashes.begin(),
-            [&](UInt index) { return getValueHash(members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS)); });
+            indices.begin(), indices.end(), hashes.begin(), [&](UInt index) {
+                return getValueHash(members[index]->view().checkedGet(
+                    NO_SET_UNDEFINED_MEMBERS));
+            });
         debug_code(assertValidState());
     }
 
@@ -211,7 +221,8 @@ struct SetView : public ExprInterface<SetView> {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool containsMember(const ExprRef<InnerViewType>& member) const {
-        return containsMember(member->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
+        return containsMember(
+            member->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool containsMember(const InnerViewType& member) const {
@@ -296,7 +307,8 @@ struct SetValue : public SetView, public ValBase {
             SetView::addMember<InnerViewType>(removedMember.asExpr());
             auto& members = getMembers<InnerViewType>();
             std::swap(members[index], members.back());
-            memberHashes.insert(getValueHash(members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS)));
+            memberHashes.insert(getValueHash(
+                members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS)));
             debug_code(assertValidState());
             debug_code(assertValidVarBases());
             return std::make_pair(false, ValRef<InnerValueType>(nullptr));
@@ -394,7 +406,6 @@ struct SetValue : public SetView, public ValBase {
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    bool isUndefined();
     std::pair<bool, ExprRef<SetView>> optimise(PathExtension) final;
 };
 

@@ -56,7 +56,6 @@ void invokeSetDefined<BoolValue>(ValRef<BoolValue>&) {}
     }                                                                        \
                                                                              \
     void name##Value::findAndReplaceSelf(const FindAndReplaceFunction&) {}   \
-    bool name##Value::isUndefined() { return false; }                        \
     pair<bool, ExprRef<name##View>> name##Value::optimise(                   \
         PathExtension path) {                                                \
         return make_pair(false, mpark::get<ExprRef<name##View>>(path.expr)); \

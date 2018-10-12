@@ -41,7 +41,7 @@ void deepCopyImpl(const SetValue& src,
     // instead, we remove values that are not   to be in the final target
     size_t index = 0;
     while (index < targetMembersImpl.size()) {
-        if (!src.containsMember(targetMembersImpl[index]->view())) {
+        if (!src.containsMember(targetMembersImpl[index]->view().get())) {
             target.removeMember<
                 typename AssociatedValueType<InnerViewType>::type>(index);
         } else {
@@ -49,7 +49,8 @@ void deepCopyImpl(const SetValue& src,
         }
     }
     for (auto& member : srcMemnersImpl) {
-        if (!target.memberHashes.count(getValueHash(member->view()))) {
+        if (!target.memberHashes.count(getValueHash(
+                member->view().checkedGet(NO_SET_UNDEFINED_MEMBERS)))) {
             target.addMember(deepCopy(*assumeAsValue(member)));
         }
     }
@@ -186,7 +187,8 @@ void SetView::assertValidState() {
             } else {
                 for (size_t i = 0; i < valMembersImpl.size(); i++) {
                     auto& member = valMembersImpl[i];
-                    HashType memberHash = getValueHash(member->view());
+                    HashType memberHash = getValueHash(
+                        member->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
                     if (!seenHashes.insert(memberHash).second) {
                         cerr << "Error: possible duplicate member: "
                              << member->view() << endl;

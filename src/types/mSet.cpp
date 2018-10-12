@@ -173,7 +173,8 @@ void MSetView::assertValidState() {
             UInt calculatedTotal = 0;
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 auto& member = valMembersImpl[i];
-                HashType memberHash = getValueHash(member->view());
+                HashType memberHash = getValueHash(
+                    member->view().checkedGet(NO_MSET_UNDEFINED_MEMBERS));
                 calculatedTotal += mix(memberHash);
             }
             if (success) {

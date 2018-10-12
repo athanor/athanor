@@ -403,8 +403,8 @@ struct SequenceValue : public SequenceView, public ValBase {
         valBase(*removedMember).container = NULL;
         reassignIndicesToEnd<InnerValueType>(index);
         if (injective) {
-            bool deleted =
-                memberHashes.erase(getValueHash(removedMemberExpr->view().get()));
+            bool deleted = memberHashes.erase(
+                getValueHash(removedMemberExpr->view().get()));
             static_cast<void>(deleted);
             debug_code(assert(deleted));
         }
@@ -424,7 +424,7 @@ struct SequenceValue : public SequenceView, public ValBase {
         if (func()) {
             if (injective) {
                 bool deleted =
-                    memberHashes.erase(getValueHash(removedMemberExpr->view()));
+                    memberHashes.erase(getValueHash(removedMemberExpr->view().get()));
                 static_cast<void>(deleted);
                 debug_code(assert(deleted));
             }
@@ -452,7 +452,7 @@ struct SequenceValue : public SequenceView, public ValBase {
         auto& members = getMembers<InnerViewType>();
         for (size_t i = start; i < end; i++) {
             hashOfMembersToBeChanged.emplace_back(
-                getValueHash(members[i]->view()));
+                getValueHash(members[i]->view().get()));
         }
         return SequenceView::notifyPossibleSubsequenceChange<InnerViewType>(
             start, end);
@@ -516,7 +516,7 @@ struct SequenceValue : public SequenceView, public ValBase {
                 }
                 auto& members = getMembers<InnerViewType>();
                 for (size_t i = start; i < end; i++) {
-                    memberHashes.insert(getValueHash(members[i]->view()));
+                    memberHashes.insert(getValueHash(members[i]->view().get()));
                 }
             }
             debug_code(assertValidState());

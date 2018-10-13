@@ -149,6 +149,25 @@ std::ostream& operator<<(std::ostream& os, const AnyIterRef& ref) {
     return os;
 }
 
+template <typename View>
+string Iterator<View>::getOpName() {
+    return "Iterator<" +
+           TypeAsString<typename AssociatedValueType<View>::type>::value + ">";
+}
+template <typename View>
+void Iterator<View>::debugSanityChecksImpl() {
+    if (!ref) {
+        return;
+    }
+    ref->debugSanityCheck();
+    if (ref->appearsDefined() != this->appearsDefined()) {
+        throw SanityCheckException(
+            toString("ref and iterator definedness do not match: ref defined=",
+                     ref->appearsDefined(),
+                     ", iterator defined=", this->appearsDefined()));
+    }
+}
+
 #define iteratorInstantiators(name) template struct Iterator<name##View>;
 
 buildForAllTypes(iteratorInstantiators, );

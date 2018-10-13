@@ -76,6 +76,8 @@ struct Iterator : public ExprInterface<View> {
     void setAppearsDefined(bool set) {
         Undefinable<IterView>::setAppearsDefined(set);
     }
+    std::string getOpName();
+    void debugSanityChecksImpl();
 };
 
 template <typename T>

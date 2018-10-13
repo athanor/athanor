@@ -3,11 +3,23 @@
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <utility>
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
 #include "utils/OptionalRef.h"
 #include "utils/flagSet.h"
+
+struct SanityCheckException {
+    const std::string errorMessage;
+    std::vector<std::string> messageStack;
+    SanityCheckException(const std::string& errorMessage)
+        : errorMessage(errorMessage) {}
+    template <typename T>
+    inline void report(T&& message) {
+        messageStack.emplace_back(std::forward<T>(message));
+    }
+};
 
 template <typename View>
 struct ExprRef;
@@ -143,6 +155,20 @@ struct ExprInterface : public Undefinable<View> {
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
     virtual std::pair<bool, ExprRef<View>> optimise(PathExtension path) = 0;
+    inline void debugSanityCheck() {
+        try {
+            debugSanityCheckImpl();
+        } catch (SanityCheckException& e) {
+            std::ostringstream os;
+            os << "from operator " << this->getOpName() << " with value "
+               << " ";
+            prettyPrint(os, this->view());
+            e.report(os.str());
+            throw e;
+        }
+    }
+    virtual void debugSanityCheckImpl() = 0;
+    virtual std::string getOpName() = 0;
 };
 
 struct ViolationContext {

@@ -423,8 +423,8 @@ struct SequenceValue : public SequenceView, public ValBase {
         auto removedMember = assumeAsValue(removedMemberExpr);
         if (func()) {
             if (injective) {
-                bool deleted =
-                    memberHashes.erase(getValueHash(removedMemberExpr->view().get()));
+                bool deleted = memberHashes.erase(
+                    getValueHash(removedMemberExpr->view().get()));
                 static_cast<void>(deleted);
                 debug_code(assert(deleted));
             }
@@ -563,6 +563,8 @@ struct SequenceValue : public SequenceView, public ValBase {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension) final;
     void assertValidState();
+    void debugSanityCheckImpl();
+    std::string getOpName();
 };
 
 #endif /* SRC_TYPES_SEQUENCE_H_ */

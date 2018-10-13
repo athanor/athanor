@@ -48,7 +48,7 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
             return;
         }
         auto rightView = op->right->getViewIfDefined();
-        if (!rightView ) {
+        if (!rightView) {
             return;
         }
         op->setDefined(true);
@@ -173,4 +173,37 @@ ExprRef<SequenceView> OpMaker<IntRange>::make(ExprRef<IntView> l,
 template <>
 bool isInstanceOf<IntRange, SequenceView>(const ExprRef<SequenceView>& expr) {
     return dynamic_cast<IntRange*>(&(*expr)) != NULL;
+}
+
+string IntRange::getOpName() {
+    return toString("IntRange(", left->getViewIfDefined(), ",",
+                    right->getViewIfDefined(), ")");
+}
+
+void IntRange::debugSanityCheckImpl() {
+    left->debugSanityCheck();
+    right->debugSanityCheck();
+    this->standardSanityDefinednessChecks();
+    auto& leftView = left->view().get();
+    auto& rightView = right->view().get();
+    if (numberUndefined > 0) {
+        throw SanityCheckException("Number undefined must be 0.");
+    }
+    Int value = max(rightView.value - leftView.value, (Int)0);
+    if (value != (Int)numberElements()) {
+        throw SanityCheckException(
+            "Number elements in sequence do not match int range.\n");
+    }
+    for (Int i = leftView.value; i <= rightView.value; i++) {
+        auto memberView = getMembers<IntView>()[i]->getViewIfDefined();
+        if (!memberView) {
+            throw SanityCheckException(
+                "One of the sequence members is undefined.");
+        }
+        if (memberView->value != i) {
+            throw SanityCheckException(toString("One member has value ",
+                                                memberView->value,
+                                                " but should be ", i, "."));
+        }
+    }
 }

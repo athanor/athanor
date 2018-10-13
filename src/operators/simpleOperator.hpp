@@ -107,6 +107,20 @@ SimpleBinaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
 }
 
 template <typename View, typename OperandView, typename Derived>
+void SimpleBinaryOperator<View, OperandView,
+                          Derived>::standardSanityDefinednessChecks() {
+    if (!left->getViewIfDefined() || !right->getViewIfDefined()) {
+        if (this->appearsDefined()) {
+            throw SanityCheckException(
+                "Operands are undefined but operator is still defined.");
+        }
+    }
+    if (!this->appearsDefined()) {
+        throw SanityCheckException("operands are defined but operator is not.");
+    }
+}
+
+template <typename View, typename OperandView, typename Derived>
 void SimpleUnaryOperator<View, OperandView, Derived>::evaluateImpl() {
     operand->evaluate();
     reevaluate();
@@ -189,4 +203,18 @@ SimpleUnaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
     }
     return std::make_pair(changeMade, mpark::get<ExprRef<View>>(path.expr));
 }
+template <typename View, typename OperandView, typename Derived>
+void SimpleUnaryOperator<View, OperandView,
+                         Derived>::standardSanityDefinednessChecks() {
+    if (!operand->getViewIfDefined()) {
+        if (this->appearsDefined()) {
+            throw SanityCheckException(
+                "Operand is undefined but operator is still defined.");
+        }
+    }
+    if (!this->appearsDefined()) {
+        throw SanityCheckException("operand is defined but operator is not.");
+    }
+}
+
 #endif /* SRC_OPERATORS_SIMPLEOPERATOR_HPP_ */

@@ -274,8 +274,6 @@ void OpAllDiff::assertValidState() {
             success = false;
             break;
         }
-        if (indices.size() > 2) {
-        }
     }
     size_t total = 0;
     vector<Int> duplicateOperands;
@@ -308,7 +306,7 @@ void OpAllDiff::assertValidState() {
         }
     }
     if (success && duplicateOperands.size() != violatingOperands.size()) {
-        cerr << "Error: violatingOperands has too many indices.\n";
+        cerr << "violatingOperands has too many indices.\n";
         success = false;
     }
     if (!success) {
@@ -329,12 +327,56 @@ template struct SimpleUnaryOperator<BoolView, SequenceView, OpAllDiff>;
 
 string OpAllDiff::getOpName() { return "OpAllDiff"; }
 
-voidOpAllDiff::debugSanityCheckImpl() {
+void OpAllDiff::debugSanityCheckImpl() {
     operand->debugSanityCheck();
     auto operandView = operand->getViewIfDefined();
     if (!operandView || operandView->numberUndefined > 0) {
-        if (violation ) {
-
+        sanityCheck(violation == LARGE_VIOLATION,
+                    "AllDiff is undefined so violation should be set to "
+                    "LARGE_VIOLATION.");
+    }
+    for (size_t i = 0; i < indicesHashMap.size(); i++) {
+        HashType hash = indicesHashMap[i];
+        auto iter = hashIndicesMap.find(hash);
+        sanityCheck(iter != hashIndicesMap.end(),
+                    toString("hash ", hash, " at index ", i,
+                             " mapped to no set in hashIndicesMap."));
+        auto& indices = iter->second;
+        sanityCheck(indices.count(i),
+                    toString("index ", i, " maps to hash ", " hash ",
+                             " but hashIndicesMap does not have the hash index "
+                             "mapping\n",
+                             "Instead: Hash ", hash, " maps to ", indices));
+    }
+    size_t total = 0;
+    vector<Int> duplicateOperands;
+    for (auto& hashIndicesPair : hashIndicesMap) {
+        total += hashIndicesPair.second.size();
+        if (hashIndicesPair.second.size() > 1) {
+            for (const auto& index : hashIndicesPair.second) {
+                duplicateOperands.push_back(index);
+            }
         }
     }
+    sanityCheck(total == indicesHashMap.size(),
+                toString("found ", total,
+                         " indices in hashIndicesMap but indicesHashMap has a "
+                         "size "
+                         "of ",
+                         indicesHashMap.size()));
+
+    for (auto& index : duplicateOperands) {
+        sanityCheck(
+            violatingOperands.count(index),
+            toString("violatingOperands does not contain index ", index));
+    }
+    sanityCheck(duplicateOperands.size() == violatingOperands.size(),
+                toString("violatingOperands has too many indices."));
+    UInt calcViolation = 0;
+    for (auto& hashIndexPair : hashIndicesMap) {
+        calcViolation += (hashIndexPair.second.size() - 1);
+    }
+    sanityCheck(calcViolation == violation,
+                toString("violation should be ", calcViolation,
+                         " but it is actually ", violation));
 }

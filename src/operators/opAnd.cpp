@@ -126,7 +126,8 @@ void OpAnd::reevaluateImpl(SequenceView& operandView) {
 void OpAnd::updateVarViolationsImpl(const ViolationContext&,
                                     ViolationContainer& vioContainer) {
     for (size_t violatingOperandIndex : violatingOperands) {
-        operand->view().get()
+        operand->view()
+            .get()
             .getMembers<BoolView>()[violatingOperandIndex]
             ->updateVarViolations(violation, vioContainer);
     }
@@ -148,6 +149,29 @@ std::ostream& OpAnd::dumpState(std::ostream& os) const {
 }
 
 bool OpAnd::optimiseImpl() { return flatten<BoolView>(*this); }
+
+string OpAnd::getOpName() const { return "OpAnd"; }
+void OpAnd::debugSanityCheckImpl() const {
+    operand->debugSanityCheck();
+    this->standardSanityDefinednessChecks();
+    auto view = operand->getViewIfDefined();
+    if (!view) {
+        sanityCheck(violation == LARGE_VIOLATION,
+                    "violation is not equal to LARGE_VIOLATION.");
+        return;
+    }
+    auto& operandView = *view;
+    UInt calcViolation = 0;
+    for (auto& member : operandView.getMembers<BoolView>()) {
+        auto memberView = member->getViewIfDefined();
+        sanityCheck(memberView,
+                    "View should not be undefined, it is a bool view.");
+        calcViolation += memberView->violation;
+    }
+    sanityCheck(violation == calcViolation,
+                toString("violation should be ", calcViolation,
+                         " but it is actually ", violation));
+}
 
 template <typename Op>
 struct OpMaker;

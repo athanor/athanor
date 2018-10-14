@@ -27,7 +27,7 @@ struct IntRange : public SimpleBinaryOperator<SequenceView, IntView, IntRange> {
                                  ViolationContainer& vioContainer) final;
     void copy(IntRange& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
-    void debugSanityCheckImpl();
-    std::string getOpName();
+    void debugSanityCheckImpl() const final;
+    std::string getOpName() const final;
 };
 #endif /* SRC_OPERATORS_INTRANGE_H_ */

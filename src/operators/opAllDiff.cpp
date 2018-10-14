@@ -241,18 +241,6 @@ std::ostream& OpAllDiff::dumpState(std::ostream& os) const {
 
 bool OpAllDiff::optimiseImpl() { return false; }
 
-template <typename Op>
-struct OpMaker;
-
-template <>
-struct OpMaker<OpAllDiff> {
-    static ExprRef<BoolView> make(ExprRef<SequenceView>);
-};
-
-ExprRef<BoolView> OpMaker<OpAllDiff>::make(ExprRef<SequenceView> o) {
-    return make_shared<OpAllDiff>(move(o));
-}
-
 void OpAllDiff::assertValidState() {
     bool success = true;
     for (size_t i = 0; i < indicesHashMap.size(); i++) {
@@ -325,15 +313,16 @@ void OpAllDiff::assertValidState() {
 
 template struct SimpleUnaryOperator<BoolView, SequenceView, OpAllDiff>;
 
-string OpAllDiff::getOpName() { return "OpAllDiff"; }
+string OpAllDiff::getOpName() const { return "OpAllDiff"; }
 
-void OpAllDiff::debugSanityCheckImpl() {
+void OpAllDiff::debugSanityCheckImpl() const {
     operand->debugSanityCheck();
     auto operandView = operand->getViewIfDefined();
     if (!operandView || operandView->numberUndefined > 0) {
         sanityCheck(violation == LARGE_VIOLATION,
                     "AllDiff is undefined so violation should be set to "
                     "LARGE_VIOLATION.");
+        return;
     }
     for (size_t i = 0; i < indicesHashMap.size(); i++) {
         HashType hash = indicesHashMap[i];
@@ -379,4 +368,16 @@ void OpAllDiff::debugSanityCheckImpl() {
     sanityCheck(calcViolation == violation,
                 toString("violation should be ", calcViolation,
                          " but it is actually ", violation));
+}
+
+template <typename Op>
+struct OpMaker;
+
+template <>
+struct OpMaker<OpAllDiff> {
+    static ExprRef<BoolView> make(ExprRef<SequenceView>);
+};
+
+ExprRef<BoolView> OpMaker<OpAllDiff>::make(ExprRef<SequenceView> o) {
+    return make_shared<OpAllDiff>(move(o));
 }

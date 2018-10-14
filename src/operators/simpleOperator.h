@@ -134,7 +134,7 @@ struct SimpleBinaryOperator : public View,
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
     bool optimiseImpl();
     std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
-    void standardSanityDefinednessChecks();
+    void standardSanityDefinednessChecks() const;
 };
 
 template <typename View, typename OperandView, typename Derived>
@@ -185,7 +185,7 @@ struct SimpleUnaryOperator : public View,
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
     bool optimiseImpl();
     std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
-    void standardSanityDefinednessChecks();
+    void standardSanityDefinednessChecks() const;
 };
 
 #endif /* SRC_OPERATORS_SIMPLEOPERATOR_H_ */

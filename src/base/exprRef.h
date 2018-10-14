@@ -177,8 +177,8 @@ struct ExprInterface : public Undefinable<View> {
             throw e;
         }
     }
-    virtual void debugSanityCheckImpl() = 0;
-    virtual std::string getOpName() = 0;
+    virtual void debugSanityCheckImpl() const = 0;
+    virtual std::string getOpName() const = 0;
 };
 
 struct ViolationContext {

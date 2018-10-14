@@ -108,7 +108,7 @@ SimpleBinaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
 
 template <typename View, typename OperandView, typename Derived>
 void SimpleBinaryOperator<View, OperandView,
-                          Derived>::standardSanityDefinednessChecks() {
+                          Derived>::standardSanityDefinednessChecks() const {
     if (!left->getViewIfDefined() || !right->getViewIfDefined()) {
         if (this->appearsDefined()) {
             throw SanityCheckException(
@@ -205,7 +205,7 @@ SimpleUnaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
 }
 template <typename View, typename OperandView, typename Derived>
 void SimpleUnaryOperator<View, OperandView,
-                         Derived>::standardSanityDefinednessChecks() {
+                         Derived>::standardSanityDefinednessChecks() const {
     if (!operand->getViewIfDefined()) {
         if (this->appearsDefined()) {
             throw SanityCheckException(

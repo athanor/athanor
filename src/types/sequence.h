@@ -563,8 +563,8 @@ struct SequenceValue : public SequenceView, public ValBase {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension) final;
     void assertValidState();
-    void debugSanityCheckImpl();
-    std::string getOpName();
+    void debugSanityCheckImpl() const final;
+    std::string getOpName() const final;
 };
 
 #endif /* SRC_TYPES_SEQUENCE_H_ */

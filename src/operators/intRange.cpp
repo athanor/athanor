@@ -175,15 +175,18 @@ bool isInstanceOf<IntRange, SequenceView>(const ExprRef<SequenceView>& expr) {
     return dynamic_cast<IntRange*>(&(*expr)) != NULL;
 }
 
-string IntRange::getOpName() {
+string IntRange::getOpName() const {
     return toString("IntRange(", left->getViewIfDefined(), ",",
                     right->getViewIfDefined(), ")");
 }
 
-void IntRange::debugSanityCheckImpl() {
+void IntRange::debugSanityCheckImpl() const {
     left->debugSanityCheck();
     right->debugSanityCheck();
     this->standardSanityDefinednessChecks();
+    if (!this->appearsDefined()) {
+        return;
+    }
     auto& leftView = left->view().get();
     auto& rightView = right->view().get();
     sanityCheck(numberUndefined == 0, "Number undefined must be 0.");

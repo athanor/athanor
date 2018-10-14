@@ -23,7 +23,7 @@ class FastIterableIntSet {
         elementIndexes.resize((maxElement + 1) - minElement, NOT_PRESENT);
     }
 
-    inline int count(Int element) {
+    inline int count(Int element) const {
         size_t index = translate(element);
         return index < elementIndexes.size() &&
                elementIndexes[index] != NOT_PRESENT;
@@ -69,7 +69,7 @@ class FastIterableIntSet {
     }
 
    private:
-    inline size_t translate(Int element) { return element - minElement; }
+    inline size_t translate(Int element) const { return element - minElement; }
 
     inline size_t getIndexOf(Int element) {
         return elementIndexes[translate(element)] - 1;

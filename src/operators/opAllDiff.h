@@ -65,8 +65,8 @@ struct OpAllDiff
     std::ostream& dumpState(std::ostream& os) const final;
     bool optimiseImpl();
     void assertValidState();
-    std::string getOpName();
-    void debugSanityCheckImpl();
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPALLDIFF_H_ */

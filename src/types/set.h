@@ -407,6 +407,8 @@ struct SetValue : public SetView, public ValBase {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     std::pair<bool, ExprRef<SetView>> optimise(PathExtension) final;
+    void debugSanityCheckImpl() const final;
+    std::string getOpName() const final;
 };
 
 #endif /* SRC_TYPES_SET_H_ */

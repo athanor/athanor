@@ -41,11 +41,12 @@ struct OpCatchUndef : public ExprInterface<ExprViewType> {
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    bool isUndefined();
     ExprRef<ExprViewType>& getMember();
     const ExprRef<ExprViewType>& getMember() const;
     void reevaluate();
     std::pair<bool, ExprRef<ExprViewType>> optimise(PathExtension path) final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPCATCHUNDEF_H_ */

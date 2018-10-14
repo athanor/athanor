@@ -135,6 +135,8 @@ struct TupleValue : public TupleView, public ValBase {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     std::pair<bool, ExprRef<TupleView>> optimise(PathExtension) final;
+    void debugSanityCheckImpl() const final;
+    std::string getOpName() const final;
 };
 
 #endif /* SRC_TYPES_TUPLE_H_ */

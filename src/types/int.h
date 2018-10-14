@@ -52,6 +52,8 @@ struct IntValue : public IntView, ValBase {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     std::pair<bool, ExprRef<IntView>> optimise(PathExtension) final;
+    void debugSanityCheckImpl() const final;
+    std::string getOpName() const final;
 };
 
 struct IntViolationContext : public ViolationContext {

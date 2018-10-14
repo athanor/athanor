@@ -326,6 +326,8 @@ struct FunctionValue : public FunctionView, public ValBase {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
     std::pair<bool, ExprRef<FunctionView>> optimise(PathExtension) final;
+    void debugSanityCheckImpl() const final;
+    std::string getOpName() const final;
 
     void assertValidVarBases();
 };

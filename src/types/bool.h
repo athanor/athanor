@@ -37,6 +37,8 @@ struct BoolValue : public BoolView, ValBase {
 
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     std::pair<bool, ExprRef<BoolView>> optimise(PathExtension) final;
+    void debugSanityCheckImpl() const final;
+    std::string getOpName() const final;
 };
 
 #endif /* SRC_TYPES_BOOL_H_ */

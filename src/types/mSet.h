@@ -359,5 +359,7 @@ struct MSetValue : public MSetView, public ValBase {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     std::pair<bool, ExprRef<MSetView>> optimise(PathExtension) final;
+    void debugSanityCheckImpl() const final;
+    std::string getOpName() const final;
 };
 #endif /* SRC_TYPES_MSET_H_ */

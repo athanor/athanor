@@ -167,11 +167,6 @@ void OpCatchUndef<ExprViewType>::findAndReplaceSelf(
 }
 
 template <typename ExprViewType>
-bool OpCatchUndef<ExprViewType>::isUndefined() {
-    return false;
-}
-
-template <typename ExprViewType>
 pair<bool, ExprRef<ExprViewType>> OpCatchUndef<ExprViewType>::optimise(
     PathExtension path) {
     bool changeMade = false;
@@ -182,6 +177,20 @@ pair<bool, ExprRef<ExprViewType>> OpCatchUndef<ExprViewType>::optimise(
     changeMade |= optResult.first;
     replacement = optResult.second;
     return make_pair(changeMade, mpark::get<ExprRef<ExprViewType>>(path.expr));
+}
+
+template <typename ExprViewType>
+string OpCatchUndef<ExprViewType>::getOpName() const {
+    return "OpCatchUndef";
+}
+template <typename ExprViewType>
+void OpCatchUndef<ExprViewType>::debugSanityCheckImpl() const {
+    expr->debugSanityCheck();
+    replacement->debugSanityCheck();
+    sanityCheck(this->appearsDefined(), "This op should not be undefined.");
+    sanityCheck(exprDefined == expr->appearsDefined(),
+                toString("exprDefined should be ", expr->appearsDefined(),
+                         " but it is actually ", exprDefined));
 }
 
 template <typename Op>

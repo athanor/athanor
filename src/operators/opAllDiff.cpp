@@ -326,3 +326,15 @@ void OpAllDiff::assertValidState() {
 }
 
 template struct SimpleUnaryOperator<BoolView, SequenceView, OpAllDiff>;
+
+string OpAllDiff::getOpName() { return "OpAllDiff"; }
+
+voidOpAllDiff::debugSanityCheckImpl() {
+    operand->debugSanityCheck();
+    auto operandView = operand->getViewIfDefined();
+    if (!operandView || operandView->numberUndefined > 0) {
+        if (violation ) {
+
+        }
+    }
+}

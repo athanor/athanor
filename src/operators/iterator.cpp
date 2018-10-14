@@ -160,12 +160,11 @@ void Iterator<View>::debugSanityChecksImpl() {
         return;
     }
     ref->debugSanityCheck();
-    if (ref->appearsDefined() != this->appearsDefined()) {
-        throw SanityCheckException(
-            toString("ref and iterator definedness do not match: ref defined=",
-                     ref->appearsDefined(),
-                     ", iterator defined=", this->appearsDefined()));
-    }
+    sanityCheck(
+        ref->appearsDefined() == this->appearsDefined(),
+        toString("ref and iterator definedness do not match: ref defined=",
+                 ref->appearsDefined(),
+                 ", iterator defined=", this->appearsDefined()));
 }
 
 #define iteratorInstantiators(name) template struct Iterator<name##View>;

@@ -186,24 +186,16 @@ void IntRange::debugSanityCheckImpl() {
     this->standardSanityDefinednessChecks();
     auto& leftView = left->view().get();
     auto& rightView = right->view().get();
-    if (numberUndefined > 0) {
-        throw SanityCheckException("Number undefined must be 0.");
-    }
+    sanityCheck(numberUndefined == 0, "Number undefined must be 0.");
     Int value = max(rightView.value - leftView.value, (Int)0);
-    if (value != (Int)numberElements()) {
-        throw SanityCheckException(
-            "Number elements in sequence do not match int range.\n");
-    }
+    sanityCheck(value == (Int)numberElements(),
+                "Number elements in sequence do not match int range.");
+
     for (Int i = leftView.value; i <= rightView.value; i++) {
         auto memberView = getMembers<IntView>()[i]->getViewIfDefined();
-        if (!memberView) {
-            throw SanityCheckException(
-                "One of the sequence members is undefined.");
-        }
-        if (memberView->value != i) {
-            throw SanityCheckException(toString("One member has value ",
-                                                memberView->value,
-                                                " but should be ", i, "."));
-        }
+        sanityCheck(memberView, "One of the sequence members is undefined.");
+        sanityCheck(memberView->value == i,
+                    toString("One member has value ", memberView->value,
+                             " but should be ", i, "."));
     }
 }

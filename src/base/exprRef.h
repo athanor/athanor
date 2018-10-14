@@ -12,14 +12,24 @@
 
 struct SanityCheckException {
     const std::string errorMessage;
+    std::string file;
+    int line = 0;
     std::vector<std::string> messageStack;
     SanityCheckException(const std::string& errorMessage)
         : errorMessage(errorMessage) {}
+    SanityCheckException(const std::string& errorMessage,
+                         const std::string& file, int line)
+        : errorMessage(errorMessage), file(file), line(line) {}
     template <typename T>
     inline void report(T&& message) {
         messageStack.emplace_back(std::forward<T>(message));
     }
 };
+
+#define sanityCheck(check, message)                              \
+    if (!(check)) {                                              \
+        throw SanityCheckException(message, __FILE__, __LINE__); \
+    }
 
 template <typename View>
 struct ExprRef;

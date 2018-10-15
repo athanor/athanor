@@ -36,6 +36,8 @@ ostream& OpDiv::dumpState(ostream& os) const {
 string OpDiv::getOpName() const { return "OpDiv"; }
 
 void OpDiv::debugSanityCheckImpl() const {
+    left->debugSanityCheck();
+    right->debugSanityCheck();
     auto leftViewOption = left->getViewIfDefined();
     auto rightViewOption = right->getViewIfDefined();
     if (!leftViewOption || !rightViewOption) {

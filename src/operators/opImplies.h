@@ -20,5 +20,7 @@ struct OpImplies : public SimpleBinaryOperator<BoolView, BoolView, OpImplies> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpImplies& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 #endif /* SRC_OPERATORS_OPIMPLIES_H_ */

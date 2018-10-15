@@ -29,6 +29,26 @@ ostream& OpImplies::dumpState(ostream& os) const {
     return os;
 }
 
+string OpImplies::getOpName() const { return "OpImplies"; }
+void OpImplies::debugSanityCheckImpl() const {
+    auto leftViewOption = left->getViewIfDefined();
+    auto rightViewOption = right->getViewIfDefined();
+    sanityCheck(leftViewOption || rightViewOption,
+                "boolean operands to this operator came back undefined even "
+                "though they are boolean.");
+    auto& leftView = *leftViewOption;
+    auto& rightView = *rightViewOption;
+
+    if (leftView.violation != 0) {
+        sanityCheck(violation == 0, "violation should be 0");
+    } else {
+        sanityCheck(violation == rightView.violation,
+                    toString("violation should be ", rightView.violation,
+                             " but is instead ", violation));
+    }
+}
+
+
 template <typename Op>
 struct OpMaker;
 

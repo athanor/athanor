@@ -76,7 +76,8 @@ template <typename FunctionMemberViewType, typename TriggerType>
 struct PreImageTrigger;
 
 template <typename FunctionMemberViewType>
-lib::optional<UInt> OpFunctionImage<FunctionMemberViewType>::calculateIndex() {
+lib::optional<UInt> OpFunctionImage<FunctionMemberViewType>::calculateIndex()
+    const {
     auto functionView = functionOperand->view();
     if (!functionView) {
         return lib::nullopt;
@@ -438,6 +439,37 @@ OpFunctionImage<FunctionMemberViewType>::optimise(PathExtension path) {
     return make_pair(changeMade,
                      mpark::get<ExprRef<FunctionMemberViewType>>(path.expr));
 }
+
+template <typename FunctionMemberViewType>
+string OpFunctionImage<FunctionMemberViewType>::getOpName() const {
+    return toString(
+        "OpFunctionImage<",
+        TypeAsString<
+            typename AssociatedValueType<FunctionMemberViewType>::type>::value,
+        ">");
+}
+template <typename FunctionMemberViewType>
+void OpFunctionImage<FunctionMemberViewType>::debugSanityCheckImpl() const {
+    functionOperand->debugSanityCheck();
+    invoke(preImageOperand, debugSanityCheck());
+    if (!functionOperand->appearsDefined() ||
+        !invoke(preImageOperand, appearsDefined())) {
+        sanityCheck(!this->appearsDefined(),
+                    "operator should be undefined as at least one operand is "
+                    "undefined.");
+        return;
+    }
+    auto index = calculateIndex();
+    if (!index) {
+        sanityCheck(!this->appearsDefined(),
+                    "Image out of bounds, operator should be undefined.");
+    }
+    sanityCheck(this->appearsDefined(), "operator should be defined.");
+    sanityCheck(cachedIndex == (Int)(*index),
+                toString("cached index should be ", *index, " but is instead ",
+                         cachedIndex));
+}
+
 template <typename Op>
 struct OpMaker;
 

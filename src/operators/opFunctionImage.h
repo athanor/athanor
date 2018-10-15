@@ -64,7 +64,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     OptionalRef<ExprRef<FunctionMemberViewType>> getMember();
     OptionalRef<const ExprRef<FunctionMemberViewType>> getMember() const;
     void reevaluate(bool recalculateCachedIndex = true);
-    lib::optional<UInt> calculateIndex();
+    lib::optional<UInt> calculateIndex() const;
     std::pair<bool, ExprRef<FunctionMemberViewType>> optimise(
         PathExtension path) final;
 
@@ -84,6 +84,8 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     void setAppearsDefined(bool set) {
         Undefinable<View>::setAppearsDefined(set);
     }
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPFUNCTIONIMAGE_H_ */

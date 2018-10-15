@@ -406,6 +406,56 @@ OpFlattenOneLevel<SequenceInnerType>::optimise(PathExtension path) {
     return make_pair(operand->optimise(path.extend(operand)).first,
                      mpark::get<ExprRef<SequenceView>>(path.expr));
 }
+template <typename SequenceInnerType>
+string OpFlattenOneLevel<SequenceInnerType>::getOpName() const {
+    return toString(
+        "OpFlattenOneLevel<",
+        TypeAsString<
+            typename AssociatedValueType<SequenceInnerType>::type>::value,
+        ">");
+}
+
+template <typename SequenceInnerType>
+void OpFlattenOneLevel<SequenceInnerType>::debugSanityCheckImpl() const {
+    operand->debugSanityCheck();
+    sanityCheck(operand->appearsDefined() == this->appearsDefined(),
+                toString("operand defined = ", operand->appearsDefined(),
+                         " operator defined = ", this->appearsDefined()));
+    auto view = operand->view();
+    if (!view) {
+        return;
+    }
+    auto& operandView = *view;
+    auto& innerSequences = operandView.getMembers<SequenceView>();
+    UInt total = 0;
+    UInt totalNumberUndefined = 0;
+    sanityCheck(
+        innerSequences.size() == startingIndices.size(),
+        toString("startingIndices has size ", startingIndices.size(),
+                 " number of inner sequences is ", innerSequences.size()));
+
+    for (size_t i = 0; i < innerSequences.size(); i++) {
+        sanityCheck(startingIndices[i] == total,
+                    toString("Error: expected starting index at position ", i,
+                             " to be ", total));
+        auto& innerView =
+            innerSequences[i]->view().checkedGet(OP_FLATTEN_DEFAULT_ERROR);
+        totalNumberUndefined += innerView.numberUndefined;
+        total += innerView.numberElements();
+        auto innerMembers = innerView.getMembers<SequenceInnerType>();
+        for (size_t j = 0; j < innerMembers.size(); j++) {
+            auto* innerMemberPtr = &(*innerMembers[j]);
+            sanityCheck(total + j < numberElements(),
+                        "Not enough members in OpFlattenOneLevel");
+            auto* memberPtr = &(*(getMembers<SequenceInnerType>()[total + j]));
+            sanityCheck(innerMemberPtr == memberPtr,
+                        "member is not at the right position.");
+        }
+        sanityCheck(totalNumberUndefined == numberUndefined,
+                    toString("numberUndefined should be ", totalNumberUndefined,
+                             " but is instead ", numberUndefined));
+    }
+}
 
 template <typename Op>
 struct OpMaker;

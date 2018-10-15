@@ -33,6 +33,35 @@ ostream& OpDiv::dumpState(ostream& os) const {
     return os;
 }
 
+string OpDiv::getOpName() const { return "OpDiv"; }
+
+void OpDiv::debugSanityCheckImpl() const {
+    auto leftViewOption = left->getViewIfDefined();
+    auto rightViewOption = right->getViewIfDefined();
+    if (!leftViewOption || !rightViewOption) {
+        sanityCheck(
+            !this->appearsDefined(),
+            "operands are undefined, operator value should be undefined");
+        return;
+    }
+    auto& leftView = *leftViewOption;
+    auto& rightView = *rightViewOption;
+    if (rightView.value == 0) {
+        sanityCheck(!this->appearsDefined(),
+                    "Should be undefined as right operand is 0");
+        return;
+    }
+    sanityCheck(this->appearsDefined(),
+                "Operands are defined and not dividing by 0, operator value "
+                "should be defined.");
+    Int checkValue = leftView.value / rightView.value;
+    if (checkValue < 0 && leftView.value % rightView.value != 0) {
+        --checkValue;
+    }
+    sanityCheck(value == checkValue,
+                toString("operator value should be ", checkValue,
+                         " but it is instead ", value));
+}
 template <typename Op>
 struct OpMaker;
 

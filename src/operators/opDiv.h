@@ -17,6 +17,8 @@ struct OpDiv : public SimpleBinaryOperator<IntView, IntView, OpDiv> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpDiv& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPDIV_H_ */

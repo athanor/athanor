@@ -324,6 +324,25 @@ void OpAllDiff::debugSanityCheckImpl() const {
                     "LARGE_VIOLATION.");
         return;
     }
+    sanityCheck(
+        operandView.numberElements() == indicesHashMap.size(),
+        toString("operand has ", operandView.numberElements(),
+                 " elements but indicesHashMap has ", indicesHashMap.size()));
+    mpark::visit(
+        [&](auto& members) {
+            for (size_t i = 0; i < members.size(); i++) {
+                auto view = members[i]->getViewIfDefined();
+                if (!view) {
+                    continue;
+                }
+                HashType hash = getValueHash(*view);
+                sanityCheck(
+                    hash == indicesHashMap[i],
+                    toString("index ", i, " has hash ", hash,
+                             " but indicesHashMap has ", indicesHashMap[i]));
+            }
+        },
+        operandView.members);
     for (size_t i = 0; i < indicesHashMap.size(); i++) {
         HashType hash = indicesHashMap[i];
         auto iter = hashIndicesMap.find(hash);

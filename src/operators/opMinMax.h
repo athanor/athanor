@@ -27,10 +27,12 @@ struct OpMinMax
     void copy(OpMinMax& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
 
-    bool compare(Int u, Int v);
+    static bool compare(Int u, Int v);
     void handleMemberUndefined(UInt);
     void handleMemberDefined(UInt);
     bool optimiseImpl();
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 typedef OpMinMax<true> OpMin;
 typedef OpMinMax<false> OpMax;

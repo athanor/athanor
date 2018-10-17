@@ -1,4 +1,3 @@
-
 #include "operators/opMinMax.h"
 #include <algorithm>
 #include <cassert>
@@ -64,7 +63,7 @@ inline void updateMinValues(OpMinMax<minMode>& op, bool trigger) {
             foundUndefined = true;
             continue;
         }
-        Int operandValue = (*operandChildView).value;
+        Int operandValue = operandChildView->value;
         if (op.minValueIndices.empty() || op.compare(operandValue, op.value)) {
             op.value = operandValue;
             op.minValueIndices.clear();
@@ -119,8 +118,7 @@ void OpMinMax<minMode>::handleMemberUndefined(UInt index) {
 }
 template <bool minMode>
 void OpMinMax<minMode>::handleMemberDefined(UInt index) {
-    auto& expr =
-        this->operand->view()->template getMembers<IntView>()[index];
+    auto& expr = this->operand->view()->template getMembers<IntView>()[index];
     auto exprView = expr->getViewIfDefined();
     if (!exprView) {
         return;
@@ -273,6 +271,47 @@ std::ostream& OpMinMax<minMode>::dumpState(std::ostream& os) const {
 template <bool minMode>
 bool OpMinMax<minMode>::optimiseImpl() {
     return flatten<IntView>(*this);
+}
+template <bool minMode>
+string OpMinMax<minMode>::getOpName() const {
+    return toString("OpMinMax<minMode=", minMode, ">");
+}
+
+template <bool minMode>
+void OpMinMax<minMode>::debugSanityCheckImpl() const {
+    this->operand->debugSanityCheck();
+    this->standardSanityDefinednessChecks();
+    auto operandView = this->operand->view();
+    if (!operandView) {
+        return;
+    }
+    auto& members = (*operandView).template getMembers<IntView>();
+    FastIterableIntSet checkMinValueIndices(0, 0);
+    Int checkValue;
+    for (size_t i = 0; i < members.size(); ++i) {
+        auto& operandChild = members[i];
+        auto operandChildView = operandChild->getViewIfDefined();
+        if (!operandChildView) {
+            continue;
+        }
+        Int operandValue = operandChildView->value;
+        if (checkMinValueIndices.empty() || compare(operandValue, checkValue)) {
+            checkValue = operandValue;
+            checkMinValueIndices.clear();
+            checkMinValueIndices.insert(i);
+        } else if (operandValue == checkValue) {
+            checkMinValueIndices.insert(i);
+        }
+    }
+    sanityEqualsCheck(checkMinValueIndices.size(), minValueIndices.size());
+    for (const auto& index : checkMinValueIndices) {
+        sanityCheck(
+            minValueIndices.count(index),
+            toString("index ", index, " is missing from minValueIndices."));
+    }
+    if (!checkMinValueIndices.empty()) {
+        sanityEqualsCheck(checkValue, this->value);
+    }
 }
 
 template <typename Op>

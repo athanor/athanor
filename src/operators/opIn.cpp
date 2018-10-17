@@ -185,21 +185,14 @@ void OpIn::debugSanityCheckImpl() const {
     auto setView = setOperand->getViewIfDefined();
 
     if (!exprDefined || !setView) {
-        sanityCheck(
-            violation == LARGE_VIOLATION,
-            toString(
-                "violation should be equal to LARGE_VIOLATION but is instead ",
-                violation));
+        sanityLargeViolationCheck(violation);
+        return;
     }
     HashType hash = getValueHash(expr);
     if (setView->memberHashes.count(hash)) {
-        sanityCheck(
-            violation == 0,
-            toString("violation should be 0 bu t is instead ", violation));
+        sanityEqualsCheck(0, violation);
     } else {
-        sanityCheck(
-            violation == 1,
-            toString("violation should be 1 but is instead ", violation));
+        sanityEqualsCheck(1, violation);
     }
 }
 template <typename Op>

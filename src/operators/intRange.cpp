@@ -189,10 +189,9 @@ void IntRange::debugSanityCheckImpl() const {
     }
     auto& leftView = left->view().get();
     auto& rightView = right->view().get();
-    sanityCheck(numberUndefined == 0, "Number undefined must be 0.");
+    sanityEqualsCheck(0, numberUndefined);
     Int value = max(rightView.value - leftView.value, (Int)0);
-    sanityCheck(value == (Int)numberElements(),
-                "Number elements in sequence do not match int range.");
+    sanityEqualsCheck(value, (Int)numberElements());
 
     for (Int i = leftView.value; i <= rightView.value; i++) {
         auto memberView = getMembers<IntView>()[i]->getViewIfDefined();

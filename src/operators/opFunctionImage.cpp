@@ -465,9 +465,7 @@ void OpFunctionImage<FunctionMemberViewType>::debugSanityCheckImpl() const {
                     "Image out of bounds, operator should be undefined.");
     }
     sanityCheck(this->appearsDefined(), "operator should be defined.");
-    sanityCheck(cachedIndex == (Int)(*index),
-                toString("cached index should be ", *index, " but is instead ",
-                         cachedIndex));
+    sanityEqualsCheck((Int)(*index), cachedIndex);
 }
 
 template <typename Op>

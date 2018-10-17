@@ -60,9 +60,7 @@ void OpDiv::debugSanityCheckImpl() const {
     if (checkValue < 0 && leftView.value % rightView.value != 0) {
         --checkValue;
     }
-    sanityCheck(value == checkValue,
-                toString("operator value should be ", checkValue,
-                         " but it is instead ", value));
+    sanityEqualsCheck(checkValue, value);
 }
 template <typename Op>
 struct OpMaker;

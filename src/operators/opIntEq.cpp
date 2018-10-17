@@ -39,9 +39,22 @@ ostream& OpIntEq::dumpState(ostream& os) const {
     return os;
 }
 
-template <typename Op>
-struct OpMaker;
+string OpIntEq::getOpName() const { return "OpIntEq"; }
+void OpIntEq::debugSanityCheckImpl() const {
+    auto leftOption = left->getViewIfDefined();
+    auto rightOption = right->getViewIfDefined();
+    if (!leftOption || !rightOption) {
+        sanityLargeViolationCheck(violation);
+        return;
+    }
+    auto& leftView = *leftOption;
+    auto& rightView = *rightOption;
+    UInt checkViolation = abs(leftView.value - rightView.value);
+    sanityEqualsCheck(checkViolation, violation);
+}
 
+template <typename>
+struct OpMaker;
 template <>
 struct OpMaker<OpIntEq> {
     static ExprRef<BoolView> make(ExprRef<IntView> l, ExprRef<IntView> r);

@@ -21,5 +21,7 @@ struct OpIntEq : public SimpleBinaryOperator<BoolView, IntView, OpIntEq> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpIntEq& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 #endif /* SRC_OPERATORS_OPINTEQ_H_ */

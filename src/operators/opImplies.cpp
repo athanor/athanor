@@ -31,6 +31,8 @@ ostream& OpImplies::dumpState(ostream& os) const {
 
 string OpImplies::getOpName() const { return "OpImplies"; }
 void OpImplies::debugSanityCheckImpl() const {
+    left->debugSanityCheck();
+    right->debugSanityCheck();
     auto leftViewOption = left->getViewIfDefined();
     auto rightViewOption = right->getViewIfDefined();
     sanityCheck(leftViewOption || rightViewOption,
@@ -40,14 +42,11 @@ void OpImplies::debugSanityCheckImpl() const {
     auto& rightView = *rightViewOption;
 
     if (leftView.violation != 0) {
-        sanityCheck(violation == 0, "violation should be 0");
+        sanityEqualsCheck(0, violation);
     } else {
-        sanityCheck(violation == rightView.violation,
-                    toString("violation should be ", rightView.violation,
-                             " but is instead ", violation));
+        sanityEqualsCheck(rightView.violation, violation);
     }
 }
-
 
 template <typename Op>
 struct OpMaker;

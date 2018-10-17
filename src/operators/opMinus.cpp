@@ -2,7 +2,9 @@
 #include "operators/simpleOperator.hpp"
 using namespace std;
 
-void OpMinus::reevaluateImpl(IntView& leftView, IntView& rightView) { value = leftView.value - rightView.value; }
+void OpMinus::reevaluateImpl(IntView& leftView, IntView& rightView) {
+    value = leftView.value - rightView.value;
+}
 
 void OpMinus::updateVarViolationsImpl(const ViolationContext& vioContext,
                                       ViolationContainer& vioContainer) {
@@ -20,6 +22,21 @@ ostream& OpMinus::dumpState(ostream& os) const {
     return os;
 }
 
+string OpMinus::getOpName() const { return "OpMinus"; }
+void OpMinus::debugSanityCheckImpl() const {
+    left->debugSanityCheck();
+    right->debugSanityCheck();
+    this->standardSanityDefinednessChecks();
+    auto leftOption = left->getViewIfDefined();
+    auto rightOption = right->getViewIfDefined();
+    if (!leftOption || !rightOption) {
+        return;
+    }
+    auto& leftView = *leftOption;
+    auto& rightView = *rightOption;
+    Int checkValue = leftView.value - rightView.value;
+    sanityEqualsCheck(checkValue, value);
+}
 template <typename Op>
 struct OpMaker;
 

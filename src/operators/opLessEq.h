@@ -21,5 +21,7 @@ struct OpLessEq : public SimpleBinaryOperator<BoolView, IntView, OpLessEq> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpLessEq& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 #endif /* SRC_OPERATORS_OPLESSEQ_H_ */

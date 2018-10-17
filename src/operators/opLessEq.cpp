@@ -34,6 +34,24 @@ ostream& OpLessEq::dumpState(ostream& os) const {
     return os;
 }
 
+string OpLessEq::getOpName() const { return "OpLessEq"; }
+void OpLessEq::debugSanityCheckImpl() const {
+    left->debugSanityCheck();
+    right->debugSanityCheck();
+    auto leftOption = left->getViewIfDefined();
+    auto rightOption = right->getViewIfDefined();
+    if (!leftOption || !rightOption) {
+        sanityLargeViolationCheck(violation);
+        return;
+    }
+    auto& leftView = *leftOption;
+    auto& rightView = *rightOption;
+    Int diff = rightView.value - leftView.value;
+    UInt checkViolation = abs(min<Int>(diff, 0));
+
+    sanityEqualsCheck(checkViolation, violation);
+}
+
 template <typename Op>
 struct OpMaker;
 

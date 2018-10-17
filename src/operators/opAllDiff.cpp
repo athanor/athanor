@@ -319,14 +319,12 @@ void OpAllDiff::debugSanityCheckImpl() const {
     operand->debugSanityCheck();
     auto operandView = operand->getViewIfDefined();
     if (!operandView || operandView->numberUndefined > 0) {
-        sanityCheck(violation == LARGE_VIOLATION,
-                    "AllDiff is undefined so violation should be set to "
-                    "LARGE_VIOLATION.");
+        sanityLargeViolationCheck(violation);
         return;
     }
     sanityCheck(
-        operandView.numberElements() == indicesHashMap.size(),
-        toString("operand has ", operandView.numberElements(),
+        operandView->numberElements() == indicesHashMap.size(),
+        toString("operand has ", operandView->numberElements(),
                  " elements but indicesHashMap has ", indicesHashMap.size()));
     mpark::visit(
         [&](auto& members) {
@@ -342,7 +340,7 @@ void OpAllDiff::debugSanityCheckImpl() const {
                              " but indicesHashMap has ", indicesHashMap[i]));
             }
         },
-        operandView.members);
+        operandView->members);
     for (size_t i = 0; i < indicesHashMap.size(); i++) {
         HashType hash = indicesHashMap[i];
         auto iter = hashIndicesMap.find(hash);
@@ -384,9 +382,7 @@ void OpAllDiff::debugSanityCheckImpl() const {
     for (auto& hashIndexPair : hashIndicesMap) {
         calcViolation += (hashIndexPair.second.size() - 1);
     }
-    sanityCheck(calcViolation == violation,
-                toString("violation should be ", calcViolation,
-                         " but it is actually ", violation));
+    sanityEqualsCheck(calcViolation, violation);
 }
 
 template <typename Op>

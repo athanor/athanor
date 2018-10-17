@@ -156,8 +156,7 @@ void OpAnd::debugSanityCheckImpl() const {
     this->standardSanityDefinednessChecks();
     auto view = operand->getViewIfDefined();
     if (!view) {
-        sanityCheck(violation == LARGE_VIOLATION,
-                    "violation is not equal to LARGE_VIOLATION.");
+        sanityLargeViolationCheck(violation);
         return;
     }
     auto& operandView = *view;
@@ -168,9 +167,8 @@ void OpAnd::debugSanityCheckImpl() const {
                     "View should not be undefined, it is a bool view.");
         calcViolation += memberView->violation;
     }
-    sanityCheck(violation == calcViolation,
-                toString("violation should be ", calcViolation,
-                         " but it is actually ", violation));
+    sanityEqualsCheck(calcViolation, violation);
+    ;
 }
 
 template <typename Op>

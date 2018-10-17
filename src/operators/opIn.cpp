@@ -172,6 +172,36 @@ pair<bool, ExprRef<BoolView>> OpIn::optimise(PathExtension path) {
     setOperand = optResult.second;
     return make_pair(changeMade, mpark::get<ExprRef<BoolView>>(path.expr));
 }
+
+string OpIn::getOpName() const { return "OpIn"; }
+void OpIn::debugSanityCheckImpl() const {
+    bool exprDefined = mpark::visit(
+        [&](auto& expr) {
+            expr->debugSanityCheck();
+            return expr->getViewIfDefined().hasValue();
+        },
+        expr);
+    setOperand->debugSanityCheck();
+    auto setView = setOperand->getViewIfDefined();
+
+    if (!exprDefined || !setView) {
+        sanityCheck(
+            violation == LARGE_VIOLATION,
+            toString(
+                "violation should be equal to LARGE_VIOLATION but is instead ",
+                violation));
+    }
+    HashType hash = getValueHash(expr);
+    if (setView->memberHashes.count(hash)) {
+        sanityCheck(
+            violation == 0,
+            toString("violation should be 0 bu t is instead ", violation));
+    } else {
+        sanityCheck(
+            violation == 1,
+            toString("violation should be 1 but is instead ", violation));
+    }
+}
 template <typename Op>
 struct OpMaker;
 

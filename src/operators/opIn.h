@@ -32,6 +32,8 @@ struct OpIn : public BoolView {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     std::pair<bool, ExprRef<BoolView>> optimise(PathExtension path) final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPIN_H_ */

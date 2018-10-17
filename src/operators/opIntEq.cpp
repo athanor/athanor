@@ -41,6 +41,8 @@ ostream& OpIntEq::dumpState(ostream& os) const {
 
 string OpIntEq::getOpName() const { return "OpIntEq"; }
 void OpIntEq::debugSanityCheckImpl() const {
+    left->debugSanityCheck();
+    right->debugSanityCheck();
     auto leftOption = left->getViewIfDefined();
     auto rightOption = right->getViewIfDefined();
     if (!leftOption || !rightOption) {

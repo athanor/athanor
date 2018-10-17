@@ -33,6 +33,7 @@ string OpIsDefined<View>::getOpName() const {
 
 template <typename View>
 void OpIsDefined<View>::debugSanityCheckImpl() const {
+    this->operand->debugSanityCheck();
     bool isDefined = this->operand->getViewIfDefined().hasValue();
     if (isDefined) {
         sanityEqualsCheck(0, this->violation);

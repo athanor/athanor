@@ -20,5 +20,7 @@ struct OpLess : public SimpleBinaryOperator<BoolView, IntView, OpLess> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpLess& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 #endif /* SRC_OPERATORS_OPLESS_H_ */

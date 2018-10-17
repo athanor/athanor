@@ -26,7 +26,20 @@ std::ostream& OpIsDefined<View>::dumpState(std::ostream& os) const {
     this->operand->dumpState(os);
     return os;
 }
+template <typename View>
+string OpIsDefined<View>::getOpName() const {
+    return "OpIsDefined";
+}
 
+template <typename View>
+void OpIsDefined<View>::debugSanityCheckImpl() const {
+    bool isDefined = this->operand->getViewIfDefined().hasValue();
+    if (isDefined) {
+        sanityEqualsCheck(0, this->violation);
+    } else {
+        sanityLargeViolationCheck(this->violation);
+    }
+}
 template <typename Op>
 struct OpMaker;
 

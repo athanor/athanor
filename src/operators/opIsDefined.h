@@ -23,5 +23,7 @@ struct OpIsDefined
                                  ViolationContainer& vioContainer) final;
     void copy(OpIsDefined& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 #endif /* SRC_OPERATORS_OPISDEFINED_H_ */

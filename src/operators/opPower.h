@@ -17,6 +17,8 @@ struct OpPower : public SimpleBinaryOperator<IntView, IntView, OpPower> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpPower& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPPOWER_H_ */

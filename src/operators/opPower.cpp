@@ -45,6 +45,46 @@ ostream& OpPower::dumpState(ostream& os) const {
     return os;
 }
 
+string OpPower::getOpName() const { return "OpPower"; }
+void OpPower::debugSanityCheckImpl() const {
+    left->debugSanityCheck();
+    right->debugSanityCheck();
+    auto leftViewOption = left->getViewIfDefined();
+    auto rightViewOption = right->getViewIfDefined();
+    if (!leftViewOption || !rightViewOption) {
+        sanityCheck(
+            !this->appearsDefined(),
+            "operands are undefined, operator value should be undefined");
+        return;
+    }
+    auto& leftView = *leftViewOption;
+    auto& rightView = *rightViewOption;
+    if (leftView.value == 0) {
+        if (rightView.value < 0) {
+            sanityCheck(!this->appearsDefined(),
+                        "0 power negative number should be undefined, operator "
+                        "should be undefined.");
+            return;
+        }
+        sanityCheck(this->appearsDefined(), "operator should be defined.");
+        if (rightView.value == 0) {
+            sanityEqualsCheck(1, value);
+        } else if (rightView.value > 0) {
+            sanityEqualsCheck(0, value);
+        }
+    } else {
+        auto result =
+            safePow<Int>(leftView.value, rightView.value, MAX_NUMBER_ALLOWED);
+        if (result) {
+            sanityCheck(this->appearsDefined(), "operator should be defined.");
+            sanityEqualsCheck(*result, value);
+        } else {
+            sanityCheck(!this->appearsDefined(),
+                        "number too large, should be undefined.");
+        }
+    }
+}
+
 template <typename Op>
 struct OpMaker;
 

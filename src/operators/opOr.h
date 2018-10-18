@@ -26,6 +26,8 @@ struct OpOr : public SimpleUnaryOperator<BoolView, SequenceView, OpOr> {
     std::ostream& dumpState(std::ostream& os) const final;
 
     bool optimiseImpl();
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPOR_H_ */

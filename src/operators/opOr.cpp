@@ -30,7 +30,7 @@ inline UInt findNewMinViolation(OpOr& op, UInt minViolation) {
         op.minViolationIndices.clear();
         return op.violation;
     }
-    auto& members = (*operandView).getMembers<BoolView>();
+    auto& members = operandView->getMembers<BoolView>();
     for (size_t i = 0; i < members.size(); ++i) {
         auto& operandChild = members[i];
         UInt violation = operandChild->view()->violation;
@@ -53,7 +53,7 @@ inline bool handleOperandValueChange(OpOr& op, UInt index) {
         op.minViolationIndices.clear();
         return true;
     }
-    const ExprRef<BoolView> expr = (*operandView).getMembers<BoolView>()[index];
+    const ExprRef<BoolView> expr = operandView->getMembers<BoolView>()[index];
     bool fullReevaluate = false;
     if (expr->view()->violation < op.violation) {
         op.violation = expr->view()->violation;
@@ -166,7 +166,7 @@ void OpOr::updateVarViolationsImpl(const ViolationContext&,
         operand->updateVarViolations(violation, vioContainer);
         return;
     }
-    for (auto& operandChild : (*operandView).getMembers<BoolView>()) {
+    for (auto& operandChild : operandView->getMembers<BoolView>()) {
         operandChild->updateVarViolations(violation, vioContainer);
     }
 }
@@ -186,6 +186,49 @@ std::ostream& OpOr::dumpState(std::ostream& os) const {
 }
 
 bool OpOr::optimiseImpl() { return flatten<BoolView>(*this); }
+
+string OpOr::getOpName() const { return "OpOr"; }
+void OpOr::debugSanityCheckImpl() const {
+    operand->debugSanityCheck();
+    if (!operand->appearsDefined()) {
+        sanityLargeViolationCheck(violation);
+        return;
+    }
+    auto viewOption = operand->view();
+    sanityCheck(
+        viewOption,
+        "Something is wrong, view returned undefined when it should not.");
+    auto& operandView = *viewOption;
+    FastIterableIntSet checkMinViolationIndices(0, 0);
+    UInt checkViolation;
+
+    auto& members = operandView.getMembers<BoolView>();
+    for (size_t i = 0; i < members.size(); ++i) {
+        auto& operandChild = members[i];
+        auto operandChildOption = operandChild->view();
+        sanityCheck(operandChildOption,
+                    "operand should be bool and always defined.");
+        UInt childViolation = operandChildOption->violation;
+        if (checkMinViolationIndices.empty() ||
+            childViolation < checkViolation) {
+            checkViolation = childViolation;
+            checkMinViolationIndices.clear();
+            checkMinViolationIndices.insert(i);
+        } else if (childViolation == checkViolation) {
+            checkMinViolationIndices.insert(i);
+        }
+    }
+    sanityEqualsCheck(checkMinViolationIndices.size(),
+                      minViolationIndices.size());
+    for (const auto& index : checkMinViolationIndices) {
+        sanityCheck(
+            minViolationIndices.count(index),
+            toString("index ", index, " missing from minViolationIndices."));
+    }
+    if (!checkMinViolationIndices.empty()) {
+        sanityEqualsCheck(checkViolation, violation);
+    }
+}
 template <typename Op>
 struct OpMaker;
 

@@ -32,6 +32,38 @@ ostream& OpMod::dumpState(ostream& os) const {
     return os;
 }
 
+string OpMod::getOpName() const { return "OpMod"; }
+void OpMod::debugSanityCheckImpl() const {
+    left->debugSanityCheck();
+    right->debugSanityCheck();
+    auto leftViewOption = left->getViewIfDefined();
+    auto rightViewOption = right->getViewIfDefined();
+    if (!leftViewOption || !rightViewOption) {
+        sanityCheck(
+            !this->appearsDefined(),
+            "operands are undefined, operator value should be undefined");
+        return;
+    }
+    auto& leftView = *leftViewOption;
+    auto& rightView = *rightViewOption;
+    if (rightView.value == 0) {
+        sanityCheck(!this->appearsDefined(),
+                    "Should be undefined as right operand is 0");
+        return;
+    }
+    sanityCheck(this->appearsDefined(),
+                "Operands are defined and not moddingby 0, operator value "
+                "should be defined.");
+    Int checkValue = leftView.value % abs(rightView.value);
+    if (checkValue < 0) {
+        checkValue += abs(rightView.value);
+    }
+    if (rightView.value < 0 && checkValue > 0) {
+        checkValue -= abs(rightView.value);
+    }
+    sanityEqualsCheck(checkValue, value);
+}
+
 template <typename Op>
 struct OpMaker;
 

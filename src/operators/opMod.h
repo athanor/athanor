@@ -17,6 +17,8 @@ struct OpMod : public SimpleBinaryOperator<IntView, IntView, OpMod> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpMod& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPMOD_H_ */

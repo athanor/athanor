@@ -77,6 +77,9 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     void setAppearsDefined(bool set) {
         Undefinable<View>::setAppearsDefined(set);
     }
+
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPSEQUENCEINDEX_H_ */

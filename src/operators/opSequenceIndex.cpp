@@ -421,6 +421,34 @@ OpSequenceIndex<SequenceMemberViewType>::optimise(PathExtension path) {
                      mpark::get<ExprRef<SequenceMemberViewType>>(path.expr));
 }
 
+template <typename SequenceMemberViewType>
+string OpSequenceIndex<SequenceMemberViewType>::getOpName() const {
+    return toString(
+        "OpSequenceIndex<",
+        TypeAsString<
+            typename AssociatedValueType<SequenceMemberViewType>::type>::value,
+        ">");
+}
+
+template <typename SequenceMemberViewType>
+void OpSequenceIndex<SequenceMemberViewType>::debugSanityCheckImpl() const {
+    sequenceOperand->debugSanityCheck();
+    indexOperand->debugSanityCheck();
+    if (!sequenceOperand->appearsDefined() || !indexOperand->appearsDefined()) {
+        sanityCheck(!this->appearsDefined(),
+                    "operator should be undefined as at least one operand is "
+                    "undefined.");
+        return;
+    }
+    auto indexView = indexOperand->getViewIfDefined();
+
+    if (!indexView) {
+        sanityCheck(!this->appearsDefined(),
+                    "indexout of bounds, operator should be undefined.");
+    }
+    sanityCheck(this->appearsDefined(), "operator should be defined.");
+    sanityEqualsCheck((Int)indexView->value, cachedIndex);
+}
 template <typename Op>
 struct OpMaker;
 

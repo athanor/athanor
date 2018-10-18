@@ -30,6 +30,8 @@ struct OpProd : public SimpleUnaryOperator<IntView, SequenceView, OpProd> {
     bool optimiseImpl();
     void addSingleValue(Int exprValue);
     void removeSingleValue(Int exprValue);
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPPROD_H_ */

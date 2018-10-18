@@ -21,7 +21,8 @@ void OpProd::addSingleValue(Int exprValue) {
         cachedValue *= exprValue;
     }
     value *= exprValue;
-    assert((numberZeros > 0 && value == 0) || (value != 0 && numberZeros == 0));
+    debug_code(assert((numberZeros > 0 && value == 0) ||
+                      (value != 0 && numberZeros == 0)));
 }
 void OpProd::removeSingleValue(Int exprValue) {
     if (exprValue == 0) {
@@ -206,7 +207,7 @@ void OpProd::reevaluateImpl(SequenceView& operandView) {
             setDefined(false);
             cachedValues.insert(index, 1);
         } else {
-            Int operandValue = (*operandChildView).value;
+            Int operandValue = operandChildView->value;
             addSingleValue(operandValue);
             cachedValues.insert(index, operandValue);
         }
@@ -240,6 +241,43 @@ std::ostream& OpProd::dumpState(std::ostream& os) const {
 }
 
 bool OpProd::optimiseImpl() { return flatten<IntView>(*this); }
+
+string OpProd::getOpName() const { return "OpProd"; }
+
+void OpProd::debugSanityCheckImpl() const {
+    operand->debugSanityCheck();
+    this->standardSanityDefinednessChecks();
+    auto viewOption = operand->view();
+    if (!viewOption) {
+        return;
+    }
+    auto& operandView = *viewOption;
+    Int checkValue = 1;
+    Int checkCachedValue = 1;
+    ::PreviousValueCache<Int> checkCachedValues;
+    UInt checkNumberZeros = 0;
+    auto& members = operandView.getMembers<IntView>();
+    for (size_t index = 0; index < members.size(); index++) {
+        auto& operandChild = members[index];
+        auto operandChildView = operandChild->getViewIfDefined();
+        if (!operandChildView) {
+            checkCachedValues.insert(index, 1);
+        } else {
+            Int operandValue = operandChildView->value;
+            if (operandValue == 0) {
+                ++checkNumberZeros;
+            } else {
+                checkCachedValue *= operandValue;
+            }
+            checkValue *= operandValue;
+            checkCachedValues.insert(index, operandValue);
+        }
+    }
+    sanityEqualsCheck(checkValue, value);
+    sanityEqualsCheck(checkCachedValue, cachedValue);
+    sanityEqualsCheck(checkCachedValues, cachedValues);
+}
+
 template <typename Op>
 struct OpMaker;
 

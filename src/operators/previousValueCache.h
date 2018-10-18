@@ -2,6 +2,7 @@
 #ifndef SRC_OPERATORS_PREVIOUSVALUECACHE_H_
 #define SRC_OPERATORS_PREVIOUSVALUECACHE_H_
 #include <cassert>
+#include <iostream>
 #include <unordered_map>
 #include "common/common.h"
 
@@ -42,5 +43,12 @@ struct PreviousValueCache {
         return erase(contents.size() - 1);
     }
     void clear() { contents.clear(); }
+    inline bool operator==(const PreviousValueCache<Value>& other) const {
+        return contents == other.contents;
+    }
+    friend inline std::ostream& operator<<(
+        std::ostream& os, const PreviousValueCache<Value>& other) {
+        return os << other.contents;
+    }
 };
 #endif /* SRC_OPERATORS_PREVIOUSVALUECACHE_H_ */

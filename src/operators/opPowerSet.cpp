@@ -92,6 +92,37 @@ std::ostream& OpPowerSet::dumpState(std::ostream& os) const {
     return os;
 }
 
+string OpPowerSet::getOpName() const { return "OpPowerSet"; }
+void OpPowerSet::debugSanityCheckImpl() const {
+    sanityEqualsCheck(2, sizeLimit);
+
+    this->operand->debugSanityCheck();
+    this->standardSanityDefinednessChecks();
+    auto view = this->operand->getViewIfDefined();
+    if (!view) {
+        return;
+    }
+    auto& operandView = *view;
+    UInt n = operandView.numberElements();
+    UInt expectedNumberElementsInResult = (n * (n - 1)) / 2;
+    sanityEqualsCheck(expectedNumberElementsInResult, this->numberElements());
+    mpark::visit(
+        [&](auto& members) {
+            for (size_t i = 0; i < members.size(); i++) {
+                for (size_t j = i + 1; j < members.size(); j++) {
+                    auto subset =
+                        OpMaker<OpSetLit>::make(ExprRefVec<viewType(members)>(
+                            {members[i], members[j]}));
+                    subset->evaluate();
+                    sanityCheck(this->containsMember(subset),
+                                toString("does not contain subset ",
+                                         subset->view().get()));
+                }
+            }
+        },
+        operandView.members);
+}
+
 template <typename Op>
 struct OpMaker;
 

@@ -33,6 +33,30 @@ std::ostream& OpNotEq<OperandView>::dumpState(std::ostream& os) const {
     return os;
     return os;
 }
+template <typename OperandView>
+string OpNotEq<OperandView>::getOpName() const {
+    return toString(
+        "OpNotEq<",
+        TypeAsString<typename AssociatedValueType<OperandView>::type>::value,
+        ">");
+}
+
+template <typename OperandView>
+void OpNotEq<OperandView>::debugSanityCheckImpl() const {
+    this->left->debugSanityCheck();
+    this->right->debugSanityCheck();
+    auto leftOption = this->left->getViewIfDefined();
+    auto rightOption = this->right->getViewIfDefined();
+    if (!leftOption || !rightOption) {
+        sanityLargeViolationCheck(this->violation);
+        return;
+    }
+    auto& leftView = *leftOption;
+    auto& rightView = *rightOption;
+    UInt checkViolation =
+        (getValueHash(leftView) == getValueHash(rightView)) ? 1 : 0;
+    sanityEqualsCheck(checkViolation, this->violation);
+}
 
 template <typename Op>
 struct OpMaker;

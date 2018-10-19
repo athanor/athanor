@@ -445,6 +445,10 @@ void OpSequenceIndex<SequenceMemberViewType>::debugSanityCheckImpl() const {
     if (!indexView) {
         sanityCheck(!this->appearsDefined(),
                     "indexout of bounds, operator should be undefined.");
+    } else if (!(*getMember())->appearsDefined()) {
+        sanityCheck(!this->appearsDefined(),
+                    "member pointed to by index is undefined, hence this "
+                    "operator should be undefined.");
     }
     sanityCheck(this->appearsDefined(), "operator should be defined.");
     sanityEqualsCheck((Int)indexView->value, cachedIndex);

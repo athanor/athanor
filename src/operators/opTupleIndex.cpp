@@ -266,7 +266,23 @@ OpTupleIndex<TupleMemberViewType>::optimise(PathExtension path) {
     return make_pair(changeMade,
                      mpark::get<ExprRef<TupleMemberViewType>>(path.expr));
 }
-
+template <typename TupleMemberViewType>
+void OpTupleIndex<TupleMemberViewType>::debugSanityCheckImpl() const {
+    tupleOperand->debugSanityCheck();
+    if (!tupleOperand->appearsDefined()) {
+        sanityCheck(!this->appearsDefined(),
+                    "operator should be undefined as at least one operand is "
+                    "undefined.");
+        return;
+    }
+    if (!(*getMember())->appearsDefined()) {
+        sanityCheck(!this->appearsDefined(),
+                    "member pointed to by index is undefined, hence this "
+                    "operator should be undefined.");
+        return;
+    }
+    sanityCheck(this->appearsDefined(), "operator should be defined.");
+}
 template <typename Op>
 struct OpMaker;
 

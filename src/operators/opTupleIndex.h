@@ -71,6 +71,8 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
     void setAppearsDefined(bool set) {
         Undefinable<View>::setAppearsDefined(set);
     }
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPTUPLEINDEX_H_ */

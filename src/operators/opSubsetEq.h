@@ -19,5 +19,7 @@ struct OpSubsetEq : public SimpleBinaryOperator<BoolView, SetView, OpSubsetEq> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpSubsetEq& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 #endif /* SRC_OPERATORS_OPSETINTERSECT_H_ */

@@ -18,5 +18,7 @@ struct OpSetSize : public SimpleUnaryOperator<IntView, SetView, OpSetSize> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpSetSize& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 #endif /* SRC_OPERATORS_OPSETSIZE_H_ */

@@ -214,6 +214,26 @@ std::ostream& OpSubsetEq::dumpState(std::ostream& os) const {
     right->dumpState(os);
     return os;
 }
+
+string OpSubsetEq::getOpName() const { return "OpSubsetEq"; }
+void OpSubsetEq::debugSanityCheckImpl() const {
+    left->debugSanityCheck();
+    right->debugSanityCheck();
+    auto leftOption = left->getViewIfDefined();
+    auto rightOption = right->getViewIfDefined();
+    if (!leftOption || !rightOption) {
+        sanityLargeViolationCheck(violation);
+        return;
+    }
+    auto& leftView = *leftOption;
+    auto& rightView = *rightOption;
+    UInt checkViolation = 0;
+    for (auto& hash : leftView.memberHashes) {
+        checkViolation += !rightView.memberHashes.count(hash);
+    }
+    sanityEqualsCheck(checkViolation, violation);
+}
+
 template <typename Op>
 struct OpMaker;
 

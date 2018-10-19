@@ -20,5 +20,8 @@ struct OpSequenceSize
                                  ViolationContainer& vioContainer) final;
     void copy(OpSequenceSize& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
+
 };
 #endif /* SRC_OPERATORS_OPSEQUENCESIZE_H_ */

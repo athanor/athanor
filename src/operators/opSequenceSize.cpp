@@ -21,6 +21,16 @@ std::ostream& OpSequenceSize::dumpState(std::ostream& os) const {
     operand->dumpState(os);
     return os;
 }
+string OpSequenceSize::getOpName() const { return "OpSequenceSize"; }
+void OpSequenceSize::debugSanityCheckImpl() const {
+    operand->debugSanityCheck();
+    this->standardSanityDefinednessChecks();
+    auto view = operand->getViewIfDefined();
+    if (!view) {
+        return;
+    }
+    sanityEqualsCheck((Int)view->numberElements(), value);
+}
 
 template <typename Op>
 struct OpMaker;

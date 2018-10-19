@@ -19,7 +19,7 @@ struct PreviousValueCache {
         debug_code(assert(index < contents.size()));
         return contents[index];
     }
-
+    inline size_t size() const { return contents.size(); }
     const Value& get(size_t index) const {
         debug_code(assert(index < contents.size()));
         return contents[index];

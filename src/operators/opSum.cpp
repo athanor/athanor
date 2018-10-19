@@ -214,6 +214,34 @@ std::ostream& OpSum::dumpState(std::ostream& os) const {
 }
 
 bool OpSum::optimiseImpl() { return flatten<IntView>(*this); }
+
+string OpSum::getOpName() const { return "OpSum"; }
+
+void OpSum::debugSanityCheckImpl() const {
+    operand->debugSanityCheck();
+    this->standardSanityDefinednessChecks();
+    auto viewOption = operand->view();
+    if (!viewOption) {
+        return;
+    }
+    auto& operandView = *viewOption;
+    Int checkValue = 0;
+    auto& members = operandView.getMembers<IntView>();
+    for (size_t index = 0; index < members.size(); index++) {
+        auto& operandChild = members[index];
+        auto operandChildView = operandChild->getViewIfDefined();
+        sanityCheck(index < cachedValues.size(), "cachedValues too small");
+        if (!operandChildView) {
+            sanityEqualsCheck(0, cachedValues.get(index));
+        } else {
+            Int operandValue = operandChildView->value;
+            checkValue += operandValue;
+            sanityEqualsCheck(operandValue, cachedValues.get(index));
+        }
+    }
+    sanityEqualsCheck(checkValue, value);
+}
+
 template <typename Op>
 struct OpMaker;
 

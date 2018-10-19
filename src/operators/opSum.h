@@ -28,6 +28,8 @@ struct OpSum : public SimpleUnaryOperator<IntView, SequenceView, OpSum> {
     bool optimiseImpl();
     void addSingleValue(Int exprValue);
     void removeSingleValue(Int exprValue);
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPSUM_H_ */

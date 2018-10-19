@@ -254,14 +254,14 @@ void OpProd::debugSanityCheckImpl() const {
     auto& operandView = *viewOption;
     Int checkValue = 1;
     Int checkCachedValue = 1;
-    ::PreviousValueCache<Int> checkCachedValues;
     UInt checkNumberZeros = 0;
     auto& members = operandView.getMembers<IntView>();
     for (size_t index = 0; index < members.size(); index++) {
         auto& operandChild = members[index];
         auto operandChildView = operandChild->getViewIfDefined();
+        sanityCheck(index < cachedValues.size(), "cachedValues too small");
         if (!operandChildView) {
-            checkCachedValues.insert(index, 1);
+            sanityEqualsCheck(1, cachedValues.get(index));
         } else {
             Int operandValue = operandChildView->value;
             if (operandValue == 0) {
@@ -270,12 +270,12 @@ void OpProd::debugSanityCheckImpl() const {
                 checkCachedValue *= operandValue;
             }
             checkValue *= operandValue;
-            checkCachedValues.insert(index, operandValue);
+            sanityEqualsCheck(operandValue, cachedValues.get(index));
         }
     }
     sanityEqualsCheck(checkValue, value);
     sanityEqualsCheck(checkCachedValue, cachedValue);
-    sanityEqualsCheck(checkCachedValues, cachedValues);
+    sanityEqualsCheck(checkNumberZeros, numberZeros);
 }
 
 template <typename Op>

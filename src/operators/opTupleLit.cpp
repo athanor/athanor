@@ -153,6 +153,22 @@ pair<bool, ExprRef<TupleView>> OpTupleLit::optimise(PathExtension path) {
     }
     return make_pair(changeMade, mpark::get<ExprRef<TupleView>>(path.expr));
 }
+string OpTupleLit::getOpName() const { return "OpTupleLit"; }
+
+void OpTupleLit::debugSanityCheckImpl() const {
+    UInt checkNumberUndefined = 0;
+    for (auto& member : members) {
+        mpark::visit(
+            [&](auto& member) {
+                member->debugSanityCheck();
+                if (member->getViewIfDefined().hasValue()) {
+                    ++checkNumberUndefined;
+                }
+            },
+            member);
+    }
+    sanityEqualsCheck(checkNumberUndefined, numberUndefined);
+}
 
 template <typename Op>
 struct OpMaker;

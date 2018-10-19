@@ -176,6 +176,24 @@ pair<bool, ExprRef<SequenceView>> OpSequenceLit::optimise(PathExtension path) {
         this->members);
     return make_pair(changeMade, mpark::get<ExprRef<SequenceView>>(path.expr));
 }
+
+string OpSequenceLit::getOpName() const { return "OpSequenceLit"; }
+
+void OpSequenceLit::debugSanityCheckImpl() const {
+    mpark::visit(
+        [&](auto& members) {
+            UInt checkNumberUndefined = 0;
+            for (auto& member : members) {
+                member->debugSanityCheck();
+                if (member->getViewIfDefined().hasValue()) {
+                    ++checkNumberUndefined;
+                }
+            }
+            sanityEqualsCheck(checkNumberUndefined, numberUndefined);
+        },
+        this->members);
+}
+
 template <typename Op>
 struct OpMaker;
 

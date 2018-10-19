@@ -26,6 +26,8 @@ struct OpSequenceLit : public SequenceView {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension path) final;
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPSEQUENCELIT_H_ */

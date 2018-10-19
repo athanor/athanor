@@ -34,6 +34,16 @@ std::ostream& OpToInt::dumpState(std::ostream& os) const {
     return os;
 }
 
+string OpToInt::getOpName() const { return "OpToInt"; }
+void OpToInt::debugSanityCheckImpl() const {
+    operand->debugSanityCheck();
+    auto operandOption = operand->getViewIfDefined();
+    sanityCheck(operandOption,
+                "Bool returning operators should never be undefined.");
+    auto& operandView = *operandOption;
+    Int checkValue = (operandView.violation == 0) ? 1 : 0;
+    sanityEqualsCheck(checkValue, value);
+}
 template <typename Op>
 struct OpMaker;
 

@@ -69,7 +69,7 @@ void OpSetIndexInternal<SetMemberViewType>::reevaluateDefined() {
     auto operandView = setOperand->getViewIfDefined();
     this->setAppearsDefined(operandView &&
                             parentSetMapping[index] <
-                                (*operandView).numberElements() &&
+                                operandView->numberElements() &&
                             getMember()->appearsDefined());
 }
 
@@ -91,7 +91,7 @@ void OpSetIndexInternal<SetMemberViewType>::evaluateMappings() {
         return;
     }
 
-    parentSetMapping.resize((*operandView).numberElements());
+    parentSetMapping.resize(operandView->numberElements());
     iota(parentSetMapping.begin(), parentSetMapping.end(), 0);
     sort(parentSetMapping.begin(), parentSetMapping.end(),
          [&](size_t u, size_t v) {
@@ -134,8 +134,7 @@ void OpSetIndexInternal<SetMemberViewType>::handleSetMemberValueChange(
                         ? 1
                         : -1;
     }
-    size_t limit =
-        (increment == 1) ? setOperand->view()->numberElements() : 0;
+    size_t limit = (increment == 1) ? setOperand->view()->numberElements() : 0;
     bool shouldBeSmaller = (increment == 1) ? false : true;
     for (size_t i = index;
          i != limit &&
@@ -288,6 +287,40 @@ OpSetIndexInternal<SetMemberViewType>::optimise(PathExtension path) {
     setOperand = optResult.second;
     return make_pair(optResult.first,
                      mpark::get<ExprRef<SetMemberViewType>>(path.expr));
+}
+
+template <typename SetMemberViewType>
+string OpSetIndexInternal<SetMemberViewType>::getOpName() const {
+    return toString(
+        "OpSetIndexInternal<",
+        TypeAsString<
+            typename AssociatedValueType<SetMemberViewType>::type>::value,
+        ">");
+}
+
+template <typename SetMemberViewType>
+void OpSetIndexInternal<SetMemberViewType>::debugSanityCheckImpl() const {
+    setOperand->debugSanityCheck();
+    auto operandView = setOperand->getViewIfDefined();
+    if (!operandView) {
+        sanityCheck(!this->appearsDefined(),
+                    "operator should be undefined, operand is undefined.");
+        return;
+    }
+    sanityEqualsCheck(operandView->numberElements(), parentSetMapping.size());
+    for (size_t i = 0; i < parentSetMapping.size() - 1; i++) {
+        size_t u = i, v = i + 1;
+        sanityCheck(smallerValue(getMember(u)->getViewIfDefined(),
+                                 getMember(v)->getViewIfDefined()),
+                    "Out of order mapping from parents to set");
+    }
+    sanityEqualsCheck(parentSetMapping.size(), setParentMapping.size());
+    for (size_t i = 0; i < parentSetMapping.size(); i++) {
+        sanityEqualsCheck(i, setParentMapping[parentSetMapping[i]]);
+    }
+    sanityEqualsCheck(parentSetMapping[index] < operandView->numberElements() &&
+                          getMember()->appearsDefined(),
+                      this->appearsDefined());
 }
 
 template <typename Op>

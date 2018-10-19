@@ -66,6 +66,8 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     void setAppearsDefined(bool set) {
         Undefinable<View>::setAppearsDefined(set);
     }
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPSETINDEXINTERNAL_H_ */

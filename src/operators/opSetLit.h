@@ -48,6 +48,8 @@ struct OpSetLit : public SetView {
     void removeValue(size_t index, HashType hash);
     template <typename View>
     void addValue(size_t index, bool insert = false);
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPSETLIT_H_ */

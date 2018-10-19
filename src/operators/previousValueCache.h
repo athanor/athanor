@@ -20,6 +20,11 @@ struct PreviousValueCache {
         return contents[index];
     }
 
+    const Value& get(size_t index) const {
+        debug_code(assert(index < contents.size()));
+        return contents[index];
+    }
+
     template <typename V>
     Value getAndSet(size_t index, V&& value) {
         Value oldValue = get(index);

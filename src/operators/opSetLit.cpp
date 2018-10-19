@@ -274,7 +274,6 @@ ostream& operator<<(ostream& os, const OpSetLit::OperandGroup& og) {
 }
 
 void OpSetLit::assertValidHashes() {
-    debug_log(hashIndicesMap);
     bool success = true;
     mpark::visit(
         [&](auto& operands) {
@@ -357,6 +356,45 @@ void OpSetLit::assertValidHashes() {
                 }
                 cerr << endl;
                 abort();
+            }
+        },
+        operands);
+}
+
+string OpSetLit::getOpName() const { return "OpSetLit"; }
+
+void OpSetLit::debugSanityCheckImpl() const {
+    mpark::visit(
+        [&](auto& operands) {
+            for (size_t i = 0; i < operands.size(); i++) {
+                auto& operand = operands[i];
+                auto view = operand->getViewIfDefined();
+                sanityCheck(view, NO_SET_UNDEFINED_MEMBERS);
+                HashType hash = getValueHash(*view);
+                sanityEqualsCheck(hash, cachedOperandHashes.get(i));
+                auto iter = hashIndicesMap.find(hash);
+                sanityCheck(iter != hashIndicesMap.end(),
+                            toString("hash ", hash, " of operand with index ",
+                                     i, " maps to no operand group."));
+                auto& og = iter->second;
+                sanityCheck(og.operands.count(i),
+                            toString("hash ", hash,
+                                     " maps to operand group that does not "
+                                     "contain the index ",
+                                     i));
+            }
+
+            for (const auto& hashIndicesPair : hashIndicesMap) {
+                HashType hash = hashIndicesPair.first;
+                auto& og = hashIndicesPair.second;
+                sanityCheck(og.operands.count(og.focusOperand),
+                            "focus operand not in operand group.");
+                sanityEqualsCheck(hash,
+                                  cachedSetHashes.get(og.focusOperandSetIndex));
+                for (UInt index : og.operands) {
+                    HashType hash2 = cachedOperandHashes.get(index);
+                    sanityEqualsCheck(hash, hash2);
+                }
             }
         },
         operands);

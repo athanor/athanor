@@ -102,4 +102,11 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     }
 };
 
+template <>
+struct ContainerSanityChecker<FunctionView> {
+    static void debugSanityCheck(const Quantifier<FunctionView>&) {
+        todoImpl();
+    }
+};
+
 template struct Quantifier<FunctionView>;

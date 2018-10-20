@@ -266,6 +266,17 @@ OpTupleIndex<TupleMemberViewType>::optimise(PathExtension path) {
     return make_pair(changeMade,
                      mpark::get<ExprRef<TupleMemberViewType>>(path.expr));
 }
+
+template <typename TupleMemberViewType>
+string OpTupleIndex<TupleMemberViewType>::getOpName() const {
+    return toString(
+                    "OpTupleIndex<",
+                    TypeAsString<
+                    typename AssociatedValueType<TupleMemberViewType>::type>::value,
+                    ">");
+}
+
+
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::debugSanityCheckImpl() const {
     tupleOperand->debugSanityCheck();

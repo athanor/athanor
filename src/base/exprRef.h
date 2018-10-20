@@ -35,8 +35,8 @@ struct SanityCheckException {
     sanityCheck(val1 == val2, toString(#val2, " should be ", val1, \
                                        " but is instead ", val2));
 #define sanityLargeViolationCheck(val) \
-    sanityCheck(                             \
-        LARGE_VIOLATION == val,              \
+    sanityCheck(                       \
+        LARGE_VIOLATION == val,        \
         toString(#val, " should be LARGE_VIOLATION but is instead ", val));
 
 template <typename View>

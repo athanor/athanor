@@ -59,7 +59,11 @@ void invokeSetDefined<BoolValue>(ValRef<BoolValue>&) {}
     pair<bool, ExprRef<name##View>> name##Value::optimise(                   \
         PathExtension path) {                                                \
         return make_pair(false, mpark::get<ExprRef<name##View>>(path.expr)); \
-    }
+    }                                                                        \
+    string name##Value::getOpName() const {                                  \
+        return TypeAsString<name##Value>::value;                             \
+    }                                                                        \
+    void name##Value::debugSanityCheckImpl() const {}
 
 buildForAllTypes(specialised, )
 #undef specialised

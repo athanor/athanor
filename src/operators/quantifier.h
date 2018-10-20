@@ -80,6 +80,8 @@ struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 
     std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension path);
+    std::string getOpName() const final;
+    void debugSanityCheckImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_QUANTIFIER_H_ */

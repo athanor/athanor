@@ -150,12 +150,12 @@ std::ostream& operator<<(std::ostream& os, const AnyIterRef& ref) {
 }
 
 template <typename View>
-string Iterator<View>::getOpName() {
+string Iterator<View>::getOpName() const {
     return "Iterator<" +
            TypeAsString<typename AssociatedValueType<View>::type>::value + ">";
 }
 template <typename View>
-void Iterator<View>::debugSanityChecksImpl() {
+void Iterator<View>::debugSanityCheckImpl() const {
     if (!ref) {
         return;
     }

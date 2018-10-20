@@ -277,7 +277,7 @@ bool optimiseIfIntRangeWithConditions(Quantifier& quant) {
     return true;
 }
 
-#define exportOptimiseFunction(name)            \
+#define exportOptimiseFunction(name)           \
     template pair<bool, ExprRef<SequenceView>> \
     Quantifier<name##View>::optimise(PathExtension path);
 

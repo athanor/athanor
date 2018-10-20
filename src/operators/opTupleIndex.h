@@ -73,7 +73,6 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
     }
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
-
 };
 
 #endif /* SRC_OPERATORS_OPTUPLEINDEX_H_ */

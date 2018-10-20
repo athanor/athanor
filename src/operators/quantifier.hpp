@@ -21,6 +21,18 @@ struct InitialUnroller<SequenceView>;
 template <>
 struct InitialUnroller<FunctionView>;
 
+template <typename ContainerType>
+struct ContainerSanityChecker;
+
+template <>
+struct ContainerSanityChecker<MSetView>;
+template <>
+struct ContainerSanityChecker<SetView>;
+template <>
+struct ContainerSanityChecker<SequenceView>;
+template <>
+struct ContainerSanityChecker<FunctionView>;
+
 template <typename Container>
 struct ContainerTrigger;
 template <>
@@ -338,6 +350,33 @@ void Quantifier<ContainerType>::findAndReplaceSelf(
     const FindAndReplaceFunction& func) {
     mpark::visit([&](auto& expr) { expr = findAndReplace(expr, func); },
                  this->expr);
+}
+
+template <typename ContainerType>
+std::string Quantifier<ContainerType>::getOpName() const {
+    return toString(
+        "Quantifier<",
+        TypeAsString<typename AssociatedValueType<ContainerType>::type>::value,
+        ">");
+}
+
+template <typename ContainerType>
+void Quantifier<ContainerType>::debugSanityCheckImpl() const {
+    container->debugSanityCheck();
+    ContainerSanityChecker<viewType(container)>::debugSanityCheck(*this);
+
+    mpark::visit(
+        [&](auto& members) {
+            UInt checkNumberUndefined = 0;
+            for (auto& member : members) {
+                member->debugSanityCheck();
+                if (member->getViewIfDefined().hasValue()) {
+                    ++checkNumberUndefined;
+                }
+            }
+            sanityEqualsCheck(checkNumberUndefined, numberUndefined);
+        },
+        this->members);
 }
 
 #endif /* SRC_OPERATORS_QUANTIFIER_HPP_ */

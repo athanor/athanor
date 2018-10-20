@@ -99,4 +99,9 @@ struct InitialUnroller<SetView> {
             containerView.members);
     }
 };
+
+template <>
+struct ContainerSanityChecker<SetView> {
+    static void debugSanityCheck(const Quantifier<SetView>&) { todoImpl(); }
+};
 template struct Quantifier<SetView>;

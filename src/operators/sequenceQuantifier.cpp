@@ -159,4 +159,11 @@ struct InitialUnroller<SequenceView> {
     }
 };
 
+template <>
+struct ContainerSanityChecker<SequenceView> {
+    static void debugSanityCheck(const Quantifier<SequenceView>&) {
+        todoImpl();
+    }
+};
+
 template struct Quantifier<SequenceView>;

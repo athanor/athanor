@@ -190,6 +190,13 @@ void OpSequenceLit::debugSanityCheckImpl() const {
                 }
             }
             sanityEqualsCheck(checkNumberUndefined, numberUndefined);
+            if (numberUndefined == 0) {
+                sanityCheck(this->appearsDefined(),
+                            "operator should be defined.");
+            } else {
+                sanityCheck(!this->appearsDefined(),
+                            "operator should be undefined.");
+            }
         },
         this->members);
 }

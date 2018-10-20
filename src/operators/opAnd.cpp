@@ -153,7 +153,6 @@ bool OpAnd::optimiseImpl() { return flatten<BoolView>(*this); }
 string OpAnd::getOpName() const { return "OpAnd"; }
 void OpAnd::debugSanityCheckImpl() const {
     operand->debugSanityCheck();
-    this->standardSanityDefinednessChecks();
     auto view = operand->getViewIfDefined();
     if (!view) {
         sanityLargeViolationCheck(violation);

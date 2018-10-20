@@ -176,8 +176,6 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
     if (runSanityChecks) {
         state.model.csp->debugSanityCheck();
         state.model.objective->debugSanityCheck();
-
-
     }
     state.stats.initialSolution(state.model);
     try {

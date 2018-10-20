@@ -373,9 +373,10 @@ void Quantifier<ContainerType>::debugSanityCheckImpl() const {
         return;
     }
     ContainerSanityChecker<viewType(container)>::debugSanityCheck(*this, *view);
+    UInt checkNumberUndefined = 0;
+
     mpark::visit(
         [&](auto& members) {
-            UInt checkNumberUndefined = 0;
             for (auto& member : members) {
                 member->debugSanityCheck();
                 if (!member->getViewIfDefined().hasValue()) {
@@ -385,6 +386,11 @@ void Quantifier<ContainerType>::debugSanityCheckImpl() const {
             sanityEqualsCheck(checkNumberUndefined, numberUndefined);
         },
         this->members);
+    if (checkNumberUndefined == 0) {
+        sanityCheck(this->appearsDefined(), "operator should be defined.");
+    } else {
+        sanityCheck(!this->appearsDefined(), "operator should be undefined.");
+    }
 }
 
 #endif /* SRC_OPERATORS_QUANTIFIER_HPP_ */

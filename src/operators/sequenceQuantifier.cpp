@@ -165,8 +165,6 @@ struct ContainerSanityChecker<SequenceView> {
                                  const SequenceView& container) {
         sanityEqualsCheck(container.numberElements(), quant.numberElements());
     }
-
-}
-;
+};
 
 template struct Quantifier<SequenceView>;

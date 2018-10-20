@@ -37,9 +37,17 @@ auto& seedArg = randomSeedFlag.add<Arg<int>>(
         if (value < 0) {
             throw ErrorMessage("Seed must be greater or equal to 0.");
         } else {
-                        return value;
+            return value;
         }
     }));
+bool runSanityChecks = false;
+auto& sanityCheckFlag  = argParser.add<Flag>(
+    "--sanityCheck", Policy::OPTIONAL,
+    "Activate sanity check mode, this is a debugging feature,.  After each "
+    "move, the state is scanned for errors caused by bad triggering.  Note, "
+    "errors caused by hash collisions are not tested for in this mode.",
+    [](auto&) { runSanityChecks = true; });
+
 void testHashes() {
     const size_t max = 10000;
     unordered_map<UInt, pair<UInt, UInt>> seenHashes;
@@ -94,7 +102,7 @@ int main(const int argc, const char** argv) {
     argParser.validateArgs(argc, argv);
     ParsedModel parsedModel = parseModelFromJson(fileArg.get());
     State state(parsedModel.builder->build());
-    u_int32_t seed = (seedArg)? seedArg.get() : random_device()();
+    u_int32_t seed = (seedArg) ? seedArg.get() : random_device()();
     globalRandomGenerator.seed(seed);
     cout << "Using seed: " << seed << endl;
     auto nhSelection = make_shared<RandomNeighbourhood>();

@@ -25,14 +25,13 @@ include_directories( src )
 set(CMAKE_CXX_STANDARD 14)
 message("")
 message("")
-# Configure CCache if available
+#Configure CCache if available
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
         message("Found ccache on the system.  Using ccache to speed up recompilations.")
         set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
         set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif(CCACHE_FOUND)
-
 
 #find sources
 file(GLOB_RECURSE sources      src/*.cpp src/*.h src/*.hpp src/*.inc)

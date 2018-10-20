@@ -8,6 +8,7 @@
 void dumpVarViolations(const ViolationContainer& vioContainer);
 extern bool sigIntActivated, sigAlarmActivated;
 extern u_int64_t iterationLimit;
+extern bool runSanityChecks;
 inline bool alwaysTrue(const AnyValVec&) { return true; }
 
 struct EndOfSearchException {};
@@ -43,6 +44,10 @@ class State {
         auto statsMarkPoint = stats.getMarkPoint();
         bool solutionAccepted = false, changeMade = false;
         AcceptanceCallBack callback = [&]() {
+            if (runSanityChecks) {
+                model.csp->debugSanityCheck();
+                model.objective->debugSanityCheck();
+            }
             changeMade = true;
             solutionAccepted = strategy(
                 NeighbourhoodResult(model, nhIndex, true, statsMarkPoint));
@@ -54,6 +59,10 @@ class State {
                                    changingVariables, stats,
                                    model.vioContainer);
         neighbourhood.apply(params);
+        if (runSanityChecks && !solutionAccepted) {
+            model.csp->debugSanityCheck();
+            model.objective->debugSanityCheck();
+        }
         NeighbourhoodResult nhResult(model, nhIndex, changeMade,
                                      statsMarkPoint);
         if (!changeMade) {

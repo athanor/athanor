@@ -26,9 +26,10 @@ auto& fileArg = argParser.add<Arg<ifstream>>(
             throw ErrorMessage("Error opening file: " + path);
         }
     });
+
+std::mt19937 globalRandomGenerator;
 auto& randomSeedFlag = argParser.add<ComplexFlag>(
-    "--randomSeed", Policy::OPTIONAL, "Specify a random seed.",
-    [](const string&) { useSeedForRandom = true; });
+    "--randomSeed", Policy::OPTIONAL, "Specify a random seed.");
 auto& seedArg = randomSeedFlag.add<Arg<int>>(
     "integer_seed", Policy::MANDATORY,
     "Integer seed to use for random generator.",
@@ -36,8 +37,7 @@ auto& seedArg = randomSeedFlag.add<Arg<int>>(
         if (value < 0) {
             throw ErrorMessage("Seed must be greater or equal to 0.");
         } else {
-            seedForRandom = (UInt)(value);
-            return value;
+                        return value;
         }
     }));
 void testHashes() {
@@ -94,6 +94,9 @@ int main(const int argc, const char** argv) {
     argParser.validateArgs(argc, argv);
     ParsedModel parsedModel = parseModelFromJson(fileArg.get());
     State state(parsedModel.builder->build());
+    u_int32_t seed = (seedArg)? seedArg.get() : random_device()();
+    globalRandomGenerator.seed(seed);
+    cout << "Using seed: " << seed << endl;
     auto nhSelection = make_shared<RandomNeighbourhood>();
     auto strategy = makeExplorationUsingViolationBackOff(
         makeHillClimbing(nhSelection), nhSelection);

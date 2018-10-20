@@ -316,6 +316,8 @@ void Quantifier<ContainerType>::evaluateImpl() {
         containerDefined = false;
         this->setAppearsDefined(false);
     } else {
+        containerDefined = true;
+        this->setAppearsDefined(true);
         InitialUnroller<ContainerType>::initialUnroll(*this, *view);
     }
 }

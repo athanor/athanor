@@ -35,7 +35,7 @@ endif(CCACHE_FOUND)
 
 
 #find sources
-file(GLOB_RECURSE sources      src/*.cpp src/*.h src/*.inc)
+file(GLOB_RECURSE sources      src/*.cpp src/*.h src/*.hpp src/*.inc)
 
 
 

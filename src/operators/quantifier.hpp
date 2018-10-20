@@ -363,8 +363,16 @@ std::string Quantifier<ContainerType>::getOpName() const {
 template <typename ContainerType>
 void Quantifier<ContainerType>::debugSanityCheckImpl() const {
     container->debugSanityCheck();
-    ContainerSanityChecker<viewType(container)>::debugSanityCheck(*this);
 
+    if (!container->appearsDefined()) {
+        sanityCheck(!this->appearsDefined(),
+                    "Operator should be undefined as container is undefined.");
+    }
+    auto view = container->view();
+    if (!view) {
+        return;
+    }
+    ContainerSanityChecker<viewType(container)>::debugSanityCheck(*this, *view);
     mpark::visit(
         [&](auto& members) {
             UInt checkNumberUndefined = 0;

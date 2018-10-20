@@ -104,8 +104,9 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
 
 template <>
 struct ContainerSanityChecker<FunctionView> {
-    static void debugSanityCheck(const Quantifier<FunctionView>&) {
-        todoImpl();
+    static void debugSanityCheck(const Quantifier<FunctionView>& quant,
+                                 const FunctionView& container) {
+        sanityEqualsCheck(container.rangeSize(), quant.numberElements());
     }
 };
 

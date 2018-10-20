@@ -161,9 +161,12 @@ struct InitialUnroller<SequenceView> {
 
 template <>
 struct ContainerSanityChecker<SequenceView> {
-    static void debugSanityCheck(const Quantifier<SequenceView>&) {
-        todoImpl();
+    static void debugSanityCheck(const Quantifier<SequenceView>& quant,
+                                 const SequenceView& container) {
+        sanityEqualsCheck(container.numberElements(), quant.numberElements());
     }
-};
+
+}
+;
 
 template struct Quantifier<SequenceView>;

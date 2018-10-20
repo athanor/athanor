@@ -41,7 +41,7 @@ auto& seedArg = randomSeedFlag.add<Arg<int>>(
         }
     }));
 bool runSanityChecks = false;
-auto& sanityCheckFlag  = argParser.add<Flag>(
+auto& sanityCheckFlag = argParser.add<Flag>(
     "--sanityCheck", Policy::OPTIONAL,
     "Activate sanity check mode, this is a debugging feature,.  After each "
     "move, the state is scanned for errors caused by bad triggering.  Note, "
@@ -117,7 +117,22 @@ int main(const int argc, const char** argv) {
     } else if (realTimeLimitFlag) {
         setTimeout(realTimeLimitArg.get(), false);
     }
-    search(strategy, state);
+    try {
+        search(strategy, state);
+    } catch (SanityCheckException& e) {
+        cerr << "***SANITY CHECK ERROR: " << e.errorMessage << endl;
+        if (!e.file.empty()) {
+            cerr << "From file: " << e.file << endl;
+        }
+        if (e.line > 0) {
+            cerr << "Line: " << e.line << endl;
+        }
+        size_t i = 1;
+        for (auto& message : e.messageStack) {
+            cerr << i << ": " << message << endl;
+            ++i;
+        }
+    }
 }
 
 void setTimeout(int numberSeconds, bool virtualTimer) {

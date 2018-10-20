@@ -173,7 +173,12 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
 
     state.model.objective->evaluate();
     state.model.objective->startTriggering();
+    if (runSanityChecks) {
+        state.model.csp->debugSanityCheck();
+        state.model.objective->debugSanityCheck();
 
+
+    }
     state.stats.initialSolution(state.model);
     try {
         searchStrategy->run(state, true);

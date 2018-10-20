@@ -132,6 +132,7 @@ int main(const int argc, const char** argv) {
             cerr << i << ": " << message << endl;
             ++i;
         }
+        abort();
     }
 }
 

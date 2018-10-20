@@ -161,7 +161,7 @@ void OpTupleLit::debugSanityCheckImpl() const {
         mpark::visit(
             [&](auto& member) {
                 member->debugSanityCheck();
-                if (member->getViewIfDefined().hasValue()) {
+                if (!member->getViewIfDefined().hasValue()) {
                     ++checkNumberUndefined;
                 }
             },

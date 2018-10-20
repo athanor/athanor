@@ -185,7 +185,7 @@ void OpSequenceLit::debugSanityCheckImpl() const {
             UInt checkNumberUndefined = 0;
             for (auto& member : members) {
                 member->debugSanityCheck();
-                if (member->getViewIfDefined().hasValue()) {
+                if (!member->getViewIfDefined().hasValue()) {
                     ++checkNumberUndefined;
                 }
             }

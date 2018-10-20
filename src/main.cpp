@@ -41,12 +41,17 @@ auto& seedArg = randomSeedFlag.add<Arg<int>>(
         }
     }));
 bool runSanityChecks = false;
-auto& sanityCheckFlag = argParser.add<Flag>(
+bool verboseSanityError = false;
+auto& sanityCheckFlag = argParser.add<ComplexFlag>(
     "--sanityCheck", Policy::OPTIONAL,
     "Activate sanity check mode, this is a debugging feature,.  After each "
     "move, the state is scanned for errors caused by bad triggering.  Note, "
     "errors caused by hash collisions are not tested for in this mode.",
     [](auto&) { runSanityChecks = true; });
+
+auto& verboseErrorFlag = argParser.add<Flag>(
+    "--verbose", Policy::OPTIONAL, "Verbose printing at point of error.",
+    [](auto&) { verboseSanityError = true; });
 
 void testHashes() {
     const size_t max = 10000;
@@ -127,11 +132,15 @@ int main(const int argc, const char** argv) {
         if (e.line > 0) {
             cerr << "Line: " << e.line << endl;
         }
+        if (!e.stateDump.empty()) {
+            cerr << "Operator state: " << e.stateDump << endl;
+        }
         size_t i = 1;
         for (auto& message : e.messageStack) {
             cerr << i << ": " << message << endl;
             ++i;
         }
+
         abort();
     }
 }

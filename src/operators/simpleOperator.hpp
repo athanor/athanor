@@ -131,8 +131,9 @@ void SimpleUnaryOperator<View, OperandView, Derived>::reevaluate() {
     if (view) {
         this->setDefined(true);
         derived().reevaluateImpl(*view);
+    } else {
+        this->setDefined(false);
     }
-    this->setDefined(false);
 }
 
 template <typename View, typename OperandView, typename Derived>

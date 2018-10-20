@@ -49,7 +49,7 @@ void ExprInterface<View>::addTriggerImpl(
     bool includeMembers, Int memberIndex) {
     this->view()->triggers.emplace_back(trigger);
     if (includeMembers) {
-        addAsMemberTrigger(this->view(), trigger, memberIndex);
+        addAsMemberTrigger(this->view().get(), trigger, memberIndex);
     }
 }
 

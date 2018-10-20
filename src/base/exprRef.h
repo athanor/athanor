@@ -9,12 +9,13 @@
 #include "base/typeDecls.h"
 #include "utils/OptionalRef.h"
 #include "utils/flagSet.h"
-
+extern bool verboseSanityError;
 struct SanityCheckException {
     const std::string errorMessage;
     std::string file;
     int line = 0;
     std::vector<std::string> messageStack;
+    std::string stateDump;
     SanityCheckException(const std::string& errorMessage)
         : errorMessage(errorMessage) {}
     SanityCheckException(const std::string& errorMessage,
@@ -177,11 +178,13 @@ struct ExprInterface : public Undefinable<View> {
         try {
             debugSanityCheckImpl();
         } catch (SanityCheckException& e) {
-            std::ostringstream os;
-            os << "from operator " << this->getOpName() << " with value "
-               << " ";
-            prettyPrint(os, this->view());
-            e.report(os.str());
+            if (verboseSanityError && e.stateDump.empty()) {
+                std::ostringstream os;
+                this->dumpState(os);
+                e.stateDump = os.str();
+            }
+            e.report(toString("From operator ", this->getOpName(),
+                              " with value ", this->getViewIfDefined()));
             throw e;
         }
     }

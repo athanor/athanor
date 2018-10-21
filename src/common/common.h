@@ -13,18 +13,19 @@
 //#define LOG_WITH_THREAD_NAME
 #ifdef LOG_WITH_THREAD_NAME
 #define debug_thread_log \
-    std::cout << "thread " << std::this_thread::get_id() << ":"
+std::cout << "thread " << std::this_thread::get_id() << ":"
 #else
 #define debug_thread_log std::cout
 #endif
 
+extern bool debugLogAllowed;
 #define debug_log_no_endl(x)                                           \
-    {                                                                  \
+    if (debugLogAllowed) {                                             \
         std::lock_guard<std::recursive_mutex> guard(COMMON_LOG_MUTEX); \
         debug_thread_log << x;                                         \
     }
 #define debug_log(x)                                                   \
-    {                                                                  \
+    if (debugLogAllowed) {                                             \
         std::lock_guard<std::recursive_mutex> guard(COMMON_LOG_MUTEX); \
         debug_thread_log << x << std::endl;                            \
     }

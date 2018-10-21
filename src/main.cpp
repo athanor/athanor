@@ -49,10 +49,17 @@ auto& sanityCheckFlag = argParser.add<ComplexFlag>(
     "errors caused by hash collisions are not tested for in this mode.",
     [](auto&) { runSanityChecks = true; });
 
-auto& verboseErrorFlag = argParser.add<Flag>(
+auto& verboseErrorFlag = sanityCheckFlag.add<Flag>(
     "--verbose", Policy::OPTIONAL, "Verbose printing at point of error.",
     [](auto&) { verboseSanityError = true; });
 
+debug_code(bool debugLogAllowed = true;
+           auto& disableDebugLoggingFlag = argParser.add<Flag>(
+               "--disableDebugLog", Policy::OPTIONAL,
+               "Included only for debug builds, can be used to silence logging "
+               "but keeping assertions switched on.",
+               [](auto&) { debugLogAllowed = false; });
+           );
 void testHashes() {
     const size_t max = 10000;
     unordered_map<UInt, pair<UInt, UInt>> seenHashes;

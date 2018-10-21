@@ -72,6 +72,7 @@ void OpSetLit::evaluateImpl() {
 
         },
         operands);
+    this->setAppearsDefined(true);
     debug_code(assertValidHashes());
 }
 
@@ -109,8 +110,7 @@ OpSetLit::OpSetLit(OpSetLit&& other)
     : SetView(std::move(other)),
       operands(move(other.operands)),
       hashIndicesMap(move(other.hashIndicesMap)),
-      exprTriggers(move(other.exprTriggers))
- {
+      exprTriggers(move(other.exprTriggers)) {
     setTriggerParent(this, exprTriggers);
 }
 

@@ -129,7 +129,8 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
             });
         }
     }
-    void valueRemoved(UInt, HashType hash) { valueRemovedImpl(hash, true); }
+    void valueRemoved(UInt, HashType hash) {
+                valueRemovedImpl(hash, true); }
 
     inline void valueAddedImpl(HashType hash, bool triggering) {
         if (op->left->view()

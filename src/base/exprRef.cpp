@@ -47,9 +47,10 @@ template <typename View>
 void ExprInterface<View>::addTriggerImpl(
     const std::shared_ptr<typename ExprInterface<View>::TriggerType>& trigger,
     bool includeMembers, Int memberIndex) {
-    this->view()->triggers.emplace_back(trigger);
+    auto view = this->view();
+    view->triggers.emplace_back(trigger);
     if (includeMembers) {
-        addAsMemberTrigger(this->view().get(), trigger, memberIndex);
+        addAsMemberTrigger(*view, trigger, memberIndex);
     }
 }
 

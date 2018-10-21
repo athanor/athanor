@@ -118,10 +118,7 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
     HashType oldHash;
     vector<HashType> oldHashes;
 
-    RightTrigger(OpSubsetEq* op) : op(op) {
-        cout << "creating trigger, allow defined only flag = " << this->flags.template get<TriggerBase::ALLOW_ONLY_DEFINEDNESS_TRIGGERS>() << endl;
-        
-    }
+    RightTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemovedImpl(HashType hash, bool triggering) {
         if (op->left->view()
                 .checkedGet(NO_UNDEFINED_IN_SUBSET)
@@ -132,8 +129,7 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
             });
         }
     }
-    void valueRemoved(UInt, HashType hash) {
-                valueRemovedImpl(hash, true); }
+    void valueRemoved(UInt, HashType hash) { valueRemovedImpl(hash, true); }
 
     inline void valueAddedImpl(HashType hash, bool triggering) {
         if (op->left->view()

@@ -22,8 +22,7 @@ struct OpSetLit : public SetView {
     PreviousValueCache<HashType> cachedSetHashes;
 
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
-    UInt numberUndefined = 0;
-    OpSetLit(AnyExprVec operands) : operands(std::move(operands)) {}
+        OpSetLit(AnyExprVec operands) : operands(std::move(operands)) {}
     OpSetLit(const OpSetLit&) = delete;
     OpSetLit(OpSetLit&& other);
     ~OpSetLit() { this->stopTriggeringOnChildren(); }

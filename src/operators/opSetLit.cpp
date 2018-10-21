@@ -57,7 +57,6 @@ void OpSetLit::removeValue(size_t index, HashType hash) {
 
 void OpSetLit::evaluateImpl() {
     debug_code(assert(exprTriggers.empty()));
-    numberUndefined = 0;
     mpark::visit(
         [&](auto& operands) {
             this->members.emplace<ExprRefVec<viewType(operands)>>();
@@ -110,8 +109,8 @@ OpSetLit::OpSetLit(OpSetLit&& other)
     : SetView(std::move(other)),
       operands(move(other.operands)),
       hashIndicesMap(move(other.hashIndicesMap)),
-      exprTriggers(move(other.exprTriggers)),
-      numberUndefined(move(other.numberUndefined)) {
+      exprTriggers(move(other.exprTriggers))
+ {
     setTriggerParent(this, exprTriggers);
 }
 
@@ -192,7 +191,6 @@ ExprRef<SetView> OpSetLit::deepCopySelfForUnrollImpl(
             newOpSetLit->memberHashes = memberHashes;
             newOpSetLit->cachedHashTotal = cachedHashTotal;
             newOpSetLit->hashIndicesMap = hashIndicesMap;
-            newOpSetLit->numberUndefined = numberUndefined;
             return newOpSetLit;
         },
         operands);

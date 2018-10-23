@@ -58,8 +58,7 @@ debug_code(bool debugLogAllowed = true;
                "--disableDebugLog", Policy::OPTIONAL,
                "Included only for debug builds, can be used to silence logging "
                "but keeping assertions switched on.",
-               [](auto&) { debugLogAllowed = false; });
-           );
+               [](auto&) { debugLogAllowed = false; }););
 void testHashes() {
     const size_t max = 10000;
     unordered_map<UInt, pair<UInt, UInt>> seenHashes;

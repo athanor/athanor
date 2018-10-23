@@ -13,7 +13,7 @@
 //#define LOG_WITH_THREAD_NAME
 #ifdef LOG_WITH_THREAD_NAME
 #define debug_thread_log \
-std::cout << "thread " << std::this_thread::get_id() << ":"
+    std::cout << "thread " << std::this_thread::get_id() << ":"
 #else
 #define debug_thread_log std::cout
 #endif

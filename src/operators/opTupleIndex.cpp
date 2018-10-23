@@ -19,7 +19,6 @@ void OpTupleIndex<TupleMemberViewType>::addTriggerImpl(
 template <typename TupleMemberViewType>
 OptionalRef<ExprRef<TupleMemberViewType>>
 OpTupleIndex<TupleMemberViewType>::getMember() {
-    debug_code(assert(this->appearsDefined()));
     auto view = tupleOperand->getViewIfDefined();
     if (!view) {
         return EmptyOptional();
@@ -32,7 +31,6 @@ OpTupleIndex<TupleMemberViewType>::getMember() {
 template <typename TupleMemberViewType>
 OptionalRef<const ExprRef<TupleMemberViewType>>
 OpTupleIndex<TupleMemberViewType>::getMember() const {
-    debug_code(assert(this->appearsDefined()));
     auto view = tupleOperand->getViewIfDefined();
     if (!view) {
         return EmptyOptional();

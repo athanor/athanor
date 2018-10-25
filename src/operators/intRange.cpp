@@ -190,11 +190,11 @@ void IntRange::debugSanityCheckImpl() const {
     auto& leftView = left->view().get();
     auto& rightView = right->view().get();
     sanityEqualsCheck(0, numberUndefined);
-    Int value = max(rightView.value - leftView.value, (Int)0);
+    Int value = max(rightView.value - (leftView.value - 1), (Int)0);
     sanityEqualsCheck(value, (Int)numberElements());
 
     for (Int i = leftView.value; i <= rightView.value; i++) {
-        auto memberView = getMembers<IntView>()[i]->getViewIfDefined();
+        auto memberView = getMembers<IntView>()[i-1]->getViewIfDefined();
         sanityCheck(memberView, "One of the sequence members is undefined.");
         sanityCheck(memberView->value == i,
                     toString("One member has value ", memberView->value,

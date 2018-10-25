@@ -16,16 +16,17 @@ struct Iterator : public ExprInterface<View> {
     template <typename Func>
     inline void changeValue(bool triggering, const ExprRef<View>& oldVal,
                             const ExprRef<View>& newVal, Func&& callback) {
-        this->setAppearsDefined(true);
         if (!triggering) {
             ref = newVal;
             callback();
+            this->setAppearsDefined(ref->appearsDefined());
         } else {
             ref = oldVal;
             callback();
             bool oldValUndefined = !oldVal->appearsDefined();
             ref = newVal;
             bool newValUndefined = !newVal->appearsDefined();
+            this->setAppearsDefined(!newValUndefined);
             if (oldValUndefined && !newValUndefined) {
                 visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, triggers,
                               true);

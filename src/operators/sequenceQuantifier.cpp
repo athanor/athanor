@@ -79,6 +79,7 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
                         op->indicesOfValuesToUnroll[i] + 1;
                     auto unrolledExpr = OpMaker<OpTupleLit>::make(
                         {tupleFirstMember.asExpr(), vToUnroll[i]});
+                    unrolledExpr->evaluate();
                     op->unroll(op->indicesOfValuesToUnroll[i], unrolledExpr);
                     if (op->indicesOfValuesToUnroll[i] + 1 <
                             op->unrolledIterVals.size() &&
@@ -152,6 +153,7 @@ struct InitialUnroller<SequenceView> {
                     tupleFirstMember->value = i + 1;
                     auto unrolledExpr = OpMaker<OpTupleLit>::make(
                         {tupleFirstMember.asExpr(), membersImpl[i]});
+                    unrolledExpr->evaluate();
                     quantifier.unroll(i, unrolledExpr);
                 }
             },

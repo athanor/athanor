@@ -375,12 +375,12 @@ void OpSequenceIndex<SequenceMemberViewType>::updateVarViolationsImpl(
 
 template <typename SequenceMemberViewType>
 ExprRef<SequenceMemberViewType>
-OpSequenceIndex<SequenceMemberViewType>::deepCopySelfForUnrollImpl(
+OpSequenceIndex<SequenceMemberViewType>::deepCopyForUnrollImpl(
     const ExprRef<SequenceMemberViewType>&, const AnyIterRef& iterator) const {
     auto newOpSequenceIndex =
         make_shared<OpSequenceIndex<SequenceMemberViewType>>(
-            sequenceOperand->deepCopySelfForUnroll(sequenceOperand, iterator),
-            indexOperand->deepCopySelfForUnrollImpl(indexOperand, iterator));
+            sequenceOperand->deepCopyForUnroll(sequenceOperand, iterator),
+            indexOperand->deepCopyForUnrollImpl(indexOperand, iterator));
     newOpSequenceIndex->cachedIndex = cachedIndex;
     newOpSequenceIndex->locallyDefined = locallyDefined;
     return newOpSequenceIndex;

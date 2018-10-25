@@ -130,7 +130,7 @@ struct TupleValue : public TupleView, public ValBase {
     void stopTriggering() final;
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer&) final;
-    ExprRef<TupleView> deepCopySelfForUnrollImpl(
+    ExprRef<TupleView> deepCopyForUnrollImpl(
         const ExprRef<TupleView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;

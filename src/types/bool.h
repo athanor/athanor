@@ -30,7 +30,7 @@ struct BoolValue : public BoolView, ValBase {
     void stopTriggering() final;
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer&) final;
-    ExprRef<BoolView> deepCopySelfForUnrollImpl(
+    ExprRef<BoolView> deepCopyForUnrollImpl(
         const ExprRef<BoolView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;

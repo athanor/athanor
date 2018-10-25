@@ -6,7 +6,7 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 void OpTupleLit::evaluateImpl() {
-        numberUndefined = 0;
+    numberUndefined = 0;
     for (auto& member : members) {
         mpark::visit(
             [&](auto& member) {
@@ -18,7 +18,7 @@ void OpTupleLit::evaluateImpl() {
             member);
     }
     this->setAppearsDefined(this->numberUndefined == 0);
-    }
+}
 namespace {
 template <typename TriggerType>
 struct ExprTrigger
@@ -103,14 +103,14 @@ void OpTupleLit::stopTriggering() {
 void OpTupleLit::updateVarViolationsImpl(const ViolationContext&,
                                          ViolationContainer&) {}
 
-ExprRef<TupleView> OpTupleLit::deepCopySelfForUnrollImpl(
+ExprRef<TupleView> OpTupleLit::deepCopyForUnrollImpl(
     const ExprRef<TupleView>&, const AnyIterRef& iterator) const {
     vector<AnyExprRef> newMembers;
     for (auto& member : members) {
         mpark::visit(
             [&](auto& member) {
                 newMembers.emplace_back(
-                    member->deepCopySelfForUnroll(member, iterator));
+                    member->deepCopyForUnroll(member, iterator));
             },
             member);
     }

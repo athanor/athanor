@@ -129,8 +129,8 @@ struct SimpleBinaryOperator : public View,
     void startTriggeringImpl() final;
     void stopTriggeringOnChildren();
     void stopTriggering() final;
-    ExprRef<View> deepCopySelfForUnrollImpl(
-        const ExprRef<View>&, const AnyIterRef& iterator) const final;
+    ExprRef<View> deepCopyForUnrollImpl(const ExprRef<View>&,
+                                        const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
     bool optimiseImpl();
     std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
@@ -180,8 +180,8 @@ struct SimpleUnaryOperator : public View,
     void startTriggeringImpl() final;
     void stopTriggeringOnChildren();
     void stopTriggering() final;
-    ExprRef<View> deepCopySelfForUnrollImpl(
-        const ExprRef<View>&, const AnyIterRef& iterator) const final;
+    ExprRef<View> deepCopyForUnrollImpl(const ExprRef<View>&,
+                                        const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
     bool optimiseImpl();
     std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;

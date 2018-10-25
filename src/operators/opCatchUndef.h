@@ -36,7 +36,7 @@ struct OpCatchUndef : public ExprInterface<ExprViewType> {
 
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer&) final;
-    ExprRef<ExprViewType> deepCopySelfForUnrollImpl(
+    ExprRef<ExprViewType> deepCopyForUnrollImpl(
         const ExprRef<ExprViewType>& self,
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;

@@ -46,7 +46,7 @@ struct IntValue : public IntView, ValBase {
     void stopTriggering() final;
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer&) final;
-    ExprRef<IntView> deepCopySelfForUnrollImpl(
+    ExprRef<IntView> deepCopyForUnrollImpl(
         const ExprRef<IntView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;

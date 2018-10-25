@@ -142,10 +142,10 @@ void OpCatchUndef<ExprViewType>::updateVarViolationsImpl(
 }
 
 template <typename ExprViewType>
-ExprRef<ExprViewType> OpCatchUndef<ExprViewType>::deepCopySelfForUnrollImpl(
+ExprRef<ExprViewType> OpCatchUndef<ExprViewType>::deepCopyForUnrollImpl(
     const ExprRef<ExprViewType>&, const AnyIterRef& iterator) const {
     auto newOpCatchUndef = make_shared<OpCatchUndef<ExprViewType>>(
-        expr->deepCopySelfForUnroll(expr, iterator), replacement);
+        expr->deepCopyForUnroll(expr, iterator), replacement);
     newOpCatchUndef->exprDefined = exprDefined;
     return newOpCatchUndef;
 }

@@ -382,13 +382,13 @@ void OpFunctionImage<FunctionMemberViewType>::updateVarViolationsImpl(
 
 template <typename FunctionMemberViewType>
 ExprRef<FunctionMemberViewType>
-OpFunctionImage<FunctionMemberViewType>::deepCopySelfForUnrollImpl(
+OpFunctionImage<FunctionMemberViewType>::deepCopyForUnrollImpl(
     const ExprRef<FunctionMemberViewType>&, const AnyIterRef& iterator) const {
     auto newOpFunctionImage =
         make_shared<OpFunctionImage<FunctionMemberViewType>>(
-            functionOperand->deepCopySelfForUnroll(functionOperand, iterator),
+            functionOperand->deepCopyForUnroll(functionOperand, iterator),
             invoke_r(preImageOperand,
-                     deepCopySelfForUnrollImpl(preImageOperand, iterator),
+                     deepCopyForUnrollImpl(preImageOperand, iterator),
                      AnyExprRef));
     newOpFunctionImage->cachedIndex = cachedIndex;
     newOpFunctionImage->locallyDefined = locallyDefined;

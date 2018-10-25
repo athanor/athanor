@@ -27,7 +27,7 @@ struct OpIn : public BoolView {
     void stopTriggeringOnChildren();
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer&) final;
-    ExprRef<BoolView> deepCopySelfForUnrollImpl(
+    ExprRef<BoolView> deepCopyForUnrollImpl(
         const ExprRef<BoolView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;

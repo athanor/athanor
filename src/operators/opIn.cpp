@@ -136,11 +136,11 @@ void OpIn::updateVarViolationsImpl(const ViolationContext&,
     }
 }
 
-ExprRef<BoolView> OpIn::deepCopySelfForUnrollImpl(
+ExprRef<BoolView> OpIn::deepCopyForUnrollImpl(
     const ExprRef<BoolView>&, const AnyIterRef& iterator) const {
     auto newOpIn = make_shared<OpIn>(
-        invoke_r(expr, expr->deepCopySelfForUnroll(expr, iterator), AnyExprRef),
-        setOperand->deepCopySelfForUnroll(setOperand, iterator));
+        invoke_r(expr, expr->deepCopyForUnroll(expr, iterator), AnyExprRef),
+        setOperand->deepCopyForUnroll(setOperand, iterator));
     newOpIn->violation = violation;
     return newOpIn;
 }

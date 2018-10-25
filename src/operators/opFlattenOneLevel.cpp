@@ -384,10 +384,10 @@ void OpFlattenOneLevel<SequenceInnerType>::stopTriggering() {
 
 template <typename SequenceInnerType>
 ExprRef<SequenceView>
-OpFlattenOneLevel<SequenceInnerType>::deepCopySelfForUnrollImpl(
+OpFlattenOneLevel<SequenceInnerType>::deepCopyForUnrollImpl(
     const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
     auto newOp = make_shared<OpFlattenOneLevel<SequenceInnerType>>(
-        operand->deepCopySelfForUnroll(operand, iterator));
+        operand->deepCopyForUnroll(operand, iterator));
     newOp->members = members;
     newOp->numberUndefined = numberUndefined;
     newOp->startingIndices = startingIndices;

@@ -33,7 +33,7 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
 
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer&) final;
-    ExprRef<SetMemberViewType> deepCopySelfForUnrollImpl(
+    ExprRef<SetMemberViewType> deepCopyForUnrollImpl(
         const ExprRef<SetMemberViewType>& self,
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;

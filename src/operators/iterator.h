@@ -60,8 +60,8 @@ struct Iterator : public ExprInterface<View> {
 
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer&) final;
-    ExprRef<View> deepCopySelfForUnrollImpl(
-        const ExprRef<View>& self, const AnyIterRef& iterator) const final;
+    ExprRef<View> deepCopyForUnrollImpl(const ExprRef<View>& self,
+                                        const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 

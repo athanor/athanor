@@ -172,7 +172,7 @@ void OpSetLit::updateVarViolationsImpl(const ViolationContext& context,
         operands);
 }
 
-ExprRef<SetView> OpSetLit::deepCopySelfForUnrollImpl(
+ExprRef<SetView> OpSetLit::deepCopyForUnrollImpl(
     const ExprRef<SetView>&, const AnyIterRef& iterator) const {
     return mpark::visit(
         [&](auto& operands) {
@@ -181,7 +181,7 @@ ExprRef<SetView> OpSetLit::deepCopySelfForUnrollImpl(
 
             for (auto& operand : operands) {
                 newOperands.emplace_back(
-                    operand->deepCopySelfForUnroll(operand, iterator));
+                    operand->deepCopyForUnroll(operand, iterator));
                 if (newOperands.size() <= numberElements()) {
                     newSetMembers.emplace_back(newOperands.back());
                 }

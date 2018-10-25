@@ -91,7 +91,7 @@ void Quantifier<ContainerType>::unroll(UInt index,
                     : mpark::get<IterRef<ViewType>>(unrolledIterVals.back())
                           ->getValue();
             ExprRef<viewType(members)> newMember =
-                exprToCopy->deepCopySelfForUnroll(exprToCopy, iterRef);
+                exprToCopy->deepCopyForUnroll(exprToCopy, iterRef);
             iterRef->changeValue(!evaluateExpr, oldValueOfIter, newView, [&]() {
                 if (evaluateExpr) {
                     newMember->evaluate();
@@ -142,10 +142,10 @@ void Quantifier<ContainerType>::roll(UInt index) {
 }
 
 template <typename ContainerType>
-ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnrollImpl(
+ExprRef<SequenceView> Quantifier<ContainerType>::deepCopyForUnrollImpl(
     const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
     auto newQuantifier = std::make_shared<Quantifier<ContainerType>>(
-        container->deepCopySelfForUnroll(container, iterator), quantId);
+        container->deepCopyForUnroll(container, iterator), quantId);
 
     mpark::visit(
         [&](const auto& vToUnroll) {
@@ -157,14 +157,14 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopySelfForUnrollImpl(
     mpark::visit(
         [&](const auto& expr) {
             newQuantifier->setExpression(
-                expr->deepCopySelfForUnroll(expr, iterator));
+                expr->deepCopyForUnroll(expr, iterator));
             auto& members = this->template getMembers<viewType(expr)>();
             for (size_t i = 0; i < members.size(); ++i) {
                 auto& member = members[i];
                 auto& iterVal = unrolledIterVals[i];
                 newQuantifier->template addMember<viewType(members)>(
                     newQuantifier->numberElements(),
-                    member->deepCopySelfForUnroll(member, iterator));
+                    member->deepCopyForUnroll(member, iterator));
                 newQuantifier->unrolledIterVals.emplace_back(iterVal);
             }
         },

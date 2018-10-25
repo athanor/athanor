@@ -47,7 +47,7 @@ void invokeSetDefined<BoolValue>(ValRef<BoolValue>&) {}
         ViolationContainer& vioContainer) {                                  \
         registerViolations(this, vioContext.parentViolation, vioContainer);  \
     }                                                                        \
-    ExprRef<name##View> name##Value::deepCopySelfForUnrollImpl(              \
+    ExprRef<name##View> name##Value::deepCopyForUnrollImpl(                  \
         const ExprRef<name##View>& self, const AnyIterRef&) const {          \
         return self;                                                         \
     }                                                                        \

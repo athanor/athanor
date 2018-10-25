@@ -158,17 +158,17 @@ struct ExprInterface : public Undefinable<View> {
     }
     virtual void updateVarViolationsImpl(const ViolationContext& vioContext,
                                          ViolationContainer&) = 0;
-    inline ExprRef<View> deepCopySelfForUnroll(const ExprRef<View>& self,
-                                               const AnyIterRef& iterator) {
+    inline ExprRef<View> deepCopyForUnroll(const ExprRef<View>& self,
+                                           const AnyIterRef& iterator) {
         if (isConstant()) {
             return self;
         }
 
-        ExprRef<View> copy = deepCopySelfForUnrollImpl(self, iterator);
+        ExprRef<View> copy = deepCopyForUnrollImpl(self, iterator);
         copy->flags = flags;
         return copy;
     }
-    virtual ExprRef<View> deepCopySelfForUnrollImpl(
+    virtual ExprRef<View> deepCopyForUnrollImpl(
         const ExprRef<View>& self, const AnyIterRef& iterator) const = 0;
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
 

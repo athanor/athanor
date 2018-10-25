@@ -255,10 +255,10 @@ void OpSetIndexInternal<SetMemberViewType>::updateVarViolationsImpl(
 
 template <typename SetMemberViewType>
 ExprRef<SetMemberViewType>
-OpSetIndexInternal<SetMemberViewType>::deepCopySelfForUnrollImpl(
+OpSetIndexInternal<SetMemberViewType>::deepCopyForUnrollImpl(
     const ExprRef<SetMemberViewType>&, const AnyIterRef& iterator) const {
     auto newOpSetIndex = make_shared<OpSetIndexInternal<SetMemberViewType>>(
-        setOperand->deepCopySelfForUnroll(setOperand, iterator), index);
+        setOperand->deepCopyForUnroll(setOperand, iterator), index);
     newOpSetIndex->parentSetMapping = parentSetMapping;
     newOpSetIndex->setParentMapping = setParentMapping;
     return newOpSetIndex;

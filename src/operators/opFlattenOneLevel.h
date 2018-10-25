@@ -27,7 +27,7 @@ struct OpFlattenOneLevel : public SequenceView {
 
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
-    ExprRef<SequenceView> deepCopySelfForUnrollImpl(
+    ExprRef<SequenceView> deepCopyForUnrollImpl(
         const ExprRef<SequenceView>& self,
         const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;

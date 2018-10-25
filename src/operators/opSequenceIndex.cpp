@@ -80,7 +80,7 @@ void OpSequenceIndex<SequenceMemberViewType>::reevaluate(
         auto indexView = indexOperand->getViewIfDefined();
         auto sequenceView = sequenceOperand->view();
         if (!indexView || !sequenceView || indexView->value < 1 ||
-            indexView->value > sequenceView->numberElements()) {
+            indexView->value > (Int)sequenceView->numberElements()) {
             locallyDefined = false;
         } else {
             locallyDefined = true;
@@ -441,7 +441,7 @@ void OpSequenceIndex<SequenceMemberViewType>::debugSanityCheckImpl() const {
                     "operands are undefined, operator should be undefined.");
         return;
     } else if (indexView->value < 1 ||
-               indexView->value > sequenceView->numberElements()) {
+               indexView->value > (Int)sequenceView->numberElements()) {
         sanityCheck(!this->appearsDefined(),
                     "index out of bounds, operator should be undefined.");
         return;

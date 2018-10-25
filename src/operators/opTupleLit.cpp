@@ -6,6 +6,7 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 void OpTupleLit::evaluateImpl() {
+        numberUndefined = 0;
     for (auto& member : members) {
         mpark::visit(
             [&](auto& member) {
@@ -16,7 +17,8 @@ void OpTupleLit::evaluateImpl() {
             },
             member);
     }
-}
+    this->setAppearsDefined(this->numberUndefined == 0);
+    }
 namespace {
 template <typename TriggerType>
 struct ExprTrigger

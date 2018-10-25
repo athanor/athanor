@@ -13,7 +13,10 @@ void OpTupleIndex<TupleMemberViewType>::addTriggerImpl(
     trigger->flags.template get<TriggerBase::ALLOW_DEFINEDNESS_TRIGGERS>() =
         false;
     triggers.emplace_back(getTriggerBase(trigger));
-    getMember().get()->addTrigger(trigger, includeMembers, memberIndex);
+    auto member = getMember();
+    if (member) {
+        member.get()->addTrigger(trigger, includeMembers, memberIndex);
+    }
 }
 
 template <typename TupleMemberViewType>
@@ -61,7 +64,8 @@ OptionalRef<const TupleMemberViewType> OpTupleIndex<TupleMemberViewType>::view()
 
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::reevaluate() {
-    setAppearsDefined(getMember().get()->appearsDefined());
+    auto member = getMember();
+    setAppearsDefined(member && (*member)->appearsDefined());
 }
 
 template <typename TupleMemberViewType>

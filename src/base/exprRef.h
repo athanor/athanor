@@ -239,6 +239,12 @@ inline std::ostream& prettyPrint(std::ostream& os,
     }
 }
 
+template <typename View>
+inline std::ostream& operator<<(std::ostream& os,
+                                const OptionalRef<View>& ref) {
+    return prettyPrint(os, ref);
+}
+
 bool smallerValue(const AnyExprRef& u, const AnyExprRef& v);
 
 template <typename View>

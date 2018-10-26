@@ -45,8 +45,7 @@ class State {
         bool solutionAccepted = false, changeMade = false;
         AcceptanceCallBack callback = [&]() {
             if (runSanityChecks) {
-                model.csp->debugSanityCheck();
-                model.objective->debugSanityCheck();
+                model.debugSanityCheck();
             }
             changeMade = true;
             solutionAccepted = strategy(
@@ -60,8 +59,7 @@ class State {
                                    model.vioContainer);
         neighbourhood.apply(params);
         if (runSanityChecks && !solutionAccepted) {
-            model.csp->debugSanityCheck();
-            model.objective->debugSanityCheck();
+                            model.debugSanityCheck();
         }
         NeighbourhoodResult nhResult(model, nhIndex, changeMade,
                                      statsMarkPoint);

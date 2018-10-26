@@ -54,6 +54,15 @@ struct Model {
         }
     }
 
+    void debugSanityCheck() const {
+        csp->debugSanityCheck();
+        objective->debugSanityCheck();
+        for (auto& indexExprPair : definingExpressions) {
+            mpark::visit([&](auto& expr) { expr->debugSanityCheck(); },
+                         indexExprPair.second);
+        }
+    }
+
    public:
     inline UInt getViolation() const { return csp->view()->violation; }
     inline Int getObjective() const {

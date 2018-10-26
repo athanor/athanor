@@ -142,7 +142,10 @@ ExprRef<TupleView> functionIndexToDomain<TupleView>(
         intVal->value = row + dim.lower;
         tupleMembers.emplace_back(intVal.asExpr());
     }
-    return OpMaker<OpTupleLit>::make(move(tupleMembers));
+    auto tuple = OpMaker<OpTupleLit>::make(move(tupleMembers));
+    tuple->setAppearsDefined(true);
+    tuple->setEvaluated(true);
+    return tuple;
 }
 
 template <>

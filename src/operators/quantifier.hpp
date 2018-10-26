@@ -67,7 +67,7 @@ template <typename ContainerType>
 template <typename ViewType>
 void Quantifier<ContainerType>::unroll(UInt index,
                                        const ExprRef<ViewType>& newView) {
-    mpark::visit(
+        mpark::visit(
         [&](auto& members) {
             debug_log("unrolling " << newView << " at index " << index);
             auto iterRef = this->newIterRef<ViewType, false>();

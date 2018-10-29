@@ -25,7 +25,7 @@ struct InitialUnroller<FunctionView> {
                         auto unrolledExpr = OpMaker<OpTupleLit>::make(
                             {tupleFirstMember, membersImpl[i]});
                         unrolledExpr->evaluate();
-                                                quantifier.unroll(i, unrolledExpr);
+                        quantifier.unroll(i, unrolledExpr);
                     } else {
                         auto tupleFirstMember =
                             containerView.template indexToDomain<TupleView>(i);

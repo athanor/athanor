@@ -59,7 +59,7 @@ class State {
                                    model.vioContainer);
         neighbourhood.apply(params);
         if (runSanityChecks && !solutionAccepted) {
-                            model.debugSanityCheck();
+            model.debugSanityCheck();
         }
         NeighbourhoodResult nhResult(model, nhIndex, changeMade,
                                      statsMarkPoint);

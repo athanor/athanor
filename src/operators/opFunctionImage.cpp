@@ -24,7 +24,9 @@ void OpFunctionImage<FunctionMemberViewType>::addTriggerImpl(
 template <typename FunctionMemberViewType>
 OptionalRef<ExprRef<FunctionMemberViewType>>
 OpFunctionImage<FunctionMemberViewType>::getMember() {
-    debug_code(assert(invoke(preImageOperand, appearsDefined())));
+    if (!invoke(preImageOperand, appearsDefined())) {
+        return EmptyOptional();
+    }
     debug_code(assert(cachedIndex >= 0));
     auto view = functionOperand->getViewIfDefined();
     if (!view || cachedIndex >= (Int)(*view).rangeSize()) {
@@ -38,7 +40,9 @@ OpFunctionImage<FunctionMemberViewType>::getMember() {
 template <typename FunctionMemberViewType>
 OptionalRef<const ExprRef<FunctionMemberViewType>>
 OpFunctionImage<FunctionMemberViewType>::getMember() const {
-    debug_code(assert(invoke(preImageOperand, appearsDefined())));
+    if (!invoke(preImageOperand, appearsDefined())) {
+        return EmptyOptional();
+    }
     debug_code(assert(cachedIndex >= 0));
     auto view = functionOperand->getViewIfDefined();
     if (!view || cachedIndex >= (Int)(*view).rangeSize()) {

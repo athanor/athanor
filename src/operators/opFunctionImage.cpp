@@ -357,7 +357,9 @@ void OpFunctionImage<FunctionMemberViewType>::stopTriggeringOnChildren() {
             },
             preImageOperand);
         deleteTrigger(functionOperandTrigger);
-        deleteTrigger(functionMemberTrigger);
+        if (functionMemberTrigger) {
+            deleteTrigger(functionMemberTrigger);
+        }
         preImageTrigger = nullptr;
         functionOperandTrigger = nullptr;
         functionMemberTrigger = nullptr;

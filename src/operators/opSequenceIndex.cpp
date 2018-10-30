@@ -347,7 +347,9 @@ void OpSequenceIndex<SequenceMemberViewType>::stopTriggeringOnChildren() {
     if (indexTrigger) {
         deleteTrigger(indexTrigger);
         deleteTrigger(sequenceOperandTrigger);
-        deleteTrigger(sequenceMemberTrigger);
+        if (sequenceMemberTrigger) {
+            deleteTrigger(sequenceMemberTrigger);
+        }
         indexTrigger = nullptr;
         sequenceOperandTrigger = nullptr;
         sequenceMemberTrigger = nullptr;

@@ -71,22 +71,19 @@ OpSequenceIndex<SequenceMemberViewType>::view() const {
 template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::reevaluate(
     bool recalculateCachedIndex) {
-    if (!indexOperand->appearsDefined()) {
+    auto sequenceView = sequenceOperand->view();
+    auto indexView = indexOperand->getViewIfDefined();
+
+    if (!sequenceView || !indexView) {
         locallyDefined = false;
         this->setAppearsDefined(false);
         return;
     }
     if (recalculateCachedIndex) {
-        auto indexView = indexOperand->getViewIfDefined();
-        auto sequenceView = sequenceOperand->view();
-        if (!indexView || !sequenceView || indexView->value < 0 ||
-            indexView->value >= (Int)sequenceView->numberElements()) {
-            locallyDefined = false;
-        } else {
-            locallyDefined = true;
-            cachedIndex = (*indexView).value;
-        }
+        cachedIndex = indexView->value - 1;
     }
+    locallyDefined =
+        cachedIndex >= 0 && cachedIndex < (Int)sequenceView->numberElements();
     setAppearsDefined(locallyDefined && getMember().get()->appearsDefined());
 }
 
@@ -393,8 +390,9 @@ OpSequenceIndex<SequenceMemberViewType>::deepCopyForUnrollImpl(
 template <typename SequenceMemberViewType>
 std::ostream& OpSequenceIndex<SequenceMemberViewType>::dumpState(
     std::ostream& os) const {
-    os << "opSequenceIndex(value=";
-    prettyPrint(os, this->getViewIfDefined());
+    os << "opSequenceIndex(defined=" << this->appearsDefined()
+       << ",value=" << this->getViewIfDefined() << ",";
+
     os << ",\n";
 
     os << "sequence=";
@@ -444,12 +442,13 @@ void OpSequenceIndex<SequenceMemberViewType>::debugSanityCheckImpl() const {
         sanityCheck(!this->appearsDefined(),
                     "operands are undefined, operator should be undefined.");
         return;
-    } else if (indexView->value < 0 ||
-               indexView->value >= (Int)sequenceView->numberElements()) {
+    } else if (indexView->value - 1 < 0 ||
+               indexView->value - 1 >= (Int)sequenceView->numberElements()) {
         sanityCheck(!this->appearsDefined(),
                     "index out of bounds, operator should be undefined.");
         return;
     } else {
+        sanityEqualsCheck((Int)indexView->value - 1, cachedIndex);
         auto member = getMember();
         sanityCheck(member, "member returned empty optional.");
         if (!(*member)->appearsDefined()) {
@@ -457,11 +456,12 @@ void OpSequenceIndex<SequenceMemberViewType>::debugSanityCheckImpl() const {
                         "member pointed to by index is undefined, hence this "
                         "operator should be undefined.");
             return;
+        } else {
+            sanityCheck(this->appearsDefined(), "operator should be defined.");
         }
     }
-    sanityEqualsCheck((Int)indexView->value, cachedIndex);
-    sanityCheck(this->appearsDefined(), "operator should be defined.");
 }
+
 template <typename Op>
 struct OpMaker;
 

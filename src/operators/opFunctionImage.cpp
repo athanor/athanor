@@ -405,7 +405,7 @@ OpFunctionImage<FunctionMemberViewType>::deepCopyForUnrollImpl(
 template <typename FunctionMemberViewType>
 std::ostream& OpFunctionImage<FunctionMemberViewType>::dumpState(
     std::ostream& os) const {
-    os << "opFunctionImage(value=";
+    os << "opFunctionImage(defined=" << this->appearsDefined() << ",value=";
     prettyPrint(os, this->getViewIfDefined());
     os << ",\n";
 

@@ -19,9 +19,10 @@ struct IntRange : public SimpleBinaryOperator<SequenceView, IntView, IntRange> {
 
     IntRange(ExprRef<IntView> left, ExprRef<IntView> right)
         : SimpleBinaryOperator<SequenceView, IntView, IntRange>(
-              std::move(left), std::move(right)) {}
+              std::move(left), std::move(right)) {
+        this->members.emplace<ExprRefVec<IntView>>();
+    }
 
-    void setInnerType() { this->members.emplace<ExprRefVec<IntView>>(); }
     void reevaluateImpl(IntView& leftView, IntView& rightView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;

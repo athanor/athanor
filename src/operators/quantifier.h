@@ -65,7 +65,7 @@ struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
         return std::make_shared<Iterator<T>>(quantId, nullptr);
     }
 
-    template<typename View>
+    template <typename View>
     void setContainerInnerType() {
         valuesToUnroll.emplace<ExprRefVec<View>>();
     }

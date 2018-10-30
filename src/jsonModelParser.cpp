@@ -1018,7 +1018,8 @@ void parseGenerator(json& generatorParent,
                     } else {
                         ExprRef<InnerViewType> iter(
                             quantifier->template newIterRef<InnerViewType>());
-                        quantifier->template setContainerInnerType<InnerViewType>();
+                        quantifier
+                            ->template setContainerInnerType<InnerViewType>();
                         addLocalVarsToScopeFromPatternMatch(
                             generatorExpr[0], innerDomain, iter, parsedModel,
                             variablesAddedToScope);

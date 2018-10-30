@@ -79,7 +79,7 @@ void OpSequenceIndex<SequenceMemberViewType>::reevaluate(
     if (recalculateCachedIndex) {
         auto indexView = indexOperand->getViewIfDefined();
         auto sequenceView = sequenceOperand->view();
-        if (!indexView || !sequenceView || indexView->value < 1 ||
+        if (!indexView || !sequenceView || indexView->value < 0 ||
             indexView->value >= (Int)sequenceView->numberElements()) {
             locallyDefined = false;
         } else {
@@ -326,7 +326,9 @@ void OpSequenceIndex<SequenceMemberViewType>::startTriggeringImpl() {
             OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger>(
             this);
         sequenceOperand->addTrigger(sequenceOperandTrigger, false);
-        reattachSequenceMemberTrigger();
+        if (locallyDefined) {
+            reattachSequenceMemberTrigger();
+        }
         sequenceOperand->startTriggering();
     }
 }
@@ -440,8 +442,8 @@ void OpSequenceIndex<SequenceMemberViewType>::debugSanityCheckImpl() const {
         sanityCheck(!this->appearsDefined(),
                     "operands are undefined, operator should be undefined.");
         return;
-    } else if (indexView->value < 1 ||
-               indexView->value > (Int)sequenceView->numberElements()) {
+    } else if (indexView->value < 0 ||
+               indexView->value >= (Int)sequenceView->numberElements()) {
         sanityCheck(!this->appearsDefined(),
                     "index out of bounds, operator should be undefined.");
         return;

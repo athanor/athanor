@@ -327,7 +327,9 @@ void OpFunctionImage<FunctionMemberViewType>::startTriggeringImpl() {
             OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger>(
             this);
         functionOperand->addTrigger(functionOperandTrigger, false);
-        reattachFunctionMemberTrigger();
+        if (locallyDefined) {
+            reattachFunctionMemberTrigger();
+        }
         functionOperand->startTriggering();
     }
 }

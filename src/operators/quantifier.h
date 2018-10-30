@@ -60,14 +60,15 @@ struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
         const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
 
-    template <typename T, bool resetValuesToUnroll = true>
+    template <typename T>
     inline IterRef<T> newIterRef() {
-        if (resetValuesToUnroll) {
-            valuesToUnroll.emplace<ExprRefVec<T>>();
-        }
         return std::make_shared<Iterator<T>>(quantId, nullptr);
     }
 
+    template<typename View>
+    void setContainerInnerType() {
+        valuesToUnroll.emplace<ExprRefVec<View>>();
+    }
     bool triggering();
     template <typename ViewType>
     void unroll(UInt index, const ExprRef<ViewType>& newView);

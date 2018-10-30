@@ -1007,6 +1007,7 @@ void parseGenerator(json& generatorParent,
                     if (powerSetTest != NULL) {
                         auto iterRef =
                             quantifier->template newIterRef<SetView>();
+                        quantifier->template setContainerInnerType<SetView>();
                         auto iterDomain = innerDomain;
                         ExprRef<SetView> iter(iterRef);
                         addLocalVarsToScopeFromPatternMatch(
@@ -1017,6 +1018,7 @@ void parseGenerator(json& generatorParent,
                     } else {
                         ExprRef<InnerViewType> iter(
                             quantifier->template newIterRef<InnerViewType>());
+                        quantifier->template setContainerInnerType<InnerViewType>();
                         addLocalVarsToScopeFromPatternMatch(
                             generatorExpr[0], innerDomain, iter, parsedModel,
                             variablesAddedToScope);
@@ -1025,12 +1027,14 @@ void parseGenerator(json& generatorParent,
                 [&](shared_ptr<MSetDomain>&) {
                     ExprRef<InnerViewType> iter(
                         quantifier->template newIterRef<InnerViewType>());
+                    quantifier->template setContainerInnerType<InnerViewType>();
                     addLocalVarsToScopeFromPatternMatch(
                         generatorExpr[0], innerDomain, iter, parsedModel,
                         variablesAddedToScope);
                 },
                 [&](shared_ptr<SequenceDomain>&) {
                     auto iterRef = quantifier->template newIterRef<TupleView>();
+                    quantifier->template setContainerInnerType<InnerViewType>();
                     if (generatorParent.count("GenDomainNoRepr")) {
                         auto iter = OpMaker<OpTupleIndex<InnerViewType>>::make(
                             iterRef, 1);
@@ -1049,6 +1053,7 @@ void parseGenerator(json& generatorParent,
                 [&](shared_ptr<FunctionDomain>& functionDomain) {
                     ExprRef<TupleView> iter(
                         quantifier->template newIterRef<TupleView>());
+                    quantifier->template setContainerInnerType<InnerViewType>();
                     auto iterDomain =
                         fakeTupleDomain({functionDomain->from, innerDomain});
                     addLocalVarsToScopeFromPatternMatch(

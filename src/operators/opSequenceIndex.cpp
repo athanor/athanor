@@ -80,7 +80,7 @@ void OpSequenceIndex<SequenceMemberViewType>::reevaluate(
         auto indexView = indexOperand->getViewIfDefined();
         auto sequenceView = sequenceOperand->view();
         if (!indexView || !sequenceView || indexView->value < 1 ||
-            indexView->value > (Int)sequenceView->numberElements()) {
+            indexView->value >= (Int)sequenceView->numberElements()) {
             locallyDefined = false;
         } else {
             locallyDefined = true;

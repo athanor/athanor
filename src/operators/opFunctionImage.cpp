@@ -375,7 +375,7 @@ void OpFunctionImage<FunctionMemberViewType>::stopTriggering() {
 template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::updateVarViolationsImpl(
     const ViolationContext& vioContext, ViolationContainer& vioContainer) {
-    invoke(preImageOperand, updateVarViolationsImpl(vioContext, vioContainer));
+    invoke(preImageOperand, updateVarViolations(vioContext, vioContainer));
     auto functionMember = getMember();
     if (locallyDefined && functionMember) {
         (*functionMember)->updateVarViolations(vioContext, vioContainer);
@@ -392,8 +392,7 @@ OpFunctionImage<FunctionMemberViewType>::deepCopyForUnrollImpl(
         make_shared<OpFunctionImage<FunctionMemberViewType>>(
             functionOperand->deepCopyForUnroll(functionOperand, iterator),
             invoke_r(preImageOperand,
-                     deepCopyForUnroll(preImageOperand, iterator),
-                     AnyExprRef));
+                     deepCopyForUnroll(preImageOperand, iterator), AnyExprRef));
     newOpFunctionImage->cachedIndex = cachedIndex;
     newOpFunctionImage->locallyDefined = locallyDefined;
     return newOpFunctionImage;

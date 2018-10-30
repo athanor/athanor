@@ -364,7 +364,7 @@ void OpSequenceIndex<SequenceMemberViewType>::stopTriggering() {
 template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::updateVarViolationsImpl(
     const ViolationContext& vioContext, ViolationContainer& vioContainer) {
-    indexOperand->updateVarViolationsImpl(vioContext, vioContainer);
+    indexOperand->updateVarViolations(vioContext, vioContainer);
     auto sequenceMember = getMember();
     if (locallyDefined && sequenceMember) {
         (*sequenceMember)->updateVarViolations(vioContext, vioContainer);
@@ -380,7 +380,7 @@ OpSequenceIndex<SequenceMemberViewType>::deepCopyForUnrollImpl(
     auto newOpSequenceIndex =
         make_shared<OpSequenceIndex<SequenceMemberViewType>>(
             sequenceOperand->deepCopyForUnroll(sequenceOperand, iterator),
-            indexOperand->deepCopyForUnrollImpl(indexOperand, iterator));
+            indexOperand->deepCopyForUnroll(indexOperand, iterator));
     newOpSequenceIndex->cachedIndex = cachedIndex;
     newOpSequenceIndex->locallyDefined = locallyDefined;
     return newOpSequenceIndex;

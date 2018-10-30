@@ -127,28 +127,43 @@ struct ExprInterface : public Undefinable<View> {
         }
     }
 
+   protected:
+    virtual void addTriggerImpl(const std::shared_ptr<TriggerType>& trigger,
+                                bool includeMembers = true,
+                                Int memberIndex = -1);
+
+    virtual void evaluateImpl() = 0;
+
+    virtual void startTriggeringImpl() = 0;
+
+    virtual void updateVarViolationsImpl(const ViolationContext& vioContext,
+                                         ViolationContainer&) = 0;
+
+    virtual ExprRef<View> deepCopyForUnrollImpl(
+        const ExprRef<View>& self, const AnyIterRef& iterator) const = 0;
+
+    virtual void debugSanityCheckImpl() const = 0;
+
+   public:
     void addTrigger(const std::shared_ptr<TriggerType>& trigger,
                     bool includeMembers = true, Int memberIndex = -1) {
         if (!isConstant()) {
             addTriggerImpl(trigger, includeMembers, memberIndex);
         }
     }
-    virtual void addTriggerImpl(const std::shared_ptr<TriggerType>& trigger,
-                                bool includeMembers = true,
-                                Int memberIndex = -1);
+
     inline void evaluate() {
         if (!isEvaluated()) {
             setEvaluated(true);
             this->evaluateImpl();
         }
     }
-    virtual void evaluateImpl() = 0;
     void startTriggering() {
         if (!isConstant()) {
             this->startTriggeringImpl();
         }
     }
-    virtual void startTriggeringImpl() = 0;
+
     virtual void stopTriggering() = 0;
     void updateVarViolations(const ViolationContext& vioContext,
                              ViolationContainer& vioContainer) {
@@ -156,8 +171,7 @@ struct ExprInterface : public Undefinable<View> {
             updateVarViolationsImpl(vioContext, vioContainer);
         }
     }
-    virtual void updateVarViolationsImpl(const ViolationContext& vioContext,
-                                         ViolationContainer&) = 0;
+
     inline ExprRef<View> deepCopyForUnroll(const ExprRef<View>& self,
                                            const AnyIterRef& iterator) {
         if (isConstant()) {
@@ -168,8 +182,6 @@ struct ExprInterface : public Undefinable<View> {
         copy->flags = flags;
         return copy;
     }
-    virtual ExprRef<View> deepCopyForUnrollImpl(
-        const ExprRef<View>& self, const AnyIterRef& iterator) const = 0;
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
@@ -188,7 +200,6 @@ struct ExprInterface : public Undefinable<View> {
             throw e;
         }
     }
-    virtual void debugSanityCheckImpl() const = 0;
     virtual std::string getOpName() const = 0;
 };
 

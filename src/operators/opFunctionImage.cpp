@@ -392,7 +392,7 @@ OpFunctionImage<FunctionMemberViewType>::deepCopyForUnrollImpl(
         make_shared<OpFunctionImage<FunctionMemberViewType>>(
             functionOperand->deepCopyForUnroll(functionOperand, iterator),
             invoke_r(preImageOperand,
-                     deepCopyForUnrollImpl(preImageOperand, iterator),
+                     deepCopyForUnroll(preImageOperand, iterator),
                      AnyExprRef));
     newOpFunctionImage->cachedIndex = cachedIndex;
     newOpFunctionImage->locallyDefined = locallyDefined;

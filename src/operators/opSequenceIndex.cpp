@@ -455,8 +455,8 @@ void OpSequenceIndex<SequenceMemberViewType>::debugSanityCheckImpl() const {
             return;
         }
     }
-    sanityCheck(this->appearsDefined(), "operator should be defined.");
     sanityEqualsCheck((Int)indexView->value, cachedIndex);
+    sanityCheck(this->appearsDefined(), "operator should be defined.");
 }
 template <typename Op>
 struct OpMaker;

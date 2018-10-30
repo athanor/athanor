@@ -99,6 +99,7 @@ void Quantifier<ContainerType>::unroll(UInt index,
                 newMember->startTriggering();
             });
             unrolledIterVals.insert(unrolledIterVals.begin() + index, iterRef);
+            newMember->debugSanityCheck();
             if (containerDefined) {
                 this->addMemberAndNotify(index, newMember);
             } else {

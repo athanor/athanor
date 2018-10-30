@@ -15,7 +15,7 @@ endif()
 add_subdirectory (include/auto-arg-parse)
 add_subdirectory (include/murmurHash)
 add_subdirectory (include/variant)
-add_subdirectory (include/optional)
+add_subdirectory (include/Optional)
 include_directories( include/PicoSHA2)
 include_directories( include/json)
 #allow includes relative to src

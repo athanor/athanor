@@ -216,6 +216,7 @@ void SequenceView::assertValidState() {
                          << " but think it should be " << numberUndefinedFound
                          << endl;
                     cerr << "members size " << valMembersImpl.size() << endl;
+                    success = false;
                 }
             }
             if (!success) {

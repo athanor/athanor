@@ -197,13 +197,12 @@ struct SequenceView : public ExprInterface<SequenceView> {
             value -= previousSubsequenceHash;
             value += newHash;
         });
-        debug_code(assertValidState());
         return newHash;
     }
 
     inline void notifySubsequenceChanged(UInt startIndex, UInt endIndex) {
         ignoreUnused(startIndex, endIndex);
-        debug_code(assertValidState());
+
         visitAllMemberTriggersInRange(
             [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
             startIndex, endIndex);

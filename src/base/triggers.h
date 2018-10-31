@@ -29,9 +29,6 @@ struct DelayedTrigger : public virtual TriggerBase {
     virtual void trigger() = 0;
 };
 
-extern std::vector<std::shared_ptr<DelayedTrigger>> delayedTriggerStack;
-extern bool currentlyProcessingDelayedTriggerStack;
-
 template <typename Trigger>
 void cleanNullTriggers(std::vector<std::shared_ptr<Trigger>>& triggers) {
     for (size_t i = 0; i < triggers.size(); ++i) {
@@ -50,6 +47,21 @@ void cleanNullTriggers(std::vector<std::shared_ptr<Trigger>>& triggers) {
     }
 }
 
+struct DelayedTriggerStack;
+extern DelayedTriggerStack* currentDelayedTriggerStack;
+
+struct DelayedTriggerStack {
+    std::vector<std::shared_ptr<DelayedTrigger>> stack;
+    DelayedTriggerStack* oldStack;
+    DelayedTriggerStack() : oldStack(currentDelayedTriggerStack) {
+        currentDelayedTriggerStack = this;
+    }
+    ~DelayedTriggerStack() {
+        debug_code(assert(currentDelayedTriggerStack == this));
+        currentDelayedTriggerStack = oldStack;
+    }
+};
+
 template <typename Visitor, typename Trigger>
 void visitTriggers(Visitor&& func,
                    std::vector<std::shared_ptr<Trigger>>& triggers,
@@ -58,6 +70,7 @@ void visitTriggers(Visitor&& func,
     using ALLOW_ONLY_DEFINEDNESS_TRIGGERS =
         TriggerBase::ALLOW_ONLY_DEFINEDNESS_TRIGGERS;
     using TRIGGER_ACTIVE = TriggerBase::TRIGGER_ACTIVE;
+    DelayedTriggerStack delayedTriggers;
 
     size_t size = triggers.size();
     size_t triggerNullCount = 0;
@@ -82,22 +95,20 @@ void visitTriggers(Visitor&& func,
     if (((double)triggerNullCount) / triggers.size() > 0.2) {
         cleanNullTriggers(triggers);
     }
-    if (!currentlyProcessingDelayedTriggerStack) {
-        currentlyProcessingDelayedTriggerStack = true;
-        while (!delayedTriggerStack.empty()) {
-            auto trigger = std::move(delayedTriggerStack.back());
-            delayedTriggerStack.pop_back();
-            if (trigger && trigger->flags.template get<TRIGGER_ACTIVE>()) {
-                trigger->trigger();
-            }
+
+    while (!delayedTriggers.stack.empty()) {
+        auto trigger = std::move(delayedTriggers.stack.back());
+        delayedTriggers.stack.pop_back();
+        if (trigger && trigger->flags.template get<TRIGGER_ACTIVE>()) {
+            trigger->trigger();
         }
-        currentlyProcessingDelayedTriggerStack = false;
     }
 }
 
 template <typename Trigger>
 void addDelayedTrigger(const std::shared_ptr<Trigger>& trigger) {
-    delayedTriggerStack.emplace_back(trigger);
+    debug_code(assert(currentDelayedTriggerStack != NULL));
+    currentDelayedTriggerStack->stack.emplace_back(trigger);
 }
 
 template <typename Trigger>

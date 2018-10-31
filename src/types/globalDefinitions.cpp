@@ -7,8 +7,6 @@
 #include "types/allTypes.h"
 #define quote(x) #x
 using namespace std;
-bool currentlyProcessingDelayedTriggerStack = false;
-vector<shared_ptr<DelayedTrigger>> delayedTriggerStack;
 
 inline pair<bool, ViolationContainer&> registerViolations(
     const ValBase* val, const UInt violation, ViolationContainer& vioContainer);

@@ -6,6 +6,8 @@ struct IntTrigger : public virtual TriggerBase {};
 
 template <typename Child>
 struct ChangeTriggerAdapter<IntTrigger, Child>
-    : public ChangeTriggerAdapterBase<IntTrigger, Child> {};
+    : public ChangeTriggerAdapterBase<IntTrigger, Child> {
+    ChangeTriggerAdapter(const ExprRef<IntView>&) {}
+};
 
 #endif /* SRC_TRIGGERS_INTTRIGGER_H_ */

@@ -22,10 +22,16 @@ void OpTupleLit::evaluateImpl() {
 namespace {
 template <typename TriggerType>
 struct ExprTrigger
-    : public OpTupleLit::ExprTriggerBase,
-      public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>> {
+    : public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>,
+      OpTupleLit::ExprTriggerBase {
     typedef typename AssociatedViewType<TriggerType>::type View;
     using ExprTriggerBase::ExprTriggerBase;
+
+    ExprTrigger(OpTupleLit* op, UInt index)
+        : ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>(
+              mpark::get<ExprRef<View>>(op->members[index])),
+          ExprTriggerBase(op, index) {}
+
     ExprRef<View>& getTriggeringOperand() {
         return mpark::get<ExprRef<View>>(this->op->members[this->index]);
     }

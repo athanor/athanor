@@ -18,19 +18,17 @@ struct SequenceMemberTrigger : public virtual TriggerBase {
 
 /* don't want to import SequenceView here but need access to internal field so a
  * function has been created for that purpose*/
-size_t numberUndefinedMembers(const SequenceView& view);
 
 struct SequenceTrigger : public virtual SequenceOuterTrigger,
                          public virtual SequenceMemberTrigger {};
+
 template <typename Child>
 struct ChangeTriggerAdapter<SequenceTrigger, Child>
     : public ChangeTriggerAdapterBase<SequenceTrigger, Child> {
    private:
     bool wasDefined;
     inline bool eventHandledAsDefinednessChange() {
-        auto view = getOp()->view();
-        bool defined =
-            view && appearsDefined(*view) && numberUndefinedMembers(*view) == 0;
+        bool defined = getOp()->getViewIfDefined().hasValue();
         if (wasDefined && !defined) {
             this->forwardHasBecomeUndefined();
             wasDefined = defined;
@@ -50,6 +48,8 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
     }
 
    public:
+    ChangeTriggerAdapter(const ExprRef<SequenceView>& op)
+        : wasDefined(op->getViewIfDefined().hasValue()) {}
     inline void valueRemoved(UInt, const AnyExprRef&) {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();

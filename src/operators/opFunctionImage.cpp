@@ -256,9 +256,13 @@ struct PreImageTrigger
           TriggerType, PreImageTrigger<FunctionMemberViewType, TriggerType>>,
       public OpFunctionImage<FunctionMemberViewType>::PreImageTriggerBase {
     typedef typename AssociatedViewType<TriggerType>::type PreImageType;
-    using OpFunctionImage<
-        FunctionMemberViewType>::PreImageTriggerBase::PreImageTriggerBase;
     using OpFunctionImage<FunctionMemberViewType>::PreImageTriggerBase::op;
+    PreImageTrigger(OpFunctionImage<FunctionMemberViewType>* op)
+        : ChangeTriggerAdapter<
+              TriggerType,
+              PreImageTrigger<FunctionMemberViewType, TriggerType>>(
+              mpark::get<ExprRef<PreImageType>>(op->preImageOperand)),
+          OpFunctionImage<FunctionMemberViewType>::PreImageTriggerBase(op) {}
 
     ExprRef<PreImageType>& getTriggeringOperand() {
         return mpark::get<ExprRef<PreImageType>>(op->preImageOperand);

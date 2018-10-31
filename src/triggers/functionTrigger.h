@@ -22,8 +22,7 @@ struct ChangeTriggerAdapter<FunctionTrigger, Child>
    private:
     bool wasDefined;
     inline bool eventHandledAsDefinednessChange() {
-        auto view = getOp()->view();
-        bool defined = view && appearsDefined(*view);
+        bool defined = getOp()->getViewIfDefined().hasValue();
         if (wasDefined && !defined) {
             this->forwardHasBecomeUndefined();
             wasDefined = defined;
@@ -43,6 +42,8 @@ struct ChangeTriggerAdapter<FunctionTrigger, Child>
     }
 
    public:
+    ChangeTriggerAdapter(const ExprRef<FunctionView>& op)
+        : wasDefined(op->getViewIfDefined().hasValue()) {}
     inline void imageChanged(UInt) final {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();

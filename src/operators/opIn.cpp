@@ -42,7 +42,12 @@ namespace {
 template <typename Derived, typename TriggerType>
 struct Trigger : public ChangeTriggerAdapter<TriggerType, Derived>,
                  public OpIn::ExprTriggerBase {
-    using OpIn::ExprTriggerBase::ExprTriggerBase;
+    typedef typename AssociatedViewType<TriggerType>::type ExprType;
+
+    Trigger(OpIn* op)
+        : ChangeTriggerAdapter<TriggerType, Derived>(
+              mpark::get<ExprRef<ExprType>>(op->expr)),
+          ExprTriggerBase(op) {}
     void adapterValueChanged() {
         op->changeValue([&]() {
             op->reevaluate();

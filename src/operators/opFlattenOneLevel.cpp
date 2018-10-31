@@ -441,7 +441,7 @@ void OpFlattenOneLevel<SequenceInnerType>::debugSanityCheckImpl() const {
         auto& innerView =
             innerSequences[i]->view().checkedGet(OP_FLATTEN_DEFAULT_ERROR);
         totalNumberUndefined += innerView.numberUndefined;
-                auto innerMembers = innerView.getMembers<SequenceInnerType>();
+        auto innerMembers = innerView.getMembers<SequenceInnerType>();
         for (size_t j = 0; j < innerMembers.size(); j++) {
             auto* innerMemberPtr = &(*innerMembers[j]);
             sanityCheck(total + j < numberElements(),

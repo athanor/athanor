@@ -23,13 +23,17 @@ void OpSequenceLit::evaluateImpl() {
 namespace {
 template <typename TriggerType>
 struct ExprTrigger
-    : public OpSequenceLit::ExprTriggerBase,
-      public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>> {
+    : public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>,
+      public OpSequenceLit::ExprTriggerBase {
     typedef typename AssociatedViewType<TriggerType>::type View;
     using ExprTriggerBase::ExprTriggerBase;
     ExprRef<View>& getTriggeringOperand() {
         return op->getMembers<View>()[index];
     }
+    ExprTrigger(OpSequenceLit* op, UInt index)
+        : ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>(
+              op->getMembers<View>()[index]),
+          ExprTriggerBase(op, index) {}
     void adapterValueChanged() {
         this->op->template changeSubsequenceAndNotify<View>(this->index,
                                                             this->index + 1);

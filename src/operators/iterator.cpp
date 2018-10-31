@@ -32,8 +32,12 @@ template <typename View>
 struct Iterator<View>::RefTrigger
     : public ChangeTriggerAdapter<typename Iterator<View>::TriggerType,
                                   typename Iterator<View>::RefTrigger> {
+    typedef typename Iterator<View>::TriggerType TriggerType;
     Iterator<View>* op;
-    RefTrigger(Iterator<View>* op) : op(op) {
+    RefTrigger(Iterator<View>* op)
+        : ChangeTriggerAdapter<TriggerType,
+                               typename Iterator<View>::RefTrigger>(op->ref),
+          op(op) {
         this->flags
             .template get<TriggerBase::ALLOW_ONLY_DEFINEDNESS_TRIGGERS>() =
             true;

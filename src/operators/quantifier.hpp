@@ -99,7 +99,7 @@ void Quantifier<ContainerType>::unroll(UInt index,
                 newMember->startTriggering();
             });
             unrolledIterVals.insert(unrolledIterVals.begin() + index, iterRef);
-//            newMember->debugSanityCheck();
+            newMember->debugSanityCheck();
             if (containerDefined) {
                 this->addMemberAndNotify(index, newMember);
             } else {
@@ -175,11 +175,18 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopyForUnrollImpl(
 }
 
 template <typename ContainerType, typename ViewType>
-struct ExprChangeTrigger
-    : Quantifier<ContainerType>::ExprTriggerBase,
-      ChangeTriggerAdapter<typename AssociatedTriggerType<ViewType>::type,
-                           ExprChangeTrigger<ContainerType, ViewType>> {
-    using Quantifier<ContainerType>::ExprTriggerBase ::ExprTriggerBase;
+struct ExprChangeTrigger : public ChangeTriggerAdapter<
+                               typename AssociatedTriggerType<ViewType>::type,
+                               ExprChangeTrigger<ContainerType, ViewType>>,
+                           public Quantifier<ContainerType>::ExprTriggerBase {
+    typedef typename AssociatedTriggerType<ViewType>::type TriggerType;
+
+    ExprChangeTrigger(Quantifier<ContainerType>* op, UInt index)
+        : ChangeTriggerAdapter<TriggerType,
+                               ExprChangeTrigger<ContainerType, ViewType>>(
+              op->template getMembers<ViewType>()[index]),
+          Quantifier<ContainerType>::ExprTriggerBase(op, index) {}
+
     ExprRef<ViewType>& getTriggeringOperand() {
         return this->op->template getMembers<ViewType>()[this->index];
     }

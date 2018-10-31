@@ -13,6 +13,7 @@ struct MSetTrigger : public virtual TriggerBase {
 template <typename Child>
 struct ChangeTriggerAdapter<MSetTrigger, Child>
     : public ChangeTriggerAdapterBase<MSetTrigger, Child> {
+    ChangeTriggerAdapter(const ExprRef<MSetView>&) {}
     inline void valueRemoved(UInt, const AnyExprRef&) {
         this->forwardValueChanged();
     }

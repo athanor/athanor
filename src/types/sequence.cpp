@@ -6,9 +6,6 @@
 #include "utils/ignoreUnused.h"
 #include "utils/safePow.h"
 using namespace std;
-size_t numberUndefinedMembers(const SequenceView& view) {
-    return view.numberUndefined;
-}
 
 template <>
 HashType getValueHash<SequenceView>(const SequenceView& val) {

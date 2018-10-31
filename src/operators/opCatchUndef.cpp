@@ -61,12 +61,15 @@ namespace {
 
 template <typename ExprViewType, typename TriggerType>
 struct ExprTrigger
-    : public OpCatchUndef<ExprViewType>::ExprTriggerBase,
-      public ChangeTriggerAdapter<TriggerType,
-                                  ExprTrigger<ExprViewType, TriggerType>> {
+    : public ChangeTriggerAdapter<TriggerType,
+                                  ExprTrigger<ExprViewType, TriggerType>>,
+      public OpCatchUndef<ExprViewType>::ExprTriggerBase {
     using OpCatchUndef<ExprViewType>::ExprTriggerBase::op;
     ExprTrigger(OpCatchUndef<ExprViewType>* op)
-        : OpCatchUndef<ExprViewType>::ExprTriggerBase(op) {
+        : ChangeTriggerAdapter<TriggerType,
+                               ExprTrigger<ExprViewType, TriggerType>>(
+              op->expr),
+          OpCatchUndef<ExprViewType>::ExprTriggerBase(op) {
         this->flags
             .template get<TriggerBase::ALLOW_ONLY_DEFINEDNESS_TRIGGERS>() =
             true;

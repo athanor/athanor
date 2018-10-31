@@ -79,12 +79,17 @@ void OpSetLit::evaluateImpl() {
 namespace {
 template <typename TriggerType>
 struct ExprTrigger
-    : public OpSetLit::ExprTriggerBase,
-      public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>> {
+    : public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>,
+      public OpSetLit::ExprTriggerBase {
     typedef typename AssociatedViewType<TriggerType>::type View;
-    using ExprTriggerBase::ExprTriggerBase;
+
     using ExprTriggerBase::index;
     using ExprTriggerBase::op;
+
+    ExprTrigger(OpSetLit* op, UInt index)
+        : ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>(
+              mpark::get<ExprRefVec<View>>(op->operands)[index]),
+          ExprTriggerBase(op, index) {}
     ExprRef<View>& getTriggeringOperand() {
         return mpark::get<ExprRefVec<View>>(op->operands)[this->index];
     }

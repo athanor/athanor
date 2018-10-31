@@ -13,7 +13,11 @@ struct SimpleBinaryTrigger
           TriggerType, SimpleBinaryTrigger<Op, TriggerType, isLeftTrigger>> {
     typedef typename AssociatedViewType<TriggerType>::type OperandType;
     Op* op;
-    SimpleBinaryTrigger(Op* op) : op(op) {}
+    SimpleBinaryTrigger(Op* op)
+        : ChangeTriggerAdapter<
+              TriggerType, SimpleBinaryTrigger<Op, TriggerType, isLeftTrigger>>(
+              (isLeftTrigger) ? op->left : op->right),
+          op(op) {}
     ExprRef<OperandType>& getTriggeringOperand() {
         return (isLeftTrigger) ? op->left : op->right;
     }
@@ -70,7 +74,11 @@ struct SimpleUnaryTrigger
                                   SimpleUnaryTrigger<Op, TriggerType>> {
     typedef typename AssociatedViewType<TriggerType>::type OperandType;
     Op* op;
-    SimpleUnaryTrigger(Op* op) : op(op) {}
+    SimpleUnaryTrigger(Op* op)
+        : ChangeTriggerAdapter<TriggerType,
+                               SimpleUnaryTrigger<Op, TriggerType>>(
+              op->operand),
+          op(op) {}
 
     ExprRef<OperandType>& getTriggeringOperand() { return op->operand; }
     inline void adapterValueChanged() {

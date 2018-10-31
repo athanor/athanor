@@ -15,6 +15,7 @@ struct SetTrigger : public virtual TriggerBase {
 template <typename Child>
 struct ChangeTriggerAdapter<SetTrigger, Child>
     : public ChangeTriggerAdapterBase<SetTrigger, Child> {
+    ChangeTriggerAdapter(const ExprRef<SetView>&) {}
     inline void valueRemoved(UInt, HashType) { this->forwardValueChanged(); }
     inline void valueAdded(const AnyExprRef&) final {
         this->forwardValueChanged();

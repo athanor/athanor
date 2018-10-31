@@ -1462,6 +1462,7 @@ void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
         return;
     }
     cerr << "Not sure how to parse this letting: " << lettingArray << endl;
+    abort();
 }
 
 void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {

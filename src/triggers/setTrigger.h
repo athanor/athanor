@@ -51,8 +51,8 @@ struct ChangeTriggerAdapter<SetTrigger, Child>
     }
 };
 
-template <typename Op>
-struct ForwardingTrigger<SetTrigger, Op>
+template <typename Op, typename Child>
+struct ForwardingTrigger<SetTrigger, Op,Child>
     : public ForwardingTriggerBase<SetTrigger, Op> {
     using ForwardingTriggerBase<SetTrigger, Op>::ForwardingTriggerBase;
     void valueRemoved(UInt index, HashType oldHash) {

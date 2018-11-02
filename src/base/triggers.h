@@ -179,7 +179,7 @@ struct ForwardingTriggerBase : public virtual TriggerType {
         visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
     }
 };
-template <typename Trigger, typename Op>
+template <typename Trigger, typename Op, typename Child>
 struct ForwardingTrigger;
 
 template <typename View>

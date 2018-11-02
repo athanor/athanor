@@ -44,8 +44,8 @@ struct ChangeTriggerAdapter<MSetTrigger, Child>
     }
 };
 
-template <typename Op>
-struct ForwardingTrigger<MSetTrigger, Op>
+template <typename Op, typename Child>
+struct ForwardingTrigger<MSetTrigger, Op,Child>
     : public ForwardingTriggerBase<MSetTrigger, Op> {
     using ForwardingTriggerBase<MSetTrigger, Op>::ForwardingTriggerBase;
     void valueRemoved(UInt index, const AnyExprRef& expr) {

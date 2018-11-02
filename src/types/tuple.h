@@ -52,7 +52,7 @@ struct TupleView : public ExprInterface<TupleView>,
         visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
     }
 
-    inline void notifyMemberDefined(UInt index) {
+    inline void defineMemberAndNotify(UInt index) {
         cachedHashTotal.invalidate();
         debug_code(assert(numberUndefined > 0));
         numberUndefined--;
@@ -63,7 +63,7 @@ struct TupleView : public ExprInterface<TupleView>,
                             index);
     }
 
-    inline void notifyMemberUndefined(UInt index) {
+    inline void undefineMemberAndNotify(UInt index) {
         cachedHashTotal.invalidate();
         numberUndefined++;
         this->setAppearsDefined(false);

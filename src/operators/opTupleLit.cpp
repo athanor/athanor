@@ -48,8 +48,8 @@ struct ExprTrigger
             ->addTrigger(trigger);
         op->exprTriggers[index] = trigger;
     }
-    void adapterHasBecomeDefined() { op->notifyMemberDefined(index); }
-    void adapterHasBecomeUndefined() { op->notifyMemberUndefined(index); }
+    void adapterHasBecomeDefined() { op->defineMemberAndNotify(index); }
+    void adapterHasBecomeUndefined() { op->undefineMemberAndNotify(index); }
 };
 
 }  // namespace

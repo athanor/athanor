@@ -12,8 +12,8 @@ struct ChangeTriggerAdapter<IntTrigger, Child>
     : public ChangeTriggerAdapterBase<IntTrigger, Child> {
     ChangeTriggerAdapter(const ExprRef<IntView>&) {}
 };
-template <typename Op>
-struct ForwardingTrigger<IntTrigger, Op>
+template <typename Op, typename Child>
+struct ForwardingTrigger<IntTrigger, Op, Child>
     : public ForwardingTriggerBase<IntTrigger, Op> {
     using ForwardingTriggerBase<IntTrigger, Op>::ForwardingTriggerBase;
 };

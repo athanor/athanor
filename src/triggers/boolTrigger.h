@@ -7,8 +7,8 @@ struct ChangeTriggerAdapter<BoolTrigger, Child>
     : public ChangeTriggerAdapterBase<BoolTrigger, Child> {
     ChangeTriggerAdapter(const ExprRef<BoolView>&) {}
 };
-template <typename Op>
-struct ForwardingTrigger<BoolTrigger, Op>
+template <typename Op, typename Child>
+struct ForwardingTrigger<BoolTrigger, Op, Child>
     : public ForwardingTriggerBase<BoolTrigger, Op> {
     using ForwardingTriggerBase<BoolTrigger, Op>::ForwardingTriggerBase;
 };

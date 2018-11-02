@@ -49,11 +49,11 @@ struct ExprTrigger
     }
 
     void adapterHasBecomeDefined() {
-        op->template notifyMemberDefined<View>(index);
+        op->template defineMemberAndNotify<View>(index);
     }
 
     void adapterHasBecomeUndefined() {
-        op->template notifyMemberUndefined<View>(index);
+        op->template undefineMemberAndNotify<View>(index);
     }
 };  // namespace
 }  // namespace

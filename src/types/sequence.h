@@ -89,12 +89,6 @@ struct SequenceView : public ExprInterface<SequenceView>,
         debug_code(assertValidState());
     }
 
-    inline void notifyMemberAdded(size_t index, const AnyExprRef& newMember) {
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->valueAdded(index, newMember); },
-                      triggers);
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRef<InnerViewType> removeMember(UInt index) {
         auto& members = getMembers<InnerViewType>();
@@ -120,13 +114,6 @@ struct SequenceView : public ExprInterface<SequenceView>,
         return removedMember;
     }
 
-    inline void notifyMemberRemoved(UInt index,
-                                    const AnyExprRef& removedMember) {
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->valueRemoved(index, removedMember); },
-                      triggers);
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void swapPositions(UInt index1, UInt index2) {
         auto& members = getMembers<InnerViewType>();
@@ -138,19 +125,6 @@ struct SequenceView : public ExprInterface<SequenceView>,
             value += this->calcMemberHash(index2, members[index2]);
         });
         debug_code(assertValidState());
-    }
-
-    inline void notifyPositionsSwapped(UInt index1, UInt index2) {
-        visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
-                      allMemberTriggers);
-        if (index1 < singleMemberTriggers.size()) {
-            visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
-                          singleMemberTriggers[index1]);
-        }
-        if (index2 < singleMemberTriggers.size()) {
-            visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
-                          singleMemberTriggers[index2]);
-        }
     }
 
     inline void checkNotUsingCachedHash() {
@@ -184,11 +158,6 @@ struct SequenceView : public ExprInterface<SequenceView>,
         return newHash;
     }
 
-    inline void notifySubsequenceChanged(UInt startIndex, UInt endIndex) {
-        visitAllMemberTriggersInRange(
-            [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
-            startIndex, endIndex);
-    }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void swapAndNotify(UInt index1, UInt index2) {
@@ -197,7 +166,7 @@ struct SequenceView : public ExprInterface<SequenceView>,
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void notifyMemberDefined(UInt index) {
+    inline void defineMemberAndNotify(UInt index) {
         cachedHashTotal.applyIfValid([&](auto& value) {
             value +=
                 this->calcMemberHash(index, getMembers<InnerViewType>()[index]);
@@ -207,24 +176,22 @@ struct SequenceView : public ExprInterface<SequenceView>,
         if (numberUndefined == 0) {
             this->setAppearsDefined(true);
         }
-        visitTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
-                      triggers);
+        notifyMemberDefined(index);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void notifyMemberUndefined(UInt index) {
+    inline void undefineMemberAndNotify(UInt index) {
         checkNotUsingCachedHash();
-        notifyMemberUndefined<InnerViewType>(index, 0);
+        undefineMemberAndNotify<InnerViewType>(index, 0);
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void notifyMemberUndefined(UInt index,
+    inline void undefineMemberAndNotify(UInt index,
                                       HashType hashOfPossibleChange) {
         cachedHashTotal.applyIfValid(
             [&](auto& value) { value -= hashOfPossibleChange; });
         numberUndefined++;
         this->setAppearsDefined(false);
-        visitTriggers([&](auto& t) { t->memberHasBecomeUndefined(index); },
-                      triggers);
+        notifyMemberUndefined(index);
     }
 
     void silentClear() {

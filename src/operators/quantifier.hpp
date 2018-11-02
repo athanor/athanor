@@ -215,7 +215,7 @@ struct ExprChangeTrigger : public ChangeTriggerAdapter<
     void adapterHasBecomeDefined() {
         mpark::visit(
             [&](auto& members) {
-                this->op->template notifyMemberDefined<viewType(members)>(
+                this->op->template defineMemberAndNotify<viewType(members)>(
                     this->index);
             },
             this->op->members);
@@ -223,7 +223,7 @@ struct ExprChangeTrigger : public ChangeTriggerAdapter<
     void adapterHasBecomeUndefined() {
         mpark::visit(
             [&](auto& members) {
-                this->op->template notifyMemberUndefined<viewType(members)>(
+                this->op->template undefineMemberAndNotify<viewType(members)>(
                     this->index);
             },
             this->op->members);

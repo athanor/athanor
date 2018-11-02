@@ -38,6 +38,51 @@ struct TriggerContainer<SequenceView> {
             visitTriggers(func, singleMemberTriggers[i]);
         }
     }
+    inline void notifyMemberAdded(size_t index, const AnyExprRef& newMember) {
+        visitTriggers([&](auto& t) { t->valueAdded(index, newMember); },
+                      triggers);
+    }
+
+
+    inline void notifyMemberRemoved(UInt index,
+                                    const AnyExprRef& removedMember) {
+        visitTriggers([&](auto& t) { t->valueRemoved(index, removedMember); },
+                      triggers);
+    }
+
+
+    inline void notifyPositionsSwapped(UInt index1, UInt index2) {
+        visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
+                      allMemberTriggers);
+        if (index1 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
+                          singleMemberTriggers[index1]);
+        }
+        if (index2 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
+                          singleMemberTriggers[index2]);
+        }
+    }
+
+
+    inline void notifySubsequenceChanged(UInt startIndex, UInt endIndex) {
+        visitAllMemberTriggersInRange(
+                                      [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
+                                      startIndex, endIndex);
+    }
+
+    inline void notifyMemberDefined(UInt index) {
+        visitTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
+                      triggers);
+    }
+
+
+    inline void notifyMemberUndefined(UInt index) {
+        visitTriggers([&](auto& t) { t->memberHasBecomeUndefined(index); },
+                      triggers);
+    }
+
+
 };
 
 template <typename Child>
@@ -93,35 +138,36 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
     void hasBecomeUndefined() override { eventHandledAsDefinednessChange(); }
 };
 
-template <typename Op>
-struct ForwardingTrigger<SequenceTrigger, Op>
+template <typename Op, typename Child>
+struct ForwardingTrigger<SequenceTrigger, Op, Child>
     : public ForwardingTriggerBase<SequenceTrigger, Op> {
     using ForwardingTriggerBase<SequenceTrigger, Op>::ForwardingTriggerBase;
+
     void valueRemoved(UInt index, const AnyExprRef& removedValue) {
-        visitTriggers([&](auto& t) { t->valueRemoved(index, removedValue); },
-                      this->op->triggers);
+        this->op->notifyValueRemoved(index,removedValue);
     }
+
     void valueAdded(UInt index, const AnyExprRef& expr) {
-        visitTriggers([&](auto& t) { t->valueAdded(index, expr); },
-                      this->op->triggers);
+        this->op->notifyMemberAdded(index,expr);
     }
 
     void subsequenceChanged(UInt startIndex, UInt endIndex) {
-        visitTriggers(
-            [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
-            this->op->triggers);
+        this->op->notifySubsequenceChanged(startIndex,endIndex);
     }
+
     void memberHasBecomeUndefined(UInt index) {
-        visitTriggers([&](auto& t) { t->memberHasBecomeUndefined(index); },
-                      this->op->triggers);
+        auto view = static_cast<Child*>(this)->getTriggeringOperand()->getViewIfDefined();
+        this->op->setAppearsDefined(view.hasValue());
+
+        this->notifyMemberUndefined();
     }
     void memberHasBecomeDefined(UInt index) {
-        visitTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
-                      this->op->triggers);
+        auto view = static_cast<Child*>(this)->getTriggeringOperand()->getViewIfDefined();
+        this->op->setAppearsDefined(view.hasValue());
+        this->op->notifyMemberDefined(index);
     }
     void positionsSwapped(UInt index1, UInt index2) {
-        visitTriggers([&](auto& t) { t->positionsSwapped(index1, index2); },
-                      this->op->triggers);
+        this->op->notifyPositionsSwapped(inex1,index2);
     }
 };
 

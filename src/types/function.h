@@ -89,7 +89,6 @@ struct FunctionView : public ExprInterface<FunctionView>,
     friend FunctionValue;
     DimensionVec dimensions;
     AnyExprVec range;
-    debug_code(bool posFunctionValueChangeCalled = false);
 
     lib::optional<UInt> domainToIndex(const IntView& intV);
     lib::optional<UInt> domainToIndex(const TupleView& tupleV);
@@ -125,24 +124,6 @@ struct FunctionView : public ExprInterface<FunctionView>,
         range.emplace<ExprRefVec<InnerViewType>>().assign(requiredSize,
                                                           nullptr);
     }
-    template <typename Func>
-    void visitMemberTriggers(Func&& func, UInt index) {
-        visitTriggers(func, allMemberTriggers);
-        if (index < singleMemberTriggers.size()) {
-            visitTriggers(func, singleMemberTriggers[index]);
-        }
-    }
-
-    template <typename Func>
-    void visitMemberTriggers(Func&& func, const std::vector<UInt>& indices) {
-        visitTriggers(func, allMemberTriggers);
-        for (auto& index : indices) {
-            if (index < singleMemberTriggers.size()) {
-                visitTriggers(func, singleMemberTriggers[index]);
-            }
-        }
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void assignImage(size_t index,
                             const ExprRef<InnerViewType>& member) {
@@ -162,11 +143,6 @@ struct FunctionView : public ExprInterface<FunctionView>,
         ignoreUnused(index);
     }
 
-    inline void notifyImageChanged(UInt index) {
-        debug_code(assertValidState());
-        visitMemberTriggers([&](auto& t) { t->imageChanged(index); }, index);
-    }
-
     inline void notifyPossibleImagesChange(const std::vector<UInt>& indices) {
         ignoreUnused(indices);
         debug_code(assertValidState());
@@ -178,12 +154,6 @@ struct FunctionView : public ExprInterface<FunctionView>,
         ignoreUnused(indices);
     }
 
-    inline void notifyImagesChanged(const std::vector<UInt>& indices) {
-        debug_code(assertValidState());
-        visitMemberTriggers([&](auto& t) { t->imageChanged(indices); },
-                            indices);
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void swapImages(UInt index1, UInt index2) {
         auto& range = getRange<InnerViewType>();
@@ -191,25 +161,7 @@ struct FunctionView : public ExprInterface<FunctionView>,
         debug_code(assertValidState());
     }
 
-    inline void notifyImagesSwapped(UInt index1, UInt index2) {
-        debug_code(assert(posFunctionValueChangeCalled);
-                   posFunctionValueChangeCalled = false);
-
-        visitTriggers([&](auto& t) { t->imageSwap(index1, index2); },
-                      allMemberTriggers);
-        if (index1 < singleMemberTriggers.size()) {
-            visitTriggers([&](auto& t) { t->imageSwap(index1, index2); },
-                          singleMemberTriggers[index1]);
-        }
-        if (index2 < singleMemberTriggers.size()) {
-            visitTriggers([&](auto& t) { t->imageSwap(index1, index2); },
-                          singleMemberTriggers[index2]);
-        }
-    }
-
     inline void notifyEntireFunctionChange() {
-        debug_code(assert(posFunctionValueChangeCalled);
-                   posFunctionValueChangeCalled = false);
         visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
     }
 

@@ -22,6 +22,44 @@ struct TriggerContainer<FunctionView> {
     std::vector<std::shared_ptr<FunctionMemberTrigger>> allMemberTriggers;
     std::vector<std::vector<std::shared_ptr<FunctionMemberTrigger>>>
         singleMemberTriggers;
+    template <typename Func>
+    void visitMemberTriggers(Func&& func, UInt index) {
+        visitTriggers(func, allMemberTriggers);
+        if (index < singleMemberTriggers.size()) {
+            visitTriggers(func, singleMemberTriggers[index]);
+        }
+    }
+    template <typename Func>
+    void visitMemberTriggers(Func&& func, const std::vector<UInt>& indices) {
+        visitTriggers(func, allMemberTriggers);
+        for (auto& index : indices) {
+            if (index < singleMemberTriggers.size()) {
+                visitTriggers(func, singleMemberTriggers[index]);
+            }
+        }
+    }
+
+    inline void notifyImageChanged(UInt index) {
+        visitMemberTriggers([&](auto& t) { t->imageChanged(index); }, index);
+    }
+
+    inline void notifyImagesChanged(const std::vector<UInt>& indices) {
+        visitMemberTriggers([&](auto& t) { t->imageChanged(indices); },
+                            indices);
+    }
+
+    inline void notifyImagesSwapped(UInt index1, UInt index2) {
+        visitTriggers([&](auto& t) { t->imageSwap(index1, index2); },
+                      allMemberTriggers);
+        if (index1 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->imageSwap(index1, index2); },
+                          singleMemberTriggers[index1]);
+        }
+        if (index2 < singleMemberTriggers.size()) {
+            visitTriggers([&](auto& t) { t->imageSwap(index1, index2); },
+                          singleMemberTriggers[index2]);
+        }
+    }
 };
 
 template <typename Child>
@@ -68,22 +106,17 @@ struct ChangeTriggerAdapter<FunctionTrigger, Child>
     void hasBecomeDefined() { eventHandledAsDefinednessChange(); }
     void hasBecomeUndefined() { eventHandledAsDefinednessChange(); }
 };
-template <typename Op>
-struct ForwardingTrigger<FunctionTrigger, Op>
+template <typename Op, typename Child>
+struct ForwardingTrigger<FunctionTrigger, Op, Child>
     : public ForwardingTriggerBase<FunctionTrigger, Op> {
     using ForwardingTriggerBase<FunctionTrigger, Op>::ForwardingTriggerBase;
     void imageChanged(const std::vector<UInt>& indices) {
-        visitTriggers([&](auto& t) { t->imageChanged(indices); },
-                      this->op->triggers);
+        this->op->notifyImageChanged(indices);
     }
-    void imageChanged(UInt index) {
-        visitTriggers([&](auto& t) { t->imageChanged(index); },
-                      this->op->triggers);
-    }
+    void imageChanged(UInt index) { this->op->notifyImageChanged(index); }
 
     void imageSwap(UInt index1, UInt index2) {
-        visitTriggers([&](auto& t) { t->imageSwap(index1, index2); },
-                      this->op->triggers);
+        this->op->notifyImageSwapped(index1, index2);
     }
 };
 

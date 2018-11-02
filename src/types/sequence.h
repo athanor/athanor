@@ -158,7 +158,6 @@ struct SequenceView : public ExprInterface<SequenceView>,
         return newHash;
     }
 
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void swapAndNotify(UInt index1, UInt index2) {
         swapPositions<InnerViewType>(index1, index2);
@@ -186,7 +185,7 @@ struct SequenceView : public ExprInterface<SequenceView>,
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void undefineMemberAndNotify(UInt index,
-                                      HashType hashOfPossibleChange) {
+                                        HashType hashOfPossibleChange) {
         cachedHashTotal.applyIfValid(
             [&](auto& value) { value -= hashOfPossibleChange; });
         numberUndefined++;

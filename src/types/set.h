@@ -38,12 +38,12 @@ struct SetDomain {
     }
 };
 
-struct SetView : public ExprInterface<SetView> {
+struct SetView : public ExprInterface<SetView>,
+                 public TriggerContainer<SetView> {
     friend SetValue;
     std::unordered_set<HashType> memberHashes;
     AnyExprVec members;
     HashType cachedHashTotal = 0;
-    std::vector<std::shared_ptr<SetTrigger>> triggers;
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool addMember(const ExprRef<InnerViewType>& member) {
@@ -62,11 +62,6 @@ struct SetView : public ExprInterface<SetView> {
         return true;
     }
 
-    inline void notifyMemberAdded(const AnyExprRef& newMember) {
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRef<InnerViewType> removeMember(UInt index) {
         auto& members = getMembers<InnerViewType>();
@@ -81,13 +76,6 @@ struct SetView : public ExprInterface<SetView> {
         members[index] = std::move(members.back());
         members.pop_back();
         return removedMember;
-    }
-
-    inline void notifyMemberRemoved(UInt index, HashType hashOfRemovedMember) {
-        debug_code(assertValidState());
-        visitTriggers(
-            [&](auto& t) { t->valueRemoved(index, hashOfRemovedMember); },
-            triggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -127,19 +115,6 @@ struct SetView : public ExprInterface<SetView> {
             memberHashes.insert(newHash);
         }
         debug_code(assertValidState());
-    }
-
-    inline void notifyMemberChanged(size_t index, HashType oldHash) {
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->memberValueChanged(index, oldHash); },
-                      triggers);
-    }
-    inline void notifyMembersChanged(const std::vector<UInt>& indices,
-                                     const std::vector<HashType>& oldHashes) {
-        debug_code(assertValidState());
-        visitTriggers(
-            [&](auto& t) { t->memberValuesChanged(indices, oldHashes); },
-            triggers);
     }
 
     void silentClear() {

@@ -10,11 +10,7 @@ template <typename View>
 void Iterator<View>::addTriggerImpl(
     const shared_ptr<typename Iterator<View>::TriggerType>& trigger,
     bool includeMembers, Int memberIndex) {
-    debug_code(assert(ref));
-    triggers.emplace_back(getTriggerBase(trigger));
-    trigger->flags.template get<TriggerBase::ALLOW_DEFINEDNESS_TRIGGERS>() =
-        false;
-    ref->addTrigger(trigger, includeMembers, memberIndex);
+    triggers.emplace_back(trigger);
 }
 
 template <typename View>
@@ -30,26 +26,20 @@ OptionalRef<const View> Iterator<View>::view() const {
 
 template <typename View>
 struct Iterator<View>::RefTrigger
-    : public ChangeTriggerAdapter<typename Iterator<View>::TriggerType,
-                                  typename Iterator<View>::RefTrigger> {
+    : public ForwardingTrigger<typename Iterator<View>::TriggerType,
+                               typename Iterator<View>::RefTrigger> {
     typedef typename Iterator<View>::TriggerType TriggerType;
-    Iterator<View>* op;
-    RefTrigger(Iterator<View>* op)
-        : ChangeTriggerAdapter<TriggerType,
-                               typename Iterator<View>::RefTrigger>(op->ref),
-          op(op) {
-        this->flags
-            .template get<TriggerBase::ALLOW_ONLY_DEFINEDNESS_TRIGGERS>() =
-            true;
-    }
-    void adapterValueChanged() {}
-    void adapterHasBecomeUndefined() {
+    using Base = ForwardingTrigger<typename Iterator<View>::TriggerType,
+                                   typename Iterator<View>::RefTrigger>;
+
+    void hasBecomeUndefined() override {
         this->op->setAppearsDefined(false);
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
+        Base::hasBecomeUndefined();
     }
-    void adapterHasBecomeDefined() {
+    void hasBecomeDefined() override {
         this->op->setAppearsDefined(true);
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
+        Base::hasBecomeDefined();
+        ;
     }
     ExprRef<View>& getTriggeringOperand() { return op->ref; }
     void reattachTrigger() {
@@ -59,6 +49,7 @@ struct Iterator<View>::RefTrigger
         op->refTrigger = trigger;
     }
 };
+
 template <typename View>
 void Iterator<View>::evaluateImpl() {
     debug_code(assert(ref));

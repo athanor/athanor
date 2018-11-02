@@ -14,12 +14,18 @@ struct TupleMemberTrigger : public virtual TriggerBase {
 struct TupleTrigger : public virtual TupleOuterTrigger,
                       public virtual TupleMemberTrigger {};
 
+struct TriggerContainer<TupleView> {
+    std::vector<std::shared_ptr<TupleOuterTrigger>> triggers;
+    std::vector<std::shared_ptr<TupleMemberTrigger>> allMemberTriggers;
+    std::vector<std::vector<std::shared_ptr<TupleMemberTrigger>>>
+        singleMemberTriggers;
+};
 template <typename Child>
 struct ChangeTriggerAdapter<TupleTrigger, Child>
     : public ChangeTriggerAdapterBase<TupleTrigger, Child> {
    private:
     bool wasDefined;
-    inline bool eventHandledAsDefinednessChange() {
+    bool eventHandledAsDefinednessChange() {
         bool defined = getOp()->getViewIfDefined().hasValue();
         if (wasDefined && !defined) {
             this->forwardHasBecomeUndefined();
@@ -35,26 +41,39 @@ struct ChangeTriggerAdapter<TupleTrigger, Child>
         }
     }
 
-    inline auto& getOp() {
-        return static_cast<Child*>(this)->getTriggeringOperand();
-    }
+    auto& getOp() { return static_cast<Child*>(this)->getTriggeringOperand(); }
 
    public:
     ChangeTriggerAdapter(const ExprRef<TupleView>& op)
         : wasDefined(op->getViewIfDefined().hasValue()) {}
 
-    inline void memberValueChanged(UInt) final {
+    void memberValueChanged(UInt) {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
-    inline void memberHasBecomeDefined(UInt) {
-        eventHandledAsDefinednessChange();
-    }
-    inline void memberHasBecomeUndefined(UInt) {
-        eventHandledAsDefinednessChange();
-    }
-    inline void hasBecomeDefined() { eventHandledAsDefinednessChange(); }
-    inline void hasBecomeUndefined() { eventHandledAsDefinednessChange(); }
+    void memberHasBecomeDefined(UInt) { eventHandledAsDefinednessChange(); }
+    void memberHasBecomeUndefined(UInt) { eventHandledAsDefinednessChange(); }
+    void hasBecomeDefined() { eventHandledAsDefinednessChange(); }
+    void hasBecomeUndefined() { eventHandledAsDefinednessChange(); }
 };
+
+template <typename Op>
+struct ForwardingTrigger<TupleTrigger, Op>
+    : public ForwardingTriggerBase<TupleTrigger, Op> {
+    using ForwardingTriggerBase<TupleTrigger, Op>::ForwardingTriggerBase;
+    void memberValueChanged(UInt index) {
+        visitTriggers([&](auto& t) { t->memberValueChanged(index); },
+                      this->op->triggers);
+    }
+    void memberHasBecomeUndefined(UInt index) {
+        visitTriggers([&](auto& t) { t->memberHasBecomeUndefined(index); },
+                      this->op->triggers);
+    }
+    void memberHasBecomeDefined(UInt index) {
+        visitTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
+                      this->op->triggers);
+    }
+};
+
 #endif /* SRC_TRIGGERS_TUPLETRIGGER_H_ */

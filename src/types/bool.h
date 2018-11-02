@@ -7,9 +7,9 @@
 
 #include "base/base.h"
 struct BoolDomain {};
-struct BoolView : public ExprInterface<BoolView> {
+struct BoolView : public ExprInterface<BoolView>,
+                  public TriggerContainer<BoolView> {
     UInt violation;
-    std::vector<std::shared_ptr<BoolTrigger>> triggers;
 
     inline void initFrom(BoolView& other) { violation = other.violation; }
     template <typename Func>

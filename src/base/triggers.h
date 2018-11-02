@@ -10,13 +10,11 @@ template <typename T>
 struct ExprRef;
 extern u_int64_t triggerEventCount;
 struct TriggerBase {
-    struct TRIGGER_ACTIVE;
-    struct ALLOW_DEFINEDNESS_TRIGGERS;
-    struct ALLOW_ONLY_DEFINEDNESS_TRIGGERS;
-    FlagSet<TRIGGER_ACTIVE, ALLOW_DEFINEDNESS_TRIGGERS,
-            ALLOW_ONLY_DEFINEDNESS_TRIGGERS>
-        flags = {{true, true, false}};
+   private:
+    bool _active = true;
 
+   public:
+    bool& active() { return _active; }
     virtual ~TriggerBase() {}
 
     virtual void valueChanged() = 0;
@@ -64,27 +62,14 @@ struct DelayedTriggerStack {
 
 template <typename Visitor, typename Trigger>
 void visitTriggers(Visitor&& func,
-                   std::vector<std::shared_ptr<Trigger>>& triggers,
-                   bool isDefinednessTrigger = false) {
-    using ALLOW_DEFINEDNESS_TRIGGERS = TriggerBase::ALLOW_DEFINEDNESS_TRIGGERS;
-    using ALLOW_ONLY_DEFINEDNESS_TRIGGERS =
-        TriggerBase::ALLOW_ONLY_DEFINEDNESS_TRIGGERS;
-    using TRIGGER_ACTIVE = TriggerBase::TRIGGER_ACTIVE;
+                   std::vector<std::shared_ptr<Trigger>>& triggers) {
     DelayedTriggerStack delayedTriggers;
-
     size_t size = triggers.size();
     size_t triggerNullCount = 0;
     // triggers may be changed, insure that new triggers are ignored
     for (size_t i = 0; i < size && i < triggers.size(); i++) {
         auto& trigger = triggers[i];
-        if (trigger && trigger->flags.template get<TRIGGER_ACTIVE>()) {
-            if ((isDefinednessTrigger &&
-                 !trigger->flags.template get<ALLOW_DEFINEDNESS_TRIGGERS>()) ||
-                (!isDefinednessTrigger &&
-                 trigger->flags
-                     .template get<ALLOW_ONLY_DEFINEDNESS_TRIGGERS>())) {
-                continue;
-            }
+        if (trigger && trigger->active()) {
             ++triggerEventCount;
             func(trigger);
         } else {
@@ -99,7 +84,7 @@ void visitTriggers(Visitor&& func,
     while (!delayedTriggers.stack.empty()) {
         auto trigger = std::move(delayedTriggers.stack.back());
         delayedTriggers.stack.pop_back();
-        if (trigger && trigger->flags.template get<TRIGGER_ACTIVE>()) {
+        if (trigger && trigger->active()) {
             trigger->trigger();
         }
     }
@@ -113,7 +98,7 @@ void addDelayedTrigger(const std::shared_ptr<Trigger>& trigger) {
 
 template <typename Trigger>
 void deleteTrigger(const std::shared_ptr<Trigger>& trigger) {
-    trigger->flags.template get<TriggerBase::TRIGGER_ACTIVE>() = false;
+    trigger->active() = false;
 }
 
 template <typename Op, typename Trigger>
@@ -137,20 +122,24 @@ void setTriggerParent(Op* op, Triggers&... triggers) {
 }
 
 struct BoolTrigger : public virtual TriggerBase {
-    inline void hasBecomeUndefined() final { shouldNotBeCalledPanic; }
-    inline void hasBecomeDefined() { shouldNotBeCalledPanic; }
+    void hasBecomeUndefined() final { shouldNotBeCalledPanic; }
+    void hasBecomeDefined() { shouldNotBeCalledPanic; }
+};
+
+struct TriggerContainer<BoolTrigger> {
+    std::vector<std::shared_ptr<BoolTrigger>> triggers;
 };
 
 template <typename TriggerType, typename Child>
 struct ChangeTriggerAdapterBaseHelper : public TriggerType {
-    inline void forwardHasBecomeDefined() {
+    void forwardHasBecomeDefined() {
         static_cast<Child*>(this)->adapterHasBecomeDefined();
     }
-    inline void hasBecomeDefined() { forwardHasBecomeDefined(); }
-    inline void forwardHasBecomeUndefined() {
+    void hasBecomeDefined() { forwardHasBecomeDefined(); }
+    void forwardHasBecomeUndefined() {
         static_cast<Child*>(this)->adapterHasBecomeUndefined();
     }
-    inline void hasBecomeUndefined() { forwardHasBecomeUndefined(); }
+    void hasBecomeUndefined() { forwardHasBecomeUndefined(); }
 };
 
 template <typename Child>
@@ -160,15 +149,40 @@ struct ChangeTriggerAdapterBaseHelper<BoolTrigger, Child> : public BoolTrigger {
 template <typename TriggerType, typename Child>
 struct ChangeTriggerAdapterBase
     : public ChangeTriggerAdapterBaseHelper<TriggerType, Child> {
-    inline void forwardValueChanged() {
+    void forwardValueChanged() {
         static_cast<Child*>(this)->adapterValueChanged();
     }
-    inline void valueChanged() final { this->forwardValueChanged(); }
+    void valueChanged() { this->forwardValueChanged(); }
 };
 
 template <typename TriggerType, typename Child>
 struct ChangeTriggerAdapter;
+
 template <typename TriggerType>
 const std::shared_ptr<TriggerBase> getTriggerBase(
     const std::shared_ptr<TriggerType>& trigger);
+
+template <typename TriggerType, typename Op>
+struct ForwardingTriggerBase : public virtual TriggerType {
+    Op* op;
+    ForwardingTriggerBase(Op* op) : op(op) {}
+
+    void valueChanged() override {
+        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+    }
+    void hasBecomeDefined() override {
+        op->setDefined(true);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
+    }
+    void hasBecomeUndefined() override {
+        op->setDefined(false);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
+    }
+};
+template <typename Trigger, typename Op>
+struct ForwardingTrigger;
+
+template <typename View>
+struct TriggerContainer;
+
 #endif /* SRC_BASE_TRIGGERS_H_ */

@@ -43,14 +43,10 @@ static const char* NO_SEQUENCE_HASHING_UNDEFINED =
     "sequence is not correctly handling hashing values that appear "
     "defined but return undefined views.\n";
 
-struct SequenceView : public ExprInterface<SequenceView> {
+struct SequenceView : public ExprInterface<SequenceView>,
+                      public TriggerContainer<SequenceView> {
     friend SequenceValue;
     AnyExprVec members;
-    std::vector<std::shared_ptr<SequenceOuterTrigger>> triggers;
-
-    std::vector<std::shared_ptr<SequenceMemberTrigger>> allMemberTriggers;
-    std::vector<std::vector<std::shared_ptr<SequenceMemberTrigger>>>
-        singleMemberTriggers;
     SimpleCache<HashType> cachedHashTotal;
     UInt numberUndefined = 0;
 
@@ -73,18 +69,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
             total += calcMemberHash(i, getMembers<InnerViewType>()[i]);
         }
         return total;
-    }
-
-    template <typename Func>
-    void visitAllMemberTriggersInRange(Func&& func, size_t startIndex,
-                                       size_t endIndex) {
-        visitTriggers(func, allMemberTriggers);
-        for (size_t i = startIndex; i < endIndex; i++) {
-            if (i >= singleMemberTriggers.size()) {
-                break;
-            }
-            visitTriggers(func, singleMemberTriggers[i]);
-        }
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -201,8 +185,6 @@ struct SequenceView : public ExprInterface<SequenceView> {
     }
 
     inline void notifySubsequenceChanged(UInt startIndex, UInt endIndex) {
-        ignoreUnused(startIndex, endIndex);
-
         visitAllMemberTriggersInRange(
             [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
             startIndex, endIndex);

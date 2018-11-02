@@ -22,9 +22,9 @@ struct IntDomain {
               })) {}
 };
 
-struct IntView : public ExprInterface<IntView> {
+struct IntView : public ExprInterface<IntView>,
+                 public TriggerContainer<IntView> {
     Int value;
-    std::vector<std::shared_ptr<IntTrigger>> triggers;
 
     inline void initFrom(IntView& other) { value = other.value; }
 

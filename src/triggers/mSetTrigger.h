@@ -10,21 +10,65 @@ struct MSetTrigger : public virtual TriggerBase {
     virtual void memberValuesChanged(const std::vector<UInt>& indices) = 0;
 };
 
+struct TriggerContainer<MSetView> {
+    std::vector<std::shared_ptr<MSetTrigger>> triggers;
+    inline void notifyMemberAdded(const AnyExprRef& newMember) {
+        visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
+    }
+
+    inline void notifyMemberRemoved(UInt index, const AnyExprRef& expr) {
+        visitTriggers([&](auto& t) { t->valueRemoved(index, expr); }, triggers);
+    }
+
+
+    inline void notifyMemberChanged(size_t index) {
+        visitTriggers([&](auto& t) { t->memberValueChanged(index); }, triggers);
+    }
+
+
+    inline void notifyMembersChanged(const std::vector<UInt>& indices) {
+        visitTriggers([&](auto& t) { t->memberValuesChanged(indices); },
+                      triggers);
+    }
+};
+
 template <typename Child>
 struct ChangeTriggerAdapter<MSetTrigger, Child>
     : public ChangeTriggerAdapterBase<MSetTrigger, Child> {
     ChangeTriggerAdapter(const ExprRef<MSetView>&) {}
-    inline void valueRemoved(UInt, const AnyExprRef&) {
+    void valueRemoved(UInt, const AnyExprRef&) { this->forwardValueChanged(); }
+    void valueAdded(const AnyExprRef&) { this->forwardValueChanged(); }
+
+    void memberValueChanged(UInt) { this->forwardValueChanged(); }
+
+    void memberValuesChanged(const std::vector<UInt>&) {
         this->forwardValueChanged();
     }
-    inline void valueAdded(const AnyExprRef&) final {
-        this->forwardValueChanged();
+};
+
+template <typename Op>
+struct ForwardingTrigger<MSetTrigger, Op>
+    : public ForwardingTriggerBase<MSetTrigger, Op> {
+    using ForwardingTriggerBase<MSetTrigger, Op>::ForwardingTriggerBase;
+    void valueRemoved(UInt index, const AnyExprRef& oldVal) {
+        visitTriggers([&](auto& t) { t->valueRemoved(index, oldVal); },
+                      this->op->triggers);
+    }
+    void valueAdded(const AnyExprRef& expr) {
+        visitTriggers([&](auto& t) { t->valueAdded(expr); },
+                      this->op->triggers);
     }
 
-    inline void memberValueChanged(UInt) final { this->forwardValueChanged(); }
+    void memberValueChanged(UInt index, HashType oldHash) {
+        visitTriggers([&](auto& t) { t->memberValueChanged(index, oldHash); },
+                      this->op->triggers);
+    }
 
-    inline void memberValuesChanged(const std::vector<UInt>&) final {
-        this->forwardValueChanged();
+    void memberValuesChanged(const std::vector<UInt>& indices,
+                             const std::vector<HashType>& oldHashes) {
+        visitTriggers(
+            [&](auto& t) { t->memberValuesChanged(indices, oldHashes); },
+            this->op->triggers);
     }
 };
 

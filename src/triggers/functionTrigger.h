@@ -16,12 +16,20 @@ struct FunctionMemberTrigger : public virtual TriggerBase {
 
 struct FunctionTrigger : public virtual FunctionOuterTrigger,
                          public virtual FunctionMemberTrigger {};
+
+struct TriggerContainer<FunctionView> {
+    std::vector<std::shared_ptr<FunctionOuterTrigger>> triggers;
+    std::vector<std::shared_ptr<FunctionMemberTrigger>> allMemberTriggers;
+    std::vector<std::vector<std::shared_ptr<FunctionMemberTrigger>>>
+        singleMemberTriggers;
+};
+
 template <typename Child>
 struct ChangeTriggerAdapter<FunctionTrigger, Child>
     : public ChangeTriggerAdapterBase<FunctionTrigger, Child> {
    private:
     bool wasDefined;
-    inline bool eventHandledAsDefinednessChange() {
+    bool eventHandledAsDefinednessChange() {
         bool defined = getOp()->getViewIfDefined().hasValue();
         if (wasDefined && !defined) {
             this->forwardHasBecomeUndefined();
@@ -37,30 +45,46 @@ struct ChangeTriggerAdapter<FunctionTrigger, Child>
         }
     }
 
-    inline auto& getOp() {
-        return static_cast<Child*>(this)->getTriggeringOperand();
-    }
+    auto& getOp() { return static_cast<Child*>(this)->getTriggeringOperand(); }
 
    public:
     ChangeTriggerAdapter(const ExprRef<FunctionView>& op)
         : wasDefined(op->getViewIfDefined().hasValue()) {}
-    inline void imageChanged(UInt) final {
+    void imageChanged(UInt) {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
-    inline void imageChanged(const std::vector<UInt>&) final {
+    void imageChanged(const std::vector<UInt>&) {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
-    inline void imageSwap(UInt, UInt) final {
+    void imageSwap(UInt, UInt) {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
-    inline void hasBecomeDefined() { eventHandledAsDefinednessChange(); }
-    inline void hasBecomeUndefined() { eventHandledAsDefinednessChange(); }
+    void hasBecomeDefined() { eventHandledAsDefinednessChange(); }
+    void hasBecomeUndefined() { eventHandledAsDefinednessChange(); }
+};
+template <typename Op>
+struct ForwardingTrigger<FunctionTrigger, Op>
+    : public ForwardingTriggerBase<FunctionTrigger, Op> {
+    using ForwardingTriggerBase<FunctionTrigger, Op>::ForwardingTriggerBase;
+    void imageChanged(const std::vector<UInt>& indices) {
+        visitTriggers([&](auto& t) { t->imageChanged(indices); },
+                      this->op->triggers);
+    }
+    void imageChanged(UInt index) {
+        visitTriggers([&](auto& t) { t->imageChanged(index); },
+                      this->op->triggers);
+    }
+
+    void imageSwap(UInt index1, UInt index2) {
+        visitTriggers([&](auto& t) { t->imageSwap(index1, index2); },
+                      this->op->triggers);
+    }
 };
 
 #endif /* SRC_TRIGGERS_FUNCTIONTRIGGER_H_ */

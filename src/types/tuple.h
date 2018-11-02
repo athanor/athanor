@@ -16,16 +16,11 @@ struct TupleDomain {
 
     TupleDomain(std::vector<AnyDomainRef> inners) : inners(std::move(inners)) {}
 };
-struct TupleView;
-struct TupleValue;
-struct TupleView : public ExprInterface<TupleView> {
+
+struct TupleView : public ExprInterface<TupleView>,
+                   public TriggerContainer<TupleView> {
     friend TupleValue;
     std::vector<AnyExprRef> members;
-    std::vector<std::shared_ptr<TupleOuterTrigger>> triggers;
-
-    std::vector<std::shared_ptr<TupleMemberTrigger>> allMemberTriggers;
-    std::vector<std::vector<std::shared_ptr<TupleMemberTrigger>>>
-        singleMemberTriggers;
 
     SimpleCache<HashType> cachedHashTotal;
     u_int32_t numberUndefined = 0;
@@ -74,10 +69,6 @@ struct TupleView : public ExprInterface<TupleView> {
         this->setAppearsDefined(false);
         visitMemberTriggers(
             [&](auto& t) { t->memberHasBecomeUndefined(index); }, index);
-    }
-
-    inline void initFrom(TupleView&) {
-        std::cerr << "not allowed\n" << __func__ << std::endl;
     }
 };
 

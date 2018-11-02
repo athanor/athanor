@@ -8,7 +8,7 @@ template <typename View>
 struct Iterator : public ExprInterface<View> {
     typedef typename AssociatedTriggerType<View>::type TriggerType;
     struct RefTrigger;
-    std::vector<std::shared_ptr<TriggerBase>> triggers;
+    std::vector<std::shared_ptr<TriggerType>> triggers;
     u_int64_t id;
     ExprRef<View> ref;
     std::shared_ptr<RefTrigger> refTrigger;
@@ -34,12 +34,7 @@ struct Iterator : public ExprInterface<View> {
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
                               triggers, true);
             } else if (!newValUndefined) {
-                visitTriggers(
-                    [&](auto t) {
-                        t->valueChanged();
-                        t->reattachTrigger();
-                    },
-                    triggers);
+                visitTriggers([&](auto t) { t->valueChanged(); }, triggers);
             }
         }
     }

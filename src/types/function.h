@@ -84,15 +84,11 @@ using std::experimental::optional;
 }  // namespace lib
 lib::optional<Int> getAsIntForFunctionIndex(const AnyExprRef& expr);
 
-struct FunctionView : public ExprInterface<FunctionView> {
+struct FunctionView : public ExprInterface<FunctionView>,
+                      TriggerContainer<FunctionView> {
     friend FunctionValue;
     DimensionVec dimensions;
     AnyExprVec range;
-    std::vector<std::shared_ptr<FunctionOuterTrigger>> triggers;
-
-    std::vector<std::shared_ptr<FunctionMemberTrigger>> allMemberTriggers;
-    std::vector<std::vector<std::shared_ptr<FunctionMemberTrigger>>>
-        singleMemberTriggers;
     debug_code(bool posFunctionValueChangeCalled = false);
 
     lib::optional<UInt> domainToIndex(const IntView& intV);

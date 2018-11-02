@@ -31,12 +31,11 @@ struct MSetDomain {
 };
 static const char* NO_MSET_UNDEFINED_MEMBERS =
     "Not yet handling multisets with undefined members.\n";
-struct MSetView : public ExprInterface<MSetView> {
+struct MSetView : public ExprInterface<MSetView>,
+                  public TriggerContainer<MSetView> {
     friend MSetValue;
     AnyExprVec members;
     HashType cachedHashTotal = 0;
-    std::vector<std::shared_ptr<MSetTrigger>> triggers;
-    debug_code(bool posMSetValueChangeCalled = false);
 
    private:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -49,12 +48,6 @@ struct MSetView : public ExprInterface<MSetView> {
         debug_code(assertValidState());
     }
 
-    inline void notifyMemberAdded(const AnyExprRef& newMember) {
-        debug_code(assert(posMSetValueChangeCalled);
-                   posMSetValueChangeCalled = false);
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
-    }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRef<InnerViewType> removeMember(UInt index) {
@@ -68,13 +61,6 @@ struct MSetView : public ExprInterface<MSetView> {
         members[index] = std::move(members.back());
         members.pop_back();
         return removedMember;
-    }
-
-    inline void notifyMemberRemoved(UInt index, const AnyExprRef& expr) {
-        debug_code(assert(posMSetValueChangeCalled);
-                   posMSetValueChangeCalled = false);
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->valueRemoved(index, expr); }, triggers);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -108,16 +94,6 @@ struct MSetView : public ExprInterface<MSetView> {
         debug_code(assertValidState());
     }
 
-    inline void notifyMemberChanged(size_t index) {
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->memberValueChanged(index); }, triggers);
-    }
-
-    inline void notifyMembersChanged(const std::vector<UInt>& indices) {
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->memberValuesChanged(indices); },
-                      triggers);
-    }
 
     void silentClear() {
         mpark::visit(

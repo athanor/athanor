@@ -48,7 +48,6 @@ struct MSetView : public ExprInterface<MSetView>,
         debug_code(assertValidState());
     }
 
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRef<InnerViewType> removeMember(UInt index) {
         auto& members = getMembers<InnerViewType>();
@@ -93,7 +92,6 @@ struct MSetView : public ExprInterface<MSetView>,
         }
         debug_code(assertValidState());
     }
-
 
     void silentClear() {
         mpark::visit(

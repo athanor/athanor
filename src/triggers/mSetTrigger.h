@@ -20,11 +20,9 @@ struct TriggerContainer<MSetView> {
         visitTriggers([&](auto& t) { t->valueRemoved(index, expr); }, triggers);
     }
 
-
     inline void notifyMemberChanged(size_t index) {
         visitTriggers([&](auto& t) { t->memberValueChanged(index); }, triggers);
     }
-
 
     inline void notifyMembersChanged(const std::vector<UInt>& indices) {
         visitTriggers([&](auto& t) { t->memberValuesChanged(indices); },
@@ -50,25 +48,17 @@ template <typename Op>
 struct ForwardingTrigger<MSetTrigger, Op>
     : public ForwardingTriggerBase<MSetTrigger, Op> {
     using ForwardingTriggerBase<MSetTrigger, Op>::ForwardingTriggerBase;
-    void valueRemoved(UInt index, const AnyExprRef& oldVal) {
-        visitTriggers([&](auto& t) { t->valueRemoved(index, oldVal); },
-                      this->op->triggers);
+    void valueRemoved(UInt index, const AnyExprRef& expr) {
+        this->op->notifyValueRemoved(index, expr);
     }
-    void valueAdded(const AnyExprRef& expr) {
-        visitTriggers([&](auto& t) { t->valueAdded(expr); },
-                      this->op->triggers);
+    void valueAdded(const AnyExprRef& expr) { this->op->valueAdded(expr); }
+
+    void memberValueChanged(UInt index) {
+        this->op->notifyMemberChanged(index);
     }
 
-    void memberValueChanged(UInt index, HashType oldHash) {
-        visitTriggers([&](auto& t) { t->memberValueChanged(index, oldHash); },
-                      this->op->triggers);
-    }
-
-    void memberValuesChanged(const std::vector<UInt>& indices,
-                             const std::vector<HashType>& oldHashes) {
-        visitTriggers(
-            [&](auto& t) { t->memberValuesChanged(indices, oldHashes); },
-            this->op->triggers);
+    void memberValuesChanged(const std::vector<UInt>& indices) {
+        this->op->notifymembersChanged(indices);
     }
 };
 

@@ -4,11 +4,11 @@
 
 #include "base/base.h"
 #include "base/exprRef.h"
+#include "triggers/allTriggers.h"
 template <typename View>
-struct Iterator : public ExprInterface<View> {
+struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
     typedef typename AssociatedTriggerType<View>::type TriggerType;
     struct RefTrigger;
-    std::vector<std::shared_ptr<TriggerType>> triggers;
     u_int64_t id;
     ExprRef<View> ref;
     std::shared_ptr<RefTrigger> refTrigger;
@@ -28,13 +28,14 @@ struct Iterator : public ExprInterface<View> {
             bool newValUndefined = !newVal->appearsDefined();
             this->setAppearsDefined(!newValUndefined);
             if (oldValUndefined && !newValUndefined) {
-                visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, triggers,
-                              true);
+                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                              this->triggers);
             } else if (!oldValUndefined && newValUndefined) {
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                              triggers, true);
+                              this->triggers);
             } else if (!newValUndefined) {
-                visitTriggers([&](auto t) { t->valueChanged(); }, triggers);
+                visitTriggers([&](auto t) { t->valueChanged(); },
+                              this->triggers);
             }
         }
     }

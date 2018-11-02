@@ -17,6 +17,7 @@ struct FunctionMemberTrigger : public virtual TriggerBase {
 struct FunctionTrigger : public virtual FunctionOuterTrigger,
                          public virtual FunctionMemberTrigger {};
 
+template <>
 struct TriggerContainer<FunctionView> {
     std::vector<std::shared_ptr<FunctionOuterTrigger>> triggers;
     std::vector<std::shared_ptr<FunctionMemberTrigger>> allMemberTriggers;
@@ -111,12 +112,12 @@ struct ForwardingTrigger<FunctionTrigger, Op, Child>
     : public ForwardingTriggerBase<FunctionTrigger, Op> {
     using ForwardingTriggerBase<FunctionTrigger, Op>::ForwardingTriggerBase;
     void imageChanged(const std::vector<UInt>& indices) {
-        this->op->notifyImageChanged(indices);
+        this->op->notifyImagesChanged(indices);
     }
     void imageChanged(UInt index) { this->op->notifyImageChanged(index); }
 
     void imageSwap(UInt index1, UInt index2) {
-        this->op->notifyImageSwapped(index1, index2);
+        this->op->notifyImagesSwapped(index1, index2);
     }
 };
 

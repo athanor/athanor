@@ -13,6 +13,7 @@ struct SetTrigger : public virtual TriggerBase {
         const std::vector<HashType>& oldHashes) = 0;
 };
 
+template <>
 struct TriggerContainer<SetView> {
     std::vector<std::shared_ptr<SetTrigger>> triggers;
     inline void notifyMemberAdded(const AnyExprRef& newMember) {

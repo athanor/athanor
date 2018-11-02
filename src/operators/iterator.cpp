@@ -10,7 +10,7 @@ template <typename View>
 void Iterator<View>::addTriggerImpl(
     const shared_ptr<typename Iterator<View>::TriggerType>& trigger,
     bool includeMembers, Int memberIndex) {
-    triggers.emplace_back(trigger);
+    handleTriggerAdd(trigger, includeMembers, memberIndex, *this);
 }
 
 template <typename View>
@@ -27,26 +27,19 @@ OptionalRef<const View> Iterator<View>::view() const {
 template <typename View>
 struct Iterator<View>::RefTrigger
     : public ForwardingTrigger<typename Iterator<View>::TriggerType,
+                               Iterator<View>,
                                typename Iterator<View>::RefTrigger> {
     typedef typename Iterator<View>::TriggerType TriggerType;
-    using Base = ForwardingTrigger<typename Iterator<View>::TriggerType,
-                                   typename Iterator<View>::RefTrigger>;
+    using ForwardingTrigger<TriggerType, Iterator<View>,
+                            Iterator<View>::RefTrigger>::ForwardingTrigger;
+    ExprRef<View>& getTriggeringOperand() { return this->op->ref; }
 
-    void hasBecomeUndefined() override {
-        this->op->setAppearsDefined(false);
-        Base::hasBecomeUndefined();
-    }
-    void hasBecomeDefined() override {
-        this->op->setAppearsDefined(true);
-        Base::hasBecomeDefined();
-        ;
-    }
-    ExprRef<View>& getTriggeringOperand() { return op->ref; }
     void reattachTrigger() {
-        deleteTrigger(op->refTrigger);
-        auto trigger = make_shared<typename Iterator<View>::RefTrigger>(op);
-        op->ref->addTrigger(trigger);
-        op->refTrigger = trigger;
+        deleteTrigger(this->op->refTrigger);
+        auto trigger =
+            make_shared<typename Iterator<View>::RefTrigger>(this->op);
+        this->op->ref->addTrigger(trigger);
+        this->op->refTrigger = trigger;
     }
 };
 
@@ -60,9 +53,12 @@ void Iterator<View>::evaluateImpl() {
 template <typename View>
 Iterator<View>::Iterator(Iterator<View>&& other)
     : ExprInterface<View>(move(other)),
-      triggers(move(other.triggers)),
+      TriggerContainer<View>(move(other)),
       id(move(other.id)),
-      ref(move(other.ref)) {}
+      ref(move(other.ref)),
+      refTrigger(move(other.refTrigger)) {
+    setTriggerParent(this,refTrigger);
+}
 
 template <typename View>
 void Iterator<View>::startTriggeringImpl() {

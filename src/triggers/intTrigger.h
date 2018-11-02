@@ -4,7 +4,8 @@
 #include "base/base.h"
 struct IntTrigger : public virtual TriggerBase {};
 
-struct TriggerContainer<IntTrigger> {
+template <>
+struct TriggerContainer<IntView> {
     std::vector<std::shared_ptr<IntTrigger>> triggers;
 };
 template <typename Child>

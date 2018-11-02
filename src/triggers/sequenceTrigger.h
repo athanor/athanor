@@ -21,6 +21,7 @@ struct SequenceMemberTrigger : public virtual TriggerBase {
 struct SequenceTrigger : public virtual SequenceOuterTrigger,
                          public virtual SequenceMemberTrigger {};
 
+template <>
 struct TriggerContainer<SequenceView> {
     std::vector<std::shared_ptr<SequenceOuterTrigger>> triggers;
     std::vector<std::shared_ptr<SequenceMemberTrigger>> allMemberTriggers;
@@ -131,17 +132,35 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
     void hasBecomeDefined() override { eventHandledAsDefinednessChange(); }
     void hasBecomeUndefined() override { eventHandledAsDefinednessChange(); }
 };
-
+size_t numberElements(SequenceView& view);
 template <typename Op, typename Child>
 struct ForwardingTrigger<SequenceTrigger, Op, Child>
     : public ForwardingTriggerBase<SequenceTrigger, Op> {
     using ForwardingTriggerBase<SequenceTrigger, Op>::ForwardingTriggerBase;
 
+   public:
+    void reevaluateDefined() {
+        auto view = static_cast<Child*>(this)
+                        ->getTriggeringOperand()
+                        ->getViewIfDefined();
+        this->op->setAppearsDefined(view.hasValue());
+    }
+
+   public:
     void valueRemoved(UInt index, const AnyExprRef& removedValue) {
-        this->op->notifyValueRemoved(index, removedValue);
+        auto& view =
+            static_cast<Child*>(this)->getTriggeringOperand()->view().get();
+        if (numberElements(view) < this->op->singleMemberTriggers.size()) {
+            this->op->singleMemberTriggers.resize(numberElements(view));
+        }
+        reevaluateDefined();
+        this->op->notifyMemberRemoved(index, removedValue);
     }
 
     void valueAdded(UInt index, const AnyExprRef& expr) {
+        if (!appearsDefined(expr)) {
+            this->op->setAppearsDefined(false);
+        }
         this->op->notifyMemberAdded(index, expr);
     }
 
@@ -150,22 +169,15 @@ struct ForwardingTrigger<SequenceTrigger, Op, Child>
     }
 
     void memberHasBecomeUndefined(UInt index) {
-        auto view = static_cast<Child*>(this)
-                        ->getTriggeringOperand()
-                        ->getViewIfDefined();
-        this->op->setAppearsDefined(view.hasValue());
-
-        this->notifyMemberUndefined();
+        reevaluateDefined();
+        this->op->notifyMemberUndefined(index);
     }
     void memberHasBecomeDefined(UInt index) {
-        auto view = static_cast<Child*>(this)
-                        ->getTriggeringOperand()
-                        ->getViewIfDefined();
-        this->op->setAppearsDefined(view.hasValue());
+        reevaluateDefined();
         this->op->notifyMemberDefined(index);
     }
     void positionsSwapped(UInt index1, UInt index2) {
-        this->op->notifyPositionsSwapped(inex1, index2);
+        this->op->notifyPositionsSwapped(index1, index2);
     }
 };
 

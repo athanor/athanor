@@ -10,6 +10,7 @@ struct MSetTrigger : public virtual TriggerBase {
     virtual void memberValuesChanged(const std::vector<UInt>& indices) = 0;
 };
 
+template <>
 struct TriggerContainer<MSetView> {
     std::vector<std::shared_ptr<MSetTrigger>> triggers;
     inline void notifyMemberAdded(const AnyExprRef& newMember) {
@@ -49,16 +50,16 @@ struct ForwardingTrigger<MSetTrigger, Op, Child>
     : public ForwardingTriggerBase<MSetTrigger, Op> {
     using ForwardingTriggerBase<MSetTrigger, Op>::ForwardingTriggerBase;
     void valueRemoved(UInt index, const AnyExprRef& expr) {
-        this->op->notifyValueRemoved(index, expr);
+        this->op->notifyMemberRemoved(index, expr);
     }
-    void valueAdded(const AnyExprRef& expr) { this->op->valueAdded(expr); }
+    void valueAdded(const AnyExprRef& expr) { this->op->notifyMemberAdded(expr); }
 
     void memberValueChanged(UInt index) {
         this->op->notifyMemberChanged(index);
     }
 
     void memberValuesChanged(const std::vector<UInt>& indices) {
-        this->op->notifymembersChanged(indices);
+        this->op->notifyMembersChanged(indices);
     }
 };
 

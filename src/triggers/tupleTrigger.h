@@ -14,6 +14,7 @@ struct TupleMemberTrigger : public virtual TriggerBase {
 struct TupleTrigger : public virtual TupleOuterTrigger,
                       public virtual TupleMemberTrigger {};
 
+template <>
 struct TriggerContainer<TupleView> {
     std::vector<std::shared_ptr<TupleOuterTrigger>> triggers;
     std::vector<std::shared_ptr<TupleMemberTrigger>> allMemberTriggers;
@@ -83,7 +84,7 @@ struct ChangeTriggerAdapter<TupleTrigger, Child>
 
 template <typename Op, typename Child>
 struct ForwardingTrigger<TupleTrigger, Op, Child>
-    : public ForwardingTriggerBase<TupleTrigger, Op, Child> {
+    : public ForwardingTriggerBase<TupleTrigger, Op> {
     using ForwardingTriggerBase<TupleTrigger, Op>::ForwardingTriggerBase;
     void memberValueChanged(UInt index) {
         this->op->notifyMemberChanged(index);

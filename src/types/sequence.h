@@ -105,11 +105,6 @@ struct SequenceView : public ExprInterface<SequenceView>,
         if (!removedMember->appearsDefined()) {
             numberUndefined--;
         }
-        if (members.size() < singleMemberTriggers.size()) {
-            singleMemberTriggers.erase(
-                singleMemberTriggers.begin() + members.size(),
-                singleMemberTriggers.end());
-        }
         debug_code(assertValidState());
         return removedMember;
     }

@@ -6,7 +6,9 @@
 #include "utils/ignoreUnused.h"
 #include "utils/safePow.h"
 using namespace std;
-
+size_t numberElements(SequenceView& view) {
+    return view.numberElements();
+}
 template <>
 HashType getValueHash<SequenceView>(const SequenceView& val) {
     return val.cachedHashTotal.getOrSet([&]() {

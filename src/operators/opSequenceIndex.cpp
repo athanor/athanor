@@ -129,7 +129,7 @@ bool OpSequenceIndex<SequenceMemberViewType>::eventForwardedAsDefinednessChange(
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
-            triggers, true);
+            triggers);
         return true;
     } else {
         return !this->appearsDefined();
@@ -246,7 +246,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
-            op->triggers, true);
+            op->triggers);
     }
     void reattachTrigger() final {
         deleteTrigger(op->sequenceOperandTrigger);
@@ -296,7 +296,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::IndexTrigger
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
-            op->triggers, true);
+            op->triggers);
     }
 
     void hasBecomeUndefined() {

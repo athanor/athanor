@@ -51,7 +51,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
             if (op->operand->view()->numberUndefined == 1) {
                 op->setDefined(false);
                 visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                              op->triggers, true);
+                              op->triggers);
             }
             return;
         }
@@ -136,7 +136,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
         });
         if (wasDefined && !op->isDefined()) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers, true);
+                          op->triggers);
         } else if (!wasDefined && op->isDefined()) {
             visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
                           true);

@@ -29,7 +29,7 @@ struct SimpleBinaryTrigger
         });
         if (wasDefined && !op->isDefined()) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers, true);
+                          op->triggers);
         } else if (!wasDefined && op->isDefined()) {
             visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
                           true);
@@ -89,7 +89,7 @@ struct SimpleUnaryTrigger
         });
         if (wasDefined && !op->isDefined()) {
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers, true);
+                          op->triggers);
         } else if (!wasDefined && op->isDefined()) {
             visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
                           true);

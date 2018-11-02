@@ -145,7 +145,7 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
             op->setDefined(op->operand->appearsDefined());
             if (op->isDefined()) {
                 visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                              op->triggers, true);
+                              op->triggers);
             }
         } else {
             op->changeValue([&]() {

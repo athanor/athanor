@@ -100,7 +100,7 @@ bool OpTupleIndex<TupleMemberViewType>::eventForwardedAsDefinednessChange() {
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
-            triggers, true);
+            triggers);
         return true;
     } else {
         return !this->appearsDefined();
@@ -164,7 +164,7 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
-            op->triggers, true);
+            op->triggers);
     }
     void reattachTrigger() final {
         deleteTrigger(op->tupleOperandTrigger);

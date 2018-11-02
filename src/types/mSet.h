@@ -150,8 +150,6 @@ struct MSetView : public ExprInterface<MSetView>,
     }
 
     inline void notifyEntireMSetChange() {
-        debug_code(assert(posMSetValueChangeCalled);
-                   posMSetValueChangeCalled = false);
         debug_code(assertValidState());
         visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
     }

@@ -127,7 +127,7 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
         if (op->appearsDefined()) {
             op->setAppearsDefined(false);
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers, true);
+                          op->triggers);
         }
     }
     void hasBecomeDefined() {

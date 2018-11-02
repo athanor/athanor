@@ -70,7 +70,7 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
         if (op->appearsDefined()) {
             op->setAppearsDefined(false);
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers, true);
+                          op->triggers);
         }
     }
     void hasBecomeDefined() {

@@ -86,15 +86,14 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
         if (op->appearsDefined()) {
             op->setAppearsDefined(false);
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers, true);
+                          op->triggers);
         }
     }
     void hasBecomeDefined() {
         this->valueChanged();
         op->containerDefined = true;
         op->setAppearsDefined(op->numberUndefined == 0);
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
-                      true);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
     }
     void reattachTrigger() final {
         deleteTrigger(op->containerTrigger);

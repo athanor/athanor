@@ -157,7 +157,7 @@ bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
-            triggers, true);
+            triggers);
         return true;
     } else {
         return !this->appearsDefined();
@@ -234,7 +234,7 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
-            op->triggers, true);
+            op->triggers);
     }
     void reattachTrigger() final {
         deleteTrigger(op->functionOperandTrigger);
@@ -299,7 +299,7 @@ struct PreImageTrigger
                 t->hasBecomeDefined();
                 t->reattachTrigger();
             },
-            op->triggers, true);
+            op->triggers);
     }
 
     void adapterHasBecomeUndefined() {

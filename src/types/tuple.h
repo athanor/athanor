@@ -28,18 +28,6 @@ struct TupleView : public ExprInterface<TupleView>,
     TupleView(std::vector<AnyExprRef> members) : members(members) {}
 
     inline void memberChanged(UInt) { cachedHashTotal.invalidate(); }
-    template <typename Func>
-    void visitMemberTriggers(Func&& func, UInt index) {
-        visitTriggers(func, allMemberTriggers);
-        if (index < singleMemberTriggers.size()) {
-            visitTriggers(func, singleMemberTriggers[index]);
-        }
-    }
-
-    inline void notifyMemberChanged(UInt index) {
-        visitMemberTriggers([&](auto& t) { t->memberValueChanged(index); },
-                            index);
-    }
 
    public:
     inline void memberChangedAndNotify(UInt index) {
@@ -59,16 +47,14 @@ struct TupleView : public ExprInterface<TupleView>,
         if (numberUndefined == 0) {
             this->setAppearsDefined(true);
         }
-        visitMemberTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
-                            index);
+        notifyMemberDefined(index);
     }
 
     inline void undefineMemberAndNotify(UInt index) {
         cachedHashTotal.invalidate();
         numberUndefined++;
         this->setAppearsDefined(false);
-        visitMemberTriggers(
-            [&](auto& t) { t->memberHasBecomeUndefined(index); }, index);
+        notifyMemberUndefined(index);
     }
 };
 

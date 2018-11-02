@@ -19,7 +19,30 @@ struct TriggerContainer<TupleView> {
     std::vector<std::shared_ptr<TupleMemberTrigger>> allMemberTriggers;
     std::vector<std::vector<std::shared_ptr<TupleMemberTrigger>>>
         singleMemberTriggers;
+    template <typename Func>
+    void visitMemberTriggers(Func&& func, UInt index) {
+        visitTriggers(func, allMemberTriggers);
+        if (index < singleMemberTriggers.size()) {
+            visitTriggers(func, singleMemberTriggers[index]);
+        }
+    }
+
+    inline void notifyMemberChanged(UInt index) {
+        visitMemberTriggers([&](auto& t) { t->memberValueChanged(index); },
+                            index);
+    }
+
+    inline void notifyMemberDefined(UInt index) {
+        visitMemberTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
+                            index);
+    }
+
+    inline void notifyMemberUndefined(UInt index) {
+        visitMemberTriggers(
+            [&](auto& t) { t->memberHasBecomeUndefined(index); }, index);
+    }
 };
+
 template <typename Child>
 struct ChangeTriggerAdapter<TupleTrigger, Child>
     : public ChangeTriggerAdapterBase<TupleTrigger, Child> {
@@ -58,21 +81,26 @@ struct ChangeTriggerAdapter<TupleTrigger, Child>
     void hasBecomeUndefined() { eventHandledAsDefinednessChange(); }
 };
 
-template <typename Op>
-struct ForwardingTrigger<TupleTrigger, Op>
-    : public ForwardingTriggerBase<TupleTrigger, Op> {
+template <typename Op, typename Child>
+struct ForwardingTrigger<TupleTrigger, Op, Child>
+    : public ForwardingTriggerBase<TupleTrigger, Op, Child> {
     using ForwardingTriggerBase<TupleTrigger, Op>::ForwardingTriggerBase;
     void memberValueChanged(UInt index) {
-        visitTriggers([&](auto& t) { t->memberValueChanged(index); },
-                      this->op->triggers);
+        this->op->notifyMemberChanged(index);
     }
     void memberHasBecomeUndefined(UInt index) {
-        visitTriggers([&](auto& t) { t->memberHasBecomeUndefined(index); },
-                      this->op->triggers);
+        auto view = static_cast<Child*>(this)
+                        ->getTriggeringOperand()
+                        ->getViewIfDefined();
+        this->op->setAppearsDefined(view.hasValue());
+        this->op->notifyMemberUndefined(index);
     }
     void memberHasBecomeDefined(UInt index) {
-        visitTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
-                      this->op->triggers);
+        auto view = static_cast<Child*>(this)
+                        ->getTriggeringOperand()
+                        ->getViewIfDefined();
+        this->op->setAppearsDefined(view.hasValue());
+        this->op->notifyMemberDefined(index);
     }
 };
 

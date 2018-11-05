@@ -50,16 +50,26 @@ struct ForwardingTrigger<MSetTrigger, Op, Child>
     : public ForwardingTriggerBase<MSetTrigger, Op> {
     using ForwardingTriggerBase<MSetTrigger, Op>::ForwardingTriggerBase;
     void valueRemoved(UInt index, const AnyExprRef& expr) {
-        this->op->notifyMemberRemoved(index, expr);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberRemoved(index, expr);
+        }
     }
-    void valueAdded(const AnyExprRef& expr) { this->op->notifyMemberAdded(expr); }
+    void valueAdded(const AnyExprRef& expr) {
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberAdded(expr);
+        }
+    }
 
     void memberValueChanged(UInt index) {
-        this->op->notifyMemberChanged(index);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberChanged(index);
+        }
     }
 
     void memberValuesChanged(const std::vector<UInt>& indices) {
-        this->op->notifyMembersChanged(indices);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMembersChanged(indices);
+        }
     }
 };
 

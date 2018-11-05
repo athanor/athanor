@@ -106,29 +106,33 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
    public:
     ChangeTriggerAdapter(const ExprRef<SequenceView>& op)
         : wasDefined(op->getViewIfDefined().hasValue()) {}
-    void valueRemoved(UInt, const AnyExprRef&) {
+    void valueRemoved(UInt, const AnyExprRef&) override {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
-    void valueAdded(UInt, const AnyExprRef&) {
+    void valueAdded(UInt, const AnyExprRef&) override {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
 
-    void subsequenceChanged(UInt, UInt) {
+    void subsequenceChanged(UInt, UInt) override {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
-    void positionsSwapped(UInt, UInt) {
+    void positionsSwapped(UInt, UInt) override {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
-    void memberHasBecomeDefined(UInt) { eventHandledAsDefinednessChange(); }
-    void memberHasBecomeUndefined(UInt) { eventHandledAsDefinednessChange(); }
+    void memberHasBecomeDefined(UInt) override {
+        eventHandledAsDefinednessChange();
+    }
+    void memberHasBecomeUndefined(UInt) override {
+        eventHandledAsDefinednessChange();
+    }
     void hasBecomeDefined() override { eventHandledAsDefinednessChange(); }
     void hasBecomeUndefined() override { eventHandledAsDefinednessChange(); }
 };
@@ -154,30 +158,42 @@ struct ForwardingTrigger<SequenceTrigger, Op, Child>
             this->op->singleMemberTriggers.resize(numberElements(view));
         }
         reevaluateDefined();
-        this->op->notifyMemberRemoved(index, removedValue);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberRemoved(index, removedValue);
+        }
     }
 
     void valueAdded(UInt index, const AnyExprRef& expr) {
         if (!appearsDefined(expr)) {
             this->op->setAppearsDefined(false);
         }
-        this->op->notifyMemberAdded(index, expr);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberAdded(index, expr);
+        }
     }
 
     void subsequenceChanged(UInt startIndex, UInt endIndex) {
-        this->op->notifySubsequenceChanged(startIndex, endIndex);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifySubsequenceChanged(startIndex, endIndex);
+        }
     }
 
     void memberHasBecomeUndefined(UInt index) {
         reevaluateDefined();
-        this->op->notifyMemberUndefined(index);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberUndefined(index);
+        }
     }
     void memberHasBecomeDefined(UInt index) {
         reevaluateDefined();
-        this->op->notifyMemberDefined(index);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberDefined(index);
+        }
     }
     void positionsSwapped(UInt index1, UInt index2) {
-        this->op->notifyPositionsSwapped(index1, index2);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyPositionsSwapped(index1, index2);
+        }
     }
 };
 

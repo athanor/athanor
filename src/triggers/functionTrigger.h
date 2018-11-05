@@ -112,12 +112,20 @@ struct ForwardingTrigger<FunctionTrigger, Op, Child>
     : public ForwardingTriggerBase<FunctionTrigger, Op> {
     using ForwardingTriggerBase<FunctionTrigger, Op>::ForwardingTriggerBase;
     void imageChanged(const std::vector<UInt>& indices) {
-        this->op->notifyImagesChanged(indices);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyImagesChanged(indices);
+        }
     }
-    void imageChanged(UInt index) { this->op->notifyImageChanged(index); }
+    void imageChanged(UInt index) {
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyImageChanged(index);
+        }
+    }
 
     void imageSwap(UInt index1, UInt index2) {
-        this->op->notifyImagesSwapped(index1, index2);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyImagesSwapped(index1, index2);
+        }
     }
 };
 

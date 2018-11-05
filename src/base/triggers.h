@@ -29,11 +29,11 @@ struct DelayedTrigger : public virtual TriggerBase {
 template <typename View>
 struct TriggerContainer;
 
-
 template <typename TrigCont, typename Trigger>
-auto addAsMemberTrigger(TrigCont& container, const std::shared_ptr<Trigger>& trigger,
+auto addAsMemberTrigger(TrigCont& container,
+                        const std::shared_ptr<Trigger>& trigger,
                         Int memberIndex)
--> decltype(container.allMemberTriggers, void()) {
+    -> decltype(container.allMemberTriggers, void()) {
     if (memberIndex == -1) {
         container.allMemberTriggers.emplace_back(trigger);
     } else {
@@ -47,9 +47,10 @@ auto addAsMemberTrigger(TrigCont& container, const std::shared_ptr<Trigger>& tri
 template <typename... Args>
 auto addAsMemberTrigger(Args&&...) {}
 
-template<typename TrigCont,typename Trigger>
+template <typename TrigCont, typename Trigger>
 void handleTriggerAdd(const std::shared_ptr<Trigger>& trigger,
-                      bool includeMembers, Int memberIndex, TrigCont& container) {
+                      bool includeMembers, Int memberIndex,
+                      TrigCont& container) {
     container.triggers.emplace_back(trigger);
     if (includeMembers) {
         addAsMemberTrigger(container, trigger, memberIndex);
@@ -151,7 +152,7 @@ void setTriggerParent(Op* op, Triggers&... triggers) {
 }
 
 struct BoolTrigger : public virtual TriggerBase {
-    void hasBecomeUndefined()  { shouldNotBeCalledPanic; }
+    void hasBecomeUndefined() { shouldNotBeCalledPanic; }
     void hasBecomeDefined() { shouldNotBeCalledPanic; }
 };
 
@@ -193,15 +194,23 @@ struct ForwardingTriggerBase : public virtual TriggerType {
     ForwardingTriggerBase(Op* op) : op(op) {}
 
     void valueChanged() override {
-        visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+        if (op->allowForwardingOfTrigger()) {
+            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+        }
     }
     void hasBecomeDefined() override {
         op->setAppearsDefined(true);
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
+        if (op->allowForwardingOfTrigger()) {
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                          op->triggers);
+        }
     }
     void hasBecomeUndefined() override {
         op->setAppearsDefined(false);
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
+        if (op->allowForwardingOfTrigger()) {
+            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                          op->triggers);
+        }
     }
 };
 template <typename Trigger, typename Op, typename Child>

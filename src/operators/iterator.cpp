@@ -57,7 +57,7 @@ Iterator<View>::Iterator(Iterator<View>&& other)
       id(move(other.id)),
       ref(move(other.ref)),
       refTrigger(move(other.refTrigger)) {
-    setTriggerParent(this,refTrigger);
+    setTriggerParent(this, refTrigger);
 }
 
 template <typename View>

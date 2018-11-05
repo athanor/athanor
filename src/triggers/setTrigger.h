@@ -57,19 +57,27 @@ struct ForwardingTrigger<SetTrigger, Op, Child>
     : public ForwardingTriggerBase<SetTrigger, Op> {
     using ForwardingTriggerBase<SetTrigger, Op>::ForwardingTriggerBase;
     void valueRemoved(UInt index, HashType oldHash) {
-        this->op->notifyMemberRemoved(index, oldHash);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberRemoved(index, oldHash);
+        }
     }
     void valueAdded(const AnyExprRef& expr) {
-        this->op->notifyMemberAdded(expr);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberAdded(expr);
+        }
     }
 
     void memberValueChanged(UInt index, HashType oldHash) {
-        this->op->notifyMemberChanged(index, oldHash);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberChanged(index, oldHash);
+        }
     }
 
     void memberValuesChanged(const std::vector<UInt>& indices,
                              const std::vector<HashType>& oldHashes) {
-        this->op->notifyMembersChanged(indices, oldHashes);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMembersChanged(indices, oldHashes);
+        }
     }
 };
 

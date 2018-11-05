@@ -32,7 +32,7 @@ void ExprInterface<View>::addTriggerImpl(
     const std::shared_ptr<typename ExprInterface<View>::TriggerType>& trigger,
     bool includeMembers, Int memberIndex) {
     auto view = this->view();
-    handleTriggerAdd(trigger,includeMembers,memberIndex,*view);
+    handleTriggerAdd(trigger, includeMembers, memberIndex, *view);
 }
 
 bool smallerValue(const AnyExprRef& u, const AnyExprRef& v) {

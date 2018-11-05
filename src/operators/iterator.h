@@ -75,6 +75,7 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
     }
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
+    inline bool allowForwardingOfTrigger() { return true; }
 };
 
 template <typename T>

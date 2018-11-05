@@ -3,27 +3,26 @@
 #define SRC_OPERATORS_OPCATCHUNDEF_H_
 
 #include "base/base.h"
+#include "triggers/allTriggers.h"
 
 template <typename ExprViewType>
-struct OpCatchUndef : public ExprInterface<ExprViewType> {
-    struct ExprTriggerBase {
-        OpCatchUndef<ExprViewType>* op;
-        ExprTriggerBase(OpCatchUndef<ExprViewType>* op) : op(op) {}
-        virtual ~ExprTriggerBase() {}
-    };
-
+struct OpCatchUndef : public ExprInterface<ExprViewType>,
+                      public TriggerContainer<ExprViewType> {
     typedef typename AssociatedTriggerType<ExprViewType>::type ExprTriggerType;
-    std::vector<std::shared_ptr<TriggerBase>> triggers;
+    struct ExprTrigger;
     ExprRef<ExprViewType> expr;
     ExprRef<ExprViewType> replacement;
     bool exprDefined = false;
-    std::shared_ptr<ExprTriggerBase> exprTrigger;
+    bool recentlyTriggeredChange = false;
+    std::shared_ptr<ExprTrigger> exprTrigger;
 
     OpCatchUndef(ExprRef<ExprViewType> expr, ExprRef<ExprViewType> replacement)
         : expr(std::move(expr)), replacement(std::move(replacement)) {}
     OpCatchUndef(const OpCatchUndef<ExprViewType>&) = delete;
     OpCatchUndef(OpCatchUndef<ExprViewType>&& other);
     ~OpCatchUndef() { this->stopTriggeringOnChildren(); }
+    bool allowForwardingOfTrigger();
+    void setAppearsDefined(bool set);
     void addTriggerImpl(const std::shared_ptr<ExprTriggerType>& trigger,
                         bool includeMembers, Int memberIndex) final;
     OptionalRef<ExprViewType> view() final;

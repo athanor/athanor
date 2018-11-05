@@ -10,10 +10,7 @@ template <typename ExprViewType>
 void OpCatchUndef<ExprViewType>::addTriggerImpl(
     const shared_ptr<ExprTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
-    triggers.emplace_back(getTriggerBase(trigger));
-    trigger->flags.template get<TriggerBase::ALLOW_DEFINEDNESS_TRIGGERS>() =
-        false;
-    getMember()->addTrigger(trigger, includeMembers, memberIndex);
+    handleTriggerAdd(trigger, includeMembers, memberIndex, *this);
 }
 
 template <typename ExprViewType>
@@ -36,6 +33,24 @@ OptionalRef<const ExprViewType> OpCatchUndef<ExprViewType>::view() const {
 }
 
 template <typename ExprViewType>
+void OpCatchUndef<ExprViewType>::setAppearsDefined(bool set) {
+    // assign exprDefined but remember old value
+    swap(set, exprDefined);
+    if (set != exprDefined) {
+        recentlyTriggeredChange = true;
+        visitTriggers([&](auto& t) { t->valueChanged(); }, this->triggers);
+    }
+}
+template <typename ExprViewType>
+bool OpCatchUndef<ExprViewType>::allowForwardingOfTrigger() {
+    if (recentlyTriggeredChange) {
+        recentlyTriggeredChange = false;
+        return false;
+    }
+    return exprDefined;
+}
+
+template <typename ExprViewType>
 void OpCatchUndef<ExprViewType>::reevaluate() {
     exprDefined = expr->getViewIfDefined().hasValue();
 }
@@ -44,76 +59,53 @@ template <typename ExprViewType>
 void OpCatchUndef<ExprViewType>::evaluateImpl() {
     replacement->evaluate();
     expr->evaluate();
+    // if not bool view invoke set appears defined true
+    // careful to invoke setAppearsDefined on the base class
+    // ExprInterface::setAppearsDefined, not OpCatchUndef::setAppearsDefined
+    overloaded([&](ExprInterface<BoolView>&) {},
+               [&](auto& expr) { expr.setAppearsDefined(true); })(
+        static_cast<ExprInterface<ExprViewType>&>(*this));
     reevaluate();
 }
 
 template <typename ExprViewType>
 OpCatchUndef<ExprViewType>::OpCatchUndef(OpCatchUndef<ExprViewType>&& other)
     : ExprInterface<ExprViewType>(move(other)),
-      triggers(move(other.triggers)),
+      TriggerContainer<ExprViewType>(move(other)),
       expr(move(other.expr)),
       replacement(move(other.replacement)),
       exprDefined(move(other.exprDefined)),
       exprTrigger(move(other.exprTrigger)) {
     setTriggerParent(this, exprTrigger);
 }
-namespace {
 
-template <typename ExprViewType, typename TriggerType>
-struct ExprTrigger
-    : public ChangeTriggerAdapter<TriggerType,
-                                  ExprTrigger<ExprViewType, TriggerType>>,
-      public OpCatchUndef<ExprViewType>::ExprTriggerBase {
-    using OpCatchUndef<ExprViewType>::ExprTriggerBase::op;
-    ExprTrigger(OpCatchUndef<ExprViewType>* op)
-        : ChangeTriggerAdapter<TriggerType,
-                               ExprTrigger<ExprViewType, TriggerType>>(
-              op->expr),
-          OpCatchUndef<ExprViewType>::ExprTriggerBase(op) {
-        this->flags
-            .template get<TriggerBase::ALLOW_ONLY_DEFINEDNESS_TRIGGERS>() =
-            true;
-    }
-    ExprRef<ExprViewType>& getTriggeringOperand() { return op->expr; }
-    void adapterValueChanged() {}
-    void adapterHasBecomeDefined() {
-        op->exprDefined = true;
-        visitTriggers(
-            [&](auto& t) {
-                t->valueChanged();
-                t->reattachTrigger();
-            },
-            op->triggers);
-    }
+template <typename ExprViewType>
+struct OpCatchUndef<ExprViewType>::ExprTrigger
+    : public ForwardingTrigger<
+          typename AssociatedTriggerType<ExprViewType>::type,
+          OpCatchUndef<ExprViewType>,
+          typename OpCatchUndef<ExprViewType>::ExprTrigger> {
+    using ForwardingTrigger<
+        typename AssociatedTriggerType<ExprViewType>::type,
+        OpCatchUndef<ExprViewType>,
+        typename OpCatchUndef<ExprViewType>::ExprTrigger>::ForwardingTrigger;
+    ExprRef<ExprViewType>& getTriggeringOperand() { return this->op->expr; }
 
-    void adapterHasBecomeUndefined() {
-        op->exprDefined = false;
-        visitTriggers(
-            [&](auto& t) {
-                t->valueChanged();
-                t->reattachTrigger();
-            },
-            op->triggers);
-    }
     void reattachTrigger() final {
-        deleteTrigger(
-            static_pointer_cast<ExprTrigger<ExprViewType, TriggerType>>(
-                op->exprTrigger));
-        auto trigger = make_shared<ExprTrigger<ExprViewType, TriggerType>>(op);
-        op->expr->addTrigger(trigger);
-        op->exprTrigger = trigger;
+        deleteTrigger(this->op->exprTrigger);
+        auto trigger =
+            make_shared<OpCatchUndef<ExprViewType>::ExprTrigger>(this->op);
+        this->op->expr->addTrigger(trigger);
+        this->op->exprTrigger = trigger;
     }
 };
-}  // namespace
 
 template <typename ExprViewType>
 void OpCatchUndef<ExprViewType>::startTriggeringImpl() {
     if (!exprTrigger) {
-        typedef typename AssociatedTriggerType<ExprViewType>::type TriggerType;
-        auto trigger =
-            make_shared<ExprTrigger<ExprViewType, TriggerType>>(this);
-        exprTrigger = trigger;
-        expr->addTrigger(trigger);
+        exprTrigger =
+            make_shared<typename OpCatchUndef<ExprViewType>::ExprTrigger>(this);
+        expr->addTrigger(exprTrigger);
         expr->startTriggering();
     }
 }
@@ -121,9 +113,7 @@ void OpCatchUndef<ExprViewType>::startTriggeringImpl() {
 template <typename ExprViewType>
 void OpCatchUndef<ExprViewType>::stopTriggeringOnChildren() {
     if (exprTrigger) {
-        deleteTrigger(
-            static_pointer_cast<ExprTrigger<ExprViewType, ExprTriggerType>>(
-                exprTrigger));
+        deleteTrigger(exprTrigger);
         exprTrigger = nullptr;
     }
 }

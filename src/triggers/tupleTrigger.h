@@ -87,21 +87,27 @@ struct ForwardingTrigger<TupleTrigger, Op, Child>
     : public ForwardingTriggerBase<TupleTrigger, Op> {
     using ForwardingTriggerBase<TupleTrigger, Op>::ForwardingTriggerBase;
     void memberValueChanged(UInt index) {
-        this->op->notifyMemberChanged(index);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberChanged(index);
+        }
     }
     void memberHasBecomeUndefined(UInt index) {
         auto view = static_cast<Child*>(this)
                         ->getTriggeringOperand()
                         ->getViewIfDefined();
         this->op->setAppearsDefined(view.hasValue());
-        this->op->notifyMemberUndefined(index);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberUndefined(index);
+        }
     }
     void memberHasBecomeDefined(UInt index) {
         auto view = static_cast<Child*>(this)
                         ->getTriggeringOperand()
                         ->getViewIfDefined();
         this->op->setAppearsDefined(view.hasValue());
-        this->op->notifyMemberDefined(index);
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberDefined(index);
+        }
     }
 };
 

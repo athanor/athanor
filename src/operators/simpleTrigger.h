@@ -91,7 +91,8 @@ struct SimpleUnaryTrigger
             visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
                           op->triggers);
         } else if (!wasDefined && op->isDefined()) {
-            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                          op->triggers);
         }
     }
 

@@ -13,6 +13,7 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
     ExprRef<View> ref;
     std::shared_ptr<RefTrigger> refTrigger;
     Iterator(u_int64_t id, ExprRef<View> ref) : id(id), ref(std::move(ref)) {}
+    void reattachRefTrigger();
     template <typename Func>
     inline void changeValue(bool triggering, const ExprRef<View>& oldVal,
                             const ExprRef<View>& newVal, Func&& callback) {
@@ -21,6 +22,8 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
             callback();
             this->setAppearsDefined(ref->appearsDefined());
         } else {
+            ref = newVal;
+            reattachRefTrigger();
             ref = oldVal;
             callback();
             bool oldValUndefined = !oldVal->appearsDefined();

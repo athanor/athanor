@@ -60,14 +60,29 @@ Iterator<View>::Iterator(Iterator<View>&& other)
     setTriggerParent(this, refTrigger);
 }
 
+
+template <typename View>
+void Iterator<View>::reattachRefTrigger() {
+    if (refTrigger) {
+        deleteTrigger(refTrigger);
+    }
+    refTrigger = make_shared<RefTrigger>(this);
+    debug_code(assert(ref));
+    ref->addTrigger(refTrigger);
+}
+
+
 template <typename View>
 void Iterator<View>::startTriggeringImpl() {
     debug_code(assert(ref));
     if (!refTrigger) {
         refTrigger = make_shared<RefTrigger>(this);
         ref->addTrigger(refTrigger);
-        ref->startTriggering();
     }
+    // unlike other operators, always forward startTriggering.
+    // this is because in Iterator::changeValue() we may have forced iterator to
+    // trigger on ref before Iterator::startTriggering was called.
+    ref->startTriggering();
 }
 
 template <typename View>

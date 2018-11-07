@@ -23,8 +23,7 @@ struct DefinedContainer {
         bool wasDefined = isDefined();
         setDefined(true);
         if (!wasDefined) {
-            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers,
-                          true);
+            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers);
         }
     }
     void reevaluateDefinedAndTrigger() {

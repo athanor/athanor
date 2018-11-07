@@ -134,8 +134,7 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
         this->valueChanged();
         op->containerDefined = true;
         op->setAppearsDefined(op->numberUndefined == 0);
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
-                      true);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
     }
 
     void memberHasBecomeUndefined(UInt) final {}

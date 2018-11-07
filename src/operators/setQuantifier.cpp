@@ -79,8 +79,7 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
         this->valueChanged();
         op->containerDefined = true;
         op->setAppearsDefined(op->numberUndefined == 0);
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers,
-                      true);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
     }
 };
 

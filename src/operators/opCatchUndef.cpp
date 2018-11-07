@@ -184,6 +184,7 @@ void OpCatchUndef<ExprViewType>::debugSanityCheckImpl() const {
     sanityCheck(exprDefined == expr->appearsDefined(),
                 toString("exprDefined should be ", expr->appearsDefined(),
                          " but it is actually ", exprDefined));
+    sanityEqualsCheck(true, this->appearsDefined());
 }
 
 template <typename Op>

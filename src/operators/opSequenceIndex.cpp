@@ -106,7 +106,7 @@ OpSequenceIndex<SequenceMemberViewType>::OpSequenceIndex(
       sequenceMemberTrigger(move(other.sequenceMemberTrigger)),
       indexTrigger(move(other.indexTrigger)) {
     setTriggerParent(this, sequenceOperandTrigger, sequenceMemberTrigger,
-                     indexTrigger);
+                     indexTrigger, memberTrigger);
 }
 
 template <typename SequenceMemberViewType>

@@ -6,18 +6,18 @@
 #include "types/function.h"
 #include "types/int.h"
 template <typename FunctionMemberViewType>
-struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
-    struct FunctionOperandTrigger;
+struct OpFunctionImage : public ExprInterface<FunctionMemberViewType>,
+                         public TriggerContainer<FunctionMemberViewType> {
     typedef typename AssociatedTriggerType<FunctionMemberViewType>::type
         FunctionMemberTriggerType;
+    struct FunctionOperandTrigger;
     struct PreImageTriggerBase {
         OpFunctionImage<FunctionMemberViewType>* op;
         PreImageTriggerBase(OpFunctionImage<FunctionMemberViewType>* op)
             : op(op) {}
         virtual ~PreImageTriggerBase() {}
     };
-
-    std::vector<std::shared_ptr<TriggerBase>> triggers;
+    struct MemberTrigger;
     ExprRef<FunctionView> functionOperand;
     AnyExprRef preImageOperand;
     Int cachedIndex;
@@ -25,6 +25,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     std::shared_ptr<FunctionOperandTrigger> functionOperandTrigger;
     std::shared_ptr<FunctionOperandTrigger> functionMemberTrigger;
     std::shared_ptr<PreImageTriggerBase> preImageTrigger;
+    std::shared_ptr<MemberTrigger> memberTrigger;
 
     OpFunctionImage(ExprRef<FunctionView> functionOperand,
                     AnyExprRef preImageOperand)
@@ -64,6 +65,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType> {
     OptionalRef<ExprRef<FunctionMemberViewType>> getMember();
     OptionalRef<const ExprRef<FunctionMemberViewType>> getMember() const;
     void reevaluate(bool recalculateCachedIndex = true);
+    bool allowForwardingOfTrigger();
     lib::optional<UInt> calculateIndex() const;
     std::pair<bool, ExprRef<FunctionMemberViewType>> optimise(
         PathExtension path) final;

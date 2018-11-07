@@ -15,10 +15,7 @@ template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::addTriggerImpl(
     const shared_ptr<FunctionMemberTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
-    triggers.emplace_back(getTriggerBase(trigger));
-    if (locallyDefined) {
-        getMember().get()->addTrigger(trigger, includeMembers, memberIndex);
-    }
+    handleTriggerAdd(trigger, includeMembers, memberIndex, *this);
 }
 
 template <typename FunctionMemberViewType>
@@ -96,6 +93,11 @@ lib::optional<UInt> OpFunctionImage<FunctionMemberViewType>::calculateIndex()
 }
 
 template <typename FunctionMemberViewType>
+bool OpFunctionImage<FunctionMemberViewType>::allowForwardingOfTrigger() {
+    return true;
+}
+
+template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::reevaluate(
     bool recalculateCachedIndex) {
     if (!invoke(preImageOperand, appearsDefined())) {
@@ -126,7 +128,7 @@ template <typename FunctionMemberViewType>
 OpFunctionImage<FunctionMemberViewType>::OpFunctionImage(
     OpFunctionImage<FunctionMemberViewType>&& other)
     : ExprInterface<FunctionMemberViewType>(move(other)),
-      triggers(move(other.triggers)),
+      TriggerContainer<FunctionMemberViewType>(move(other)),
       functionOperand(move(other.functionOperand)),
       preImageOperand(move(other.preImageOperand)),
       cachedIndex(move(other.cachedIndex)),
@@ -135,7 +137,7 @@ OpFunctionImage<FunctionMemberViewType>::OpFunctionImage(
       functionMemberTrigger(move(other.functionMemberTrigger)),
       preImageTrigger(move(other.preImageTrigger)) {
     setTriggerParent(this, functionOperandTrigger, functionMemberTrigger,
-                     preImageTrigger);
+                     preImageTrigger, memberTrigger);
 }
 
 template <typename FunctionMemberViewType>
@@ -144,20 +146,24 @@ bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
     bool wasDefined = this->appearsDefined();
     bool wasLocallyDefined = locallyDefined;
     reevaluate(recalculateIndex);
-    if (!wasLocallyDefined && locallyDefined) {
+    if (!locallyDefined) {
+        if (functionMemberTrigger) {
+            deleteTrigger(functionMemberTrigger);
+            functionMemberTrigger = nullptr;
+        }
+        if (!memberTrigger) {
+            deleteTrigger(memberTrigger);
+            memberTrigger = nullptr;
+        }
+    } else if (!wasLocallyDefined && locallyDefined) {
         reattachFunctionMemberTrigger();
     }
     if (wasDefined && !this->appearsDefined()) {
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers,
-                      true);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                      this->triggers);
         return true;
     } else if (!wasDefined && this->appearsDefined()) {
-        visitTriggers(
-            [&](auto t) {
-                t->hasBecomeDefined();
-                t->reattachTrigger();
-            },
-            triggers);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, this->triggers);
         return true;
     } else {
         return !this->appearsDefined();
@@ -192,54 +198,29 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
             swap(index1, index2);
         }
         if (!op->eventForwardedAsDefinednessChange(false)) {
-            visitTriggers(
-                [&](auto t) {
-                    t->valueChanged();
-                    t->reattachTrigger();
-                },
-                op->triggers);
+            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
             op->reattachFunctionMemberTrigger();
         }
     }
 
     void valueChanged() final {
         if (!op->eventForwardedAsDefinednessChange(true)) {
-            visitTriggers(
-                [&](auto& t) {
-                    t->valueChanged();
-                    t->reattachTrigger();
-                },
-                op->triggers);
+            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
         }
     }
 
     inline void hasBecomeUndefined() {
-        op->locallyDefined = false;
-        if (!op->appearsDefined()) {
-            return;
-        }
-        op->setAppearsDefined(false);
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers,
-                      true);
+        op->eventForwardedAsDefinednessChange(false);
     }
 
-    void hasBecomeDefined() {
-        op->reevaluate(true);
-        if (!op->appearsDefined()) {
-            return;
-        }
-        op->reattachFunctionMemberTrigger();
-        visitTriggers(
-            [&](auto t) {
-                t->hasBecomeDefined();
-                t->reattachTrigger();
-            },
-            op->triggers);
-    }
+    void hasBecomeDefined() { op->eventForwardedAsDefinednessChange(true); }
     void reattachTrigger() final {
         deleteTrigger(op->functionOperandTrigger);
         if (op->functionMemberTrigger) {
             deleteTrigger(op->functionMemberTrigger);
+        }
+        if (op->memberTrigger) {
+            deleteTrigger(op->memberTrigger);
         }
         auto trigger = make_shared<FunctionOperandTrigger>(op);
         op->functionOperand->addTrigger(trigger, false);
@@ -269,12 +250,7 @@ struct PreImageTrigger
     }
     void adapterValueChanged() {
         if (!op->eventForwardedAsDefinednessChange(true)) {
-            visitTriggers(
-                [&](auto t) {
-                    t->valueChanged();
-                    t->reattachTrigger();
-                },
-                op->triggers);
+            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
             op->reattachFunctionMemberTrigger();
         }
     }
@@ -290,26 +266,35 @@ struct PreImageTrigger
         op->preImageTrigger = trigger;
     }
     void adapterHasBecomeDefined() {
-        op->reevaluate();
-        if (op->appearsDefined()) {
-            return;
-        }
-        visitTriggers(
-            [&](auto t) {
-                t->hasBecomeDefined();
-                t->reattachTrigger();
-            },
-            op->triggers);
+        op->eventForwardedAsDefinednessChange(true);
     }
 
     void adapterHasBecomeUndefined() {
-        if (!op->appearsDefined()) {
-            return;
-        }
-        op->locallyDefined = false;
-        op->setAppearsDefined(false);
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers,
-                      true);
+        op->eventForwardedAsDefinednessChange(false);
+    }
+};
+
+template <typename FunctionMemberViewType>
+struct OpFunctionImage<FunctionMemberViewType>::MemberTrigger
+    : public ForwardingTrigger<
+          typename AssociatedTriggerType<FunctionMemberViewType>::type,
+          OpFunctionImage<FunctionMemberViewType>,
+          typename OpFunctionImage<FunctionMemberViewType>::MemberTrigger> {
+    using ForwardingTrigger<
+        typename AssociatedTriggerType<FunctionMemberViewType>::type,
+        OpFunctionImage<FunctionMemberViewType>,
+        typename OpFunctionImage<FunctionMemberViewType>::MemberTrigger>::
+        ForwardingTrigger;
+    ExprRef<FunctionMemberViewType>& getTriggeringOperand() {
+        return this->op->getMember().get();
+    }
+    void reattachTrigger() final {
+        deleteTrigger(this->op->memberTrigger);
+        auto trigger = make_shared<
+            typename OpFunctionImage<FunctionMemberViewType>::MemberTrigger>(
+            this->op);
+        this->op->getMember().get()->addTrigger(trigger);
+        this->op->memberTrigger = trigger;
     }
 };
 
@@ -343,8 +328,15 @@ void OpFunctionImage<FunctionMemberViewType>::reattachFunctionMemberTrigger() {
     if (functionMemberTrigger) {
         deleteTrigger(functionMemberTrigger);
     }
+    if (memberTrigger) {
+        deleteTrigger(memberTrigger);
+    }
     functionMemberTrigger = make_shared<FunctionOperandTrigger>(this);
+    memberTrigger =
+        make_shared<OpFunctionImage<FunctionMemberViewType>::MemberTrigger>(
+            this);
     functionOperand->addTrigger(functionMemberTrigger, true, cachedIndex);
+    getMember().get()->addTrigger(memberTrigger);
 }
 
 template <typename FunctionMemberViewType>
@@ -364,9 +356,13 @@ void OpFunctionImage<FunctionMemberViewType>::stopTriggeringOnChildren() {
         if (functionMemberTrigger) {
             deleteTrigger(functionMemberTrigger);
         }
+        if (memberTrigger) {
+            deleteTrigger(memberTrigger);
+        }
         preImageTrigger = nullptr;
         functionOperandTrigger = nullptr;
         functionMemberTrigger = nullptr;
+        memberTrigger = nullptr;
     }
 }
 

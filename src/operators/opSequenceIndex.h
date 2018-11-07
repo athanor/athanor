@@ -1,23 +1,25 @@
 
 #ifndef SRC_OPERATORS_OPSEQUENCEINDEX_H_
 #define SRC_OPERATORS_OPSEQUENCEINDEX_H_
-
 #include "base/base.h"
+#include "triggers/allTriggers.h"
 #include "types/int.h"
 #include "types/sequence.h"
 template <typename SequenceMemberViewType>
-struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
+struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType>,
+                         public TriggerContainer<SequenceMemberViewType> {
     struct IndexTrigger;
     struct SequenceOperandTrigger;
+    struct MemberTrigger;
     typedef typename AssociatedTriggerType<SequenceMemberViewType>::type
         SequenceMemberTriggerType;
-    std::vector<std::shared_ptr<TriggerBase>> triggers;
     ExprRef<SequenceView> sequenceOperand;
     ExprRef<IntView> indexOperand;
     Int cachedIndex;
     bool locallyDefined = false;
     std::shared_ptr<SequenceOperandTrigger> sequenceOperandTrigger;
     std::shared_ptr<SequenceOperandTrigger> sequenceMemberTrigger;
+    std::shared_ptr<MemberTrigger> memberTrigger;
     std::shared_ptr<IndexTrigger> indexTrigger;
 
     OpSequenceIndex(ExprRef<SequenceView> sequenceOperand,
@@ -42,6 +44,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType> {
     OptionalRef<SequenceMemberViewType> view() final;
     OptionalRef<const SequenceMemberViewType> view() const final;
 
+    bool allowForwardingOfTrigger();
     void evaluateImpl() final;
     void startTriggeringImpl() final;
     void stopTriggering() final;

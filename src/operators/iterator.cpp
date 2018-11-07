@@ -60,7 +60,6 @@ Iterator<View>::Iterator(Iterator<View>&& other)
     setTriggerParent(this, refTrigger);
 }
 
-
 template <typename View>
 void Iterator<View>::reattachRefTrigger() {
     if (refTrigger) {
@@ -70,7 +69,6 @@ void Iterator<View>::reattachRefTrigger() {
     debug_code(assert(ref));
     ref->addTrigger(refTrigger);
 }
-
 
 template <typename View>
 void Iterator<View>::startTriggeringImpl() {

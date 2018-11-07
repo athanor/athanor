@@ -33,11 +33,12 @@ class State {
     void runNeighbourhood(size_t nhIndex, ParentStrategy&& strategy) {
         testForTermination();
         Neighbourhood& neighbourhood = model.neighbourhoods[nhIndex];
-        debug_code(
+        debug_code(if (debugLogAllowed) {
             debug_log("Iteration count: "
                       << stats.numberIterations
                       << "\nBefore neighbourhood application, state is:");
-            stats.printCurrentState(model));
+            stats.printCurrentState(model);
+        });
         debug_neighbourhood_action(
             "Applying neighbourhood: " << neighbourhood.name << ":");
         auto& var = model.variables[model.neighbourhoodVarMapping[nhIndex]];

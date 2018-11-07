@@ -6,16 +6,18 @@
 #include "types/int.h"
 #include "types/tuple.h"
 template <typename TupleMemberViewType>
-struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
+struct OpTupleIndex : public ExprInterface<TupleMemberViewType>,
+                      public TriggerContainer<TupleMemberViewType> {
     struct TupleOperandTrigger;
     typedef typename AssociatedTriggerType<TupleMemberViewType>::type
         TupleMemberTriggerType;
-    std::vector<std::shared_ptr<TriggerBase>> triggers;
+    struct MemberTrigger;
+
     ExprRef<TupleView> tupleOperand;
     UInt indexOperand;
     std::shared_ptr<TupleOperandTrigger> tupleOperandTrigger;
     std::shared_ptr<TupleOperandTrigger> tupleMemberTrigger;
-
+    std::shared_ptr<MemberTrigger> memberTrigger;
     OpTupleIndex(ExprRef<TupleView> tupleOperand, UInt indexOperand)
         : tupleOperand(std::move(tupleOperand)),
           indexOperand(std::move(indexOperand)) {
@@ -35,7 +37,7 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType> {
                         bool includeMembers, Int memberIndex) final;
     OptionalRef<TupleMemberViewType> view() final;
     OptionalRef<const TupleMemberViewType> view() const final;
-
+    bool allowForwardingOfTrigger();
     void evaluateImpl() final;
     void startTriggeringImpl() final;
     void stopTriggering() final;

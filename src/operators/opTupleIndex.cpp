@@ -10,13 +10,7 @@ template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::addTriggerImpl(
     const shared_ptr<TupleMemberTriggerType>& trigger, bool includeMembers,
     Int memberIndex) {
-    trigger->flags.template get<TriggerBase::ALLOW_DEFINEDNESS_TRIGGERS>() =
-        false;
-    triggers.emplace_back(getTriggerBase(trigger));
-    auto member = getMember();
-    if (member) {
-        member.get()->addTrigger(trigger, includeMembers, memberIndex);
-    }
+    handleTriggerAdd(trigger, includeMembers, memberIndex, *this);
 }
 
 template <typename TupleMemberViewType>
@@ -67,6 +61,10 @@ void OpTupleIndex<TupleMemberViewType>::reevaluate() {
     auto member = getMember();
     setAppearsDefined(member && (*member)->appearsDefined());
 }
+template <typename TupleMemberViewType>
+bool OpTupleIndex<TupleMemberViewType>::allowForwardingOfTrigger() {
+    return true;
+}
 
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::evaluateImpl() {
@@ -78,12 +76,13 @@ template <typename TupleMemberViewType>
 OpTupleIndex<TupleMemberViewType>::OpTupleIndex(
     OpTupleIndex<TupleMemberViewType>&& other)
     : ExprInterface<TupleMemberViewType>(move(other)),
-      triggers(move(other.triggers)),
+      TriggerContainer<TupleMemberViewType>(move(other)),
       tupleOperand(move(other.tupleOperand)),
       indexOperand(move(other.indexOperand)),
       tupleOperandTrigger(move(other.tupleOperandTrigger)),
       tupleMemberTrigger(move(other.tupleMemberTrigger)) {
-    setTriggerParent(this, tupleOperandTrigger, tupleMemberTrigger);
+    setTriggerParent(this, tupleOperandTrigger, tupleMemberTrigger,
+                     memberTrigger);
 }
 
 template <typename TupleMemberViewType>
@@ -91,16 +90,11 @@ bool OpTupleIndex<TupleMemberViewType>::eventForwardedAsDefinednessChange() {
     bool wasDefined = this->appearsDefined();
     reevaluate();
     if (wasDefined && !this->appearsDefined()) {
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, triggers,
-                      true);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                      this->triggers);
         return true;
     } else if (!wasDefined && this->appearsDefined()) {
-        visitTriggers(
-            [&](auto t) {
-                t->hasBecomeDefined();
-                t->reattachTrigger();
-            },
-            triggers);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, this->triggers);
         return true;
     } else {
         return !this->appearsDefined();
@@ -138,43 +132,53 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
             visitTriggers(
                 [&](auto& t) {
                     t->valueChanged();
-                    t->reattachTrigger();
+
                 },
                 op->triggers);
         }
     }
 
     inline void hasBecomeUndefined() {
-        if (!op->appearsDefined()) {
-            return;
-        }
-        op->setAppearsDefined(false);
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers,
-                      true);
+        op->eventForwardedAsDefinednessChange();
     }
 
-    void hasBecomeDefined() {
-        op->reevaluate();
-        if (!op->appearsDefined()) {
-            return;
-        }
-        op->reattachTupleMemberTrigger();
-        visitTriggers(
-            [&](auto t) {
-                t->hasBecomeDefined();
-                t->reattachTrigger();
-            },
-            op->triggers);
-    }
+    void hasBecomeDefined() { op->eventForwardedAsDefinednessChange(); }
     void reattachTrigger() final {
         deleteTrigger(op->tupleOperandTrigger);
         if (op->tupleMemberTrigger) {
             deleteTrigger(op->tupleMemberTrigger);
         }
+        if (op->memberTrigger) {
+            deleteTrigger(op->memberTrigger);
+        }
         auto trigger = make_shared<TupleOperandTrigger>(op);
         op->tupleOperand->addTrigger(trigger, false);
         op->reattachTupleMemberTrigger();
         op->tupleOperandTrigger = trigger;
+    }
+};
+
+template <typename TupleMemberViewType>
+struct OpTupleIndex<TupleMemberViewType>::MemberTrigger
+    : public ForwardingTrigger<
+          typename AssociatedTriggerType<TupleMemberViewType>::type,
+          OpTupleIndex<TupleMemberViewType>,
+          typename OpTupleIndex<TupleMemberViewType>::MemberTrigger> {
+    using ForwardingTrigger<
+        typename AssociatedTriggerType<TupleMemberViewType>::type,
+        OpTupleIndex<TupleMemberViewType>,
+        typename OpTupleIndex<TupleMemberViewType>::MemberTrigger>::
+        ForwardingTrigger;
+    ExprRef<TupleMemberViewType>& getTriggeringOperand() {
+        return this->op->getMember().get();
+    }
+    void reattachTrigger() final {
+        deleteTrigger(this->op->memberTrigger);
+        auto trigger = make_shared<
+            typename OpTupleIndex<TupleMemberViewType>::MemberTrigger>(
+            this->op);
+        this->op->getMember().get()->addTrigger(trigger);
+        this->op->memberTrigger = trigger;
     }
 };
 
@@ -195,8 +199,14 @@ void OpTupleIndex<TupleMemberViewType>::reattachTupleMemberTrigger() {
     if (tupleMemberTrigger) {
         deleteTrigger(tupleMemberTrigger);
     }
+    if (memberTrigger) {
+        deleteTrigger(memberTrigger);
+    }
     tupleMemberTrigger = make_shared<TupleOperandTrigger>(this);
+    memberTrigger =
+        make_shared<OpTupleIndex<TupleMemberViewType>::MemberTrigger>(this);
     tupleOperand->addTrigger(tupleMemberTrigger, true, indexOperand);
+    getMember().get()->addTrigger(memberTrigger);
 }
 
 template <typename TupleMemberViewType>
@@ -204,8 +214,11 @@ void OpTupleIndex<TupleMemberViewType>::stopTriggeringOnChildren() {
     if (tupleOperandTrigger) {
         deleteTrigger(tupleOperandTrigger);
         deleteTrigger(tupleMemberTrigger);
+        deleteTrigger(memberTrigger);
+
         tupleOperandTrigger = nullptr;
         tupleMemberTrigger = nullptr;
+        memberTrigger = nullptr;
     }
 }
 

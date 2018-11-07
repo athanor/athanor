@@ -29,11 +29,9 @@ void OpMinMax<minMode>::reevaluateImpl(SequenceView&) {
 template <bool minMode>
 void triggerChange(OpMinMax<minMode>& op, bool wasDefined, Int oldValue) {
     if (!wasDefined && !op.isDefined()) {
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers,
-                      true);
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers);
     } else if (wasDefined && !op.isDefined()) {
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op.triggers,
-                      true);
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op.triggers);
     } else if (op.isDefined()) {
         swap(op.value, oldValue);
         op.changeValue([&]() {

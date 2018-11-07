@@ -91,12 +91,14 @@ void StatsContainer::printCurrentState(Model& model) {
         model.printVariables();
         std::cout << "solution end\n";
     }
-    debug_code(debug_log("CSP state:");
-               model.csp->dumpState(std::cout) << std::endl;
-               if (model.optimiseMode != OptimiseMode::NONE) {
-                   debug_log("Objective state:");
-                   model.objective->dumpState(std::cout) << std::endl;
-               });
+    debug_code(if (debugLogAllowed) {
+        debug_log("CSP state:");
+        model.csp->dumpState(std::cout) << std::endl;
+        if (model.optimiseMode != OptimiseMode::NONE) {
+            debug_log("Objective state:");
+            model.objective->dumpState(std::cout) << std::endl;
+        }
+    });
 }
 
 std::ostream& operator<<(std::ostream& os, StatsContainer& stats) {

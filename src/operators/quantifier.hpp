@@ -1,10 +1,11 @@
 #ifndef SRC_OPERATORS_QUANTIFIER_HPP_
 #define SRC_OPERATORS_QUANTIFIER_HPP_
 #include "operators/quantifier.h"
-
-#include <vector>
 #include "triggers/allTriggers.h"
 
+#include <vector>
+
+extern bool runSanityChecks;
 template <typename ContainerType>
 struct InitialUnroller;
 
@@ -99,7 +100,9 @@ void Quantifier<ContainerType>::unroll(UInt index,
                 newMember->startTriggering();
             });
             unrolledIterVals.insert(unrolledIterVals.begin() + index, iterRef);
-            //            newMember->debugSanityCheck();
+            if (runSanityChecks) {
+                newMember->debugSanityCheck();
+            }
             if (containerDefined) {
                 this->addMemberAndNotify(index, newMember);
             } else {

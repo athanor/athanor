@@ -203,6 +203,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
     void valueChanged() final {
         if (!op->eventForwardedAsDefinednessChange(true)) {
             visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+            op->reattachSequenceMemberTrigger();
         }
     }
 

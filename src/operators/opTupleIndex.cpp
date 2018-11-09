@@ -132,9 +132,9 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
             visitTriggers(
                 [&](auto& t) {
                     t->valueChanged();
-
                 },
                 op->triggers);
+            op->reattachTupleMemberTrigger();
         }
     }
 

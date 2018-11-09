@@ -206,6 +206,7 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
     void valueChanged() final {
         if (!op->eventForwardedAsDefinednessChange(true)) {
             visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+            op->reattachFunctionMemberTrigger();
         }
     }
 

@@ -85,6 +85,7 @@ struct SequenceView : public ExprInterface<SequenceView>,
         }
         if (memberUndefined) {
             numberUndefined++;
+            this->setAppearsDefined(false);
         }
         debug_code(assertValidState());
     }
@@ -104,6 +105,9 @@ struct SequenceView : public ExprInterface<SequenceView>,
         }
         if (!removedMember->appearsDefined()) {
             numberUndefined--;
+            if (numberUndefined == 0) {
+                this->setAppearsDefined(true);
+            }
         }
         debug_code(assertValidState());
         return removedMember;

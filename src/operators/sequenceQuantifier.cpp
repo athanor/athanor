@@ -165,6 +165,24 @@ struct ContainerSanityChecker<SequenceView> {
     static void debugSanityCheck(const Quantifier<SequenceView>& quant,
                                  const SequenceView& container) {
         sanityEqualsCheck(container.numberElements(), quant.numberElements());
+        sanityEqualsCheck(container.numberElements(),
+                          quant.unrolledIterVals.size());
+        for (size_t i = 0; i < quant.unrolledIterVals.size(); i++) {
+            auto* iterPtr = mpark::get_if<IterRef<TupleView>>(
+                &(quant.unrolledIterVals[i].asVariant()));
+            sanityCheck(iterPtr, "Expected tuple type here.");
+            auto view = (*iterPtr)->ref->view();
+            sanityCheck(view, "view() should not return undefined here.");
+            sanityEqualsCheck(2, view->members.size());
+            auto* intExprPtr =
+                mpark::get_if<ExprRef<IntView>>(&(view->members[0]));
+            sanityCheck(intExprPtr,
+                        "Expected first element of unrolled tuple to be int.");
+            auto intView = (*intExprPtr)->getViewIfDefined();
+            sanityCheck(intView,
+                        "First member of unrolled tuple should be defined.");
+            sanityEqualsCheck((Int)(i + 1), intView->value);
+        }
     }
 };
 

@@ -149,6 +149,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         if (!op->eventForwardedAsDefinednessChange(false) &&
             (Int)index <= op->cachedIndex) {
             visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+            op->reattachSequenceMemberTrigger();
         }
     }
 
@@ -159,6 +160,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         if (!op->eventForwardedAsDefinednessChange(false) &&
             (Int)index <= op->cachedIndex) {
             visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+            op->reattachSequenceMemberTrigger();
         }
     }
 

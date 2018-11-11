@@ -68,7 +68,7 @@ void setAddGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
                 params.parentCheckTryLimit *
                 getTryLimit(val.numberElements(), innerDomainSize);
             debug_neighbourhood_action("Looking for value to add");
-            bool success;
+            bool success = false;
             do {
                 assignRandomValueInDomain(*innerDomainPtr, *newMember,
                                           params.stats);
@@ -127,7 +127,7 @@ void setMoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
                 params.parentCheckTryLimit *
                 getTryLimit(toVal.numberElements(), innerDomainSize);
             debug_neighbourhood_action("Looking for value to move");
-            bool success;
+            bool success = false;
             do {
                 debug_code(prettyPrint(cout, static_cast<SetView&>(fromVal)));
                 debug_code(prettyPrint(cout, static_cast<SetView&>(toVal)));
@@ -195,7 +195,7 @@ void setRemoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
             size_t indexToRemove;
             int numberTries = 0;
             ValRef<InnerValueType> removedMember(nullptr);
-            bool success;
+            bool success = false;
             debug_neighbourhood_action("Looking for value to remove");
             do {
                 ++params.stats.minorNodeCount;
@@ -434,7 +434,7 @@ void setAssignRandomGen(const SetDomain& domain, int numberValsRequired,
             backup->container = val.container;
             auto newValue = constructValueFromDomain(domain);
             newValue->container = val.container;
-            bool success;
+            bool success = false;
             do {
                 assignRandomValueInDomain(domain, *newValue, params.stats);
                 success = val.tryAssignNewValue(*newValue, [&]() {

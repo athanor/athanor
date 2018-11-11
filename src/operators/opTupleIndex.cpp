@@ -129,11 +129,7 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
 
     void valueChanged() final {
         if (!op->eventForwardedAsDefinednessChange()) {
-            visitTriggers(
-                [&](auto& t) {
-                    t->valueChanged();
-                },
-                op->triggers);
+            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
             op->reattachTupleMemberTrigger();
         }
     }

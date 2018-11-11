@@ -22,6 +22,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     OpSum* op;
     OperandsSequenceTrigger(OpSum* op) : op(op) {}
     void valueAdded(UInt index, const AnyExprRef& exprIn) final {
+        debug_log("value added, index=" << index << " value=" << exprIn);
         if (!op->evaluationComplete) {
             return;
         }
@@ -101,7 +102,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
             for (size_t i = startIndex; i < endIndex; i++) {
                 handleSingleOperandChange(operandView, i);
             }
-            return true;
+            return op->isDefined();
         });
     }
 
@@ -149,6 +150,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     void memberHasBecomeDefined(UInt index) {
+
         auto operandView = op->operand->view();
         if (!operandView) {
             hasBecomeUndefined();

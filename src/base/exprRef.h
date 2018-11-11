@@ -239,7 +239,9 @@ inline bool appearsDefined(const AnyExprRef& expr) {
                         expr);
 }
 std::ostream& prettyPrint(std::ostream& os, const AnyExprRef& expr);
-
+inline std::ostream& operator<<(std::ostream& os, const AnyExprRef& expr) {
+    return prettyPrint(os, expr);
+}
 template <typename View>
 inline std::ostream& prettyPrint(std::ostream& os,
                                  const OptionalRef<View>& ref) {

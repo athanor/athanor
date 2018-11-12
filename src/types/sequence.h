@@ -475,6 +475,48 @@ struct SequenceValue : public SequenceView, public ValBase {
             ;
         }
     }
+
+   private:
+    template <typename InnerViewType>
+    void reversePositions(UInt startIndex, UInt endIndex, bool triggerChange) {
+        auto& members = getMembers<InnerViewType>();
+
+        while (startIndex < endIndex) {
+            swapPositions<InnerViewType>(startIndex, endIndex);
+            if (triggerChange) {
+                valBase(*assumeAsValue(members[startIndex])).id = startIndex;
+                valBase(*assumeAsValue(members[endIndex])).id = endIndex;
+                SequenceView::notifyPositionsSwapped(startIndex, endIndex);
+            }
+            ++startIndex;
+            --endIndex;
+        }
+    }
+
+   public:
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
+    inline bool trySubsequenceReverse(UInt startIndex, UInt endIndex,
+                                      Func&& func) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        // perform test reverse without triggering
+        reversePositions<InnerViewType>(startIndex, endIndex, false);
+        if (func()) {
+            // undo reverse
+            reversePositions<InnerViewType>(startIndex, endIndex, false);
+            // perform real reverse with triggering
+            reversePositions<InnerViewType>(startIndex, endIndex, true);
+            debug_code(assertValidVarBases());
+            debug_code(assertValidState());
+            return true;
+        } else {
+            reversePositions<InnerViewType>(startIndex, endIndex, false);
+            debug_code(assertValidState());
+            debug_code(assertValidVarBases());
+            return false;
+        }
+    }
+
     template <typename Func>
     bool tryAssignNewValue(SequenceValue& newvalue, Func&& func) {
         // fake putting in the value first untill func()verifies that it is

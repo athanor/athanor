@@ -244,6 +244,64 @@ void sequenceRemoveGen(const SequenceDomain& domain, int numberValsRequired,
 }
 
 template <typename InnerDomainPtrType>
+void sequenceReverseSubGenImpl(const SequenceDomain&, InnerDomainPtrType&,
+                               int numberValsRequired,
+                               std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+
+    neighbourhoods.emplace_back(
+        "sequenceReverseSub", numberValsRequired,
+        [](NeighbourhoodParams& params) {
+            auto& val = *(params.getVals<SequenceValue>().front());
+            if (val.numberElements() < 2) {
+                ++params.stats.minorNodeCount;
+                return;
+            }
+            int numberTries = 0;
+            const int tryLimit = params.parentCheckTryLimit;
+            debug_neighbourhood_action(
+                "Looking for indices of subsequence to reverse");
+
+            bool success;
+            UInt index1, index2;
+            do {
+                index1 = globalRandom<UInt>(0, val.numberElements() - 2);
+                index2 =
+                    globalRandom<UInt>(index1 + 1, val.numberElements() - 1);
+                params.stats.minorNodeCount +=
+                    (index2 - index1) / 2 + ((index2 - index1) % 2 != 0);
+                success = val.trySubsequenceReverse<InnerValueType>(
+                    index1, index2,
+                    [&]() { return params.parentCheck(params.vals); });
+            } while (!success && ++numberTries < tryLimit);
+            if (!success) {
+                debug_neighbourhood_action(
+                    "Couldn't find subsequence to reverse, number tries="
+                    << tryLimit);
+                return;
+            }
+            debug_neighbourhood_action(
+                "subsequence reversed: " << index1 << " and " << index2);
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                val.trySubsequenceReverse<InnerValueType>(
+                    index1, index2, []() { return true; });
+            }
+        });
+}
+
+void sequenceReverseSubGen(const SequenceDomain& domain, int numberValsRequired,
+                           std::vector<Neighbourhood>& neighbourhoods) {
+    mpark::visit(
+        [&](const auto& innerDomainPtr) {
+            sequenceReverseSubGenImpl(domain, innerDomainPtr,
+                                      numberValsRequired, neighbourhoods);
+        },
+        domain.inner);
+}
+
+template <typename InnerDomainPtrType>
 void sequencePositionsSwapGenImpl(const SequenceDomain&, InnerDomainPtrType&,
                                   int numberValsRequired,
                                   std::vector<Neighbourhood>& neighbourhoods) {
@@ -342,4 +400,5 @@ const NeighbourhoodVec<SequenceDomain>
         {1, sequenceLiftSingleGen},
         {1, sequenceAddGen},
         {1, sequenceRemoveGen},
-        {1, sequencePositionsSwapGen}};
+        {1, sequencePositionsSwapGen},
+        {1, sequenceReverseSubGen}};

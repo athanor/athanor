@@ -245,12 +245,6 @@ void functionImagesSwapGen(const FunctionDomain& domain, int numberValsRequired,
             }),
         domain.to);
 }
-const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
-inline int getTryLimit(UInt numberMembers, UInt domainSize) {
-    double successChance = (domainSize - numberMembers) / (double)domainSize;
-    return (int)(ceil(NUMBER_TRIES_CONSTANT_MULTIPLIER / successChance));
-}
-
 void functionUnifyImagesGenImpl(const FunctionDomain&,
                                 const shared_ptr<IntDomain>& innerDomainPtr,
                                 int numberValsRequired,
@@ -265,8 +259,9 @@ void functionUnifyImagesGenImpl(const FunctionDomain&,
                 return;
             }
             int numberTries = 0;
-            const int tryLimit = params.parentCheckTryLimit *
-                                 getTryLimit(val.rangeSize(), innerDomainSize);
+            const int tryLimit =
+                params.parentCheckTryLimit *
+                calcNumberInsertionAttempts(val.rangeSize(), innerDomainSize);
             debug_neighbourhood_action("Looking for indices to unitfy");
             bool success;
             UInt index1, index2;
@@ -349,8 +344,9 @@ void functionSplitImagesGenImpl(const FunctionDomain&,
                 return;
             }
             int numberTries = 0;
-            const int tryLimit = params.parentCheckTryLimit *
-                                 getTryLimit(val.rangeSize(), innerDomainSize);
+            const int tryLimit =
+                params.parentCheckTryLimit *
+                calcNumberInsertionAttempts(val.rangeSize(), innerDomainSize);
             debug_neighbourhood_action("Looking for indices to split");
             bool success;
             UInt index1, index2;

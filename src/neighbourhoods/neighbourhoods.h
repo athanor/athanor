@@ -118,4 +118,10 @@ inline void assignRandomValueInDomain(const AnyDomainRef& domain,
         domain);
 }
 
+inline int calcNumberInsertionAttempts(UInt numberMembers, UInt domainSize) {
+    static const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
+    double successChance = (domainSize - numberMembers) / (double)domainSize;
+    return (int)(ceil(NUMBER_TRIES_CONSTANT_MULTIPLIER / successChance));
+}
+
 #endif /* SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_ */

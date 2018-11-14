@@ -242,6 +242,169 @@ void sequenceRemoveGen(const SequenceDomain& domain, int numberValsRequired,
         },
         domain.inner);
 }
+template <typename InnerViewType>
+static void insureSize(ExprRefVec<InnerViewType>& newValues,
+                       size_t subseqSize) {
+    typedef typename AssociatedValueType<InnerViewType>::type InnerValueType;
+    if (subseqSize < newValues.size()) {
+        newValues.erase(newValues.begin() + subseqSize, newValues.end());
+    }
+    while (newValues.size() < subseqSize) {
+        newValues.emplace_back(make<InnerValueType>().asExpr());
+    }
+}
+
+template <typename InnerDomainType, typename InnerValueType,
+          typename InnerViewType>
+void assignNewValues(InnerDomainType& innerDomain, InnerValueType& val,
+                     vector<HashType>& oldHashes,
+                     ExprRefVec<InnerViewType>& newValues,
+                     StatsContainer& stats) {
+    if (val.injective) {
+        for (auto& hash : oldHashes) {
+            val.memberHashes.erase(hash);
+        }
+    }
+
+    vector<HashType> newHashes;
+    for (auto& expr : newValues) {
+        while (true) {
+                        assignRandomValueInDomain(innerDomain, *assumeAsValue(expr), stats);
+            if (!val.injective) {
+                break;
+            }
+            HashType hash = getValueHash(expr);
+            if (!val.memberHashes.count(hash)) {
+                val.memberHashes.insert(hash);
+                newHashes.emplace_back(hash);
+                break;
+            }
+        }
+    }
+    if (val.injective) {
+        for (auto& hash : newHashes) {
+            val.memberHashes.erase(hash);
+        }
+        for (auto& hash : oldHashes) {
+            val.memberHashes.insert(hash);
+        }
+    }
+}
+
+template <typename InnerViewType>
+void swapSub(ExprRefVec<InnerViewType>& members,
+             ExprRefVec<InnerViewType>& newValues, UInt startIndex,
+             UInt endIndex) {
+    UInt subseqSize = (endIndex - startIndex) + 1;
+    for (size_t i = 0; i < subseqSize; i++) {
+        swap(members[startIndex + i], newValues[i]);
+    }
+}
+
+template <typename InnerViewType>
+void deepSwapSub(ExprRefVec<InnerViewType>& members,
+                 ExprRefVec<InnerViewType>& newValues, UInt startIndex,
+                 UInt endIndex) {
+    typedef typename AssociatedValueType<InnerViewType>::type InnerValueType;
+    auto temp = make<InnerValueType>();
+
+    UInt subseqSize = (endIndex - startIndex) + 1;
+    for (size_t i = 0; i < subseqSize; i++) {
+        deepCopy(*assumeAsValue(members[startIndex + i]), *temp);
+        deepCopy(*assumeAsValue(newValues[i]),
+                 *assumeAsValue(members[startIndex + i]));
+        deepCopy(*temp, *assumeAsValue(newValues[i]));
+    }
+}
+
+template <typename InnerDomainPtrType>
+void sequenceRelaxSubGenImpl(const SequenceDomain&,
+                             InnerDomainPtrType& innerDomainPtr,
+                             int numberValsRequired,
+                             std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    neighbourhoods.emplace_back(
+        "sequenceRelaxSub", numberValsRequired,
+        [&innerDomainPtr](NeighbourhoodParams& params) {
+            auto& val = *(params.getVals<SequenceValue>().front());
+            if (val.numberElements() < 2) {
+                ++params.stats.minorNodeCount;
+                return;
+            }
+            int numberTries = 0;
+            const int tryLimit = params.parentCheckTryLimit;
+            debug_neighbourhood_action(
+                "Looking for indices of subsequence to relax");
+
+            bool success;
+            UInt startIndex, endIndex;
+            ExprRefVec<InnerViewType> newValues;
+            vector<HashType> oldHashes;
+            auto& members = val.getMembers<InnerViewType>();
+            do {
+                startIndex = globalRandom<UInt>(0, val.numberElements() - 2);
+                endIndex = globalRandom<UInt>(startIndex + 1,
+                                              val.numberElements() - 1);
+                oldHashes.clear();
+                HashType previousSubseqHash =
+                    val.notifyPossibleSubsequenceChange<InnerValueType>(
+                        startIndex, endIndex, oldHashes);
+                insureSize(newValues, (endIndex - startIndex) + 1);
+
+                assignNewValues(*innerDomainPtr, val, oldHashes, newValues,
+                                params.stats);
+
+                // temperarily swap values in, and if parent type accepts it,
+                // swap it back and do a propper deepCopy
+                swapSub(members, newValues, startIndex, endIndex);
+
+                success = val.trySubsequenceChange<InnerValueType>(
+                    startIndex, endIndex, oldHashes, previousSubseqHash, [&]() {
+                        swapSub(members, newValues, startIndex, endIndex);
+                        if (params.parentCheck(params.vals)) {
+                            deepSwapSub(members, newValues, startIndex,
+                                        endIndex);
+                            return true;
+                        }
+                        return false;
+                    });
+            } while (!success && ++numberTries < tryLimit);
+
+            if (!success) {
+                debug_neighbourhood_action(
+                    "Couldn't find new values for relaxed subsequence, number "
+                    "tries="
+                    << tryLimit);
+                return;
+            }
+            debug_neighbourhood_action(
+                "subsequence relaxd: " << startIndex << " and " << endIndex);
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                oldHashes.clear();
+                HashType previousSubseqHash =
+                    val.notifyPossibleSubsequenceChange<InnerValueType>(
+                        startIndex, endIndex, oldHashes);
+                deepSwapSub(members, newValues, startIndex, endIndex);
+                val.trySubsequenceChange<InnerValueType>(
+                    startIndex, endIndex, oldHashes, previousSubseqHash,
+                    []() { return true; });
+            }
+        });
+}
+
+void sequenceRelaxSubGen(const SequenceDomain& domain, int numberValsRequired,
+                         std::vector<Neighbourhood>& neighbourhoods) {
+    mpark::visit(overloaded([&](const auto&) {},
+                            [&](const shared_ptr<IntDomain>& innerDomainPtr) {
+                                sequenceRelaxSubGenImpl(domain, innerDomainPtr,
+                                                        numberValsRequired,
+                                                        neighbourhoods);
+                            }),
+                 domain.inner);
+}
 
 template <typename InnerDomainPtrType>
 void sequenceReverseSubGenImpl(const SequenceDomain&, InnerDomainPtrType&,
@@ -401,4 +564,7 @@ const NeighbourhoodVec<SequenceDomain>
         {1, sequenceAddGen},
         {1, sequenceRemoveGen},
         {1, sequencePositionsSwapGen},
-        {1, sequenceReverseSubGen}};
+        {1, sequenceReverseSubGen}
+        {1,sequenceRelaxSubGen}
+    };
+

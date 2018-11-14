@@ -39,8 +39,6 @@ void assignRandomValueInDomain<MSetDomain>(const MSetDomain& domain,
         domain.inner);
 }
 
-inline int getTryLimit(UInt, UInt) { return 1; }
-
 template <typename InnerDomainPtrType>
 void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
                            int numberValsRequired,
@@ -93,9 +91,8 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
                 changingMembersImpl.emplace_back(
                     val.member<InnerValueType>(indexToChange));
                 NeighbourhoodParams innerNhParams(
-                    changeAccepted, parentCheck,
-                    getTryLimit(val.numberElements(), innerDomainSize),
-                    changingMembers, params.stats, vioContainerAtThisLevel);
+                    changeAccepted, parentCheck, 1, changingMembers,
+                    params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMemberChange<InnerValueType>(indexToChange, oldHash,
@@ -173,9 +170,8 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain, const InnerDomainPtrType,
                         val.member<InnerValueType>(indexToChange));
                 }
                 NeighbourhoodParams innerNhParams(
-                    changeAccepted, parentCheck,
-                    getTryLimit(val.numberElements(), innerDomainSize),
-                    changingMembers, params.stats, vioContainerAtThisLevel);
+                    changeAccepted, parentCheck, 1, changingMembers,
+                    params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMembersChange<InnerValueType>(

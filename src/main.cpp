@@ -82,11 +82,13 @@ enum SelectionStrategyChoice {
     RANDOM,
     RANDOM_VIOLATION_BIASED,
     UCB,
+    UCBV,
     INTERACTIVE
 };
 
 SearchStrategyChoice searchStrategyChoice = HILL_CLIMBING_VIOLATION_EXPLORE;
 SelectionStrategyChoice selectionStrategyChoice = RANDOM_VIOLATION_BIASED;
+double ucbExplorationBias = 2;
 
 auto& searchStratGroup =
     argParser
@@ -128,6 +130,13 @@ auto& ucbFlag = selectionStratGroup.add<Flag>(
     "Upper confidence bound, a multiarmed bandet method for learning which "
     "neighbourhoods are best performing..",
     [](auto&&) { selectionStrategyChoice = UCB; });
+
+auto& ucbWithVioFlag = selectionStratGroup.add<Flag>(
+    "ucbv",
+    "Upper confidence bound with violation, a multiarmed bandet method for "
+    "learning which "
+    "neighbourhoods are best performing.  Bias towards violating variables..",
+    [](auto&&) { selectionStrategyChoice = UCBV; });
 
 auto& interactiveFlag = selectionStratGroup.add<Flag>(
     "i", "interactive, Prompt user for neighbourhood to select.",
@@ -195,8 +204,11 @@ void runSearch(State& state) {
             runSearchImpl(state, make_shared<RandomNeighbourhood>());
             return;
         }
-        case UCB: {
-            runSearchImpl(state, make_shared<UcbNeighbourhoodSelection>());
+        case UCB:
+        case UCBV: {
+            runSearchImpl(state, make_shared<UcbNeighbourhoodSelection>(
+                                     selectionStrategyChoice == UCBV,
+                                     ucbExplorationBias));
             return;
         }
 

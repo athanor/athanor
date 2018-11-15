@@ -10,11 +10,16 @@
 #include "search/solver.h"
 #include "search/statsContainer.h"
 #include "utils/random.h"
-#define d_log(x) // std::cout << x << std::endl;
+#define d_log(x)  // std::cout << x << std::endl;
 class UcbNeighbourhoodSelection {
-    double ucbExplorationBias = 2;
+    bool withVioUpdates;
+    double ucbExplorationBias;
 
    public:
+    UcbNeighbourhoodSelection(bool withVioUpdates, double ucbExplorationBias)
+        : withVioUpdates(withVioUpdates),
+          ucbExplorationBias(ucbExplorationBias) {}
+
     inline double ucbValue(double reward, double totalCost,
                            double neighbourhoodCost) {
         d_log("total cost " << totalCost << " nh cost " << neighbourhoodCost
@@ -94,6 +99,10 @@ class UcbNeighbourhoodSelection {
         size_t chosenNeighbourhood = bestNeighbourhoods[globalRandom<size_t>(
             0, bestNeighbourhoods.size() - 1)];
         d_log("chosen neighbourhood: " << chosenNeighbourhood);
+        if (withVioUpdates) {
+            updateViolations(state);
+        }
+
         state.runNeighbourhood(chosenNeighbourhood, [&](const auto& result) {
             return parentStrategy(result);
         });

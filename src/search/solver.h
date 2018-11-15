@@ -136,6 +136,14 @@ inline void evaluateAndStartTriggeringDefinedExpressions(State& state) {
     }
 }
 
+void updateViolations(State& state) {
+    state.model.vioContainer.reset();
+    if (state.model.csp->violation == 0) {
+        return;
+    }
+    state.model.csp->updateVarViolations(0, state.model.vioContainer);
+}
+
 template <typename SearchStrategy>
 void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
     triggerEventCount = 0;

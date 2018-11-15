@@ -40,11 +40,6 @@ void assignRandomValueInDomain<SetDomain>(const SetDomain& domain,
         domain.inner);
 }
 
-const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
-inline int getTryLimit(UInt numberMembers, UInt domainSize) {
-    double successChance = (domainSize - numberMembers) / (double)domainSize;
-    return (int)(ceil(NUMBER_TRIES_CONSTANT_MULTIPLIER / successChance));
-}
 template <typename InnerDomainPtrType>
 void setAddGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
                    int numberValsRequired,
@@ -64,9 +59,9 @@ void setAddGenImpl(const SetDomain& domain, InnerDomainPtrType& innerDomainPtr,
             }
             auto newMember = constructValueFromDomain(*innerDomainPtr);
             int numberTries = 0;
-            const int tryLimit =
-                params.parentCheckTryLimit *
-                getTryLimit(val.numberElements(), innerDomainSize);
+            const int tryLimit = params.parentCheckTryLimit *
+                                 calcNumberInsertionAttempts(
+                                     val.numberElements(), innerDomainSize);
             debug_neighbourhood_action("Looking for value to add");
             bool success = false;
             do {
@@ -123,14 +118,12 @@ void setMoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
                 return;
             }
             int numberTries = 0;
-            const int tryLimit =
-                params.parentCheckTryLimit *
-                getTryLimit(toVal.numberElements(), innerDomainSize);
+            const int tryLimit = params.parentCheckTryLimit *
+                                 calcNumberInsertionAttempts(
+                                     toVal.numberElements(), innerDomainSize);
             debug_neighbourhood_action("Looking for value to move");
             bool success = false;
             do {
-                debug_code(prettyPrint(cout, static_cast<SetView&>(fromVal)));
-                debug_code(prettyPrint(cout, static_cast<SetView&>(toVal)));
                 ++params.stats.minorNodeCount;
                 UInt indexToMove =
                     globalRandom<UInt>(0, fromVal.numberElements() - 1);
@@ -300,7 +293,8 @@ void setLiftSingleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                     val.member<InnerValueType>(indexToChange));
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck,
-                    getTryLimit(val.numberElements(), innerDomainSize),
+                    calcNumberInsertionAttempts(val.numberElements(),
+                                                innerDomainSize),
                     changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
@@ -399,7 +393,8 @@ void setLiftMultipleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                 }
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck,
-                    getTryLimit(val.numberElements(), innerDomainSize),
+                    calcNumberInsertionAttempts(val.numberElements(),
+                                                innerDomainSize),
                     changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {

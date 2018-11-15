@@ -523,6 +523,82 @@ void sequencePositionsSwapGen(const SequenceDomain& domain,
         domain.inner);
 }
 
+template <typename InnerDomainPtrType>
+void sequenceMoveGenImpl(const SequenceDomain& domain, InnerDomainPtrType&,
+                         int numberValsRequired,
+                         std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    UInt innerDomainSize = getDomainSize(domain.inner);
+
+    neighbourhoods.emplace_back(
+        "sequenceMove", numberValsRequired,
+        [innerDomainSize, &domain](NeighbourhoodParams& params) {
+            auto& vals = params.getVals<SequenceValue>();
+            debug_code(assert(vals.size() == 2));
+            auto& fromVal = *(vals[0]);
+            auto& toVal = *(vals[1]);
+            if (fromVal.numberElements() == domain.sizeAttr.minSize ||
+                toVal.numberElements() == domain.sizeAttr.maxSize) {
+                ++params.stats.minorNodeCount;
+                return;
+            }
+            int numberTries = 0;
+            const int tryLimit = params.parentCheckTryLimit *
+                                 calcNumberInsertionAttempts(
+                                     toVal.numberElements(), innerDomainSize);
+            debug_neighbourhood_action("Looking for value to move");
+            bool success = false;
+            UInt indexToMove, destIndex;
+            do {
+                ++params.stats.minorNodeCount;
+                indexToMove =
+                    globalRandom<UInt>(0, fromVal.numberElements() - 1);
+                destIndex = globalRandom<UInt>(0, toVal.numberElements());
+                auto memberToMove = assumeAsValue(
+                    fromVal.getMembers<InnerViewType>()[indexToMove]);
+                success = toVal.tryAddMember(destIndex, memberToMove, [&]() {
+                    return fromVal
+                        .tryRemoveMember<InnerValueType>(
+                            indexToMove,
+                            [&]() { return params.parentCheck(params.vals); })
+                        .first;
+                });
+            } while (!success && ++numberTries < tryLimit);
+            if (!success) {
+                debug_neighbourhood_action(
+                    "Couldn't find value, number tries=" << tryLimit);
+                return;
+            }
+            debug_neighbourhood_action(
+                "Moved value: "
+                << toVal.getMembers<InnerViewType>()[destIndex]);
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                auto member = toVal
+                                  .tryRemoveMember<InnerValueType>(
+                                      destIndex, []() { return true; })
+                                  .second;
+                fromVal.tryAddMember(indexToMove, member,
+                                     [&]() { return true; });
+            }
+        });
+}
+
+void sequenceMoveGen(const SequenceDomain& domain, int numberValsRequired,
+                     std::vector<Neighbourhood>& neighbourhoods) {
+    if (domain.sizeAttr.sizeType == SizeAttr::SizeAttrType::EXACT_SIZE) {
+        return;
+    }
+    mpark::visit(
+        [&](const auto& innerDomainPtr) {
+            sequenceMoveGenImpl(domain, innerDomainPtr, numberValsRequired,
+                                neighbourhoods);
+        },
+        domain.inner);
+}
+
 void sequenceAssignRandomGen(const SequenceDomain& domain,
                              int numberValsRequired,
                              std::vector<Neighbourhood>& neighbourhoods) {
@@ -564,4 +640,5 @@ const NeighbourhoodVec<SequenceDomain>
     NeighbourhoodGenList<SequenceDomain>::value = {
         {1, sequenceLiftSingleGen}, {1, sequenceAddGen},
         {1, sequenceRemoveGen},     {1, sequencePositionsSwapGen},
-        {1, sequenceReverseSubGen}, {1, sequenceRelaxSubGen}};
+        {1, sequenceReverseSubGen}, {1, sequenceRelaxSubGen},
+        {2, sequenceMoveGen}};

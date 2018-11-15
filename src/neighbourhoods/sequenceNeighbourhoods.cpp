@@ -265,11 +265,10 @@ void assignNewValues(InnerDomainType& innerDomain, InnerValueType& val,
             val.memberHashes.erase(hash);
         }
     }
-
     vector<HashType> newHashes;
     for (auto& expr : newValues) {
         while (true) {
-                        assignRandomValueInDomain(innerDomain, *assumeAsValue(expr), stats);
+            assignRandomValueInDomain(innerDomain, *assumeAsValue(expr), stats);
             if (!val.injective) {
                 break;
             }
@@ -295,7 +294,7 @@ template <typename InnerViewType>
 void swapSub(ExprRefVec<InnerViewType>& members,
              ExprRefVec<InnerViewType>& newValues, UInt startIndex,
              UInt endIndex) {
-    UInt subseqSize = (endIndex - startIndex) + 1;
+    UInt subseqSize = endIndex - startIndex;
     for (size_t i = 0; i < subseqSize; i++) {
         swap(members[startIndex + i], newValues[i]);
     }
@@ -308,7 +307,7 @@ void deepSwapSub(ExprRefVec<InnerViewType>& members,
     typedef typename AssociatedValueType<InnerViewType>::type InnerValueType;
     auto temp = make<InnerValueType>();
 
-    UInt subseqSize = (endIndex - startIndex) + 1;
+    UInt subseqSize = endIndex - startIndex;
     for (size_t i = 0; i < subseqSize; i++) {
         deepCopy(*assumeAsValue(members[startIndex + i]), *temp);
         deepCopy(*assumeAsValue(newValues[i]),
@@ -344,14 +343,14 @@ void sequenceRelaxSubGenImpl(const SequenceDomain&,
             vector<HashType> oldHashes;
             auto& members = val.getMembers<InnerViewType>();
             do {
-                startIndex = globalRandom<UInt>(0, val.numberElements() - 2);
-                endIndex = globalRandom<UInt>(startIndex + 1,
-                                              val.numberElements() - 1);
+                startIndex = globalRandom<UInt>(0, val.numberElements() - 1);
+                endIndex =
+                    globalRandom<UInt>(startIndex + 1, val.numberElements());
                 oldHashes.clear();
                 HashType previousSubseqHash =
                     val.notifyPossibleSubsequenceChange<InnerValueType>(
                         startIndex, endIndex, oldHashes);
-                insureSize(newValues, (endIndex - startIndex) + 1);
+                insureSize(newValues, endIndex - startIndex);
 
                 assignNewValues(*innerDomainPtr, val, oldHashes, newValues,
                                 params.stats);
@@ -362,8 +361,11 @@ void sequenceRelaxSubGenImpl(const SequenceDomain&,
 
                 success = val.trySubsequenceChange<InnerValueType>(
                     startIndex, endIndex, oldHashes, previousSubseqHash, [&]() {
+                        // swap it back
                         swapSub(members, newValues, startIndex, endIndex);
                         if (params.parentCheck(params.vals)) {
+                            // swap values of the variables not the variables
+                            // and trigger change
                             deepSwapSub(members, newValues, startIndex,
                                         endIndex);
                             return true;
@@ -560,11 +562,6 @@ void sequenceAssignRandomGen(const SequenceDomain& domain,
 
 const NeighbourhoodVec<SequenceDomain>
     NeighbourhoodGenList<SequenceDomain>::value = {
-        {1, sequenceLiftSingleGen},
-        {1, sequenceAddGen},
-        {1, sequenceRemoveGen},
-        {1, sequencePositionsSwapGen},
-        {1, sequenceReverseSubGen}
-        {1,sequenceRelaxSubGen}
-    };
-
+        {1, sequenceLiftSingleGen}, {1, sequenceAddGen},
+        {1, sequenceRemoveGen},     {1, sequencePositionsSwapGen},
+        {1, sequenceReverseSubGen}, {1, sequenceRelaxSubGen}};

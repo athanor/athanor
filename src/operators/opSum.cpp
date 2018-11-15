@@ -150,7 +150,6 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     void memberHasBecomeDefined(UInt index) {
-
         auto operandView = op->operand->view();
         if (!operandView) {
             hasBecomeUndefined();

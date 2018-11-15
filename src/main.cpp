@@ -77,6 +77,51 @@ void testHashes() {
     }
 }
 
+enum SearchStrategyChoice { HILL_CLIMBING, HILL_CLIMBING_VIOLATION_EXPLORE };
+enum SelectionStrategyChoice { RANDOM, RANDOM_VIOLATION_BIASED, INTERACTIVE };
+
+SearchStrategyChoice searchStrategyChoice = HILL_CLIMBING_VIOLATION_EXPLORE;
+SelectionStrategyChoice selectionStrategyChoice = RANDOM_VIOLATION_BIASED;
+
+auto& searchStratGroup =
+    argParser
+        .add<ComplexFlag>("--search", Policy::OPTIONAL,
+                          "Specify search strategy (default=hcvc).")
+        .makeExclusiveGroup(Policy::MANDATORY);
+
+auto& hillClimbingFlag = searchStratGroup.add<Flag>(
+    "hc", "Hill climbing strategy.",
+    [](auto&&) { searchStrategyChoice = HILL_CLIMBING; });
+
+auto& hillClimbingVIOLATIONExploreFlag = searchStratGroup.add<Flag>(
+    "hcvc",
+    "Hill climbing with violation exploration. When local optimum detected, "
+    "attempt to break passed optimum by allowing constraints to be violated.  "
+    "Only works with optimisation problems.",
+    [](auto&&) { searchStrategyChoice = HILL_CLIMBING_VIOLATION_EXPLORE; });
+
+auto& selectionStratGroup =
+    argParser
+        .add<ComplexFlag>("--selection", Policy::OPTIONAL,
+                          "Specify neighbourhood selection strategy "
+                          "(default=rvb).")
+        .makeExclusiveGroup(Policy::MANDATORY);
+
+auto& randomViolationBiasedFlag = selectionStratGroup.add<Flag>(
+    "rvb",
+    "Random (violation biased), select neighbourhoods randomly, with bias "
+    "towards operating on variables "
+    "with violations.",
+    [](auto&&) { selectionStrategyChoice = RANDOM_VIOLATION_BIASED; });
+
+auto& randomFlag = selectionStratGroup.add<Flag>(
+    "r", "random, select neighbourhoods randomly.",
+    [](auto&&) { selectionStrategyChoice = RANDOM; });
+
+auto& interactiveFlag = selectionStratGroup.add<Flag>(
+    "i", "interactive, Prompt user for neighbourhood to select.",
+    [](auto&&) { selectionStrategyChoice = INTERACTIVE; });
+
 auto& exclusiveTimeLimitGroup = argParser.makeExclusiveGroup(Policy::OPTIONAL);
 auto& cpuTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
     "--cpuTimeLimit", "Specify the CPU time limit in seconds.");
@@ -109,16 +154,47 @@ void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);
 void sigAlarmHandler(int);
 
-int main(const int argc, const char** argv) {
-    argParser.validateArgs(argc, argv);
-    ParsedModel parsedModel = parseModelFromJson(fileArg.get());
-    State state(parsedModel.builder->build());
-    u_int32_t seed = (seedArg) ? seedArg.get() : random_device()();
-    globalRandomGenerator.seed(seed);
-    cout << "Using seed: " << seed << endl;
-    auto nhSelection = make_shared<RandomNeighbourhood>();
-    auto strategy = makeExplorationUsingViolationBackOff(
-        makeHillClimbing(nhSelection), nhSelection);
+template <typename SelectionStrategy>
+void runSearchImpl(State& state, SelectionStrategy&& nhSelection) {
+    switch (searchStrategyChoice) {
+        case HILL_CLIMBING_VIOLATION_EXPLORE: {
+            auto strategy = makeExplorationUsingViolationBackOff(
+                makeHillClimbing(nhSelection), nhSelection);
+            search(strategy, state);
+            return;
+        }
+        case HILL_CLIMBING: {
+            auto strategy = makeHillClimbing(nhSelection);
+            search(strategy, state);
+            return;
+        }
+        default:
+            abort();
+    }
+}
+
+void runSearch(State& state) {
+    switch (selectionStrategyChoice) {
+        case RANDOM_VIOLATION_BIASED: {
+            runSearchImpl(state,
+                          make_shared<RandomNeighbourhoodWithViolation>());
+            return;
+        }
+        case RANDOM: {
+            runSearchImpl(state, make_shared<RandomNeighbourhood>());
+            return;
+        }
+        case INTERACTIVE: {
+            runSearchImpl(state,
+                          make_shared<InteractiveNeighbourhoodSelector>());
+            return;
+        }
+        default:
+            abort();
+    }
+}
+
+void setSignalsAndHandlers() {
     signal(SIGINT, sigIntHandler);
     signal(SIGVTALRM, sigAlarmHandler);
     signal(SIGALRM, sigAlarmHandler);
@@ -128,8 +204,21 @@ int main(const int argc, const char** argv) {
     } else if (realTimeLimitFlag) {
         setTimeout(realTimeLimitArg.get(), false);
     }
+}
+
+int main(const int argc, const char** argv) {
+    argParser.validateArgs(argc, argv);
+
+    u_int32_t seed = (seedArg) ? seedArg.get() : random_device()();
+    globalRandomGenerator.seed(seed);
+    cout << "Using seed: " << seed << endl;
+
+    setSignalsAndHandlers();
     try {
-        search(strategy, state);
+        ParsedModel parsedModel = parseModelFromJson(fileArg.get());
+        State state(parsedModel.builder->build());
+
+        runSearch(state);
     } catch (SanityCheckException& e) {
         cerr << "***SANITY CHECK ERROR: " << e.errorMessage << endl;
         if (!e.file.empty()) {

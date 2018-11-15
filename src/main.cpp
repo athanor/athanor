@@ -78,7 +78,12 @@ void testHashes() {
 }
 
 enum SearchStrategyChoice { HILL_CLIMBING, HILL_CLIMBING_VIOLATION_EXPLORE };
-enum SelectionStrategyChoice { RANDOM, RANDOM_VIOLATION_BIASED, UCB,  INTERACTIVE };
+enum SelectionStrategyChoice {
+    RANDOM,
+    RANDOM_VIOLATION_BIASED,
+    UCB,
+    INTERACTIVE
+};
 
 SearchStrategyChoice searchStrategyChoice = HILL_CLIMBING_VIOLATION_EXPLORE;
 SelectionStrategyChoice selectionStrategyChoice = RANDOM_VIOLATION_BIASED;
@@ -119,9 +124,10 @@ auto& randomFlag = selectionStratGroup.add<Flag>(
     [](auto&&) { selectionStrategyChoice = RANDOM; });
 
 auto& ucbFlag = selectionStratGroup.add<Flag>(
-                                                 "ucb", "Upper confidence bound, a multiarmed bandet method for learning which neighbourhoods are best performing..",
-                                                 [](auto&&) { selectionStrategyChoice = UCB; });
-
+    "ucb",
+    "Upper confidence bound, a multiarmed bandet method for learning which "
+    "neighbourhoods are best performing..",
+    [](auto&&) { selectionStrategyChoice = UCB; });
 
 auto& interactiveFlag = selectionStratGroup.add<Flag>(
     "i", "interactive, Prompt user for neighbourhood to select.",

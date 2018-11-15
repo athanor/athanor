@@ -11,8 +11,7 @@
 #include "search/ucbNeighbourhoodSelection.h"
 #include "utils/random.h"
 
-
-    class InteractiveNeighbourhoodSelector {
+class InteractiveNeighbourhoodSelector {
    public:
     template <typename ParentStrategy>
     inline void run(State& state, ParentStrategy&& parentStrategy) {

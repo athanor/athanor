@@ -22,12 +22,17 @@ ostream& operator<<(ostream& os, const NeighbourhoodStats& stats) {
     os << indent << "value,total,average\n";
     os << indent << "Number activations," << stats.numberActivations << ","
        << ((stats.numberActivations == 0) ? 0 : 1) << endl;
+    os << indent << "Number objective improvements," << stats.numberObjImprovements << ","
+    << stats.getAverage(stats.numberObjImprovements) << endl;
+    os << indent << "Number violation improvements," << stats.numberVioImprovmenents << ","
+    << stats.getAverage(stats.numberVioImprovmenents) << endl;
     os << indent << "Number minor nodes," << stats.minorNodeCount << ","
        << stats.getAverage(stats.minorNodeCount) << endl;
     os << indent << "Number trigger events," << stats.triggerEventCount << ","
        << stats.getAverage(stats.triggerEventCount) << endl;
     os << indent << "Time," << stats.totalCpuTime << ","
        << stats.getAverage(stats.totalCpuTime);
+    return os;
 }
 
 StatsContainer::StatsContainer(Model& model)
@@ -50,13 +55,32 @@ void StatsContainer::initialSolution(Model& model) {
 void StatsContainer::reportResult(bool solutionAccepted,
                                   const NeighbourhoodResult& result) {
     ++numberIterations;
+    if (result.statsMarkPoint.lastViolation > 0) {
+++numberVioIterations;
+    }
     ++neighbourhoodStats[result.neighbourhoodIndex].numberActivations;
+    if (result.statsMarkPoint.lastViolation > 0) {
+++neighbourhoodStats[result.neighbourhoodIndex].numberVioActivations;
+    }
     neighbourhoodStats[result.neighbourhoodIndex].minorNodeCount +=
         minorNodeCount - result.statsMarkPoint.minorNodeCount;
+    if (result.statsMarkPoint.lastViolation > 0) {
+        neighbourhoodStats[result.neighbourhoodIndex].vioMinorNodeCount +=
+        minorNodeCount - result.statsMarkPoint.minorNodeCount;
+    }
     neighbourhoodStats[result.neighbourhoodIndex].triggerEventCount +=
         triggerEventCount - result.statsMarkPoint.triggerEventCount;
-    neighbourhoodStats[result.neighbourhoodIndex].totalCpuTime +=
-        getCpuTime() - result.statsMarkPoint.cpuTime;
+    if (result.statsMarkPoint.lastViolation > 0) {
+        neighbourhoodStats[result.neighbourhoodIndex].vioTriggerEventCount +=
+        triggerEventCount - result.statsMarkPoint.triggerEventCount;
+    }
+    double time = getCpuTime() - result.statsMarkPoint.cpuTime;
+    neighbourhoodStats[result.neighbourhoodIndex].totalCpuTime += time;
+        if (result.statsMarkPoint.lastViolation > 0) {
+neighbourhoodStats[result.neighbourhoodIndex].vioTotalCpuTime += time;
+        }
+    neighbourhoodStats[result.neighbourhoodIndex].numberObjImprovements += (result.getDeltaObjective() < 0);
+    neighbourhoodStats[result.neighbourhoodIndex].numberVioImprovmenents += (result.getDeltaViolation() < 0);
     if (!solutionAccepted) {
         return;
     }

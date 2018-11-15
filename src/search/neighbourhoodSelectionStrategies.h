@@ -8,9 +8,11 @@
 #include "search/model.h"
 #include "search/solver.h"
 #include "search/statsContainer.h"
+#include "search/ucbNeighbourhoodSelection.h"
 #include "utils/random.h"
 
-class InteractiveNeighbourhoodSelector {
+
+    class InteractiveNeighbourhoodSelector {
    public:
     template <typename ParentStrategy>
     inline void run(State& state, ParentStrategy&& parentStrategy) {

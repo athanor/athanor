@@ -78,7 +78,7 @@ void testHashes() {
 }
 
 enum SearchStrategyChoice { HILL_CLIMBING, HILL_CLIMBING_VIOLATION_EXPLORE };
-enum SelectionStrategyChoice { RANDOM, RANDOM_VIOLATION_BIASED, INTERACTIVE };
+enum SelectionStrategyChoice { RANDOM, RANDOM_VIOLATION_BIASED, UCB,  INTERACTIVE };
 
 SearchStrategyChoice searchStrategyChoice = HILL_CLIMBING_VIOLATION_EXPLORE;
 SelectionStrategyChoice selectionStrategyChoice = RANDOM_VIOLATION_BIASED;
@@ -117,6 +117,11 @@ auto& randomViolationBiasedFlag = selectionStratGroup.add<Flag>(
 auto& randomFlag = selectionStratGroup.add<Flag>(
     "r", "random, select neighbourhoods randomly.",
     [](auto&&) { selectionStrategyChoice = RANDOM; });
+
+auto& ucbFlag = selectionStratGroup.add<Flag>(
+                                                 "ucb", "Upper confidence bound, a multiarmed bandet method for learning which neighbourhoods are best performing..",
+                                                 [](auto&&) { selectionStrategyChoice = UCB; });
+
 
 auto& interactiveFlag = selectionStratGroup.add<Flag>(
     "i", "interactive, Prompt user for neighbourhood to select.",
@@ -184,6 +189,11 @@ void runSearch(State& state) {
             runSearchImpl(state, make_shared<RandomNeighbourhood>());
             return;
         }
+        case UCB: {
+            runSearchImpl(state, make_shared<UcbNeighbourhoodSelection>());
+            return;
+        }
+
         case INTERACTIVE: {
             runSearchImpl(state,
                           make_shared<InteractiveNeighbourhoodSelector>());

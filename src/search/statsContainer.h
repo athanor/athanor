@@ -59,8 +59,14 @@ struct NeighbourhoodStats {
     u_int64_t minorNodeCount = 0;
     u_int64_t triggerEventCount = 0;
     double totalCpuTime = 0;
+    u_int64_t numberVioActivations = 0;
+    u_int64_t vioMinorNodeCount = 0;
+    u_int64_t vioTriggerEventCount = 0;
+    double vioTotalCpuTime = 0;
+
     u_int64_t numberObjImprovements = 0;
     u_int64_t numberVioImprovmenents = 0;
+
     NeighbourhoodStats(const std::string& name) : name(name) {}
     inline double getAverage(double value) const {
         return value / numberActivations;
@@ -72,7 +78,9 @@ struct NeighbourhoodStats {
 struct StatsContainer {
     OptimiseMode optimiseMode;
     u_int64_t numberIterations = 0;
+        u_int64_t numberVioIterations = 0;
     u_int64_t minorNodeCount = 0;
+    u_int64_t vioMinorNodeCount = 0;
     std::chrono::high_resolution_clock::time_point startTime =
         std::chrono::high_resolution_clock::now();
     std::chrono::high_resolution_clock::time_point endTime;

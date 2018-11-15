@@ -1,5 +1,9 @@
 #include "search/statsContainer.h"
+#include <iostream>
 #include "search/model.h"
+
+using namespace std;
+
 Int NeighbourhoodResult::getDeltaViolation() const {
     return model.getViolation() - statsMarkPoint.lastViolation;
 }
@@ -11,13 +15,27 @@ Int NeighbourhoodResult::getDeltaDefinedness() const {
     return currentDefined - statsMarkPoint.lastObjectiveDefined;
 }
 
+ostream& operator<<(ostream& os, const NeighbourhoodStats& stats) {
+    static const std::string indent = "    ";
+
+    os << "Neighbourhood: " << stats.name << endl;
+    os << indent << "value,total,average\n";
+    os << indent << "Number activations," << stats.numberActivations << ","
+       << ((stats.numberActivations == 0) ? 0 : 1) << endl;
+    os << indent << "Number minor nodes," << stats.minorNodeCount << ","
+       << stats.getAverage(stats.minorNodeCount) << endl;
+    os << indent << "Number trigger events," << stats.triggerEventCount << ","
+       << stats.getAverage(stats.triggerEventCount) << endl;
+    os << indent << "Time," << stats.totalCpuTime << ","
+       << stats.getAverage(stats.totalCpuTime);
+}
+
 StatsContainer::StatsContainer(Model& model)
-    : optimiseMode(model.optimiseMode),
-      nhActivationCounts(model.neighbourhoods.size(), 0),
-      nhMinorNodeCounts(model.neighbourhoods.size(), 0),
-      nhTriggerEventCounts(model.neighbourhoods.size(), 0),
-      nhTotalCpuTimes(model.neighbourhoods.size(), 0) {}
-#include <iostream>
+    : optimiseMode(model.optimiseMode) {
+    for (auto& neighbourhood : model.neighbourhoods) {
+        neighbourhoodStats.emplace_back(neighbourhood.name);
+    }
+}
 void StatsContainer::initialSolution(Model& model) {
     lastViolation = model.csp->view()->violation;
     lastObjectiveDefined = model.objective->getViewIfDefined().hasValue();
@@ -32,12 +50,12 @@ void StatsContainer::initialSolution(Model& model) {
 void StatsContainer::reportResult(bool solutionAccepted,
                                   const NeighbourhoodResult& result) {
     ++numberIterations;
-    ++nhActivationCounts[result.neighbourhoodIndex];
-    nhMinorNodeCounts[result.neighbourhoodIndex] +=
+    ++neighbourhoodStats[result.neighbourhoodIndex].numberActivations;
+    neighbourhoodStats[result.neighbourhoodIndex].minorNodeCount +=
         minorNodeCount - result.statsMarkPoint.minorNodeCount;
-    nhTriggerEventCounts[result.neighbourhoodIndex] +=
+    neighbourhoodStats[result.neighbourhoodIndex].triggerEventCount +=
         triggerEventCount - result.statsMarkPoint.triggerEventCount;
-    nhTotalCpuTimes[result.neighbourhoodIndex] +=
+    neighbourhoodStats[result.neighbourhoodIndex].totalCpuTime +=
         getCpuTime() - result.statsMarkPoint.cpuTime;
     if (!solutionAccepted) {
         return;
@@ -64,18 +82,17 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
         bestObjective = lastObjective;
     }
     if (vioImproved || (lastViolation == 0 && objImproved)) {
-        std::cout << "\nNew solution:\n";
-        std::cout << "Violation = " << lastViolation << std::endl;
+        cout << "\nNew solution:\n";
+        cout << "Violation = " << lastViolation << endl;
         if (model.optimiseMode != OptimiseMode::NONE) {
-            std::cout << "objective = "
-                      << transposeObjective(optimiseMode, lastObjective)
-                      << std::endl;
+            cout << "objective = "
+                 << transposeObjective(optimiseMode, lastObjective) << endl;
         }
         // for experiements
         if (lastViolation == 0) {
-            std::cout << "Best solution: "
-                      << transposeObjective(optimiseMode, bestObjective) << " "
-                      << getCpuTime() << std::endl;
+            cout << "Best solution: "
+                 << transposeObjective(optimiseMode, bestObjective) << " "
+                 << getCpuTime() << endl;
         }
     }
 
@@ -84,36 +101,34 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
     }
 }
 void StatsContainer::printCurrentState(Model& model) {
-    std::cout << (*this) << "\nTrigger event count " << triggerEventCount
-              << "\n\n";
+    cout << (*this) << "\nTrigger event count " << triggerEventCount << "\n\n";
     if (lastViolation == 0) {
-        std::cout << "solution start\n";
+        cout << "solution start\n";
         model.printVariables();
-        std::cout << "solution end\n";
+        cout << "solution end\n";
     }
     debug_code(if (debugLogAllowed) {
         debug_log("CSP state:");
-        model.csp->dumpState(std::cout) << std::endl;
+        model.csp->dumpState(cout) << endl;
         if (model.optimiseMode != OptimiseMode::NONE) {
             debug_log("Objective state:");
-            model.objective->dumpState(std::cout) << std::endl;
+            model.objective->dumpState(cout) << endl;
         }
     });
 }
 
-std::ostream& operator<<(std::ostream& os, StatsContainer& stats) {
+ostream& operator<<(ostream& os, StatsContainer& stats) {
     stats.endTimer();
 
     os << "Stats:\n";
-    os << "Best violation: " << stats.bestViolation << std::endl;
+    os << "Best violation: " << stats.bestViolation << endl;
     os << "Best objective: "
-       << transposeObjective(stats.optimiseMode, stats.bestObjective)
-       << std::endl;
+       << transposeObjective(stats.optimiseMode, stats.bestObjective) << endl;
 
-    os << "Number iterations: " << stats.numberIterations << std::endl;
-    os << "Minor node count: " << stats.minorNodeCount << std::endl;
-    std::chrono::duration<double> timeTaken = stats.endTime - stats.startTime;
-    os << "Wall time: " << timeTaken.count() << std::endl;
+    os << "Number iterations: " << stats.numberIterations << endl;
+    os << "Minor node count: " << stats.minorNodeCount << endl;
+    chrono::duration<double> timeTaken = stats.endTime - stats.startTime;
+    os << "Wall time: " << timeTaken.count() << endl;
     auto cpuTime =
         (double)(stats.endCpuTime - stats.startCpuTime) / CLOCKS_PER_SEC;
     os << "CPU time: " << cpuTime;

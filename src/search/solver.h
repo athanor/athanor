@@ -93,27 +93,9 @@ class State {
     }
 
     void printNeighbourhoodStats() {
-        static const std::string indent = "    ";
         std::cout << "---------------------\n";
-        for (size_t i = 0; i < model.neighbourhoods.size(); i++) {
-            std::cout << "Neighbourhood: " << model.neighbourhoods[i].name
-                      << std::endl;
-            std::cout << indent << "value,total,average\n";
-            std::cout << indent << "Number activations,"
-                      << stats.nhActivationCounts[i] << ","
-                      << ((stats.nhActivationCounts[i] == 0) ? 0 : 1)
-                      << std::endl;
-            std::cout << indent << "Number minor nodes,"
-                      << stats.nhMinorNodeCounts[i] << ","
-                      << stats.getAverage(stats.nhMinorNodeCounts[i], i)
-                      << std::endl;
-            std::cout << indent << "Number trigger events,"
-                      << stats.nhTriggerEventCounts[i] << ","
-                      << stats.getAverage(stats.nhTriggerEventCounts[i], i)
-                      << std::endl;
-            std::cout << indent << "Time," << stats.nhTotalCpuTimes[i] << ","
-                      << stats.getAverage(stats.nhTotalCpuTimes[i], i)
-                      << std::endl;
+        for (auto& nhStats : stats.neighbourhoodStats) {
+            std::cout << nhStats << std::endl;
         }
     }
 };

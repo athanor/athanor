@@ -53,6 +53,22 @@ struct NeighbourhoodResult {
 enum class OptimiseMode { NONE, MAXIMISE, MINIMISE };
 #endif
 
+struct NeighbourhoodStats {
+    std::string name;
+    u_int64_t numberActivations = 0;
+    u_int64_t minorNodeCount = 0;
+    u_int64_t triggerEventCount = 0;
+    double totalCpuTime = 0;
+    u_int64_t numberObjImprovements = 0;
+    u_int64_t numberVioImprovmenents = 0;
+    NeighbourhoodStats(const std::string& name) : name(name) {}
+    inline double getAverage(double value) const {
+        return value / numberActivations;
+    }
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const NeighbourhoodStats& stats);
+};
+
 struct StatsContainer {
     OptimiseMode optimiseMode;
     u_int64_t numberIterations = 0;
@@ -62,15 +78,13 @@ struct StatsContainer {
     std::chrono::high_resolution_clock::time_point endTime;
     std::clock_t startCpuTime = std::clock();
     std::clock_t endCpuTime;
-    std::vector<u_int64_t> nhActivationCounts;
-    std::vector<u_int64_t> nhMinorNodeCounts;
-    std::vector<u_int64_t> nhTriggerEventCounts;
-    std::vector<double> nhTotalCpuTimes;
     UInt bestViolation;
     UInt lastViolation;
     Int bestObjective;
     Int lastObjective;
     bool lastObjectiveDefined;
+    std::vector<NeighbourhoodStats> neighbourhoodStats;
+
     StatsContainer(Model& model);
 
     inline StatsMarkPoint getMarkPoint() {
@@ -92,9 +106,7 @@ struct StatsContainer {
     void reportResult(bool solutionAccepted, const NeighbourhoodResult& result);
     void printCurrentState(Model& model);
     friend std::ostream& operator<<(std::ostream& os, StatsContainer& stats);
-    inline double getAverage(double value, size_t index) {
-        return value / nhActivationCounts[index];
-    }
+
     double getCpuTime() {
         endTimer();
         return (double)(endCpuTime - startCpuTime) / CLOCKS_PER_SEC;

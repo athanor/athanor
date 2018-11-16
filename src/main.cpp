@@ -112,7 +112,7 @@ auto& hillClimbingVIOLATIONExploreFlag = searchStratGroup.add<Flag>(
     [](auto&&) { searchStrategyChoice = HILL_CLIMBING_VIOLATION_EXPLORE; });
 
 auto& hillClimbingRandomExploreFlag = searchStratGroup.add<Flag>(
-    "hcr",
+    "hcre",
     "Hill climbing with random exploration. When local optimum detected, "
     "attempt to break passed optimum by performing random walks.  "
     "Only works with optimisation problems.",

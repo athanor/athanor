@@ -4,6 +4,7 @@
 #include <cmath>
 #include <deque>
 #include "search/model.h"
+#include "search/neighbourhoodSelectionStrategies.h"
 #include "search/solver.h"
 #include "search/statsContainer.h"
 
@@ -50,34 +51,29 @@ auto makeHillClimbing(std::shared_ptr<Strategy> strategy) {
     return std::make_shared<HillClimbing<Strategy>>(std::move(strategy));
 }
 
-template <typename Strategy>
-class RandomAcceptance {
-    std::shared_ptr<Strategy> strategy;
-    double acceptanceProbability;
+class RandomWalk {
+    std::shared_ptr<RandomNeighbourhood> nhSelector;
+    bool allowViolations;
 
    public:
-    RandomAcceptance(std::shared_ptr<Strategy> strategy,
-                     double acceptanceProbability)
-        : strategy(std::move(strategy)),
-          acceptanceProbability(acceptanceProbability) {}
+    u_int64_t numberMovesToTake = 0;
+    RandomWalk(bool allowViolations) : allowViolations(allowViolations) {}
     void run(State& state, bool) {
-        while (true) {
-            strategy->run(state, [&](const auto& result) {
+        u_int64_t numberIterations = 0;
+        while (numberIterations <= numberMovesToTake) {
+            nhSelector->run(state, [&](const auto& result) {
                 if (!result.foundAssignment) {
                     return false;
                 }
-                return globalRandom<double>(0, 1) < acceptanceProbability;
+                bool allowed =
+                    allowViolations || result.model.getViolation() == 0;
+                numberIterations += allowed;
+                return allowed;
             });
         }
     }
 };
 
-template <typename Strategy>
-auto makeRandomAcceptance(std::shared_ptr<Strategy> strategy,
-                          double acceptanceProbability) {
-    return std::make_shared<RandomAcceptance<Strategy>>(std::move(strategy),
-                                                        acceptanceProbability);
-}
 template <typename Integer>
 class ExponentialIncrementer {
     double value;
@@ -86,6 +82,10 @@ class ExponentialIncrementer {
    public:
     ExponentialIncrementer(double initialValue, double exponent)
         : value(initialValue), exponent(exponent) {}
+    void reset(double initialValue, double exponent) {
+        this->value = initialValue;
+        this->exponent = exponent;
+    }
     Integer getValue() { return std::round(value); }
     void increment() {
         if (value > ((u_int64_t)1) << 32) {
@@ -205,6 +205,55 @@ auto makeExplorationUsingViolationBackOff(
     return std::make_shared<
         ExplorationUsingViolationBackOff<ClimbStrategy, ExploreStrategy>>(
         std::move(climbStrategy), std::move(exploreStrategy));
+}
+
+template <typename ClimbStrategy>
+class ExplorationUsingRandomWalk {
+    std::shared_ptr<ClimbStrategy> climbStrategy;
+    RandomWalk randomWalkStrategy = RandomWalk(false);
+
+   public:
+    ExplorationUsingRandomWalk(std::shared_ptr<ClimbStrategy> climbStrategy)
+        : climbStrategy(std::move(climbStrategy)) {}
+    void run(State& state, bool) {
+        double baseValue = 1, multiplier = 1.1;
+        bool explorationSupported =
+            state.model.optimiseMode != OptimiseMode::NONE;
+        if (!explorationSupported) {
+            std::cout << "[warning]: This exploration strategy does not work "
+                         "with satisfaction "
+                         "problems.  Will not enter explore mode using this "
+                         "strategy.\n";
+        }
+        do {
+            climbStrategy->run(state, !explorationSupported);
+        } while (state.model.getViolation() != 0);
+        if (!explorationSupported) {
+            throw EndOfSearchException();
+        }
+
+        Int bestObj = state.model.getObjective();
+        ExponentialIncrementer<u_int64_t> numberRandomMoves(baseValue,
+                                                            multiplier);
+        while (true) {
+            randomWalkStrategy.numberMovesToTake = numberRandomMoves.getValue();
+            randomWalkStrategy.run(state, false);
+            climbStrategy->run(state, !explorationSupported);
+
+            if (state.model.getObjective() < bestObj) {
+                bestObj = state.model.getObjective();
+                numberRandomMoves.reset(baseValue, multiplier);
+            } else {
+                numberRandomMoves.increment();
+            }
+        }
+    }
+};
+template <typename ClimbStrategy>
+auto makeExplorationUsingRandomWalk(
+    std::shared_ptr<ClimbStrategy> climbStrategy) {
+    return std::make_shared<ExplorationUsingRandomWalk<ClimbStrategy>>(
+        climbStrategy);
 }
 
 #endif /* SRC_SEARCH_SEARCHSTRATEGIES_H_ */

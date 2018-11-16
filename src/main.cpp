@@ -77,7 +77,11 @@ void testHashes() {
     }
 }
 
-enum SearchStrategyChoice { HILL_CLIMBING, HILL_CLIMBING_VIOLATION_EXPLORE };
+enum SearchStrategyChoice {
+    HILL_CLIMBING,
+    HILL_CLIMBING_VIOLATION_EXPLORE,
+    HILL_CLIMBING_RANDOM_EXPLORE
+};
 enum SelectionStrategyChoice {
     RANDOM,
     RANDOM_VIOLATION_BIASED,
@@ -93,7 +97,7 @@ double ucbExplorationBias = 2;
 auto& searchStratGroup =
     argParser
         .add<ComplexFlag>("--search", Policy::OPTIONAL,
-                          "Specify search strategy (default=hcvc).")
+                          "Specify search strategy (default=hcve).")
         .makeExclusiveGroup(Policy::MANDATORY);
 
 auto& hillClimbingFlag = searchStratGroup.add<Flag>(
@@ -101,11 +105,18 @@ auto& hillClimbingFlag = searchStratGroup.add<Flag>(
     [](auto&&) { searchStrategyChoice = HILL_CLIMBING; });
 
 auto& hillClimbingVIOLATIONExploreFlag = searchStratGroup.add<Flag>(
-    "hcvc",
+    "hcve",
     "Hill climbing with violation exploration. When local optimum detected, "
     "attempt to break passed optimum by allowing constraints to be violated.  "
     "Only works with optimisation problems.",
     [](auto&&) { searchStrategyChoice = HILL_CLIMBING_VIOLATION_EXPLORE; });
+
+auto& hillClimbingRandomExploreFlag = searchStratGroup.add<Flag>(
+    "hcr",
+    "Hill climbing with random exploration. When local optimum detected, "
+    "attempt to break passed optimum by performing random walks.  "
+    "Only works with optimisation problems.",
+    [](auto&&) { searchStrategyChoice = HILL_CLIMBING_RANDOM_EXPLORE; });
 
 auto& selectionStratGroup =
     argParser
@@ -180,6 +191,12 @@ void runSearchImpl(State& state, SelectionStrategy&& nhSelection) {
         case HILL_CLIMBING_VIOLATION_EXPLORE: {
             auto strategy = makeExplorationUsingViolationBackOff(
                 makeHillClimbing(nhSelection), nhSelection);
+            search(strategy, state);
+            return;
+        }
+        case HILL_CLIMBING_RANDOM_EXPLORE: {
+            auto strategy =
+                makeExplorationUsingRandomWalk(makeHillClimbing(nhSelection));
             search(strategy, state);
             return;
         }

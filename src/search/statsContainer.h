@@ -86,6 +86,8 @@ struct StatsContainer {
     std::chrono::high_resolution_clock::time_point endTime;
     std::clock_t startCpuTime = std::clock();
     std::clock_t endCpuTime;
+    double cpuTimeTillBestSolution;
+    double wallTimeTillBestSolution;
     UInt bestViolation;
     UInt lastViolation;
     Int bestObjective;
@@ -118,6 +120,14 @@ struct StatsContainer {
     double getCpuTime() {
         endTimer();
         return (double)(endCpuTime - startCpuTime) / CLOCKS_PER_SEC;
+    }
+
+    std::pair<double, double> getTime() {
+        endTimer();
+        double cpuTime = (double)(endCpuTime - startCpuTime) / CLOCKS_PER_SEC;
+        double wallTime =
+            std::chrono::duration<double>(endTime - startTime).count();
+        return std::make_pair(cpuTime, wallTime);
     }
 };
 

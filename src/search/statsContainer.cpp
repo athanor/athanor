@@ -114,6 +114,7 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
         bestObjective = lastObjective;
     }
     if (vioImproved || (lastViolation == 0 && objImproved)) {
+        tie(cpuTimeTillBestSolution, wallTimeTillBestSolution) = getTime();
         cout << "\nNew solution:\n";
         cout << "Violation = " << lastViolation << endl;
         if (model.optimiseMode != OptimiseMode::NONE) {
@@ -156,7 +157,10 @@ ostream& operator<<(ostream& os, StatsContainer& stats) {
     os << "Best violation: " << stats.bestViolation << endl;
     os << "Best objective: "
        << transposeObjective(stats.optimiseMode, stats.bestObjective) << endl;
-
+    os << "CPU time till best solution: " << stats.cpuTimeTillBestSolution
+       << endl;
+    os << "Wall time till best solution: " << stats.wallTimeTillBestSolution
+       << endl;
     os << "Number iterations: " << stats.numberIterations << endl;
     os << "Minor node count: " << stats.minorNodeCount << endl;
     chrono::duration<double> timeTaken = stats.endTime - stats.startTime;

@@ -8,7 +8,7 @@
 #include "search/solver.h"
 #include "search/statsContainer.h"
 
-u_int64_t ALLOWED_ITERATIONS_OF_INACTIVITY = 5000;
+u_int64_t ALLOWED_ITERATIONS_OF_INACTIVITY = 1000;
 
 template <typename Strategy>
 class HillClimbing {
@@ -216,7 +216,7 @@ class ExplorationUsingRandomWalk {
     ExplorationUsingRandomWalk(std::shared_ptr<ClimbStrategy> climbStrategy)
         : climbStrategy(std::move(climbStrategy)) {}
     void run(State& state, bool) {
-        double baseValue = 1, multiplier = 1.1;
+        double baseValue = 10, multiplier = 1.3;
         bool explorationSupported =
             state.model.optimiseMode != OptimiseMode::NONE;
         if (!explorationSupported) {
@@ -245,6 +245,9 @@ class ExplorationUsingRandomWalk {
                 numberRandomMoves.reset(baseValue, multiplier);
             } else {
                 numberRandomMoves.increment();
+                if (numberRandomMoves.getValue() > ALLOWED_ITERATIONS_OF_INACTIVITY) {
+                    numberRandomMoves.reset(baseValue,multiplier);
+                }
             }
         }
     }

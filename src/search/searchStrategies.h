@@ -245,8 +245,9 @@ class ExplorationUsingRandomWalk {
                 numberRandomMoves.reset(baseValue, multiplier);
             } else {
                 numberRandomMoves.increment();
-                if (numberRandomMoves.getValue() > ALLOWED_ITERATIONS_OF_INACTIVITY) {
-                    numberRandomMoves.reset(baseValue,multiplier);
+                if (numberRandomMoves.getValue() >
+                    ALLOWED_ITERATIONS_OF_INACTIVITY) {
+                    numberRandomMoves.reset(baseValue, multiplier);
                 }
             }
         }

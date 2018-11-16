@@ -86,7 +86,8 @@ void StatsContainer::reportResult(bool solutionAccepted,
         neighbourhoodStats[result.neighbourhoodIndex].vioTotalCpuTime += time;
     }
     neighbourhoodStats[result.neighbourhoodIndex].numberObjImprovements +=
-        (result.getDeltaObjective() < 0);
+        (result.statsMarkPoint.lastViolation == 0 &&
+         result.model.getViolation() == 0 && result.getDeltaObjective() < 0);
     neighbourhoodStats[result.neighbourhoodIndex].numberVioImprovmenents +=
         (result.getDeltaViolation() < 0);
     if (!solutionAccepted) {

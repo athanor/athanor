@@ -90,14 +90,14 @@ enum SelectionStrategyChoice {
     INTERACTIVE
 };
 
-SearchStrategyChoice searchStrategyChoice = HILL_CLIMBING_VIOLATION_EXPLORE;
-SelectionStrategyChoice selectionStrategyChoice = RANDOM_VIOLATION_BIASED;
+SearchStrategyChoice searchStrategyChoice = HILL_CLIMBING_RANDOM_EXPLORE;
+SelectionStrategyChoice selectionStrategyChoice = UCBV;
 double ucbExplorationBias = 2;
 
 auto& searchStratGroup =
     argParser
         .add<ComplexFlag>("--search", Policy::OPTIONAL,
-                          "Specify search strategy (default=hcve).")
+                          "Specify search strategy (default=hcre).")
         .makeExclusiveGroup(Policy::MANDATORY);
 
 auto& hillClimbingFlag = searchStratGroup.add<Flag>(
@@ -122,7 +122,7 @@ auto& selectionStratGroup =
     argParser
         .add<ComplexFlag>("--selection", Policy::OPTIONAL,
                           "Specify neighbourhood selection strategy "
-                          "(default=rvb).")
+                          "(default=ucbv).")
         .makeExclusiveGroup(Policy::MANDATORY);
 
 auto& randomViolationBiasedFlag = selectionStratGroup.add<Flag>(

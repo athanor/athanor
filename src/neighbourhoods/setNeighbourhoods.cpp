@@ -124,7 +124,7 @@ void setCrossOverGenImpl(const SetDomain& domain, InnerDomainPtrType&,
                                             innerDomainSize) *
                 calcNumberInsertionAttempts(toVal.numberElements(),
                                             innerDomainSize);
-            debug_neighbourhood_action("Looking for value to move");
+            debug_neighbourhood_action("Looking for values to cross over");
             bool success = false;
             UInt fromIndexToMove, toIndexToMove;
             ValRef<InnerValueType> fromMemberToMove = nullptr,

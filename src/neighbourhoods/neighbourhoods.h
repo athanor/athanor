@@ -124,4 +124,6 @@ inline int calcNumberInsertionAttempts(UInt numberMembers, UInt domainSize) {
     return (int)(ceil(NUMBER_TRIES_CONSTANT_MULTIPLIER / successChance));
 }
 
+template <typename Val>
+void swapValAssignments(Val& val1, Val& val2);
 #endif /* SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_ */

@@ -7,6 +7,8 @@
 #include "types/allTypes.h"
 #define quote(x) #x
 using namespace std;
+template <typename Val>
+void swapValAssignments(Val& val1, Val& val2);
 
 inline pair<bool, ViolationContainer&> registerViolations(
     const ValBase* val, const UInt violation, ViolationContainer& vioContainer);
@@ -61,7 +63,16 @@ void invokeSetDefined<BoolValue>(ValRef<BoolValue>&) {}
     string name##Value::getOpName() const {                                  \
         return TypeAsString<name##Value>::value;                             \
     }                                                                        \
-    void name##Value::debugSanityCheckImpl() const {}
+    void name##Value::debugSanityCheckImpl() const {}                        \
+    template <>                                                              \
+    void swapValAssignments<name##Value>(name##Value & val1,                 \
+                                         name##Value & val2) {               \
+        name##Value temp;                                                    \
+        matchInnerType(val1, temp);                                          \
+        deepCopy(val1, temp);                                                \
+        deepCopy(val2, val1);                                                \
+        deepCopy(temp, val2);                                                \
+    }
 
 buildForAllTypes(specialised, )
 #undef specialised

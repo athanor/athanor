@@ -96,6 +96,123 @@ void setAddGen(const SetDomain& domain, int numberValsRequired,
         },
         domain.inner);
 }
+
+template <typename InnerDomainPtrType>
+void setCrossOverGenImpl(const SetDomain& domain, InnerDomainPtrType&,
+                         int numberValsRequired,
+                         std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    UInt innerDomainSize = getDomainSize(domain.inner);
+
+    neighbourhoods.emplace_back(
+        "setCrossOver", numberValsRequired,
+        [innerDomainSize, &domain](NeighbourhoodParams& params) {
+            auto& vals = params.getVals<SetValue>();
+            debug_code(assert(vals.size() == 2));
+            auto& fromVal = *(vals[0]);
+            auto& toVal = *(vals[1]);
+            if (fromVal.numberElements() == 0 || toVal.numberElements() == 0) {
+                ++params.stats.minorNodeCount;
+                return;
+            }
+            int numberTries = 0;
+            const int tryLimit =
+                params.parentCheckTryLimit *
+                calcNumberInsertionAttempts(fromVal.numberElements(),
+                                            innerDomainSize) *
+                calcNumberInsertionAttempts(toVal.numberElements(),
+                                            innerDomainSize);
+            debug_neighbourhood_action("Looking for value to move");
+            bool success = false;
+            UInt fromIndexToMove, toIndexToMove;
+            ValRef<InnerValueType> fromMemberToMove = nullptr,
+                                   toMemberToMove = nullptr;
+            do {
+                ++params.stats.minorNodeCount;
+                fromIndexToMove =
+                    globalRandom<UInt>(0, fromVal.numberElements() - 1);
+                toIndexToMove =
+                    globalRandom<UInt>(0, toVal.numberElements() - 1);
+                if (toVal.containsMember(
+                        fromVal.getMembers<InnerViewType>()[fromIndexToMove]) ||
+                    fromVal.containsMember(
+                        toVal.getMembers<InnerViewType>()[toIndexToMove])) {
+                    continue;
+                }
+                fromMemberToMove = assumeAsValue(
+                    fromVal.getMembers<InnerViewType>()[fromIndexToMove]);
+                toMemberToMove = assumeAsValue(
+                    toVal.getMembers<InnerViewType>()[toIndexToMove]);
+                HashType fromMemberHash =
+                    fromVal.notifyPossibleMemberChange<InnerValueType>(
+                        fromIndexToMove);
+                HashType toMemberHash =
+                    toVal.notifyPossibleMemberChange<InnerValueType>(
+                        toIndexToMove);
+                swapValAssignments(*fromMemberToMove, *toMemberToMove);
+                success = fromVal
+                              .tryMemberChange<InnerValueType>(
+                                  fromIndexToMove, fromMemberHash,
+                                  [&]() {
+                                      return toVal
+                                          .tryMemberChange<InnerValueType>(
+                                              toIndexToMove, toMemberHash,
+                                              [&]() {
+                                                  return params.parentCheck(
+                                                      params.vals);
+                                              })
+                                          .first;
+                                  })
+                              .first;
+            } while (!success && ++numberTries < tryLimit);
+
+            if (!success) {
+                debug_neighbourhood_action(
+                    "Couldn't find values to cross over, number tries="
+                    << tryLimit);
+                return;
+            }
+
+            debug_neighbourhood_action(
+                "CrossOverd values: "
+                << toVal.getMembers<InnerViewType>()[toIndexToMove] << " and "
+                << fromVal.getMembers<InnerViewType>()[fromIndexToMove]);
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                HashType fromMemberHash =
+                    fromVal.notifyPossibleMemberChange<InnerValueType>(
+                        fromIndexToMove);
+                HashType toMemberHash =
+                    toVal.notifyPossibleMemberChange<InnerValueType>(
+                        toIndexToMove);
+                swapValAssignments(*fromMemberToMove, *toMemberToMove);
+                fromVal.tryMemberChange<InnerValueType>(
+                    fromIndexToMove, fromMemberHash, [&]() {
+                        return toVal
+                            .tryMemberChange<InnerValueType>(
+                                toIndexToMove, toMemberHash,
+                                [&]() { return true; })
+                            .first;
+                    });
+            }
+        });
+}
+
+void setCrossOverGen(const SetDomain& domain, int numberValsRequired,
+                     std::vector<Neighbourhood>& neighbourhoods) {
+    if (domain.sizeAttr.sizeType == SizeAttr::SizeAttrType::EXACT_SIZE) {
+        return;
+    }
+    mpark::visit(
+        [&](const auto& innerDomainPtr) {
+            setCrossOverGenImpl(domain, innerDomainPtr, numberValsRequired,
+                                neighbourhoods);
+        },
+        domain.inner);
+}
+
 template <typename InnerDomainPtrType>
 void setMoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
                     int numberValsRequired,
@@ -454,6 +571,5 @@ void setAssignRandomGen(const SetDomain& domain, int numberValsRequired,
 const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::value = {
     {1, setLiftSingleGen},    //
     {1, setLiftMultipleGen},  //
-    {1, setAddGen},
-    {1, setRemoveGen},
-    {2, setMoveGen}};
+    {1, setAddGen},          {1, setRemoveGen},
+    {2, setMoveGen},         {2, setCrossOverGen}};

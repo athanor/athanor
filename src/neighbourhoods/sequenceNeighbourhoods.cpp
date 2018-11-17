@@ -74,10 +74,9 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                 ParentCheckCallBack parentCheck =
                     [&](const AnyValVec& newValue) {
                         if (val.injective) {
-                            HashType newHash = getValueHash(
-                                mpark::get<ValRefVec<InnerValueType>>(newValue)
-                                    .front());
-                            if (val.memberHashes.count(newHash)) {
+
+                            if (val.containsMember (mpark::get<ValRefVec<InnerValueType>>(newValue)
+                                                       .front())) {
                                 return false;
                             }
                         }
@@ -302,13 +301,14 @@ void swapSub(ExprRefVec<InnerViewType>& members,
 
 template <typename InnerViewType>
 void swapAssignedValuesOfSub(ExprRefVec<InnerViewType>& members,
-                 ExprRefVec<InnerViewType>& newValues, UInt startIndex,
-                 UInt endIndex) {
+                             ExprRefVec<InnerViewType>& newValues,
+                             UInt startIndex, UInt endIndex) {
     typedef typename AssociatedValueType<InnerViewType>::type InnerValueType;
 
     UInt subseqSize = endIndex - startIndex;
     for (size_t i = 0; i < subseqSize; i++) {
-        swapValAssignments(*assumeAsValue(newValues[i]), *assumeAsValue(members[startIndex + i]));
+        swapValAssignments(*assumeAsValue(newValues[i]),
+                           *assumeAsValue(members[startIndex + i]));
     }
 }
 
@@ -362,8 +362,8 @@ void sequenceRelaxSubGenImpl(const SequenceDomain&,
                         if (params.parentCheck(params.vals)) {
                             // swap values of the variables not the variables
                             // and trigger change
-                            swapAssignedValuesOfSub(members, newValues, startIndex,
-                                        endIndex);
+                            swapAssignedValuesOfSub(members, newValues,
+                                                    startIndex, endIndex);
                             return true;
                         }
                         return false;
@@ -385,7 +385,8 @@ void sequenceRelaxSubGenImpl(const SequenceDomain&,
                 HashType previousSubseqHash =
                     val.notifyPossibleSubsequenceChange<InnerValueType>(
                         startIndex, endIndex, oldHashes);
-                swapAssignedValuesOfSub(members, newValues, startIndex, endIndex);
+                swapAssignedValuesOfSub(members, newValues, startIndex,
+                                        endIndex);
                 val.trySubsequenceChange<InnerValueType>(
                     startIndex, endIndex, oldHashes, previousSubseqHash,
                     []() { return true; });
@@ -595,6 +596,124 @@ void sequenceMoveGen(const SequenceDomain& domain, int numberValsRequired,
         domain.inner);
 }
 
+template <typename InnerValueType, typename Func>
+static bool performCrossOver(SequenceValue& fromVal, SequenceValue& toVal,
+                             UInt indexToCrossOver,
+                             std::vector<HashType>& fromValMemberHashes,
+                             std::vector<HashType>& toValMemberHashes,
+                             ValRef<InnerValueType> member1,
+                             ValRef<InnerValueType> member2,
+                             Func&& parentCheck) {
+    fromValMemberHashes.clear();
+    toValMemberHashes.clear();
+    HashType fromValSubseqHash =
+        fromVal.notifyPossibleSubsequenceChange<InnerValueType>(
+            indexToCrossOver, indexToCrossOver + 1, fromValMemberHashes);
+    HashType toValSubseqHash =
+        toVal.notifyPossibleSubsequenceChange<InnerValueType>(
+            indexToCrossOver, indexToCrossOver + 1, toValMemberHashes);
+    swapValAssignments(*member1, *member2);
+    return fromVal.trySubsequenceChange<InnerValueType>(
+        indexToCrossOver, indexToCrossOver + 1, fromValMemberHashes,
+        fromValSubseqHash, [&]() {
+            return toVal.trySubsequenceChange<InnerValueType>(
+                indexToCrossOver, indexToCrossOver + 1, toValMemberHashes,
+                toValSubseqHash, parentCheck);
+        });
+}
+
+template<typename InnerDomainPtrType>
+void sequenceCrossOverGenImpl(const SequenceDomain& domain, InnerDomainPtrType&,
+                              int numberValsRequired,
+                              std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    UInt innerDomainSize = getDomainSize(domain.inner);
+
+    neighbourhoods.emplace_back(
+        "sequenceCrossOver", numberValsRequired,
+        [innerDomainSize, &domain](NeighbourhoodParams& params) {
+            auto& vals = params.getVals<SequenceValue>();
+            debug_code(assert(vals.size() == 2));
+            auto& fromVal = *(vals[0]);
+            auto& toVal = *(vals[1]);
+            if (fromVal.numberElements() == 0 || toVal.numberElements() == 0) {
+                ++params.stats.minorNodeCount;
+                return;
+            }
+            int numberTries = 0;
+            const int tryLimit =
+                (domain.injective)
+                    ? params.parentCheckTryLimit *
+                          calcNumberInsertionAttempts(fromVal.numberElements(),
+                                                      innerDomainSize) *
+                          calcNumberInsertionAttempts(toVal.numberElements(),
+                                                      innerDomainSize)
+                    : params.parentCheckTryLimit;
+            debug_neighbourhood_action("Looking for values to cross over");
+            bool success = false;
+            UInt indexToCrossOver;
+            const UInt maxCrossOverIndex =
+                min(fromVal.numberElements(), toVal.numberElements()) - 1;
+            ValRef<InnerValueType> member1 = nullptr, member2 = nullptr;
+            std::vector<HashType> fromValMemberHashes, toValMemberHashes;
+
+            do {
+                ++params.stats.minorNodeCount;
+                indexToCrossOver = globalRandom<UInt>(0, maxCrossOverIndex);
+                if (domain.injective &&
+                    (toVal.containsMember(
+                         fromVal
+                             .member<InnerValueType>(indexToCrossOver)) ||
+                     fromVal.containsMember(
+                         toVal
+                             .member<InnerValueType>(indexToCrossOver)))) {
+                    continue;
+                }
+                member1 = assumeAsValue(
+                    fromVal.getMembers<InnerViewType>()[indexToCrossOver]);
+                member2 = assumeAsValue(
+                    toVal.getMembers<InnerViewType>()[indexToCrossOver]);
+                success = performCrossOver(
+                    fromVal, toVal, indexToCrossOver, fromValMemberHashes,
+                    toValMemberHashes, member1, member2,
+                    [&]() { return params.parentCheck(params.vals); });
+            } while (!success && ++numberTries < tryLimit);
+
+            if (!success) {
+                debug_neighbourhood_action(
+                    "Couldn't find values to cross over, number tries="
+                    << tryLimit);
+                return;
+            }
+
+            debug_neighbourhood_action(
+                "CrossOverd values: "
+                << toVal.getMembers<InnerViewType>()[indexToCrossOver] << " and "
+                << fromVal.getMembers<InnerViewType>()[indexToCrossOver]);
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                performCrossOver(fromVal, toVal, indexToCrossOver,
+                                 fromValMemberHashes, toValMemberHashes,
+                                 member1, member2, [&]() { return true; });
+            }
+        });
+}
+
+void sequenceCrossOverGen(const SequenceDomain& domain, int numberValsRequired,
+                          std::vector<Neighbourhood>& neighbourhoods) {
+    if (domain.sizeAttr.sizeType == SizeAttr::SizeAttrType::EXACT_SIZE) {
+        return;
+    }
+    mpark::visit(
+        [&](const auto& innerDomainPtr) {
+            sequenceCrossOverGenImpl(domain, innerDomainPtr, numberValsRequired,
+                                     neighbourhoods);
+        },
+        domain.inner);
+}
+
 void sequenceAssignRandomGen(const SequenceDomain& domain,
                              int numberValsRequired,
                              std::vector<Neighbourhood>& neighbourhoods) {
@@ -637,4 +756,7 @@ const NeighbourhoodVec<SequenceDomain>
         {1, sequenceLiftSingleGen}, {1, sequenceAddGen},
         {1, sequenceRemoveGen},     {1, sequencePositionsSwapGen},
         {1, sequenceReverseSubGen}, {1, sequenceRelaxSubGen},
-        {2, sequenceMoveGen}};
+        {2, sequenceMoveGen},
+        {2, sequenceCrossOverGen}
+
+    };

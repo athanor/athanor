@@ -281,6 +281,11 @@ struct SequenceValue : public SequenceView, public ValBase {
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
+    template<typename InnerValueType>
+    bool containsMember(const ValRef<InnerValueType>& val) {
+        debug_code(assert(injective));
+        return memberHashes.count(getValueHash(asView(*val)));
+    }
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     void reassignIndicesToEnd(UInt start) {
         auto& members =

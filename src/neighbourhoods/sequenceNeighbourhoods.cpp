@@ -301,18 +301,14 @@ void swapSub(ExprRefVec<InnerViewType>& members,
 }
 
 template <typename InnerViewType>
-void deepSwapSub(ExprRefVec<InnerViewType>& members,
+void swapAssignedValuesOfSub(ExprRefVec<InnerViewType>& members,
                  ExprRefVec<InnerViewType>& newValues, UInt startIndex,
                  UInt endIndex) {
     typedef typename AssociatedValueType<InnerViewType>::type InnerValueType;
-    auto temp = make<InnerValueType>();
 
     UInt subseqSize = endIndex - startIndex;
     for (size_t i = 0; i < subseqSize; i++) {
-        deepCopy(*assumeAsValue(members[startIndex + i]), *temp);
-        deepCopy(*assumeAsValue(newValues[i]),
-                 *assumeAsValue(members[startIndex + i]));
-        deepCopy(*temp, *assumeAsValue(newValues[i]));
+        swapValAssignments(*assumeAsValue(newValues[i]), *assumeAsValue(members[startIndex + i]));
     }
 }
 
@@ -366,7 +362,7 @@ void sequenceRelaxSubGenImpl(const SequenceDomain&,
                         if (params.parentCheck(params.vals)) {
                             // swap values of the variables not the variables
                             // and trigger change
-                            deepSwapSub(members, newValues, startIndex,
+                            swapAssignedValuesOfSub(members, newValues, startIndex,
                                         endIndex);
                             return true;
                         }
@@ -389,7 +385,7 @@ void sequenceRelaxSubGenImpl(const SequenceDomain&,
                 HashType previousSubseqHash =
                     val.notifyPossibleSubsequenceChange<InnerValueType>(
                         startIndex, endIndex, oldHashes);
-                deepSwapSub(members, newValues, startIndex, endIndex);
+                swapAssignedValuesOfSub(members, newValues, startIndex, endIndex);
                 val.trySubsequenceChange<InnerValueType>(
                     startIndex, endIndex, oldHashes, previousSubseqHash,
                     []() { return true; });

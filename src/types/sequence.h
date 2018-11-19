@@ -525,12 +525,10 @@ struct SequenceValue : public SequenceView, public ValBase {
     template <typename InnerViewType>
     void applySwaps(UInt offset, const std::vector<UInt>& swaps, bool isInverse,
                     bool trigger) {
-        const UInt startPoint = (!isInverse) ? 0 : swaps.size() - 1;
-        const UInt endPoint = (!isInverse) ? swaps.size() - 1 : 0;
-        const UInt increment = (!isInverse) ? 1 : -1;
         auto& members = getMembers<InnerViewType>();
-        for (size_t i = startPoint; i <= endPoint; i += increment) {
-            UInt point1 = i + offset, point2 = swaps[i] + offset;
+        for (size_t i = 0; i < swaps.size(); i++) {
+            size_t index = (!isInverse)? i : swaps.size() - 1 - i;
+            UInt point1 = index + offset, point2 = swaps[index] + offset;
             swapPositions<InnerViewType>(point1, point2);
             if (trigger) {
                 valBase(*assumeAsValue(members[point1])).id = point1;

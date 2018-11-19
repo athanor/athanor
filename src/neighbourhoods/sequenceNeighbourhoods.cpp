@@ -74,9 +74,10 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                 ParentCheckCallBack parentCheck =
                     [&](const AnyValVec& newValue) {
                         if (val.injective) {
-
-                            if (val.containsMember (mpark::get<ValRefVec<InnerValueType>>(newValue)
-                                                       .front())) {
+                            if (val.containsMember(
+                                    mpark::get<ValRefVec<InnerValueType>>(
+                                        newValue)
+                                        .front())) {
                                 return false;
                             }
                         }
@@ -463,6 +464,73 @@ void sequenceReverseSubGen(const SequenceDomain& domain, int numberValsRequired,
         domain.inner);
 }
 
+void generateSwap(UInt size, vector<UInt>& swaps) {
+    swaps.resize(size);
+    for (size_t i = 0; i < swaps.size(); i++) {
+        swaps[i] = globalRandom<UInt>(i, swaps.size() - 1);
+    }
+}
+
+template <typename InnerDomainPtrType>
+void sequenceShuffleSubGenImpl(const SequenceDomain&, InnerDomainPtrType&,
+                               int numberValsRequired,
+                               std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+
+    neighbourhoods.emplace_back(
+        "sequenceShuffleSub", numberValsRequired,
+        [](NeighbourhoodParams& params) {
+            auto& val = *(params.getVals<SequenceValue>().front());
+            if (val.numberElements() < 2) {
+                ++params.stats.minorNodeCount;
+                return;
+            }
+            int numberTries = 0;
+            const int tryLimit = params.parentCheckTryLimit;
+            debug_neighbourhood_action(
+                "Looking for indices of subsequence to Shuffle");
+
+            bool success;
+            UInt index1, index2;
+            vector<UInt> swaps;
+            do {
+                index1 = globalRandom<UInt>(0, val.numberElements() - 2);
+                index2 =
+                    globalRandom<UInt>(index1 + 1, val.numberElements() - 1);
+                generateSwap((index2 - index1) + 1, swaps);
+
+                params.stats.minorNodeCount += (index2 - index1) + 1;
+                success = val.trySubsequenceShuffle<InnerValueType>(
+                    index1, swaps,
+                    [&]() { return params.parentCheck(params.vals); });
+            } while (!success && ++numberTries < tryLimit);
+            if (!success) {
+                debug_neighbourhood_action(
+                    "Couldn't find subsequence to Shuffle, number tries="
+                    << tryLimit);
+                return;
+            }
+            debug_neighbourhood_action(
+                "subsequence Shuffled: " << index1 << " and " << index2);
+            if (!params.changeAccepted()) {
+                debug_neighbourhood_action("Change rejected");
+                val.trySubsequenceShuffle<InnerValueType>(
+                    index1, swaps, []() { return true; });
+            }
+        });
+}
+
+void sequenceShuffleSubGen(const SequenceDomain& domain, int numberValsRequired,
+                           std::vector<Neighbourhood>& neighbourhoods) {
+    mpark::visit(
+        [&](const auto& innerDomainPtr) {
+            sequenceShuffleSubGenImpl(domain, innerDomainPtr,
+                                      numberValsRequired, neighbourhoods);
+        },
+        domain.inner);
+}
+
 template <typename InnerDomainPtrType>
 void sequencePositionsSwapGenImpl(const SequenceDomain&, InnerDomainPtrType&,
                                   int numberValsRequired,
@@ -622,7 +690,7 @@ static bool performCrossOver(SequenceValue& fromVal, SequenceValue& toVal,
         });
 }
 
-template<typename InnerDomainPtrType>
+template <typename InnerDomainPtrType>
 void sequenceCrossOverGenImpl(const SequenceDomain& domain, InnerDomainPtrType&,
                               int numberValsRequired,
                               std::vector<Neighbourhood>& neighbourhoods) {
@@ -664,11 +732,9 @@ void sequenceCrossOverGenImpl(const SequenceDomain& domain, InnerDomainPtrType&,
                 indexToCrossOver = globalRandom<UInt>(0, maxCrossOverIndex);
                 if (domain.injective &&
                     (toVal.containsMember(
-                         fromVal
-                             .member<InnerValueType>(indexToCrossOver)) ||
+                         fromVal.member<InnerValueType>(indexToCrossOver)) ||
                      fromVal.containsMember(
-                         toVal
-                             .member<InnerValueType>(indexToCrossOver)))) {
+                         toVal.member<InnerValueType>(indexToCrossOver)))) {
                     continue;
                 }
                 member1 = assumeAsValue(
@@ -690,7 +756,8 @@ void sequenceCrossOverGenImpl(const SequenceDomain& domain, InnerDomainPtrType&,
 
             debug_neighbourhood_action(
                 "CrossOverd values: "
-                << toVal.getMembers<InnerViewType>()[indexToCrossOver] << " and "
+                << toVal.getMembers<InnerViewType>()[indexToCrossOver]
+                << " and "
                 << fromVal.getMembers<InnerViewType>()[indexToCrossOver]);
             if (!params.changeAccepted()) {
                 debug_neighbourhood_action("Change rejected");
@@ -755,8 +822,9 @@ const NeighbourhoodVec<SequenceDomain>
     NeighbourhoodGenList<SequenceDomain>::value = {
         {1, sequenceLiftSingleGen}, {1, sequenceAddGen},
         {1, sequenceRemoveGen},     {1, sequencePositionsSwapGen},
-        {1, sequenceReverseSubGen}, {1, sequenceRelaxSubGen},
-        {2, sequenceMoveGen},
+        {1, sequenceReverseSubGen},
+        {1, sequenceShuffleSubGen},
+        {1, sequenceRelaxSubGen},   {2, sequenceMoveGen},
         {2, sequenceCrossOverGen}
 
-    };
+};

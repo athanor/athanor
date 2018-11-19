@@ -1,4 +1,5 @@
 
+
 #ifndef SRC_TRIGGERS_SEQUENCETRIGGER_H_
 #define SRC_TRIGGERS_SEQUENCETRIGGER_H_
 #include "base/base.h"

@@ -281,7 +281,7 @@ struct SequenceValue : public SequenceView, public ValBase {
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
-    template<typename InnerValueType>
+    template <typename InnerValueType>
     bool containsMember(const ValRef<InnerValueType>& val) {
         debug_code(assert(injective));
         return memberHashes.count(getValueHash(asView(*val)));
@@ -516,6 +516,48 @@ struct SequenceValue : public SequenceView, public ValBase {
             return true;
         } else {
             reversePositions<InnerViewType>(startIndex, endIndex, false);
+            debug_code(assertValidState());
+            debug_code(assertValidVarBases());
+            return false;
+        }
+    }
+
+    template <typename InnerViewType>
+    void applySwaps(UInt offset, const std::vector<UInt>& swaps, bool isInverse,
+                    bool trigger) {
+        const UInt startPoint = (!isInverse) ? 0 : swaps.size() - 1;
+        const UInt endPoint = (!isInverse) ? swaps.size() - 1 : 0;
+        const UInt increment = (!isInverse) ? 1 : -1;
+        auto& members = getMembers<InnerViewType>();
+        for (size_t i = startPoint; i <= endPoint; i += increment) {
+            UInt point1 = i + offset, point2 = swaps[i] + offset;
+            swapPositions<InnerViewType>(point1, point2);
+            if (trigger) {
+                valBase(*assumeAsValue(members[point1])).id = point1;
+                valBase(*assumeAsValue(members[point2])).id = point2;
+                SequenceView::notifyPositionsSwapped(point1, point2);
+            }
+        }
+    }
+
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
+    inline bool trySubsequenceShuffle(UInt startIndex,
+                                      const std::vector<UInt>& swaps,
+                                      Func&& func) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        // perform test reverse without triggering
+        applySwaps<InnerViewType>(startIndex, swaps, false, false);
+        if (func()) {
+            // undo
+            applySwaps<InnerViewType>(startIndex, swaps, true, false);
+            // perform real reverse with triggering
+            applySwaps<InnerViewType>(startIndex, swaps, false, true);
+            debug_code(assertValidVarBases());
+            debug_code(assertValidState());
+            return true;
+        } else {
+            applySwaps<InnerViewType>(startIndex, swaps, false, false);
             debug_code(assertValidState());
             debug_code(assertValidVarBases());
             return false;

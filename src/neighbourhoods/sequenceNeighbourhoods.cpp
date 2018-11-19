@@ -823,7 +823,7 @@ const NeighbourhoodVec<SequenceDomain>
         {1, sequenceLiftSingleGen}, {1, sequenceAddGen},
         {1, sequenceRemoveGen},     {1, sequencePositionsSwapGen},
         {1, sequenceReverseSubGen},
-        {1, sequenceShuffleSubGen},
+//        {1, sequenceShuffleSubGen},
         {1, sequenceRelaxSubGen},   {2, sequenceMoveGen},
         {2, sequenceCrossOverGen}
 

@@ -52,7 +52,7 @@ auto makeHillClimbing(std::shared_ptr<Strategy> strategy) {
 }
 
 class RandomWalk {
-    std::shared_ptr<RandomNeighbourhood> nhSelector;
+    std::shared_ptr<RandomNeighbourhood> nhSelector = std::make_shared<RandomNeighbourhood>();
     bool allowViolations;
 
    public:

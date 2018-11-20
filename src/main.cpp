@@ -15,8 +15,9 @@ using namespace std;
 using namespace AutoArgParse;
 
 ArgParser argParser;
-auto& fileArg = argParser.add<Arg<ifstream>>(
-    "path_to_file", Policy::MANDATORY, "Path to parameter file.",
+auto& specFlag = argParser.add<ComplexFlag>("--spec",Policy::MANDATORY, "Precedes essence specification file.");
+auto& specArg = specFlag.add<Arg<ifstream>>(
+    "path_to_file", Policy::MANDATORY, "JSON representation of an essence file.",
     [](const string& path) -> ifstream {
         ifstream file;
         file.open(path);
@@ -26,6 +27,20 @@ auto& fileArg = argParser.add<Arg<ifstream>>(
             throw ErrorMessage("Error opening file: " + path);
         }
     });
+
+auto& paramFlag = argParser.add<ComplexFlag>("--param",Policy::OPTIONAL, "Precedes parameter file.");
+auto& paramArg = paramFlag.add<Arg<ifstream>>(
+                                            "path_to_file", Policy::MANDATORY, "JSON representation of an essence parameter file.",
+                                            [](const string& path) -> ifstream {
+                                                ifstream file;
+                                                file.open(path);
+                                                if (file.good()) {
+                                                    return file;
+                                                } else {
+                                                    throw ErrorMessage("Error opening file: " + path);
+                                                }
+                                            });
+
 
 std::mt19937 globalRandomGenerator;
 auto& randomSeedFlag = argParser.add<ComplexFlag>(
@@ -260,7 +275,7 @@ int main(const int argc, const char** argv) {
 
     setSignalsAndHandlers();
     try {
-        ParsedModel parsedModel = parseModelFromJson(fileArg.get());
+        ParsedModel parsedModel = (paramArg)? parseModelFromJson(specArg.get(),paramArg.get()) :  parseModelFromJson(specArg.get());
         State state(parsedModel.builder->build());
 
         runSearch(state);

@@ -1504,10 +1504,7 @@ inline void parseObjective(json& objExpr, ParsedModel& parsedModel) {
     parsedModel.builder->setObjective(mode, objConstraint);
 }
 
-ParsedModel parseModelFromJson(istream& is) {
-    json j;
-    is >> j;
-    ParsedModel parsedModel;
+void parseJson(json& j, ParsedModel& parsedModel) {
     for (auto& statement : j["mStatements"]) {
         if (statement.count("Declaration")) {
             auto& declaration = statement["Declaration"];
@@ -1523,5 +1520,24 @@ ParsedModel parseModelFromJson(istream& is) {
             parseObjective(statement["Objective"], parsedModel);
         }
     }
+}
+
+ParsedModel parseModelFromJson(istream& essenceIs,istream& paramIs) {
+    json paramJson;
+    paramIs >> paramJson;
+    ParsedModel parsedModel;
+    parseJson(paramJson,parsedModel);
+
+    json essenceJson;
+    essenceIs >> essenceJson;
+    parseJson(essenceJson,parsedModel);
+    return parsedModel;
+}
+
+ParsedModel parseModelFromJson(istream& essenceIs) {
+    ParsedModel parsedModel;
+    json essenceJson;
+    essenceIs >> essenceJson;
+    parseJson(essenceJson,parsedModel);
     return parsedModel;
 }

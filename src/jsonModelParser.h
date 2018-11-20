@@ -14,6 +14,6 @@ struct ParsedModel {
     ParsedModel();
 };
 
-ParsedModel parseModelFromJson(std::istream& is);
-
+ParsedModel parseModelFromJson(std::istream& essenceIs,std::istream& paramIs);
+ParsedModel parseModelFromJson(std::istream& essenceIs);
 #endif /* SRC_JSONMODELPARSER_H_ */

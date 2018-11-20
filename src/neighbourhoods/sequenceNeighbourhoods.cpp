@@ -304,7 +304,6 @@ template <typename InnerViewType>
 void swapAssignedValuesOfSub(ExprRefVec<InnerViewType>& members,
                              ExprRefVec<InnerViewType>& newValues,
                              UInt startIndex, UInt endIndex) {
-    typedef typename AssociatedValueType<InnerViewType>::type InnerValueType;
 
     UInt subseqSize = endIndex - startIndex;
     for (size_t i = 0; i < subseqSize; i++) {

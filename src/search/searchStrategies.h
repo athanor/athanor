@@ -248,6 +248,7 @@ class ExplorationUsingRandomWalk {
                 numberRandomMoves.increment();
                 if (numberRandomMoves.getValue() >
                     ALLOWED_ITERATIONS_OF_INACTIVITY) {
+                    bestObj = state.model.getObjective();
                     numberRandomMoves.reset(baseValue, multiplier);
                 }
             }

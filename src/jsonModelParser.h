@@ -13,7 +13,7 @@ struct ParsedModel {
     std::unordered_map<std::string, AnyDomainRef> domainLettings;
     ParsedModel();
 };
+typedef std::vector<std::reference_wrapper<std::istream>> ISRefVec;
+ParsedModel parseModelFromJson(ISRefVec v);
 
-ParsedModel parseModelFromJson(std::istream& essenceIs,std::istream& paramIs);
-ParsedModel parseModelFromJson(std::istream& essenceIs);
 #endif /* SRC_JSONMODELPARSER_H_ */

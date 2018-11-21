@@ -304,7 +304,6 @@ template <typename InnerViewType>
 void swapAssignedValuesOfSub(ExprRefVec<InnerViewType>& members,
                              ExprRefVec<InnerViewType>& newValues,
                              UInt startIndex, UInt endIndex) {
-
     UInt subseqSize = endIndex - startIndex;
     for (size_t i = 0; i < subseqSize; i++) {
         swapValAssignments(*assumeAsValue(newValues[i]),
@@ -819,11 +818,14 @@ void sequenceAssignRandomGen(const SequenceDomain& domain,
 
 const NeighbourhoodVec<SequenceDomain>
     NeighbourhoodGenList<SequenceDomain>::value = {
-        {1, sequenceLiftSingleGen}, {1, sequenceAddGen},
-        {1, sequenceRemoveGen},     {1, sequencePositionsSwapGen},
+        {1, sequenceLiftSingleGen},
+        {1, sequenceAddGen},
+        {1, sequenceRemoveGen},
+        {1, sequencePositionsSwapGen},
         {1, sequenceReverseSubGen},
-//        {1, sequenceShuffleSubGen},
-        {1, sequenceRelaxSubGen},   {2, sequenceMoveGen},
+        //        {1, sequenceShuffleSubGen},
+        {1, sequenceRelaxSubGen},
+        {2, sequenceMoveGen},
         {2, sequenceCrossOverGen}
 
 };

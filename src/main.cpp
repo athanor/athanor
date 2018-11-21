@@ -15,9 +15,11 @@ using namespace std;
 using namespace AutoArgParse;
 
 ArgParser argParser;
-auto& specFlag = argParser.add<ComplexFlag>("--spec",Policy::MANDATORY, "Precedes essence specification file.");
+auto& specFlag = argParser.add<ComplexFlag>(
+    "--spec", Policy::MANDATORY, "Precedes essence specification file.");
 auto& specArg = specFlag.add<Arg<ifstream>>(
-    "path_to_file", Policy::MANDATORY, "JSON representation of an essence file.",
+    "path_to_file", Policy::MANDATORY,
+    "JSON representation of an essence file.",
     [](const string& path) -> ifstream {
         ifstream file;
         file.open(path);
@@ -28,19 +30,20 @@ auto& specArg = specFlag.add<Arg<ifstream>>(
         }
     });
 
-auto& paramFlag = argParser.add<ComplexFlag>("--param",Policy::OPTIONAL, "Precedes parameter file.");
+auto& paramFlag = argParser.add<ComplexFlag>("--param", Policy::OPTIONAL,
+                                             "Precedes parameter file.");
 auto& paramArg = paramFlag.add<Arg<ifstream>>(
-                                            "path_to_file", Policy::MANDATORY, "JSON representation of an essence parameter file.",
-                                            [](const string& path) -> ifstream {
-                                                ifstream file;
-                                                file.open(path);
-                                                if (file.good()) {
-                                                    return file;
-                                                } else {
-                                                    throw ErrorMessage("Error opening file: " + path);
-                                                }
-                                            });
-
+    "path_to_file", Policy::MANDATORY,
+    "JSON representation of an essence parameter file.",
+    [](const string& path) -> ifstream {
+        ifstream file;
+        file.open(path);
+        if (file.good()) {
+            return file;
+        } else {
+            throw ErrorMessage("Error opening file: " + path);
+        }
+    });
 
 std::mt19937 globalRandomGenerator;
 auto& randomSeedFlag = argParser.add<ComplexFlag>(
@@ -269,15 +272,15 @@ void setSignalsAndHandlers() {
 int main(const int argc, const char** argv) {
     argParser.validateArgs(argc, argv);
 
-    u_int32_t seed = (seedArg) ? seedArg.get() : random_device()();
-    globalRandomGenerator.seed(seed);
-    cout << "Using seed: " << seed << endl;
-
     setSignalsAndHandlers();
     try {
-        ParsedModel parsedModel = (paramArg)? parseModelFromJson(specArg.get(),paramArg.get()) :  parseModelFromJson(specArg.get());
+        ParsedModel parsedModel =
+            (paramArg) ? parseModelFromJson({paramArg.get(), specArg.get()})
+                       : parseModelFromJson({specArg.get()});
         State state(parsedModel.builder->build());
-
+        u_int32_t seed = (seedArg) ? seedArg.get() : random_device()();
+        globalRandomGenerator.seed(seed);
+        cout << "Using seed: " << seed << endl;
         runSearch(state);
     } catch (SanityCheckException& e) {
         cerr << "***SANITY CHECK ERROR: " << e.errorMessage << endl;

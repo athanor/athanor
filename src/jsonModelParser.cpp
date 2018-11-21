@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <utility>
 #include "common/common.h"
+#include "jsonModelParser.h"
 #include "operators/opPowerSet.h"
 #include "operators/operatorMakers.h"
 #include "operators/quantifier.h"
@@ -1522,22 +1523,12 @@ void parseJson(json& j, ParsedModel& parsedModel) {
     }
 }
 
-ParsedModel parseModelFromJson(istream& essenceIs,istream& paramIs) {
-    json paramJson;
-    paramIs >> paramJson;
+ParsedModel parseModelFromJson(ISRefVec streams) {
     ParsedModel parsedModel;
-    parseJson(paramJson,parsedModel);
-
-    json essenceJson;
-    essenceIs >> essenceJson;
-    parseJson(essenceJson,parsedModel);
-    return parsedModel;
-}
-
-ParsedModel parseModelFromJson(istream& essenceIs) {
-    ParsedModel parsedModel;
-    json essenceJson;
-    essenceIs >> essenceJson;
-    parseJson(essenceJson,parsedModel);
+    for (auto& is : streams) {
+        json j;
+        is >> j;
+        parseJson(j, parsedModel);
+    }
     return parsedModel;
 }

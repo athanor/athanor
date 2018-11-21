@@ -527,7 +527,7 @@ struct SequenceValue : public SequenceView, public ValBase {
                     bool trigger) {
         auto& members = getMembers<InnerViewType>();
         for (size_t i = 0; i < swaps.size(); i++) {
-            size_t index = (!isInverse)? i : swaps.size() - 1 - i;
+            size_t index = (!isInverse) ? i : swaps.size() - 1 - i;
             UInt point1 = index + offset, point2 = swaps[index] + offset;
             swapPositions<InnerViewType>(point1, point2);
             if (trigger) {

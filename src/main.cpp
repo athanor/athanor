@@ -5,6 +5,7 @@
 #include <iostream>
 #include <unordered_map>
 #include "common/common.h"
+#include "gitRevision.h"
 #include "jsonModelParser.h"
 #include "search/neighbourhoodSelectionStrategies.h"
 #include "search/searchStrategies.h"
@@ -270,6 +271,10 @@ void setSignalsAndHandlers() {
 }
 
 int main(const int argc, const char** argv) {
+    std::cout << "ATHANOR\n";
+    if (GIT_REVISION != string("GITDIR-NOTFOUND")) {
+        cout << "Git revision: " << GIT_REVISION << endl << endl;
+    }
     argParser.validateArgs(argc, argv);
 
     setSignalsAndHandlers();

@@ -33,8 +33,16 @@ if(CCACHE_FOUND)
         set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif(CCACHE_FOUND)
 
+#git revision
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/getGitRevision/")
+include(GetGitRevisionDescription)
+get_git_head_revision(GIT_REFSPEC GIT_SHA1)
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/getGitRevision/gitRevision.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/gitRevision.cpp" @ONLY)
+
+
 #find sources
-file(GLOB_RECURSE sources      src/*.cpp src/*.h src/*.hpp src/*.inc)
+file(GLOB_RECURSE sources      src/*.cpp src/*.h src/*.hpp src/*.inc "${CMAKE_CURRENT_BINARY_DIR}/gitRevision.cpp")
 
 
 

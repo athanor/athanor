@@ -46,7 +46,7 @@ auto& paramArg = paramFlag.add<Arg<ifstream>>(
         }
     });
 
-std::mt19937 globalRandomGenerator;
+mt19937 globalRandomGenerator;
 auto& randomSeedFlag = argParser.add<ComplexFlag>(
     "--randomSeed", Policy::OPTIONAL, "Specify a random seed.");
 auto& seedArg = randomSeedFlag.add<Arg<int>>(
@@ -271,11 +271,24 @@ void setSignalsAndHandlers() {
 }
 
 int main(const int argc, const char** argv) {
-    std::cout << "ATHANOR\n";
+    cout << "ATHANOR\n";
     if (GIT_REVISION != string("GITDIR-NOTFOUND")) {
         cout << "Git revision: " << GIT_REVISION << endl << endl;
     }
-    argParser.validateArgs(argc, argv);
+    if (argc == 1) {
+        argParser.printAllUsageInfo(cout, argv[0]);
+        exit(0);
+    }
+    try {
+        argParser.validateArgs(argc, argv, false);
+    } catch (ParseException& e) {
+        cerr << "Error: " << e.what() << endl;
+        cerr << "Successfully parsed: ";
+        argParser.printSuccessfullyParsed(cerr, argv);
+        cerr << "\n\n";
+        cerr << "For usage information, run " << argv[0] << endl;
+        exit(1);
+    }
 
     setSignalsAndHandlers();
     try {
@@ -325,7 +338,7 @@ void setTimeout(int numberSeconds, bool virtualTimer) {
 }
 bool sigIntActivated = false, sigAlarmActivated = false;
 void forceExit() {
-    std::cout << "\n\nFORCE EXIT\n";
+    cout << "\n\nFORCE EXIT\n";
     abort();
 }
 void sigIntHandler(int) {

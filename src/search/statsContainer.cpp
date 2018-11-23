@@ -32,8 +32,8 @@ ostream& operator<<(ostream& os, const NeighbourhoodStats& stats) {
        << stats.getAverage(stats.minorNodeCount) << endl;
     os << indent << "Number trigger events," << stats.triggerEventCount << ","
        << stats.getAverage(stats.triggerEventCount) << endl;
-    os << indent << "Time," << stats.totalCpuTime << ","
-       << stats.getAverage(stats.totalCpuTime);
+    os << indent << "Real time," << stats.totalRealTime << ","
+       << stats.getAverage(stats.totalRealTime);
     return os;
 }
 
@@ -43,6 +43,7 @@ StatsContainer::StatsContainer(Model& model)
         neighbourhoodStats.emplace_back(neighbourhood.name);
     }
 }
+
 void StatsContainer::initialSolution(Model& model) {
     lastViolation = model.csp->view()->violation;
     lastObjectiveDefined = model.objective->getViewIfDefined().hasValue();
@@ -80,10 +81,10 @@ void StatsContainer::reportResult(bool solutionAccepted,
         neighbourhoodStats[result.neighbourhoodIndex].vioTriggerEventCount +=
             triggerEventCount - result.statsMarkPoint.triggerEventCount;
     }
-    double time = getCpuTime() - result.statsMarkPoint.cpuTime;
-    neighbourhoodStats[result.neighbourhoodIndex].totalCpuTime += time;
+    double time = getRealTime() - result.statsMarkPoint.realTime;
+    neighbourhoodStats[result.neighbourhoodIndex].totalRealTime += time;
     if (result.statsMarkPoint.lastViolation > 0) {
-        neighbourhoodStats[result.neighbourhoodIndex].vioTotalCpuTime += time;
+        neighbourhoodStats[result.neighbourhoodIndex].vioTotalRealTime += time;
     }
     neighbourhoodStats[result.neighbourhoodIndex].numberObjImprovements +=
         (result.statsMarkPoint.lastViolation == 0 &&
@@ -115,18 +116,12 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
         bestObjective = lastObjective;
     }
     if (vioImproved || (lastViolation == 0 && objImproved)) {
-        tie(cpuTimeTillBestSolution, wallTimeTillBestSolution) = getTime();
+        tie(cpuTimeTillBestSolution, realTimeTillBestSolution) = getTime();
         cout << "\nNew solution:\n";
         cout << "Violation = " << lastViolation << endl;
         if (model.optimiseMode != OptimiseMode::NONE) {
             cout << "objective = "
                  << transposeObjective(optimiseMode, lastObjective) << endl;
-        }
-        // for experiements
-        if (lastViolation == 0) {
-            cout << "Best solution: "
-                 << transposeObjective(optimiseMode, bestObjective) << " "
-                 << getCpuTime() << endl;
         }
     }
 
@@ -151,23 +146,16 @@ void StatsContainer::printCurrentState(Model& model) {
     });
 }
 
-ostream& operator<<(ostream& os, StatsContainer& stats) {
-    stats.endTimer();
-
+ostream& operator<<(ostream& os, const StatsContainer& stats) {
     os << "Stats:\n";
     os << "Best violation: " << stats.bestViolation << endl;
     os << "Best objective: "
        << transposeObjective(stats.optimiseMode, stats.bestObjective) << endl;
     os << "CPU time till best solution: " << stats.cpuTimeTillBestSolution
        << endl;
-    os << "Wall time till best solution: " << stats.wallTimeTillBestSolution
+    os << "Real time till best solution: " << stats.realTimeTillBestSolution
        << endl;
     os << "Number iterations: " << stats.numberIterations << endl;
-    os << "Minor node count: " << stats.minorNodeCount << endl;
-    chrono::duration<double> timeTaken = stats.endTime - stats.startTime;
-    os << "Wall time: " << timeTaken.count() << endl;
-    auto cpuTime =
-        (double)(stats.endCpuTime - stats.startCpuTime) / CLOCKS_PER_SEC;
-    os << "CPU time: " << cpuTime;
+    os << "Minor node count: " << stats.minorNodeCount;
     return os;
 }

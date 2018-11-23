@@ -71,7 +71,7 @@ class State {
         }
         stats.reportResult(solutionAccepted, nhResult);
         totalTimeInNeighbourhoods +=
-            (stats.getCpuTime() - nhResult.statsMarkPoint.cpuTime);
+            (stats.getRealTime() - nhResult.statsMarkPoint.realTime);
     }
 
     inline void testForTermination() {
@@ -172,14 +172,16 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
         searchStrategy->run(state, true);
     } catch (EndOfSearchException&) {
     }
-    state.stats.endTimer();
     std::cout << "\n\n";
     state.printNeighbourhoodStats();
     std::cout << "\n\n"
               << state.stats << "\nTrigger event count " << triggerEventCount
               << "\n";
-    std::cout << "total time actually spent in neighbourhoods: "
+    auto times = state.stats.getTime();
+    std::cout << "total real time actually spent in neighbourhoods: "
               << state.totalTimeInNeighbourhoods << std::endl;
+    std::cout << "Total CPU time: " << times.first << std::endl;
+    std::cout << "Total real time: " << times.second << std::endl;
 }
 
 #endif /* SRC_SEARCH_SOLVER_H_ */

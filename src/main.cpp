@@ -336,7 +336,8 @@ void setTimeout(int numberSeconds, bool virtualTimer) {
         setitimer(ITIMER_REAL, &timer, NULL);
     }
 }
-bool sigIntActivated = false, sigAlarmActivated = false;
+
+volatile bool sigIntActivated = false, sigAlarmActivated = false;
 void forceExit() {
     cout << "\n\nFORCE EXIT\n";
     abort();

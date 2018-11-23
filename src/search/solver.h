@@ -6,7 +6,8 @@
 #include "search/statsContainer.h"
 #include "triggers/allTriggers.h"
 void dumpVarViolations(const ViolationContainer& vioContainer);
-extern bool sigIntActivated, sigAlarmActivated;
+extern volatile bool sigIntActivated;
+extern volatile bool sigAlarmActivated;
 extern u_int64_t iterationLimit;
 extern bool runSanityChecks;
 inline bool alwaysTrue(const AnyValVec&) { return true; }

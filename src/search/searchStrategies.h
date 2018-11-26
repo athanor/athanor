@@ -54,10 +54,11 @@ auto makeHillClimbing(std::shared_ptr<Strategy> strategy) {
 class RandomWalk {
     std::shared_ptr<RandomNeighbourhood> nhSelector =
         std::make_shared<RandomNeighbourhood>();
-    bool allowViolations;
-
    public:
     u_int64_t numberMovesToTake = 0;
+    bool allowViolations;
+
+
     RandomWalk(bool allowViolations) : allowViolations(allowViolations) {}
     void run(State& state, bool) {
         u_int64_t numberIterations = 0;
@@ -210,49 +211,49 @@ auto makeExplorationUsingViolationBackOff(
 
 template <typename ClimbStrategy>
 class ExplorationUsingRandomWalk {
+    static constexpr double baseValue = 10;
+    static constexpr double multiplier = 1.3;
+
     std::shared_ptr<ClimbStrategy> climbStrategy;
     RandomWalk randomWalkStrategy = RandomWalk(false);
 
    public:
     ExplorationUsingRandomWalk(std::shared_ptr<ClimbStrategy> climbStrategy)
         : climbStrategy(std::move(climbStrategy)) {}
-    void run(State& state, bool) {
-        double baseValue = 10, multiplier = 1.3;
-        bool explorationSupported =
-            state.model.optimiseMode != OptimiseMode::NONE;
-        if (!explorationSupported) {
-            std::cout << "[warning]: This exploration strategy does not work "
-                         "with satisfaction "
-                         "problems.  Will not enter explore mode using this "
-                         "strategy.\n";
-        }
-        do {
-            climbStrategy->run(state, !explorationSupported);
-        } while (state.model.getViolation() != 0);
-        if (!explorationSupported) {
-            throw EndOfSearchException();
-        }
-
-        Int bestObj = state.model.getObjective();
+    template <typename Func1, typename Func2>
+    void runImpl(State& state, Func1&& quality, Func2&& finished) {
+        climbStrategy->run(state, false);
+        auto bestQuality = quality(state);
         ExponentialIncrementer<u_int64_t> numberRandomMoves(baseValue,
                                                             multiplier);
-        while (true) {
+        while (!finished(state)) {
             randomWalkStrategy.numberMovesToTake = numberRandomMoves.getValue();
             randomWalkStrategy.run(state, false);
-            climbStrategy->run(state, !explorationSupported);
+            climbStrategy->run(state,false);
 
-            if (state.model.getObjective() < bestObj) {
-                bestObj = state.model.getObjective();
+            if (quality(state) < bestQuality) {
+                // smaller is better
+                bestQuality = quality(state);
                 numberRandomMoves.reset(baseValue, multiplier);
             } else {
                 numberRandomMoves.increment();
                 if (numberRandomMoves.getValue() >
                     ALLOWED_ITERATIONS_OF_INACTIVITY) {
-                    bestObj = state.model.getObjective();
+                    // reset
+
+                    bestQuality = quality(state);
                     numberRandomMoves.reset(baseValue, multiplier);
                 }
             }
         }
+    }
+    void run(State& state, bool) {
+        randomWalkStrategy.allowViolations = true;
+        runImpl(state, [](State& state) { return state.model.getViolation(); },
+                [](State& state) { return state.model.getViolation() == 0; });
+        randomWalkStrategy.allowViolations = false;
+        runImpl(state, [](State& state) { return state.model.getObjective(); },
+                [](State&) { return false; });
     }
 };
 template <typename ClimbStrategy>

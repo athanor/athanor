@@ -24,10 +24,9 @@ struct SequenceTrigger : public virtual SequenceOuterTrigger,
 
 template <>
 struct TriggerContainer<SequenceView> {
-    std::vector<std::shared_ptr<SequenceOuterTrigger>> triggers;
-    std::vector<std::shared_ptr<SequenceMemberTrigger>> allMemberTriggers;
-    std::vector<std::vector<std::shared_ptr<SequenceMemberTrigger>>>
-        singleMemberTriggers;
+    TriggerQueue<SequenceOuterTrigger> triggers;
+    TriggerQueue<SequenceMemberTrigger> allMemberTriggers;
+    std::vector<TriggerQueue<SequenceMemberTrigger>> singleMemberTriggers;
 
     template <typename Func>
     void visitAllMemberTriggersInRange(Func&& func, size_t startIndex,

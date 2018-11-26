@@ -26,8 +26,74 @@ struct TriggerBase {
 struct DelayedTrigger : public virtual TriggerBase {
     virtual void trigger() = 0;
 };
+
 template <typename View>
 struct TriggerContainer;
+
+static const size_t MIN_CLEAN_SIZE = 16;
+
+template <typename T>
+class TriggerQueue;
+
+template <typename T>
+class TriggerQueue {
+    bool currentlyProcessing = false;
+    size_t lastCleanSize = 0;
+    std::vector<std::shared_ptr<T>> triggers;
+
+   public:
+    struct QueueAccess {
+        friend class TriggerQueue<T>;
+
+       private:
+        TriggerQueue<T> queue;
+
+       public:
+        std::vector<std::shared_ptr<T>>& triggers;
+
+       private:
+        QueueAccess(TriggerQueue<T>& queue)
+            : queue(queue), triggers(queue.triggers) {
+            debug_code(assert(!queue.currentlyProcessing));
+            queue.currentlyProcessing = true;
+        }
+
+       public:
+        ~QueueAccess() {
+            debug_code(assert(queue.currentlyProcessing));
+            queue.currentlyProcessing = false;
+        }
+    };
+
+   public:
+    inline QueueAccess access() { return QueueAccess(*this); }
+
+    template <typename Trigger>
+    void add(Trigger&& trigger) {
+        if (!currentlyProcessing && triggers.size() > lastCleanSize * 2 + MIN_CLEAN_SIZE) {
+            cleanNullTriggers(true);
+        }
+        triggers.emplace_back(std::forward<Trigger>(trigger));
+    }
+
+    void cleanNullTriggers(bool includeInactive = false) {
+        for (size_t i = 0; i < triggers.size(); ++i) {
+            if (triggers[i] && (!includeInactive || triggers[i]->active())) {
+                continue;
+            }
+            while (!triggers.empty() && !triggers.back()) {
+                triggers.pop_back();
+            }
+            if (i >= triggers.size()) {
+                break;
+            } else {
+                triggers[i] = std::move(triggers.back());
+                triggers.pop_back();
+            }
+        }
+        lastCleanSize = triggers.size();
+    }
+};
 
 template <typename TrigCont, typename Trigger>
 auto addAsMemberTrigger(TrigCont& container,
@@ -35,12 +101,12 @@ auto addAsMemberTrigger(TrigCont& container,
                         Int memberIndex)
     -> decltype(container.allMemberTriggers, void()) {
     if (memberIndex == -1) {
-        container.allMemberTriggers.emplace_back(trigger);
+        container.allMemberTriggers.add(trigger);
     } else {
         if ((Int)container.singleMemberTriggers.size() <= memberIndex) {
             container.singleMemberTriggers.resize(memberIndex + 1);
         }
-        container.singleMemberTriggers[memberIndex].emplace_back(trigger);
+        container.singleMemberTriggers[memberIndex].add(trigger);
     }
 }
 
@@ -51,27 +117,9 @@ template <typename TrigCont, typename Trigger>
 void handleTriggerAdd(const std::shared_ptr<Trigger>& trigger,
                       bool includeMembers, Int memberIndex,
                       TrigCont& container) {
-    container.triggers.emplace_back(trigger);
+    container.triggers.add(trigger);
     if (includeMembers) {
         addAsMemberTrigger(container, trigger, memberIndex);
-    }
-}
-
-template <typename Trigger>
-void cleanNullTriggers(std::vector<std::shared_ptr<Trigger>>& triggers) {
-    for (size_t i = 0; i < triggers.size(); ++i) {
-        if (triggers[i]) {
-            continue;
-        }
-        while (!triggers.empty() && !triggers.back()) {
-            triggers.pop_back();
-        }
-        if (i >= triggers.size()) {
-            break;
-        } else {
-            triggers[i] = std::move(triggers.back());
-            triggers.pop_back();
-        }
     }
 }
 
@@ -91,14 +139,15 @@ struct DelayedTriggerStack {
 };
 
 template <typename Visitor, typename Trigger>
-void visitTriggers(Visitor&& func,
-                   std::vector<std::shared_ptr<Trigger>>& triggers) {
+void visitTriggers(Visitor&& func, TriggerQueue<Trigger>& queue) {
     DelayedTriggerStack delayedTriggers;
-    size_t size = triggers.size();
+    auto access = queue.access();
+
+    size_t size = access.triggers.size();
     size_t triggerNullCount = 0;
     // triggers may be changed, insure that new triggers are ignored
-    for (size_t i = 0; i < size && i < triggers.size(); i++) {
-        auto& trigger = triggers[i];
+    for (size_t i = 0; i < size && i < access.triggers.size(); i++) {
+        auto& trigger = access.triggers[i];
         if (trigger && trigger->active()) {
             ++triggerEventCount;
             func(trigger);
@@ -107,8 +156,9 @@ void visitTriggers(Visitor&& func,
             trigger = nullptr;
         }
     }
-    if (((double)triggerNullCount) / triggers.size() > 0.2) {
-        cleanNullTriggers(triggers);
+    if (access.triggers.size() > MIN_CLEAN_SIZE &&
+        ((double)triggerNullCount) / access.triggers.size() > 0.5) {
+        queue.cleanNullTriggers();
     }
 
     while (!delayedTriggers.stack.empty()) {

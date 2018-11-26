@@ -19,10 +19,9 @@ struct FunctionTrigger : public virtual FunctionOuterTrigger,
 
 template <>
 struct TriggerContainer<FunctionView> {
-    std::vector<std::shared_ptr<FunctionOuterTrigger>> triggers;
-    std::vector<std::shared_ptr<FunctionMemberTrigger>> allMemberTriggers;
-    std::vector<std::vector<std::shared_ptr<FunctionMemberTrigger>>>
-        singleMemberTriggers;
+    TriggerQueue<FunctionOuterTrigger> triggers;
+    TriggerQueue<FunctionMemberTrigger> allMemberTriggers;
+    std::vector<TriggerQueue<FunctionMemberTrigger>> singleMemberTriggers;
     template <typename Func>
     void visitMemberTriggers(Func&& func, UInt index) {
         visitTriggers(func, allMemberTriggers);

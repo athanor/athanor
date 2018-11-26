@@ -16,10 +16,9 @@ struct TupleTrigger : public virtual TupleOuterTrigger,
 
 template <>
 struct TriggerContainer<TupleView> {
-    std::vector<std::shared_ptr<TupleOuterTrigger>> triggers;
-    std::vector<std::shared_ptr<TupleMemberTrigger>> allMemberTriggers;
-    std::vector<std::vector<std::shared_ptr<TupleMemberTrigger>>>
-        singleMemberTriggers;
+    TriggerQueue<TupleOuterTrigger> triggers;
+    TriggerQueue<TupleMemberTrigger> allMemberTriggers;
+    std::vector<TriggerQueue<TupleMemberTrigger>> singleMemberTriggers;
     template <typename Func>
     void visitMemberTriggers(Func&& func, UInt index) {
         visitTriggers(func, allMemberTriggers);

@@ -39,11 +39,6 @@ UInt getDomainSize<BoolDomain>(const BoolDomain&) {
     return 2;
 }
 
-void reset(BoolValue& val) {
-    val.triggers.clear();
-    val.container = NULL;
-}
-
 void evaluateImpl(BoolValue&) {}
 void startTriggeringImpl(BoolValue&) {}
 void stopTriggering(BoolValue&) {}

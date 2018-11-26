@@ -5,7 +5,7 @@
 
 template <>
 struct TriggerContainer<BoolView> {
-    std::vector<std::shared_ptr<BoolTrigger>> triggers;
+    TriggerQueue<BoolTrigger> triggers;
 };
 template <typename Child>
 struct ChangeTriggerAdapter<BoolTrigger, Child>

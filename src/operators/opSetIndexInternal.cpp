@@ -121,8 +121,10 @@ template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::handleSetMemberValueChange(
     UInt memberIndex) {
     size_t index = setParentMapping[memberIndex];
+    todoImpl();
+    /*
     visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
-
+*/
     int increment;
     if (index == 0) {
         increment = 1;
@@ -165,12 +167,15 @@ void OpSetIndexInternal<SetMemberViewType>::swapMemberMappings(size_t index1,
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::notifyMemberSwapped() {
+    todoImpl();
+    /*
     visitTriggers(
         [&](auto& t) {
             t->valueChanged();
             t->reattachTrigger();
         },
         triggers);
+     */
 }
 
 template <typename SetMemberViewType>
@@ -184,13 +189,14 @@ struct OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger
     void hasBecomeDefined() final { todoImpl(); }
 
     void valueChanged() final {
+        todoImpl();
         op->evaluateMappings();
-        visitTriggers(
-            [&](auto& t) {
-                t->valueChanged();
-                t->reattachTrigger();
-            },
-            op->triggers);
+        /*        visitTriggers(
+                    [&](auto& t) {
+                        t->valueChanged();
+                        t->reattachTrigger();
+                    },
+                    op->triggers);*/
     }
 
     inline void memberValueChanged(UInt index, HashType) final {

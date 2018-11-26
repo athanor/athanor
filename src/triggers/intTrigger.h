@@ -6,7 +6,7 @@ struct IntTrigger : public virtual TriggerBase {};
 
 template <>
 struct TriggerContainer<IntView> {
-    std::vector<std::shared_ptr<IntTrigger>> triggers;
+    TriggerQueue<IntTrigger> triggers;
 };
 template <typename Child>
 struct ChangeTriggerAdapter<IntTrigger, Child>

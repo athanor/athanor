@@ -86,12 +86,6 @@ UInt getDomainSize<MSetDomain>(const MSetDomain& domain) {
     todoImpl(domain);
 }
 
-void reset(MSetValue& val) {
-    val.container = NULL;
-    val.silentClear();
-    val.triggers.clear();
-}
-
 void evaluateImpl(MSetValue&) {}
 void startTriggeringImpl(MSetValue&) {}
 void stopTriggering(MSetValue&) {}

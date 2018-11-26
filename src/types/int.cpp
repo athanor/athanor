@@ -50,11 +50,6 @@ UInt getDomainSize<IntDomain>(const IntDomain& domain) {
     return domain.domainSize;
 }
 
-void reset(IntValue& val) {
-    val.triggers.clear();
-    val.container = NULL;
-}
-
 void evaluateImpl(IntValue&) {}
 void startTriggeringImpl(IntValue&) {}
 void stopTriggering(IntValue&) {}

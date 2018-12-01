@@ -96,5 +96,5 @@ message("")
 
 target_link_libraries(athanor mpark_variant)
 target_link_libraries(athanor optional)
-target_link_libraries (athanor autoArgParse-header-only)
+target_link_libraries (athanor autoArgParse)
 target_link_libraries (athanor murmurHash)

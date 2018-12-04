@@ -6,7 +6,6 @@
 #include "utils/random.h"
 
 using namespace std;
-static ViolationContainer emptyViolations;
 
 template <>
 void assignRandomValueInDomain<TupleDomain>(const TupleDomain& domain,

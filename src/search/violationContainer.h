@@ -9,6 +9,8 @@
 #include "base/intSize.h"
 #include "utils/random.h"
 
+class ViolationContainer;
+extern ViolationContainer& emptyViolations;
 class ViolationContainer {
     UInt totalViolation = 0;
     std::vector<UInt> varViolations;
@@ -42,7 +44,7 @@ class ViolationContainer {
     inline UInt varViolation(size_t varIndex) const {
         return (varIndex < varViolations.size()) ? varViolations[varIndex] : 0;
     }
-    inline const std::vector<UInt> getVarsWithViolation() const {
+    inline const std::vector<UInt>& getVarsWithViolation() const {
         return varsWithViolation;
     }
 
@@ -55,7 +57,8 @@ class ViolationContainer {
         return *ptr;
     }
     inline const ViolationContainer& childViolations(UInt id) const {
-        return *_childViolations.at(id);
+        return (hasChildViolation(id)) ? *_childViolations.at(id)
+                                       : emptyViolations;
     }
     inline bool hasChildViolation(UInt id) const {
         return _childViolations.count(id);
@@ -63,6 +66,7 @@ class ViolationContainer {
 
     UInt selectRandomVar(UInt maxVar) const;
     std::vector<UInt> selectRandomVars(UInt maxVar, size_t numberVars) const;
+    UInt calcMinViolation() const;
 };
 
 #endif /* SRC_SEARCH_VIOLATIONCONTAINER_H_ */

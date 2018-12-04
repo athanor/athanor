@@ -24,16 +24,17 @@ class HillClimbing {
             bool allowed = false, strictImprovement = false;
             strategy->run(state, [&](const auto& result) {
                 if (result.foundAssignment) {
-                if (result.statsMarkPoint.lastViolation != 0) {
-                    allowed = result.getDeltaViolation() <= 0;
-                    strictImprovement = result.getDeltaViolation() < 0;
-                } else {
-                    allowed = result.model.getViolation() == 0 &&
-                              result.getDeltaObjective() <= 0;
-                    strictImprovement = allowed && result.getDeltaObjective() < 0;
+                    if (result.statsMarkPoint.lastViolation != 0) {
+                        allowed = result.getDeltaViolation() <= 0;
+                        strictImprovement = result.getDeltaViolation() < 0;
+                    } else {
+                        allowed = result.model.getViolation() == 0 &&
+                                  result.getDeltaObjective() <= 0;
+                        strictImprovement =
+                            allowed && result.getDeltaObjective() < 0;
+                    }
                 }
-                }
-                    return allowed;
+                return allowed;
             });
             if (!isOuterMostStrategy && !strictImprovement) {
                 ++iterationsAtPeak;
@@ -53,10 +54,10 @@ auto makeHillClimbing(std::shared_ptr<Strategy> strategy) {
 class RandomWalk {
     std::shared_ptr<RandomNeighbourhood> nhSelector =
         std::make_shared<RandomNeighbourhood>();
+
    public:
     u_int64_t numberMovesToTake = 0;
     bool allowViolations;
-
 
     RandomWalk(bool allowViolations) : allowViolations(allowViolations) {}
     void run(State& state, bool) {
@@ -228,7 +229,7 @@ class ExplorationUsingRandomWalk {
         while (!finished(state)) {
             randomWalkStrategy.numberMovesToTake = numberRandomMoves.getValue();
             randomWalkStrategy.run(state, false);
-            climbStrategy->run(state,false);
+            climbStrategy->run(state, false);
             if (quality(state) < bestQuality) {
                 // smaller is better
                 bestQuality = quality(state);
@@ -240,7 +241,8 @@ class ExplorationUsingRandomWalk {
                     // reset
                     bestQuality = quality(state);
                     numberRandomMoves.reset(baseValue, multiplier);
-//                    std::cout << "quality reset to " << bestQuality << std::endl;
+                    //                    std::cout << "quality reset to " <<
+                    //                    bestQuality << std::endl;
                 }
             }
         }

@@ -6,7 +6,6 @@
 #include "utils/random.h"
 
 using namespace std;
-static ViolationContainer emptyViolations;
 
 template <typename InnerDomainPtrType>
 void assignRandomValueInDomainImpl(const SequenceDomain& domain,
@@ -60,10 +59,8 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                     ++params.stats.minorNodeCount;
                     return;
                 }
-                ViolationContainer& vioContainerAtThisLevel =
-                    params.vioContainer.hasChildViolation(val.id)
-                        ? params.vioContainer.childViolations(val.id)
-                        : emptyViolations;
+                auto& vioContainerAtThisLevel =
+                    params.vioContainer.childViolations(val.id);
                 UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
                     val.numberElements() - 1);
                 HashType previousSubsequenceHash;

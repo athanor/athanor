@@ -7,7 +7,6 @@
 #include "utils/random.h"
 
 using namespace std;
-static ViolationContainer emptyViolations;
 
 template <typename InnerDomainPtrType>
 void assignRandomValueInDomainImpl(const FunctionDomain& domain,
@@ -55,10 +54,8 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
                     ++params.stats.minorNodeCount;
                     return;
                 }
-                ViolationContainer& vioContainerAtThisLevel =
-                    params.vioContainer.hasChildViolation(val.id)
-                        ? params.vioContainer.childViolations(val.id)
-                        : emptyViolations;
+                auto& vioContainerAtThisLevel =
+                    params.vioContainer.childViolations(val.id);
                 UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
                     val.rangeSize() - 1);
                 val.notifyPossibleImageChange(indexToChange);
@@ -127,10 +124,8 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
                     ++params.stats.minorNodeCount;
                     return;
                 }
-                ViolationContainer& vioContainerAtThisLevel =
-                    params.vioContainer.hasChildViolation(val.id)
-                        ? params.vioContainer.childViolations(val.id)
-                        : emptyViolations;
+                auto& vioContainerAtThisLevel =
+                    params.vioContainer.childViolations(val.id);
                 std::vector<UInt> indicesToChange =
                     vioContainerAtThisLevel.selectRandomVars(
                         val.rangeSize() - 1, innerNhNumberValsRequired);

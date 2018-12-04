@@ -21,26 +21,25 @@ class HillClimbing {
     void run(State& state, bool isOuterMostStrategy) {
         u_int64_t iterationsAtPeak = 0;
         while (true) {
+            bool allowed = false, strictImprovement = false;
             strategy->run(state, [&](const auto& result) {
-                if (!result.foundAssignment) {
-                    return false;
-                }
-                bool allowed = false;
+                if (result.foundAssignment) {
                 if (result.statsMarkPoint.lastViolation != 0) {
                     allowed = result.getDeltaViolation() <= 0;
+                    strictImprovement = result.getDeltaViolation() < 0;
                 } else {
                     allowed = result.model.getViolation() == 0 &&
                               result.getDeltaObjective() <= 0;
+                    strictImprovement = allowed && result.getDeltaObjective() < 0;
                 }
-                if (!isOuterMostStrategy && !allowed &&
-                    state.model.getViolation() == 0) {
-                    ++iterationsAtPeak;
                 }
-                return allowed;
+                    return allowed;
             });
-            if (!isOuterMostStrategy &&
-                iterationsAtPeak > ALLOWED_ITERATIONS_OF_INACTIVITY) {
-                break;
+            if (!isOuterMostStrategy && !strictImprovement) {
+                ++iterationsAtPeak;
+                if (iterationsAtPeak > ALLOWED_ITERATIONS_OF_INACTIVITY) {
+                    break;
+                }
             }
         }
     }
@@ -230,7 +229,6 @@ class ExplorationUsingRandomWalk {
             randomWalkStrategy.numberMovesToTake = numberRandomMoves.getValue();
             randomWalkStrategy.run(state, false);
             climbStrategy->run(state,false);
-
             if (quality(state) < bestQuality) {
                 // smaller is better
                 bestQuality = quality(state);
@@ -240,9 +238,9 @@ class ExplorationUsingRandomWalk {
                 if (numberRandomMoves.getValue() >
                     ALLOWED_ITERATIONS_OF_INACTIVITY) {
                     // reset
-
                     bestQuality = quality(state);
                     numberRandomMoves.reset(baseValue, multiplier);
+//                    std::cout << "quality reset to " << bestQuality << std::endl;
                 }
             }
         }

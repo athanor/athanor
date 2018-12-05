@@ -46,7 +46,7 @@ class TriggerQueue {
         friend class TriggerQueue<T>;
 
        private:
-        TriggerQueue<T> queue;
+        TriggerQueue<T>& queue;
 
        public:
         std::vector<std::shared_ptr<T>>& triggers;

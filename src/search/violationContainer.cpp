@@ -70,8 +70,10 @@ static UInt pickRandomVariable(const ViolationContainer &vioCont, UInt maxVar,
 }
 
 UInt ViolationContainer::selectRandomVar(UInt maxVar) const {
-    debug_code(assert(maxVar < varViolations.size()));
-    return pickRandomVariable(*this, maxVar);
+    debug_code(assert(varViolations.size() <= maxVar + 1));
+    UInt randomVar = pickRandomVariable(*this, maxVar);
+    debug_code(assert(randomVar <= maxVar));
+    return randomVar;
 }
 
 vector<UInt> ViolationContainer::selectRandomVars(UInt maxVar,

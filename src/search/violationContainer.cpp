@@ -17,13 +17,15 @@ UInt ViolationContainer::calcMinViolation() const {
 }
 
 static UInt findContainingInterval(const ViolationContainer &vioCont,
-                                   UInt maxVar, double &rand,
+                                   UInt maxVar, double rand,
                                    double simulatedMinViolation) {
     for (size_t varId = 0; varId <= maxVar; varId++) {
         double violation = vioCont.varViolation(varId);
+
         if (violation == 0) {
             violation = simulatedMinViolation;
         }
+
         if (violation > rand) {
             return varId;
         } else {
@@ -56,10 +58,9 @@ static UInt pickRandomVariable(const ViolationContainer &vioCont, UInt maxVar,
         simulatedMinViolation = ((double)minViolation) / n;
         // now generate a random number in the range that includes the new
         // simulated min violations
-        UInt additionalVio =
-            (numberNonViolatingVars != 1) ? minViolation : minViolation / 2;
-        rand = globalRandom<double>(
-            0, (vioCont.getTotalViolation() + additionalVio) - 1);
+        double additionalVio =
+            (numberNonViolatingVars != 1) ? minViolation : ((double)minViolation) / 2;
+        rand = globalRandom<double>(0, (vioCont.getTotalViolation() + additionalVio) - 1);
     } else {
         rand = globalRandom<UInt>(0, vioCont.getTotalViolation() - 1);
     }

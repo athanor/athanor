@@ -22,6 +22,9 @@ class ViolationContainer {
     ViolationContainer(const UInt numberVariables = 0)
         : varViolations(numberVariables, 0) {}
     inline void addViolation(UInt id, UInt violation) {
+        if (violation == 0) {
+            return;
+        }
         if (id >= varViolations.size()) {
             varViolations.resize(id + 1, 0);
         }

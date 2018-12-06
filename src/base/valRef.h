@@ -117,7 +117,7 @@ inline void varBaseSanityChecks(
         sanityCheck(
             base.container == &val,
             toString("Member with id ", base.id, " does not point to parent."));
-        sanityEqualsCheck(base.id, val.id);
+        sanityEqualsCheck(base.id, i);
     }
 }
 #endif /* SRC_BASE_VALREF_H_ */

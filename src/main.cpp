@@ -51,14 +51,7 @@ auto& randomSeedFlag = argParser.add<ComplexFlag>(
     "--randomSeed", Policy::OPTIONAL, "Specify a random seed.");
 auto& seedArg = randomSeedFlag.add<Arg<int>>(
     "integer_seed", Policy::MANDATORY,
-    "Integer seed to use for random generator.",
-    chain(Converter<int>(), [](int value) {
-        if (value < 0) {
-            throw ErrorMessage("Seed must be greater or equal to 0.");
-        } else {
-            return value;
-        }
-    }));
+    "Integer seed to use for random generator.");
 bool runSanityChecks = false;
 bool verboseSanityError = false;
 auto& sanityCheckFlag = argParser.add<ComplexFlag>(

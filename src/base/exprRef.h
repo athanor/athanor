@@ -310,6 +310,13 @@ struct PathExtension {
     }
 };
 
+template <typename MemberExprType>
+inline void recurseSanityChecks(const ExprRefVec<MemberExprType>& members) {
+    for (auto& member : members) {
+        member->debugSanityCheck();
+    }
+}
+
 extern UInt LARGE_VIOLATION;
 extern BoolView& VIOLATING_BOOL_VIEW;
 extern UInt MAX_DOMAIN_SIZE;

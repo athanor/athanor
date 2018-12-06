@@ -58,9 +58,11 @@ static UInt pickRandomVariable(const ViolationContainer &vioCont, UInt maxVar,
         simulatedMinViolation = ((double)minViolation) / n;
         // now generate a random number in the range that includes the new
         // simulated min violations
-        double additionalVio =
-            (numberNonViolatingVars != 1) ? minViolation : ((double)minViolation) / 2;
-        rand = globalRandom<double>(0, (vioCont.getTotalViolation() + additionalVio) - 1);
+        double additionalVio = (numberNonViolatingVars != 1)
+                                   ? minViolation
+                                   : ((double)minViolation) / 2;
+        rand = globalRandom<double>(
+            0, (vioCont.getTotalViolation() + additionalVio) - 1);
     } else {
         rand = globalRandom<UInt>(0, vioCont.getTotalViolation() - 1);
     }
@@ -68,6 +70,7 @@ static UInt pickRandomVariable(const ViolationContainer &vioCont, UInt maxVar,
 }
 
 UInt ViolationContainer::selectRandomVar(UInt maxVar) const {
+    debug_code(assert(maxVar < varViolations.size()));
     return pickRandomVariable(*this, maxVar);
 }
 

@@ -66,3 +66,9 @@ bool largerValue<IntView>(const IntView& u, const IntView& v) {
 
 template <>
 void normalise<IntValue>(IntValue&) {}
+
+void IntView::standardSanityChecksForThisType() const {}
+
+void IntValue::debugSanityCheckImpl() const {
+    standardSanityChecksForThisType();
+}

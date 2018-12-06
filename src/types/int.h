@@ -38,6 +38,7 @@ struct IntView : public ExprInterface<IntView>,
         }
         return false;
     }
+    void standardSanityChecksForThisType() const;
 };
 
 struct IntValue : public IntView, ValBase {

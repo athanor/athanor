@@ -206,6 +206,7 @@ struct SetView : public ExprInterface<SetView>,
 
     inline UInt numberElements() const { return memberHashes.size(); }
     void assertValidState();
+    void standardSanityChecksForThisType() const;
 };
 
 struct SetValue : public SetView, public ValBase {

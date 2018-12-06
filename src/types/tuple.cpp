@@ -4,17 +4,19 @@
 #include "common/common.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
+static HashType calcHash(const TupleView& val) {
+    HashType result[2];
+    HashType input[val.members.size()];
+    for (size_t i = 0; i < val.members.size(); i++) {
+        input[i] = getValueHash(val.members[i]);
+    }
+    MurmurHash3_x64_128(((void*)input), sizeof(input), 0, result);
+    return result[0] ^ result[1];
+}
+
 template <>
 HashType getValueHash<TupleView>(const TupleView& val) {
-    return val.cachedHashTotal.getOrSet([&]() {
-        HashType result[2];
-        HashType input[val.members.size()];
-        for (size_t i = 0; i < val.members.size(); i++) {
-            input[i] = getValueHash(val.members[i]);
-        }
-        MurmurHash3_x64_128(((void*)input), sizeof(input), 0, result);
-        return result[0] ^ result[1];
-    });
+    return val.cachedHashTotal.getOrSet([&]() { return calcHash(val); });
 }
 
 template <>
@@ -159,4 +161,40 @@ void TupleValue::printVarBases() {
         cout << "val id: " << base.id << endl;
         cout << "is constant: " << (base.container == &constantPool) << endl;
     }
+}
+
+void TupleView::standardSanityChecksForThisType() const {
+    UInt checkNumberUndefined = 0;
+    for (auto& member : members) {
+        mpark::visit(
+            [&](auto& member) {
+                if (!member->getViewIfDefined().hasValue()) {
+                    ++checkNumberUndefined;
+                }
+            },
+            member);
+    }
+    sanityEqualsCheck(checkNumberUndefined, numberUndefined);
+    if (numberUndefined == 0) {
+        sanityCheck(this->appearsDefined(), "operator should be defined.");
+    } else {
+        sanityCheck(!this->appearsDefined(), "operator should be undefined.");
+    }
+    cachedHashTotal.applyIfValid(
+        [&](const auto& value) { sanityEqualsCheck(calcHash(*this), value); });
+}
+
+void TupleValue::debugSanityCheckImpl() const {
+    for (auto& member : members) {
+        mpark::visit(
+            [&](const auto& member) {
+                member->debugSanityCheck();
+                const ValBase& base = valBase(*assumeAsValue(member));
+                sanityCheck(base.container == this,
+                            toString("Member with id ", base.id,
+                                     " does not point to parent."));
+            },
+            member);
+    }
+    standardSanityChecksForThisType();
 }

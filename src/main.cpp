@@ -49,9 +49,9 @@ auto& paramArg = paramFlag.add<Arg<ifstream>>(
 mt19937 globalRandomGenerator;
 auto& randomSeedFlag = argParser.add<ComplexFlag>(
     "--randomSeed", Policy::OPTIONAL, "Specify a random seed.");
-auto& seedArg = randomSeedFlag.add<Arg<int>>(
-    "integer_seed", Policy::MANDATORY,
-    "Integer seed to use for random generator.");
+auto& seedArg =
+    randomSeedFlag.add<Arg<int>>("integer_seed", Policy::MANDATORY,
+                                 "Integer seed to use for random generator.");
 bool runSanityChecks = false;
 bool verboseSanityError = false;
 auto& sanityCheckFlag = argParser.add<ComplexFlag>(

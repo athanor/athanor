@@ -174,6 +174,7 @@ struct MSetView : public ExprInterface<MSetView>,
                             members);
     }
     void assertValidState();
+    void standardSanityChecksForThisType() const;
 };
 
 struct MSetValue : public MSetView, public ValBase {

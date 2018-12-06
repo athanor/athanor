@@ -366,3 +366,17 @@ void FunctionValue::printVarBases() {
         },
         range);
 }
+
+void FunctionView::standardSanityChecksForThisType() const {}
+
+void FunctionValue::debugSanityCheckImpl() const {
+    mpark::visit(
+        [&](const auto& valMembersImpl) {
+            recurseSanityChecks(valMembersImpl);
+            this->standardSanityChecksForThisType();
+            // check var bases
+
+            varBaseSanityChecks(*this, valMembersImpl);
+        },
+        range);
+}

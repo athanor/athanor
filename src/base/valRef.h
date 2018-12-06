@@ -109,4 +109,15 @@ EnableIfValueAndReturn<Val, const ValBase&> valBase(const Val& val);
 const ValBase& valBase(const AnyValRef& ref);
 ValBase& valBase(AnyValRef& ref);
 
+template <typename Val, typename MemberExprType>
+inline void varBaseSanityChecks(
+    const Val& val, const ExprRefVec<MemberExprType>& valMembersImpl) {
+    for (size_t i = 0; i < valMembersImpl.size(); i++) {
+        const ValBase& base = valBase(*assumeAsValue(valMembersImpl[i]));
+        sanityCheck(
+            base.container == &val,
+            toString("Member with id ", base.id, " does not point to parent."));
+        sanityEqualsCheck(base.id, val.id);
+    }
+}
 #endif /* SRC_BASE_VALREF_H_ */

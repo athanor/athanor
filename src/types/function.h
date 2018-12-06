@@ -180,6 +180,7 @@ struct FunctionView : public ExprInterface<FunctionView>,
     }
 
     void assertValidState();
+    void standardSanityChecksForThisType() const;
 };
 
 struct FunctionValue : public FunctionView, public ValBase {

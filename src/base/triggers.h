@@ -70,7 +70,8 @@ class TriggerQueue {
 
     template <typename Trigger>
     void add(Trigger&& trigger) {
-        if (!currentlyProcessing && triggers.size() > lastCleanSize * 2 + MIN_CLEAN_SIZE) {
+        if (!currentlyProcessing &&
+            triggers.size() > lastCleanSize * 2 + MIN_CLEAN_SIZE) {
             cleanNullTriggers(true);
         }
         triggers.emplace_back(std::forward<Trigger>(trigger));

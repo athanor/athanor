@@ -11,7 +11,6 @@ struct BoolView : public ExprInterface<BoolView>,
                   public TriggerContainer<BoolView> {
     UInt violation;
 
-    inline void initFrom(BoolView& other) { violation = other.violation; }
     template <typename Func>
     inline bool changeValue(Func&& func) {
         UInt oldViolation = violation;
@@ -22,6 +21,7 @@ struct BoolView : public ExprInterface<BoolView>,
         }
         return false;
     }
+    void standardSanityChecksForThisType() const;
 };
 
 struct BoolValue : public BoolView, ValBase {

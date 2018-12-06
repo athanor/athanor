@@ -280,7 +280,8 @@ void OpMinMax<minMode>::debugSanityCheckImpl() const {
     this->operand->debugSanityCheck();
     auto operandView = this->operand->view();
     if (!operandView) {
-        sanityCheck(!this->appearsDefined(), "operator must be undefined as operand is undefined.");
+        sanityCheck(!this->appearsDefined(),
+                    "operator must be undefined as operand is undefined.");
         return;
     }
     auto& members = (*operandView).template getMembers<IntView>();
@@ -311,7 +312,8 @@ void OpMinMax<minMode>::debugSanityCheckImpl() const {
         sanityEqualsCheck(checkValue, this->value);
         sanityCheck(this->appearsDefined(), "operator must be defined.");
     } else {
-        sanityCheck(!this->appearsDefined(), "empty min/max means this operator should be undefined.");
+        sanityCheck(!this->appearsDefined(),
+                    "empty min/max means this operator should be undefined.");
     }
 }
 

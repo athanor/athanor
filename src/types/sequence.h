@@ -38,7 +38,7 @@ struct SequenceDomain {
 template <>
 HashType getValueHash<SequenceView>(const SequenceView& val);
 ;
-struct SequenceView;
+
 static const char* NO_SEQUENCE_HASHING_UNDEFINED =
     "sequence is not correctly handling hashing values that appear "
     "defined but return undefined views.\n";
@@ -264,7 +264,7 @@ struct SequenceView : public ExprInterface<SequenceView>,
     }
     void assertValidState();
 
-   private:
+    void standardSanityChecksForThisType() const;
 };
 
 struct SequenceValue : public SequenceView, public ValBase {

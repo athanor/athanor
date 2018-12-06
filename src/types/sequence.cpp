@@ -264,6 +264,60 @@ void SequenceValue::assertValidState() {
         members);
 }
 
+void SequenceView::standardSanityChecksForThisType() const {
+    mpark::visit(
+        [&](auto& members) {
+            UInt checkNumberUndefined = 0;
+            for (auto& member : members) {
+                if (!member->getViewIfDefined().hasValue()) {
+                    ++checkNumberUndefined;
+                }
+            }
+            sanityEqualsCheck(checkNumberUndefined, numberUndefined);
+            if (numberUndefined == 0) {
+                sanityCheck(this->appearsDefined(),
+                            "operator should be defined.");
+            } else {
+                sanityCheck(!this->appearsDefined(),
+                            "operator should be undefined.");
+            }
+            cachedHashTotal.applyIfValid([&](const auto& value) {
+                sanityEqualsCheck(
+                    calcSubsequenceHash<viewType(members)>(0, members.size()),
+                    value);
+            });
+        },
+        this->members);
+}
+
+void SequenceValue::debugSanityCheckImpl() const {
+    mpark::visit(
+        [&](const auto& valMembersImpl) {
+            recurseSanityChecks(valMembersImpl);
+            standardSanityChecksForThisType();
+            if (injective) {
+                for (size_t i = 0; i < valMembersImpl.size(); i++) {
+                    auto& member = valMembersImpl[i];
+                    auto viewOption = member->getViewIfDefined();
+                    sanityCheck(
+                        viewOption,
+                        "all members must be defined in sequence values.");
+                    auto& view = *viewOption;
+                    HashType hash = getValueHash(view);
+                    sanityCheck(
+                        memberHashes.count(hash),
+                        toString("member ", member->view(), " with hash ", hash,
+                                 " is not in memberHashes."));
+                }
+                sanityEqualsCheck(memberHashes.size(), numberElements());
+            }
+            // check var bases
+
+            varBaseSanityChecks(*this, valMembersImpl);
+        },
+        members);
+}
+
 void SequenceValue::assertValidVarBases() {
     mpark::visit(
         [&](auto& valMembersImpl) {

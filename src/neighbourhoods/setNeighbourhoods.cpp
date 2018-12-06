@@ -298,6 +298,7 @@ void setRemoveGenImpl(const SetDomain& domain, InnerDomainPtrType&,
         "setRemove", numberValsRequired, [&](NeighbourhoodParams& params) {
             auto& val = *(params.getVals<SetValue>().front());
             if (val.numberElements() == domain.sizeAttr.minSize) {
+                debug_log("hit");
                 ++params.stats.minorNodeCount;
                 return;
             }

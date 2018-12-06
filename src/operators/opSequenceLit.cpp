@@ -184,25 +184,8 @@ pair<bool, ExprRef<SequenceView>> OpSequenceLit::optimise(PathExtension path) {
 string OpSequenceLit::getOpName() const { return "OpSequenceLit"; }
 
 void OpSequenceLit::debugSanityCheckImpl() const {
-    mpark::visit(
-        [&](auto& members) {
-            UInt checkNumberUndefined = 0;
-            for (auto& member : members) {
-                member->debugSanityCheck();
-                if (!member->getViewIfDefined().hasValue()) {
-                    ++checkNumberUndefined;
-                }
-            }
-            sanityEqualsCheck(checkNumberUndefined, numberUndefined);
-            if (numberUndefined == 0) {
-                sanityCheck(this->appearsDefined(),
-                            "operator should be defined.");
-            } else {
-                sanityCheck(!this->appearsDefined(),
-                            "operator should be undefined.");
-            }
-        },
-        this->members);
+    mpark::visit([&](auto& members) { recurseSanityChecks(members); }, members);
+    this->standardSanityChecksForThisType();
 }
 
 template <typename Op>

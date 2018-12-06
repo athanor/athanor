@@ -175,6 +175,7 @@ void OpSetLit::updateVarViolationsImpl(const ViolationContext& context,
             }
         },
         operands);
+    standardSanityChecksForThisType();
 }
 
 ExprRef<SetView> OpSetLit::deepCopyForUnrollImpl(

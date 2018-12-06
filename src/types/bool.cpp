@@ -55,3 +55,9 @@ template <>
 bool largerValue<BoolView>(const BoolView& u, const BoolView& v) {
     return u.violation > v.violation;
 }
+
+void BoolView::standardSanityChecksForThisType() const {}
+
+void BoolValue::debugSanityCheckImpl() const {
+    standardSanityChecksForThisType();
+}

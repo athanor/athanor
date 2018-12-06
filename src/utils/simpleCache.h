@@ -11,7 +11,7 @@ class SimpleCache {
     SimpleCache() {}
     template <typename V>
     SimpleCache(V&& v) : value(std::forward<V>(v)) {}
-    inline bool isValid() { return valid; }
+    inline bool isValid() const { return valid; }
     template <typename Func>
     inline const T& getOrSet(Func&& func) {
         if (!valid) {

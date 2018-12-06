@@ -56,6 +56,7 @@ struct TupleView : public ExprInterface<TupleView>,
         this->setAppearsDefined(false);
         notifyMemberUndefined(index);
     }
+    void standardSanityChecksForThisType() const;
 };
 
 struct TupleValue : public TupleView, public ValBase {

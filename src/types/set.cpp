@@ -268,3 +268,34 @@ void SetValue::printVarBases() {
         },
         members);
 }
+
+void SetView::standardSanityChecksForThisType() const {
+    HashType checkCachedHashTotal = 0;
+    mpark::visit(
+        [&](auto& members) {
+            for (auto& member : members) {
+                auto viewOption = member->getViewIfDefined();
+                sanityCheck(viewOption, NO_SET_UNDEFINED_MEMBERS);
+                auto& view = *viewOption;
+                HashType hash = getValueHash(view);
+                checkCachedHashTotal += mix(hash);
+                sanityCheck(memberHashes.count(hash),
+                            toString("member ", member->view(), " with hash ",
+                                     hash, " is not in memberHashes."));
+            }
+            sanityEqualsCheck(memberHashes.size(), numberElements());
+            sanityEqualsCheck(checkCachedHashTotal, cachedHashTotal);
+        },
+        members);
+}
+
+void SetValue::debugSanityCheckImpl() const {
+    mpark::visit(
+        [&](auto& members) {
+            recurseSanityChecks(members);
+            standardSanityChecksForThisType();
+            varBaseSanityChecks(*this, members);
+
+        },
+        members);
+}

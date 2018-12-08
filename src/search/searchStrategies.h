@@ -8,12 +8,36 @@
 #include "search/solver.h"
 #include "search/statsContainer.h"
 
-u_int64_t ALLOWED_ITERATIONS_OF_INACTIVITY = 1000;
+u_int64_t DEFAULT_PEAK_ITERATIONS = 1000;
+
+template <typename Integer>
+class ExponentialIncrementer {
+    double value;
+    double exponent;
+
+public:
+    ExponentialIncrementer(double initialValue, double exponent)
+    : value(initialValue), exponent(exponent) {}
+    void reset(double initialValue, double exponent) {
+        this->value = initialValue;
+        this->exponent = exponent;
+    }
+    Integer getValue() { return std::round(value); }
+    void increment() {
+        if (value > ((u_int64_t)1) << 32) {
+            value = 1;
+        }
+        value *= exponent;
+    }
+};
+
 
 template <typename Strategy>
 class HillClimbing {
     std::shared_ptr<Strategy> strategy;
-    ;
+public:
+    ExponentialIncrementer<u_int64_t> allowedIterationsAtPeak = ExponentialIncrementer<u_int64_t>(DEFAULT_PEAK_ITERATIONS,1);
+    //default to no increment
 
    public:
     HillClimbing(std::shared_ptr<Strategy> strategy)
@@ -38,7 +62,7 @@ class HillClimbing {
             });
             if (!isOuterMostStrategy && !strictImprovement) {
                 ++iterationsAtPeak;
-                if (iterationsAtPeak > ALLOWED_ITERATIONS_OF_INACTIVITY) {
+                if (iterationsAtPeak > allowedIterationsAtPeak.getValue()) {
                     break;
                 }
             }
@@ -75,28 +99,6 @@ class RandomWalk {
         }
     }
 };
-
-template <typename Integer>
-class ExponentialIncrementer {
-    double value;
-    double exponent;
-
-   public:
-    ExponentialIncrementer(double initialValue, double exponent)
-        : value(initialValue), exponent(exponent) {}
-    void reset(double initialValue, double exponent) {
-        this->value = initialValue;
-        this->exponent = exponent;
-    }
-    Integer getValue() { return std::round(value); }
-    void increment() {
-        if (value > ((u_int64_t)1) << 32) {
-            value = 1;
-        }
-        value *= exponent;
-    }
-};
-
 template <typename ClimbStrategy, typename ExploreStrategy>
 class ExplorationUsingViolationBackOff {
     std::shared_ptr<ClimbStrategy> climbStrategy;
@@ -143,7 +145,7 @@ class ExplorationUsingViolationBackOff {
             if (!allowed) {
                 ++iterationsWithoutChange;
                 if (iterationsWithoutChange %
-                        ALLOWED_ITERATIONS_OF_INACTIVITY ==
+                        DEFAULT_PEAK_ITERATIONS ==
                     0) {
                     violationBackOff.increment();
                     iterationsWithoutChange = 0;
@@ -177,7 +179,7 @@ class ExplorationUsingViolationBackOff {
             if (!allowed) {
                 ++iterationsWithoutChange;
                 if (iterationsWithoutChange ==
-                    ALLOWED_ITERATIONS_OF_INACTIVITY) {
+                    DEFAULT_PEAK_ITERATIONS) {
                     return false;
                 }
             }
@@ -222,6 +224,7 @@ class ExplorationUsingRandomWalk {
         : climbStrategy(std::move(climbStrategy)) {}
     template <typename Func1, typename Func2>
     void runImpl(State& state, Func1&& quality, Func2&& finished) {
+        climbStrategy->allowedIterationsAtPeak.reset(1000,1.3);
         climbStrategy->run(state, false);
         auto bestQuality = quality(state);
         ExponentialIncrementer<u_int64_t> numberRandomMoves(baseValue,
@@ -236,8 +239,12 @@ class ExplorationUsingRandomWalk {
                 numberRandomMoves.reset(baseValue, multiplier);
             } else {
                 numberRandomMoves.increment();
+                climbStrategy->allowedIterationsAtPeak.increment();
+                if (climbStrategy->allowedIterationsAtPeak.getValue() / 100000) {
+                    climbStrategy->allowedIterationsAtPeak.reset(1000,1.3);
+                }
                 if (numberRandomMoves.getValue() >
-                    ALLOWED_ITERATIONS_OF_INACTIVITY) {
+                    DEFAULT_PEAK_ITERATIONS) {
                     // reset
                     bestQuality = quality(state);
                     numberRandomMoves.reset(baseValue, multiplier);

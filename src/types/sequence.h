@@ -443,7 +443,7 @@ struct SequenceValue : public SequenceView, public ValBase {
             debug_code(assertValidVarBases());
             return true;
         } else {
-            SequenceView::swapAndNotify<InnerViewType>(index1, index2);
+            SequenceView::swapPositions<InnerViewType>(index1, index2);
             return false;
         }
     }

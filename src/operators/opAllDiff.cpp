@@ -211,10 +211,20 @@ void OpAllDiff::reevaluateImpl(SequenceView& operandView) {
     debug_code(assertValidState());
 }
 
-void OpAllDiff::updateVarViolationsImpl(const ViolationContext&,
+void OpAllDiff::updateVarViolationsImpl(const ViolationContext& vioContext,
                                         ViolationContainer& vioContainer) {
+    auto* boolVioContextTest =
+        dynamic_cast<const BoolViolationContext*>(&vioContext);
     mpark::visit(
         [&](auto& members) {
+            if (boolVioContextTest && boolVioContextTest->negated) {
+                if (violation == 0) {
+                    for (auto& member : members) {
+                        member->updateVarViolations(1, vioContainer);
+                    }
+                }
+                return;
+            }
             for (size_t index : violatingOperands) {
                 members[index]->updateVarViolations(
                     hashIndicesMap[indicesHashMap[index]].size(), vioContainer);

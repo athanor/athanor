@@ -123,8 +123,19 @@ void OpAnd::reevaluateImpl(SequenceView& operandView) {
     }
 }
 
-void OpAnd::updateVarViolationsImpl(const ViolationContext&,
+void OpAnd::updateVarViolationsImpl(const ViolationContext& vioContext,
                                     ViolationContainer& vioContainer) {
+    auto* boolVioContextTest =
+        dynamic_cast<const BoolViolationContext*>(&vioContext);
+    bool negated = boolVioContextTest && boolVioContextTest->negated;
+    if (negated) {
+        if (violation == 0) {
+            for (auto& operand : operand->view().get().getMembers<BoolView>()) {
+                operand->updateVarViolations(vioContext, vioContainer);
+            }
+        }
+        return;
+    }
     for (size_t violatingOperandIndex : violatingOperands) {
         operand->view()
             .get()

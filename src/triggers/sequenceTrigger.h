@@ -16,9 +16,6 @@ struct SequenceMemberTrigger : public virtual TriggerBase {
     virtual void positionsSwapped(UInt index1, UInt index2) = 0;
 };
 
-/* don't want to import SequenceView here but need access to internal field so a
- * function has been created for that purpose*/
-
 struct SequenceTrigger : public virtual SequenceOuterTrigger,
                          public virtual SequenceMemberTrigger {};
 

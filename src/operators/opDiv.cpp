@@ -19,8 +19,9 @@ void OpDiv::updateVarViolationsImpl(const ViolationContext& vioContext,
     auto rightView = right->getViewIfDefined();
     if (rightView && rightView->value == 0) {
         right->updateVarViolations(LARGE_VIOLATION, vioContainer);
+    } else {
+        right->updateVarViolations(vioContext, vioContainer);
     }
-    right->updateVarViolations(vioContext, vioContainer);
 }
 
 void OpDiv::copy(OpDiv& newOp) const { newOp.value = value; }

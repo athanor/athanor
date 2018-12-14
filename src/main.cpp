@@ -89,11 +89,14 @@ void testHashes() {
     }
 }
 
-enum SearchStrategyChoice {
-    HILL_CLIMBING,
-    HILL_CLIMBING_VIOLATION_EXPLORE,
-    HILL_CLIMBING_RANDOM_EXPLORE
+enum ImproveStrategyChoice { HILL_CLIMBING, TEST_CLIMB };
+enum ExploreStrategyChoice {
+    VIOLATION_BACKOFF,
+    RANDOM_WALK,
+    NO_EXPLORE,
+    TEST_EXPLORE
 };
+
 enum SelectionStrategyChoice {
     RANDOM,
     RANDOM_VIOLATION_BIASED,
@@ -102,33 +105,51 @@ enum SelectionStrategyChoice {
     INTERACTIVE
 };
 
-SearchStrategyChoice searchStrategyChoice = HILL_CLIMBING_RANDOM_EXPLORE;
+ImproveStrategyChoice improveStrategyChoice = HILL_CLIMBING;
+ExploreStrategyChoice exploreStrategyChoice = RANDOM_WALK;
 SelectionStrategyChoice selectionStrategyChoice = UCBV;
+
 double ucbExplorationBias = 2;
 
-auto& searchStratGroup =
+auto& improveStratGroup =
     argParser
-        .add<ComplexFlag>("--search", Policy::OPTIONAL,
-                          "Specify search strategy (default=hcre).")
+        .add<ComplexFlag>("--improve", Policy::OPTIONAL,
+                          "Specify the strategy used to improve on an "
+                          "assignment. (default=hc).")
         .makeExclusiveGroup(Policy::MANDATORY);
 
-auto& hillClimbingFlag = searchStratGroup.add<Flag>(
+auto& hillClimbingFlag = improveStratGroup.add<Flag>(
     "hc", "Hill climbing strategy.",
-    [](auto&&) { searchStrategyChoice = HILL_CLIMBING; });
+    [](auto&&) { improveStrategyChoice = HILL_CLIMBING; });
 
-auto& hillClimbingVIOLATIONExploreFlag = searchStratGroup.add<Flag>(
-    "hcve",
-    "Hill climbing with violation exploration. When local optimum detected, "
-    "attempt to break passed optimum by allowing constraints to be violated.  "
-    "Only works with optimisation problems.",
-    [](auto&&) { searchStrategyChoice = HILL_CLIMBING_VIOLATION_EXPLORE; });
+auto& testClimbFlag = improveStratGroup.add<Flag>(
+    "test", "Test strategy for developers, use at your own risk.",
+    [](auto&&) { improveStrategyChoice = TEST_CLIMB; });
 
-auto& hillClimbingRandomExploreFlag = searchStratGroup.add<Flag>(
-    "hcre",
-    "Hill climbing with random exploration. When local optimum detected, "
-    "attempt to break passed optimum by performing random walks.  "
-    "Only works with optimisation problems.",
-    [](auto&&) { searchStrategyChoice = HILL_CLIMBING_RANDOM_EXPLORE; });
+auto& exploreStratGroup =
+    argParser
+        .add<ComplexFlag>("--explore", Policy::OPTIONAL,
+                          "Specify the strategy used to explore when the "
+                          "improve strategy fails to improve on an assignment. "
+                          "(default=rw).")
+        .makeExclusiveGroup(Policy::MANDATORY);
+
+auto& randomWalkFlag = exploreStratGroup.add<Flag>(
+    "rw", "Random walk.", [](auto&&) { exploreStrategyChoice = RANDOM_WALK; });
+
+auto& vioBackOffFlag = exploreStratGroup.add<Flag>(
+    "vb", "Violation backoff.",
+    [](auto&&) { exploreStrategyChoice = VIOLATION_BACKOFF; });
+
+auto& noExploreFlag = exploreStratGroup.add<Flag>(
+    "none",
+    "Do not use an exploration strategy, only use the specified improve "
+    "strategy.",
+    [](auto&&) { exploreStrategyChoice = NO_EXPLORE; });
+
+auto& testExploreFlag = exploreStratGroup.add<Flag>(
+    "test", "Test exploration strategy for developers, use at your own risk.",
+    [](auto&&) { exploreStrategyChoice = TEST_EXPLORE; });
 
 auto& selectionStratGroup =
     argParser
@@ -197,24 +218,46 @@ void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);
 void sigAlarmHandler(int);
 
-template <typename SelectionStrategy>
-void runSearchImpl(State& state, SelectionStrategy&& nhSelection) {
-    switch (searchStrategyChoice) {
-        case HILL_CLIMBING_VIOLATION_EXPLORE: {
-            auto strategy = makeExplorationUsingViolationBackOff(
-                makeHillClimbing(nhSelection), nhSelection);
-            search(strategy, state);
-            return;
-        }
-        case HILL_CLIMBING_RANDOM_EXPLORE: {
+template <typename ImproveStrategy, typename SelectionStrategy>
+void constructStratAndRunImpl(State& state, ImproveStrategy&& improve,
+                              SelectionStrategy&& nhSelection) {
+    switch (exploreStrategyChoice) {
+        case VIOLATION_BACKOFF: {
             auto strategy =
-                makeExplorationUsingRandomWalk(makeHillClimbing(nhSelection));
+                makeExplorationUsingViolationBackOff(improve, nhSelection);
             search(strategy, state);
             return;
         }
-        case HILL_CLIMBING: {
-            auto strategy = makeHillClimbing(nhSelection);
+        case RANDOM_WALK: {
+            auto strategy = makeExplorationUsingRandomWalk(improve);
             search(strategy, state);
+            return;
+        }
+        case NO_EXPLORE: {
+            search(improve, state);
+            return;
+        }
+        case TEST_EXPLORE: {
+            auto strategy = makeTestExploration(improve);
+            search(strategy, state);
+            return;
+        }
+        default:
+            abort();
+    }
+}
+
+template <typename SelectionStrategy>
+void constructStratAndRun(State& state, SelectionStrategy&& nhSelection) {
+    switch (improveStrategyChoice) {
+        case HILL_CLIMBING: {
+            constructStratAndRunImpl(state, makeHillClimbing(nhSelection),
+                                     nhSelection);
+            return;
+        }
+        case TEST_CLIMB: {
+            constructStratAndRunImpl(state, makeTestClimb(nhSelection),
+                                     nhSelection);
             return;
         }
         default:
@@ -225,24 +268,24 @@ void runSearchImpl(State& state, SelectionStrategy&& nhSelection) {
 void runSearch(State& state) {
     switch (selectionStrategyChoice) {
         case RANDOM_VIOLATION_BIASED: {
-            runSearchImpl(state,
+            constructStratAndRun(state,
                           make_shared<RandomNeighbourhoodWithViolation>());
             return;
         }
         case RANDOM: {
-            runSearchImpl(state, make_shared<RandomNeighbourhood>());
+            constructStratAndRun(state, make_shared<RandomNeighbourhood>());
             return;
         }
         case UCB:
         case UCBV: {
-            runSearchImpl(state, make_shared<UcbNeighbourhoodSelection>(
+            constructStratAndRun(state, make_shared<UcbNeighbourhoodSelection>(
                                      selectionStrategyChoice == UCBV,
                                      ucbExplorationBias));
             return;
         }
 
         case INTERACTIVE: {
-            runSearchImpl(state,
+            constructStratAndRun(state,
                           make_shared<InteractiveNeighbourhoodSelector>());
             return;
         }

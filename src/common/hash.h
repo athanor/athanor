@@ -1,3 +1,6 @@
+#ifndef COMMON_HASH_H
+#define COMMON_HASH_H
+#include "tupleForEach.h"
 template <class T>
 inline void hash_combine(std::size_t& seed, const T& v) {
     std::hash<T> hasher;
@@ -31,3 +34,5 @@ class hash<tuple<Ty...> > {
     }
 };
 }  // namespace std
+
+#endif  // common_HASH_H

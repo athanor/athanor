@@ -42,7 +42,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/getGitRevision/gitRevision.cpp.in" "
 
 
 #find sources
-file(GLOB_RECURSE sources      src/*.cpp src/*.h src/*.hpp src/*.inc "${CMAKE_CURRENT_BINARY_DIR}/gitRevision.cpp")
+file(GLOB_RECURSE sources      src/*.cpp src/*.h src/*.hpp "${CMAKE_CURRENT_BINARY_DIR}/gitRevision.cpp")
 
 
 

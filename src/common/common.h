@@ -8,6 +8,10 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
+#include "hash.h"
+#include "toString.h"
+#include "tupleForEach.h"
+
 
 #ifdef DEBUG_MODE
 //#define LOG_WITH_THREAD_NAME
@@ -36,34 +40,6 @@ extern bool debugLogAllowed;
 #define debug_code(x)
 #endif
 
-template <std::size_t I = 0, typename FuncT, typename... Tp>
-inline typename std::enable_if<I == sizeof...(Tp), bool>::type forEach(
-    const std::tuple<Tp...> &, const FuncT &) {
-    return true;
-}
-
-template <std::size_t I = 0, typename FuncT, typename... Tp>
-    inline typename std::enable_if <
-    I<sizeof...(Tp), bool>::type forEach(const std::tuple<Tp...> &t,
-                                         const FuncT &f) {
-    if (!f(std::get<I>(t))) {
-        return false;
-    }
-    return forEach<I + 1, FuncT, Tp...>(t, f);
-}
-
-#include "hash.inc"
-#include "tostring.inc"
-
-template <typename T>
-T fromString(const std::string &str) {
-    std::istringstream iss(str);
-    T obj;
-    iss >> std::ws >> obj >> std::ws;
-    if (!iss.eof())
-        throw std::runtime_error(toString("Failed to parse  ``", str, "''"));
-    return obj;
-}
 
 template <typename T>
 using BaseType =

@@ -307,7 +307,7 @@ void SequenceValue::debugSanityCheckImpl() const {
                     sanityCheck(
                         memberHashes.count(hash),
                         toString("member ", member->view(), " with hash ", hash,
-                                 " is not in memberHashes."));
+                                 " is not in memberHashes.\nMember hashes is ", memberHashes));
                 }
                 sanityEqualsCheck(memberHashes.size(), numberElements());
             }

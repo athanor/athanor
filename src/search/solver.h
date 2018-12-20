@@ -60,6 +60,7 @@ class State {
                                    changingVariables, stats,
                                    model.vioContainer);
         neighbourhood.apply(params);
+        mpark::visit([&] (auto& v) { v->debugSanityCheck(); }, var.second);
         if (runSanityChecks && !solutionAccepted) {
             model.debugSanityCheck();
         }

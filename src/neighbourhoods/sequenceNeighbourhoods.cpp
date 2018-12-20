@@ -676,13 +676,17 @@ static bool performCrossOver(SequenceValue& fromVal, SequenceValue& toVal,
         toVal.notifyPossibleSubsequenceChange<InnerValueType>(
             indexToCrossOver, indexToCrossOver + 1, toValMemberHashes);
     swapValAssignments(*member1, *member2);
-    return fromVal.trySubsequenceChange<InnerValueType>(
+    bool success =  fromVal.trySubsequenceChange<InnerValueType>(
         indexToCrossOver, indexToCrossOver + 1, fromValMemberHashes,
         fromValSubseqHash, [&]() {
             return toVal.trySubsequenceChange<InnerValueType>(
                 indexToCrossOver, indexToCrossOver + 1, toValMemberHashes,
                 toValSubseqHash, parentCheck);
         });
+    if (!success) {
+        swapValAssignments(*member1, *member2);
+    }
+    return success;
 }
 
 template <typename InnerDomainPtrType>
@@ -725,17 +729,13 @@ void sequenceCrossOverGenImpl(const SequenceDomain& domain, InnerDomainPtrType&,
             do {
                 ++params.stats.minorNodeCount;
                 indexToCrossOver = globalRandom<UInt>(0, maxCrossOverIndex);
+                 member1 = fromVal.member<InnerValueType>(indexToCrossOver);
+member2 = toVal.member<InnerValueType>(indexToCrossOver);
                 if (domain.injective &&
-                    (toVal.containsMember(
-                         fromVal.member<InnerValueType>(indexToCrossOver)) ||
-                     fromVal.containsMember(
-                         toVal.member<InnerValueType>(indexToCrossOver)))) {
+                    (toVal.containsMember(member1) ||
+                     fromVal.containsMember(member2))) {
                     continue;
                 }
-                member1 = assumeAsValue(
-                    fromVal.getMembers<InnerViewType>()[indexToCrossOver]);
-                member2 = assumeAsValue(
-                    toVal.getMembers<InnerViewType>()[indexToCrossOver]);
                 success = performCrossOver(
                     fromVal, toVal, indexToCrossOver, fromValMemberHashes,
                     toValMemberHashes, member1, member2,

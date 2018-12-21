@@ -1,4 +1,3 @@
-
 #ifndef SRC_SEARCH_UCB_NEIGHBOURHOODSELECTION_H
 #define SRC_SEARCH_UCB_NEIGHBOURHOODSELECTION_H
 
@@ -12,13 +11,11 @@
 #include "utils/random.h"
 #define d_log(x)  // std::cout << x << std::endl;
 class UcbNeighbourhoodSelection {
-    bool withVioUpdates;
     double ucbExplorationBias;
 
    public:
-    UcbNeighbourhoodSelection(bool withVioUpdates, double ucbExplorationBias)
-        : withVioUpdates(withVioUpdates),
-          ucbExplorationBias(ucbExplorationBias) {}
+    UcbNeighbourhoodSelection(bool,double ucbExplorationBias)
+        : ucbExplorationBias(ucbExplorationBias) {}
 
     inline double ucbValue(double reward, double totalCost,
                            double neighbourhoodCost) {
@@ -99,9 +96,6 @@ class UcbNeighbourhoodSelection {
         size_t chosenNeighbourhood = bestNeighbourhoods[globalRandom<size_t>(
             0, bestNeighbourhoods.size() - 1)];
         d_log("chosen neighbourhood: " << chosenNeighbourhood);
-        if (withVioUpdates) {
-            updateViolations(state);
-        }
 
         state.runNeighbourhood(chosenNeighbourhood, [&](const auto& result) {
             return parentStrategy(result);

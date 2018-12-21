@@ -16,6 +16,7 @@ struct EndOfSearchException {};
 class State {
    public:
     Model model;
+    ViolationContainer vioContainer;
     StatsContainer stats;
     double totalTimeInNeighbourhoods = 0;
     State(Model model) : model(std::move(model)), stats(this->model) {}
@@ -58,14 +59,16 @@ class State {
         auto changingVariables = makeVecFrom(var.second);
         NeighbourhoodParams params(callback, alwaysTrueFunc, 1,
                                    changingVariables, stats,
-                                   model.vioContainer);
+                                   vioContainer);
         neighbourhood.apply(params);
                 if (runSanityChecks && !solutionAccepted) {
             model.debugSanityCheck();
         }
         NeighbourhoodResult nhResult(model, nhIndex, changeMade,
                                      statsMarkPoint);
-        if (!changeMade) {
+        if (changeMade) {
+            updateVarViolations();
+        } else {
             // tell strategy that no new assignment found
             strategy(nhResult);
         }
@@ -99,6 +102,14 @@ class State {
             std::cout << nhStats << std::endl;
         }
     }
+    void updateVarViolations() {
+        vioContainer.reset();
+        if (model.csp->violation == 0) {
+            return;
+        }
+        model.csp->updateVarViolations(0, vioContainer);
+    }
+
 };
 
 void dumpVarViolations(const ViolationContainer& vioContainer) {
@@ -137,13 +148,6 @@ inline void evaluateAndStartTriggeringDefinedExpressions(State& state) {
     }
 }
 
-void updateViolations(State& state) {
-    state.model.vioContainer.reset();
-    if (state.model.csp->violation == 0) {
-        return;
-    }
-    state.model.csp->updateVarViolations(0, state.model.vioContainer);
-}
 
 template <typename SearchStrategy>
 void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
@@ -168,6 +172,7 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
         state.model.objective->debugSanityCheck();
     }
     state.stats.initialSolution(state.model);
+    state.updateVarViolations();
     try {
         searchStrategy->run(state, true);
     } catch (EndOfSearchException&) {

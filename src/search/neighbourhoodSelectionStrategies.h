@@ -65,19 +65,18 @@ class RandomNeighbourhoodWithViolation {
    public:
     template <typename ParentStrategy>
     inline void run(State& state, ParentStrategy&& parentStrategy) {
-        updateViolations(state);
         state.runNeighbourhood(
             nextNeighbourhood(state),
             [&](const auto& result) { return parentStrategy(result); });
     }
     inline size_t nextNeighbourhood(const State& state) {
-        if (state.model.vioContainer.getTotalViolation() == 0) {
+        if (state.vioContainer.getTotalViolation() == 0) {
             return globalRandom<size_t>(0,
                                         state.model.neighbourhoods.size() - 1);
         } else {
             size_t biasRandomVar;
             while (true) {
-                biasRandomVar = state.model.vioContainer.selectRandomVar(
+                biasRandomVar = state.vioContainer.selectRandomVar(
                     state.model.variables.size() - 1);
                 if (!state.model.varNeighbourhoodMapping[biasRandomVar]
                          .empty()) {

@@ -14,7 +14,7 @@ class UcbNeighbourhoodSelection {
     double ucbExplorationBias;
 
    public:
-    UcbNeighbourhoodSelection(bool,double ucbExplorationBias)
+    UcbNeighbourhoodSelection(double ucbExplorationBias)
         : ucbExplorationBias(ucbExplorationBias) {}
 
     inline double ucbValue(double reward, double totalCost,

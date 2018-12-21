@@ -99,15 +99,13 @@ enum ExploreStrategyChoice {
 
 enum SelectionStrategyChoice {
     RANDOM,
-    RANDOM_VIOLATION_BIASED,
     UCB,
-    UCBV,
     INTERACTIVE
 };
 
 ImproveStrategyChoice improveStrategyChoice = HILL_CLIMBING;
 ExploreStrategyChoice exploreStrategyChoice = RANDOM_WALK;
-SelectionStrategyChoice selectionStrategyChoice = UCBV;
+SelectionStrategyChoice selectionStrategyChoice = UCB;
 
 double ucbExplorationBias = 2;
 
@@ -155,15 +153,9 @@ auto& selectionStratGroup =
     argParser
         .add<ComplexFlag>("--selection", Policy::OPTIONAL,
                           "Specify neighbourhood selection strategy "
-                          "(default=ucbv).")
+                          "(default=ucb).")
         .makeExclusiveGroup(Policy::MANDATORY);
 
-auto& randomViolationBiasedFlag = selectionStratGroup.add<Flag>(
-    "rvb",
-    "Random (violation biased), select neighbourhoods randomly, with bias "
-    "towards operating on variables "
-    "with violations.",
-    [](auto&&) { selectionStrategyChoice = RANDOM_VIOLATION_BIASED; });
 
 auto& randomFlag = selectionStratGroup.add<Flag>(
     "r", "random, select neighbourhoods randomly.",
@@ -172,15 +164,8 @@ auto& randomFlag = selectionStratGroup.add<Flag>(
 auto& ucbFlag = selectionStratGroup.add<Flag>(
     "ucb",
     "Upper confidence bound, a multiarmed bandet method for learning which "
-    "neighbourhoods are best performing..",
+    "neighbourhoods are best performing.",
     [](auto&&) { selectionStrategyChoice = UCB; });
-
-auto& ucbWithVioFlag = selectionStratGroup.add<Flag>(
-    "ucbv",
-    "Upper confidence bound with violation, a multiarmed bandet method for "
-    "learning which "
-    "neighbourhoods are best performing.  Bias towards violating variables..",
-    [](auto&&) { selectionStrategyChoice = UCBV; });
 
 auto& interactiveFlag = selectionStratGroup.add<Flag>(
     "i", "interactive, Prompt user for neighbourhood to select.",
@@ -214,6 +199,7 @@ auto& iterationLimitArg = iterationLimitFlag.add<Arg<u_int64_t>>(
         }
     });
 
+auto& disableVioBiasFlag = argParser.add<Flag>("--disableVioBias", Policy::OPTIONAL,"Disable the search from biasing towards violating variables.");
 void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);
 void sigAlarmHandler(int);
@@ -267,23 +253,14 @@ void constructStratAndRun(State& state, SelectionStrategy&& nhSelection) {
 
 void runSearch(State& state) {
     switch (selectionStrategyChoice) {
-        case RANDOM_VIOLATION_BIASED: {
-            constructStratAndRun(state,
-                          make_shared<RandomNeighbourhoodWithViolation>());
-            return;
-        }
         case RANDOM: {
             constructStratAndRun(state, make_shared<RandomNeighbourhood>());
             return;
         }
-        case UCB:
-        case UCBV: {
-            constructStratAndRun(state, make_shared<UcbNeighbourhoodSelection>(
-                                     selectionStrategyChoice == UCBV,
-                                     ucbExplorationBias));
+        case UCB: {
+            constructStratAndRun(state, make_shared<UcbNeighbourhoodSelection>(ucbExplorationBias));
             return;
         }
-
         case INTERACTIVE: {
             constructStratAndRun(state,
                           make_shared<InteractiveNeighbourhoodSelector>());
@@ -335,6 +312,7 @@ int main(const int argc, const char** argv) {
         u_int32_t seed = (seedArg) ? seedArg.get() : random_device()();
         globalRandomGenerator.seed(seed);
         cout << "Using seed: " << seed << endl;
+        state.disableVarViolations = disableVioBiasFlag;
         runSearch(state);
     } catch (SanityCheckException& e) {
         cerr << "***SANITY CHECK ERROR: " << e.errorMessage << endl;

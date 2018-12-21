@@ -50,18 +50,8 @@ class InteractiveNeighbourhoodSelector {
         }
     }
 };
-class RandomNeighbourhood {
-   public:
-    template <typename ParentStrategy>
-    inline void run(State& state, ParentStrategy&& parentStrategy) {
-        size_t numberNeighbourhoods = state.model.neighbourhoods.size();
-        state.runNeighbourhood(
-            globalRandom<size_t>(0, numberNeighbourhoods - 1),
-            [&](const auto& result) { return parentStrategy(result); });
-    }
-};
 
-class RandomNeighbourhoodWithViolation {
+class RandomNeighbourhood {
    public:
     template <typename ParentStrategy>
     inline void run(State& state, ParentStrategy&& parentStrategy) {

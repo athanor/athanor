@@ -15,6 +15,7 @@ inline bool alwaysTrue(const AnyValVec&) { return true; }
 struct EndOfSearchException {};
 class State {
    public:
+    bool disableVarViolations = false;
     Model model;
     ViolationContainer vioContainer;
     StatsContainer stats;
@@ -103,6 +104,9 @@ class State {
         }
     }
     void updateVarViolations() {
+        if (disableVarViolations) {
+            return;
+        }
         vioContainer.reset();
         if (model.csp->violation == 0) {
             return;

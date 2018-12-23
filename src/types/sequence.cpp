@@ -364,3 +364,6 @@ void SequenceValue::printVarBases() {
         },
         members);
 }
+
+template<> bool hasVariableSize<SequenceValue>(const SequenceValue&) { return true; }
+template<> UInt getSize<SequenceValue>(const SequenceValue& v) { return v.numberElements(); }

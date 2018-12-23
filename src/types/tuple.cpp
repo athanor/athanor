@@ -198,3 +198,6 @@ void TupleValue::debugSanityCheckImpl() const {
     }
     standardSanityChecksForThisType();
 }
+
+template<> bool hasVariableSize<TupleValue>(const TupleValue&) { return false; }
+template<> UInt getSize<TupleValue>(const TupleValue& v) { return v.members.size(); }

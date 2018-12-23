@@ -72,3 +72,6 @@ void IntView::standardSanityChecksForThisType() const {}
 void IntValue::debugSanityCheckImpl() const {
     standardSanityChecksForThisType();
 }
+
+template<> bool hasVariableSize<IntValue>(const IntValue&) { return false; }
+template<> UInt getSize<IntValue>(const IntValue&) { return 0; }

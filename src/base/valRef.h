@@ -109,6 +109,12 @@ EnableIfValueAndReturn<Val, const ValBase&> valBase(const Val& val);
 const ValBase& valBase(const AnyValRef& ref);
 ValBase& valBase(AnyValRef& ref);
 
+
+template <typename Val>
+EnableIfValueAndReturn<Val, bool> hasVariableSize(const Val& val);
+template <typename Val>
+EnableIfValueAndReturn<Val, UInt> getSize(const Val& val);
+
 template <typename Val, typename MemberExprType>
 inline void varBaseSanityChecks(
     const Val& val, const ExprRefVec<MemberExprType>& valMembersImpl) {

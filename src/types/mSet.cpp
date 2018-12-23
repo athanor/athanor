@@ -260,3 +260,6 @@ void MSetValue::debugSanityCheckImpl() const {
         },
         members);
 }
+
+template<> bool hasVariableSize<MSetValue>(const MSetValue&) { return true; }
+template<> UInt getSize<MSetValue>(const MSetValue& v) { return v.numberElements(); }

@@ -61,3 +61,6 @@ void BoolView::standardSanityChecksForThisType() const {}
 void BoolValue::debugSanityCheckImpl() const {
     standardSanityChecksForThisType();
 }
+
+template<> bool hasVariableSize<BoolValue>(const BoolValue&) { return false; }
+template<> UInt getSize<BoolValue>(const BoolValue&) { return 0; }

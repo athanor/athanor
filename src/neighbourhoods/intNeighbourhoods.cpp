@@ -75,3 +75,7 @@ void intAssignRandomGen(const IntDomain& domain, int numberValsRequired,
 
 const NeighbourhoodVec<IntDomain> NeighbourhoodGenList<IntDomain>::value = {
     {1, intAssignRandomGen}};
+
+const NeighbourhoodVec<IntDomain> NeighbourhoodGenList<IntDomain>::mergeNeighbourhoods = {};
+
+const NeighbourhoodVec<IntDomain> NeighbourhoodGenList<IntDomain>::splitNeighbourhoods = {};

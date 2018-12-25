@@ -27,3 +27,6 @@ void assignRandomValueInDomain<TupleDomain>(const TupleDomain& domain,
 
 const NeighbourhoodVec<TupleDomain> NeighbourhoodGenList<TupleDomain>::value =
     {};
+
+const NeighbourhoodVec<TupleDomain> NeighbourhoodGenList<TupleDomain>::mergeNeighbourhoods = {};
+const NeighbourhoodVec<TupleDomain> NeighbourhoodGenList<TupleDomain>::splitNeighbourhoods = {};

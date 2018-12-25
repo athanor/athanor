@@ -569,3 +569,7 @@ const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::value = {
     {1, setLiftMultipleGen},  //
     {1, setAddGen},          {1, setRemoveGen},
     {2, setMoveGen},         {2, setCrossOverGen}};
+
+
+const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::mergeNeighbourhoods = {};
+const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::splitNeighbourhoods = {};

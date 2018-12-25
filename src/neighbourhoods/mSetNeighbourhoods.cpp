@@ -340,3 +340,6 @@ const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::value = {
     {1, mSetLiftMultipleGen},
     {1, mSetRemoveGen},
     {1, mSetAddGen}};
+
+const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::mergeNeighbourhoods = {};
+const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::splitNeighbourhoods = {};

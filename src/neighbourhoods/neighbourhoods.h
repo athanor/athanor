@@ -67,10 +67,13 @@ using NeighbourhoodVec = std::vector<NeighbourhoodGenerator<Domain>>;
 template <typename DomainType>
 struct NeighbourhoodGenList;
 
+
 #define makeGeneratorDecls(name)                           \
     template <>                                            \
     struct NeighbourhoodGenList<name##Domain> {            \
         static const NeighbourhoodVec<name##Domain> value; \
+        static const NeighbourhoodVec<name##Domain> mergeNeighbourhoods; \
+        static const NeighbourhoodVec<name##Domain> splitNeighbourhoods; \
     };
 buildForAllTypes(makeGeneratorDecls, )
 #undef makeGeneratorDecls

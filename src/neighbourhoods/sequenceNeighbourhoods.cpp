@@ -826,3 +826,10 @@ const NeighbourhoodVec<SequenceDomain>
         {2, sequenceCrossOverGen}
 
 };
+
+const NeighbourhoodVec<SequenceDomain>
+NeighbourhoodGenList<SequenceDomain>::mergeNeighbourhoods = {};
+
+
+const NeighbourhoodVec<SequenceDomain>
+NeighbourhoodGenList<SequenceDomain>::splitNeighbourhoods = {};

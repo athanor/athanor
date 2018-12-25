@@ -59,3 +59,6 @@ void boolAssignRandomGen(const BoolDomain& domain, int numberValsRequired,
 
 const NeighbourhoodVec<BoolDomain> NeighbourhoodGenList<BoolDomain>::value = {
     {1, boolAssignRandomGen}};
+
+const NeighbourhoodVec<BoolDomain> NeighbourhoodGenList<BoolDomain>::mergeNeighbourhoods = {};
+const NeighbourhoodVec<BoolDomain> NeighbourhoodGenList<BoolDomain>::splitNeighbourhoods = {};

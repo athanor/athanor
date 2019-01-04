@@ -35,49 +35,21 @@ static const char* NO_PARTITION_UNDEFINED =
 struct PartitionView : public ExprInterface<PartitionView>,
                        public TriggerContainer<PartitionView> {
     friend PartitionValue;
-    ExprRefVec<SetView> parts;
-    std::unordered_map<HashType, std::pair<UInt, UInt>> hashPartMap;
-
+    AnyExprVec members;
+    std::vector<UInt> memberPartMap;
     HashType cachedHashTotal = 0;
 
-    HashType getPartHash(UInt index) {
-        return getValueHash(
-            parts[index]->view().checkedGet(NO_PARTITION_UNDEFINED));
-    }
 
-    HashType getMemberHash(UInt partIndex, UInt memberIndex) {
-        auto& partView = parts[partIndex]->getViewIfDefined().checkedGet(
-            NO_PARTITION_UNDEFINED);
-        return mpark::visit(
-            [&](auto& partMembers) {
-                auto& memberView =
-                    partMembers[memberIndex]->getViewIfDefined().checkedGet(
-                        NO_PARTITION_UNDEFINED);
-                return getValueHash(memberView);
-            },
-            partView->members);
+template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    HashType getMemberHash(UInt memberIndex) {
+            auto& members = getMembers<InnerViewType>();
+            debug_code(assert(memberIndex < members.size()));
+            return getValueHash(members[memberIndex]->getViewIfDefined().checkedGet(NO_PARTITION_UNDEFINED));
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    void swapContainingParts(UInt part1Index, UInt part2Index,
-                             Uint member1Index, UInt member2Index) {
-        HashType part1Hash = getPartHash(part1Index);
-        HashType part2Hash = getPartHash(part2Index);
-        HashType member1Hash = getMemberHash(part1Index, member1Index);
-        HashType member2Hash = getMemberHash(part2Index, member2Index);
-        deebug_code(assert(hashPartMap[member1Hash] == part1Index));
-        debug_code(assert(hashPartMap[member2Hash] == part2Index));
-        auto member1 =
-            parts[part1Index]->removeMember<InnerViewType>(member1Index);
-        auto member2 =
-            parts[partIndex2]->removeMember<InnerViewType>(memberIndex2);
-        parts[part1Index]->addMember(member2);
-        parts[part2Index]->addMember(member1);
-        std::swap(hashPartMap[member1Hash], hashPartMap[member2Hash]);
-        cachedHashTotal -= part1Hash;
-        cachedHashTotal -= part2Hash;
-        cachedHashTotal += getPartHash(part1Index);
-        cachedHashTotal += getPartHash(part2Index);
-        debug_code(assertValidState());
+    void swapContainingParts(UInt member1Index, UInt member2Index) {
+        HashType member1Hash = getMemberHash<InnerViewType>(member1Index);
+        HashType member2Hash = getMemberHash<InnerViewType>(member2Index);
     }
 
     void silentClear() {

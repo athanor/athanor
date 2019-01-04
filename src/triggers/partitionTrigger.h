@@ -20,18 +20,19 @@ struct TriggerContainer<PartitionView> {
     std::vector<TriggerQueue<PartitionMemberTrigger>> singleMemberTriggers;
 
 
-    template <typename Func>
-    void visitMemberTriggers(Func&& func, UInt index) {
-        visitTriggers(func, allMemberTriggers);
-        if (index < singleMemberTriggers.size()) {
-            visitTriggers(func, singleMemberTriggers[index]);
-        }
-    }
+
 
     inline void notifyContainingPartsSwapped(UInt member1, UInt member2) {
-        visitMemberTriggers([&] (auto& t) {
+        auto triggerFunc = [&] (auto& t) {
             t->containingPartsSwapped(member1,member2);
-        });
+        };
+        visitTriggers(triggerFunc,allMemberTriggers);
+        if (member1 < singleMemberTriggers.size()) {
+            visitTriggers(triggerFunc,singleMemberTriggers[member1]);
+        }
+        if (member2 < singleMemberTriggers.size()) {
+            visitTriggers(triggerFunc,singleMemberTriggers[member2]);
+        }
     }
 };
 
@@ -39,7 +40,7 @@ template <typename Child>
 struct ChangeTriggerAdapter<PartitionTrigger, Child>
     : public ChangeTriggerAdapterBase<PartitionTrigger, Child> {
     ChangeTriggerAdapter(const ExprRef<PartitionView>&)  {}
-    void containingPartsSwapped(UInt member1, UInt member2) override {
+    void containingPartsSwapped(UInt, UInt) override {
             this->forwardValueChanged();
     }
 };
@@ -53,9 +54,9 @@ struct ForwardingTrigger<PartitionTrigger, Op, Child>
 
    public:
 
-        void positionsSwapped(HashType index1, UInt index2) {
+        void containingTriggersSwapped(UInt member1,UInt member2) override {
         if (this->op->allowForwardingOfTrigger()) {
-            this->op->notifyPositionsSwapped(index1, index2);
+            this->op->notifyContainingPartsSwapped(member1, member2);
         }
     }
 };

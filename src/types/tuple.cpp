@@ -5,13 +5,11 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 static HashType calcHash(const TupleView& val) {
-    HashType result[2];
     HashType input[val.members.size()];
     for (size_t i = 0; i < val.members.size(); i++) {
         input[i] = getValueHash(val.members[i]);
     }
-    MurmurHash3_x64_128(((void*)input), sizeof(input), 0, result);
-    return result[0] ^ result[1];
+    return mix(((char*)input), sizeof(input));
 }
 
 template <>

@@ -54,12 +54,10 @@ struct SequenceView : public ExprInterface<SequenceView>,
     inline HashType calcMemberHash(UInt index,
                                    const ExprRef<InnerViewType>& expr) const {
         HashType input[2];
-        HashType result[2];
         input[0] = index;
         input[1] = getValueHash(
             expr->view().checkedGet(NO_SEQUENCE_HASHING_UNDEFINED));
-        MurmurHash3_x64_128(((void*)input), sizeof(input), 0, result);
-        return result[0] ^ result[1];
+        return mix(((char*)input), sizeof(input));
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

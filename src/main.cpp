@@ -97,11 +97,7 @@ enum ExploreStrategyChoice {
     TEST_EXPLORE
 };
 
-enum SelectionStrategyChoice {
-    RANDOM,
-    UCB,
-    INTERACTIVE
-};
+enum SelectionStrategyChoice { RANDOM, UCB, INTERACTIVE };
 
 ImproveStrategyChoice improveStrategyChoice = HILL_CLIMBING;
 ExploreStrategyChoice exploreStrategyChoice = RANDOM_WALK;
@@ -156,7 +152,6 @@ auto& selectionStratGroup =
                           "(default=ucb).")
         .makeExclusiveGroup(Policy::MANDATORY);
 
-
 auto& randomFlag = selectionStratGroup.add<Flag>(
     "r", "random, select neighbourhoods randomly.",
     [](auto&&) { selectionStrategyChoice = RANDOM; });
@@ -199,7 +194,9 @@ auto& iterationLimitArg = iterationLimitFlag.add<Arg<u_int64_t>>(
         }
     });
 
-auto& disableVioBiasFlag = argParser.add<Flag>("--disableVioBias", Policy::OPTIONAL,"Disable the search from biasing towards violating variables.");
+auto& disableVioBiasFlag = argParser.add<Flag>(
+    "--disableVioBias", Policy::OPTIONAL,
+    "Disable the search from biasing towards violating variables.");
 void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);
 void sigAlarmHandler(int);
@@ -258,12 +255,13 @@ void runSearch(State& state) {
             return;
         }
         case UCB: {
-            constructStratAndRun(state, make_shared<UcbNeighbourhoodSelection>(ucbExplorationBias));
+            constructStratAndRun(state, make_shared<UcbNeighbourhoodSelection>(
+                                            ucbExplorationBias));
             return;
         }
         case INTERACTIVE: {
-            constructStratAndRun(state,
-                          make_shared<InteractiveNeighbourhoodSelector>());
+            constructStratAndRun(
+                state, make_shared<InteractiveNeighbourhoodSelector>());
             return;
         }
         default:

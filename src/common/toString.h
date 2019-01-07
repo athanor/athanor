@@ -15,8 +15,7 @@
 #include <vector>
 #include "tupleForEach.h"
 
-//forward decls of operator<< for different containers
-
+// forward decls of operator<< for different containers
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& iterable);

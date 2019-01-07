@@ -109,7 +109,6 @@ EnableIfValueAndReturn<Val, const ValBase&> valBase(const Val& val);
 const ValBase& valBase(const AnyValRef& ref);
 ValBase& valBase(AnyValRef& ref);
 
-
 template <typename Val>
 EnableIfValueAndReturn<Val, bool> hasVariableSize(const Val& val);
 template <typename Val>

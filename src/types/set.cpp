@@ -1,7 +1,7 @@
-#include "types/set.h"
 #include <algorithm>
 #include <cassert>
 #include "common/common.h"
+#include "types/setVal.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 
@@ -300,5 +300,11 @@ void SetValue::debugSanityCheckImpl() const {
         members);
 }
 
-template<> bool hasVariableSize<SetValue>(const SetValue&) { return true; }
-template<> UInt getSize<SetValue>(const SetValue& v) { return v.numberElements(); }
+template <>
+bool hasVariableSize<SetValue>(const SetValue&) {
+    return true;
+}
+template <>
+UInt getSize<SetValue>(const SetValue& v) {
+    return v.numberElements();
+}

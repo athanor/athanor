@@ -1,12 +1,12 @@
-#include "types/function.h"
 #include <algorithm>
 #include <cassert>
 #include <tuple>
 #include <utility>
 #include "common/common.h"
-#include "types/bool.h"
-#include "types/int.h"
-#include "types/tuple.h"
+#include "types/boolVal.h"
+#include "types/functionVal.h"
+#include "types/intVal.h"
+#include "types/tupleVal.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 struct NoSupportException {};

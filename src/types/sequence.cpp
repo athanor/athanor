@@ -1,8 +1,8 @@
-#include "types/sequence.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include "common/common.h"
+#include "types/sequenceVal.h"
 #include "utils/ignoreUnused.h"
 #include "utils/safePow.h"
 using namespace std;
@@ -307,7 +307,8 @@ void SequenceValue::debugSanityCheckImpl() const {
                     sanityCheck(
                         memberHashes.count(hash),
                         toString("member ", member->view(), " with hash ", hash,
-                                 " is not in memberHashes.\nMember hashes is ", memberHashes));
+                                 " is not in memberHashes.\nMember hashes is ",
+                                 memberHashes));
                 }
                 sanityEqualsCheck(memberHashes.size(), numberElements());
             }
@@ -365,5 +366,11 @@ void SequenceValue::printVarBases() {
         members);
 }
 
-template<> bool hasVariableSize<SequenceValue>(const SequenceValue&) { return true; }
-template<> UInt getSize<SequenceValue>(const SequenceValue& v) { return v.numberElements(); }
+template <>
+bool hasVariableSize<SequenceValue>(const SequenceValue&) {
+    return true;
+}
+template <>
+UInt getSize<SequenceValue>(const SequenceValue& v) {
+    return v.numberElements();
+}

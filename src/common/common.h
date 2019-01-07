@@ -12,7 +12,6 @@
 #include "toString.h"
 #include "tupleForEach.h"
 
-
 #ifdef DEBUG_MODE
 //#define LOG_WITH_THREAD_NAME
 #ifdef LOG_WITH_THREAD_NAME
@@ -39,7 +38,6 @@ extern bool debugLogAllowed;
 #define debug_log_no_endl(x)
 #define debug_code(x)
 #endif
-
 
 template <typename T>
 using BaseType =

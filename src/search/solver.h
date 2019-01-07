@@ -59,10 +59,9 @@ class State {
         ParentCheckCallBack alwaysTrueFunc(alwaysTrue);
         auto changingVariables = makeVecFrom(var.second);
         NeighbourhoodParams params(callback, alwaysTrueFunc, 1,
-                                   changingVariables, stats,
-                                   vioContainer);
+                                   changingVariables, stats, vioContainer);
         neighbourhood.apply(params);
-                if (runSanityChecks && !solutionAccepted) {
+        if (runSanityChecks && !solutionAccepted) {
             model.debugSanityCheck();
         }
         NeighbourhoodResult nhResult(model, nhIndex, changeMade,
@@ -113,7 +112,6 @@ class State {
         }
         model.csp->updateVarViolations(0, vioContainer);
     }
-
 };
 
 void dumpVarViolations(const ViolationContainer& vioContainer) {
@@ -151,7 +149,6 @@ inline void evaluateAndStartTriggeringDefinedExpressions(State& state) {
             nameExprPair.second);
     }
 }
-
 
 template <typename SearchStrategy>
 void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {

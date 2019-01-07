@@ -2,7 +2,7 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
-#include "types/tuple.h"
+#include "types/tupleVal.h"
 #include "utils/random.h"
 
 using namespace std;
@@ -28,5 +28,7 @@ void assignRandomValueInDomain<TupleDomain>(const TupleDomain& domain,
 const NeighbourhoodVec<TupleDomain> NeighbourhoodGenList<TupleDomain>::value =
     {};
 
-const NeighbourhoodVec<TupleDomain> NeighbourhoodGenList<TupleDomain>::mergeNeighbourhoods = {};
-const NeighbourhoodVec<TupleDomain> NeighbourhoodGenList<TupleDomain>::splitNeighbourhoods = {};
+const NeighbourhoodVec<TupleDomain>
+    NeighbourhoodGenList<TupleDomain>::mergeNeighbourhoods = {};
+const NeighbourhoodVec<TupleDomain>
+    NeighbourhoodGenList<TupleDomain>::splitNeighbourhoods = {};

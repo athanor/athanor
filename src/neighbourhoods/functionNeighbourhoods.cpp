@@ -2,8 +2,8 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
-#include "types/function.h"
-#include "types/int.h"
+#include "types/functionVal.h"
+#include "types/intVal.h"
 #include "utils/random.h"
 
 using namespace std;

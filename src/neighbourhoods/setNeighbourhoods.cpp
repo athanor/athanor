@@ -2,7 +2,7 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
-#include "types/set.h"
+#include "types/setVal.h"
 #include "utils/random.h"
 
 using namespace std;
@@ -570,6 +570,7 @@ const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::value = {
     {1, setAddGen},          {1, setRemoveGen},
     {2, setMoveGen},         {2, setCrossOverGen}};
 
-
-const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::mergeNeighbourhoods = {};
-const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::splitNeighbourhoods = {};
+const NeighbourhoodVec<SetDomain>
+    NeighbourhoodGenList<SetDomain>::mergeNeighbourhoods = {};
+const NeighbourhoodVec<SetDomain>
+    NeighbourhoodGenList<SetDomain>::splitNeighbourhoods = {};

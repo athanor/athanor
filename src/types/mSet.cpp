@@ -1,7 +1,7 @@
-#include "types/mSet.h"
 #include <algorithm>
 #include <cassert>
 #include "common/common.h"
+#include "types/mSetVal.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 
@@ -261,5 +261,11 @@ void MSetValue::debugSanityCheckImpl() const {
         members);
 }
 
-template<> bool hasVariableSize<MSetValue>(const MSetValue&) { return true; }
-template<> UInt getSize<MSetValue>(const MSetValue& v) { return v.numberElements(); }
+template <>
+bool hasVariableSize<MSetValue>(const MSetValue&) {
+    return true;
+}
+template <>
+UInt getSize<MSetValue>(const MSetValue& v) {
+    return v.numberElements();
+}

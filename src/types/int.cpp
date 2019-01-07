@@ -1,6 +1,6 @@
-#include "types/int.h"
 #include <cassert>
 #include "common/common.h"
+#include "types/intVal.h"
 using namespace std;
 
 template <>
@@ -73,5 +73,11 @@ void IntValue::debugSanityCheckImpl() const {
     standardSanityChecksForThisType();
 }
 
-template<> bool hasVariableSize<IntValue>(const IntValue&) { return false; }
-template<> UInt getSize<IntValue>(const IntValue&) { return 0; }
+template <>
+bool hasVariableSize<IntValue>(const IntValue&) {
+    return false;
+}
+template <>
+UInt getSize<IntValue>(const IntValue&) {
+    return 0;
+}

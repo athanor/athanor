@@ -3,7 +3,7 @@
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
 
-#include "types/int.h"
+#include "types/intVal.h"
 #include "utils/random.h"
 
 Int getRandomValueInDomain(const IntDomain& domain, StatsContainer& stats) {
@@ -76,6 +76,8 @@ void intAssignRandomGen(const IntDomain& domain, int numberValsRequired,
 const NeighbourhoodVec<IntDomain> NeighbourhoodGenList<IntDomain>::value = {
     {1, intAssignRandomGen}};
 
-const NeighbourhoodVec<IntDomain> NeighbourhoodGenList<IntDomain>::mergeNeighbourhoods = {};
+const NeighbourhoodVec<IntDomain>
+    NeighbourhoodGenList<IntDomain>::mergeNeighbourhoods = {};
 
-const NeighbourhoodVec<IntDomain> NeighbourhoodGenList<IntDomain>::splitNeighbourhoods = {};
+const NeighbourhoodVec<IntDomain>
+    NeighbourhoodGenList<IntDomain>::splitNeighbourhoods = {};

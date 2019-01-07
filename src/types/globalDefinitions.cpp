@@ -4,7 +4,7 @@
  * which includes all the types */
 #include <utility>
 #include "search/violationContainer.h"
-#include "types/allTypes.h"
+#include "types/allVals.h"
 #define quote(x) #x
 using namespace std;
 template <typename Val>

@@ -1,6 +1,6 @@
-#include "types/bool.h"
 #include <cassert>
 #include "common/common.h"
+#include "types/boolVal.h"
 
 using namespace std;
 template <>
@@ -62,5 +62,11 @@ void BoolValue::debugSanityCheckImpl() const {
     standardSanityChecksForThisType();
 }
 
-template<> bool hasVariableSize<BoolValue>(const BoolValue&) { return false; }
-template<> UInt getSize<BoolValue>(const BoolValue&) { return 0; }
+template <>
+bool hasVariableSize<BoolValue>(const BoolValue&) {
+    return false;
+}
+template <>
+UInt getSize<BoolValue>(const BoolValue&) {
+    return 0;
+}

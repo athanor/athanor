@@ -2,6 +2,7 @@
 #include <iostream>
 #include <memory>
 #include "operators/simpleOperator.hpp"
+#include "types/intVal.h"
 
 using namespace std;
 

@@ -2,7 +2,7 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
-#include "types/sequence.h"
+#include "types/sequenceVal.h"
 #include "utils/random.h"
 
 using namespace std;
@@ -676,7 +676,7 @@ static bool performCrossOver(SequenceValue& fromVal, SequenceValue& toVal,
         toVal.notifyPossibleSubsequenceChange<InnerValueType>(
             indexToCrossOver, indexToCrossOver + 1, toValMemberHashes);
     swapValAssignments(*member1, *member2);
-    bool success =  fromVal.trySubsequenceChange<InnerValueType>(
+    bool success = fromVal.trySubsequenceChange<InnerValueType>(
         indexToCrossOver, indexToCrossOver + 1, fromValMemberHashes,
         fromValSubseqHash, [&]() {
             return toVal.trySubsequenceChange<InnerValueType>(
@@ -729,11 +729,10 @@ void sequenceCrossOverGenImpl(const SequenceDomain& domain, InnerDomainPtrType&,
             do {
                 ++params.stats.minorNodeCount;
                 indexToCrossOver = globalRandom<UInt>(0, maxCrossOverIndex);
-                 member1 = fromVal.member<InnerValueType>(indexToCrossOver);
-member2 = toVal.member<InnerValueType>(indexToCrossOver);
-                if (domain.injective &&
-                    (toVal.containsMember(member1) ||
-                     fromVal.containsMember(member2))) {
+                member1 = fromVal.member<InnerValueType>(indexToCrossOver);
+                member2 = toVal.member<InnerValueType>(indexToCrossOver);
+                if (domain.injective && (toVal.containsMember(member1) ||
+                                         fromVal.containsMember(member2))) {
                     continue;
                 }
                 success = performCrossOver(
@@ -828,8 +827,7 @@ const NeighbourhoodVec<SequenceDomain>
 };
 
 const NeighbourhoodVec<SequenceDomain>
-NeighbourhoodGenList<SequenceDomain>::mergeNeighbourhoods = {};
-
+    NeighbourhoodGenList<SequenceDomain>::mergeNeighbourhoods = {};
 
 const NeighbourhoodVec<SequenceDomain>
-NeighbourhoodGenList<SequenceDomain>::splitNeighbourhoods = {};
+    NeighbourhoodGenList<SequenceDomain>::splitNeighbourhoods = {};

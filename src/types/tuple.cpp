@@ -1,7 +1,7 @@
-#include "types/tuple.h"
 #include <algorithm>
 #include <cassert>
 #include "common/common.h"
+#include "types/tupleVal.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 static HashType calcHash(const TupleView& val) {
@@ -197,5 +197,11 @@ void TupleValue::debugSanityCheckImpl() const {
     standardSanityChecksForThisType();
 }
 
-template<> bool hasVariableSize<TupleValue>(const TupleValue&) { return false; }
-template<> UInt getSize<TupleValue>(const TupleValue& v) { return v.members.size(); }
+template <>
+bool hasVariableSize<TupleValue>(const TupleValue&) {
+    return false;
+}
+template <>
+UInt getSize<TupleValue>(const TupleValue& v) {
+    return v.members.size();
+}

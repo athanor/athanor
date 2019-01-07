@@ -1,12 +1,9 @@
 #ifndef SRC_TYPES_BOOL_H_
 #define SRC_TYPES_BOOL_H_
-#include <utility>
-#include <vector>
+#include "base/base.h"
 #include "triggers/boolTrigger.h"
 #include "utils/ignoreUnused.h"
 
-#include "base/base.h"
-struct BoolDomain {};
 struct BoolView : public ExprInterface<BoolView>,
                   public TriggerContainer<BoolView> {
     UInt violation;
@@ -22,23 +19,6 @@ struct BoolView : public ExprInterface<BoolView>,
         return false;
     }
     void standardSanityChecksForThisType() const;
-};
-
-struct BoolValue : public BoolView, ValBase {
-    void evaluateImpl() final;
-    void startTriggeringImpl() final;
-    void stopTriggering() final;
-    void updateVarViolationsImpl(const ViolationContext& vioContext,
-                                 ViolationContainer&) final;
-    ExprRef<BoolView> deepCopyForUnrollImpl(
-        const ExprRef<BoolView>&, const AnyIterRef& iterator) const final;
-
-    std::ostream& dumpState(std::ostream& os) const final;
-
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool, ExprRef<BoolView>> optimise(PathExtension) final;
-    void debugSanityCheckImpl() const final;
-    std::string getOpName() const final;
 };
 
 #endif /* SRC_TYPES_BOOL_H_ */

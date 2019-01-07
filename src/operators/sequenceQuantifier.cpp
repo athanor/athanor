@@ -1,6 +1,7 @@
 #include "operators/opTupleIndex.h"
 #include "operators/opTupleLit.h"
 #include "operators/quantifier.hpp"
+#include "types/intVal.h"
 #include "types/sequence.h"
 
 template <typename Op>

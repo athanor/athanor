@@ -2,7 +2,7 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
-#include "types/mSet.h"
+#include "types/mSetVal.h"
 #include "utils/random.h"
 
 using namespace std;
@@ -341,5 +341,7 @@ const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::value = {
     {1, mSetRemoveGen},
     {1, mSetAddGen}};
 
-const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::mergeNeighbourhoods = {};
-const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::splitNeighbourhoods = {};
+const NeighbourhoodVec<MSetDomain>
+    NeighbourhoodGenList<MSetDomain>::mergeNeighbourhoods = {};
+const NeighbourhoodVec<MSetDomain>
+    NeighbourhoodGenList<MSetDomain>::splitNeighbourhoods = {};

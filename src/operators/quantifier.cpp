@@ -15,6 +15,7 @@
 #include "operators/quantifier.h"
 #include "triggers/allTriggers.h"
 #include "types/allTypes.h"
+#include "types/intVal.h"
 
 template <typename Op>
 struct OpMaker;

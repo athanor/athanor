@@ -13,7 +13,7 @@
 #include "operators/opIntEq.h"
 #include "operators/opSequenceLit.h"
 #include "search/violationContainer.h"
-#include "types/allTypes.h"
+#include "types/allVals.h"
 extern ValBase definedPool;
 class ModelBuilder;
 #ifndef CLASS_OPTIMISEMODE

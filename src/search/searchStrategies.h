@@ -15,9 +15,9 @@ class ExponentialIncrementer {
     double value;
     double exponent;
 
-public:
+   public:
     ExponentialIncrementer(double initialValue, double exponent)
-    : value(initialValue), exponent(exponent) {}
+        : value(initialValue), exponent(exponent) {}
     void reset(double initialValue, double exponent) {
         this->value = initialValue;
         this->exponent = exponent;
@@ -31,14 +31,13 @@ public:
     }
 };
 
-
 template <typename Strategy>
 class HillClimbing {
-    static constexpr double  MULTIPLIER = 1.3;
+    static constexpr double MULTIPLIER = 1.3;
     std::shared_ptr<Strategy> strategy;
 
-    ExponentialIncrementer<u_int64_t> allowedIterationsAtPeak = ExponentialIncrementer<u_int64_t>(DEFAULT_PEAK_ITERATIONS,MULTIPLIER);
-
+    ExponentialIncrementer<u_int64_t> allowedIterationsAtPeak =
+        ExponentialIncrementer<u_int64_t>(DEFAULT_PEAK_ITERATIONS, MULTIPLIER);
 
    public:
     HillClimbing(std::shared_ptr<Strategy> strategy)
@@ -156,9 +155,7 @@ class ExplorationUsingViolationBackOff {
             });
             if (!allowed) {
                 ++iterationsWithoutChange;
-                if (iterationsWithoutChange %
-                        DEFAULT_PEAK_ITERATIONS ==
-                    0) {
+                if (iterationsWithoutChange % DEFAULT_PEAK_ITERATIONS == 0) {
                     violationBackOff.increment();
                     iterationsWithoutChange = 0;
                 }
@@ -190,8 +187,7 @@ class ExplorationUsingViolationBackOff {
             });
             if (!allowed) {
                 ++iterationsWithoutChange;
-                if (iterationsWithoutChange ==
-                    DEFAULT_PEAK_ITERATIONS) {
+                if (iterationsWithoutChange == DEFAULT_PEAK_ITERATIONS) {
                     return false;
                 }
             }
@@ -252,8 +248,7 @@ class ExplorationUsingRandomWalk {
             } else {
                 numberRandomMoves.increment();
                 climbStrategy->increaseTerminationLimit();
-                if (numberRandomMoves.getValue() >
-                    DEFAULT_PEAK_ITERATIONS) {
+                if (numberRandomMoves.getValue() > DEFAULT_PEAK_ITERATIONS) {
                     // reset
                     bestQuality = quality(state);
                     numberRandomMoves.reset(baseValue, multiplier);
@@ -275,28 +270,23 @@ class ExplorationUsingRandomWalk {
 template <typename ClimbStrategy>
 auto makeExplorationUsingRandomWalk(
     std::shared_ptr<ClimbStrategy> climbStrategy) {
-    return std::make_shared<ExplorationUsingRandomWalk<ClimbStrategy>>(climbStrategy);
+    return std::make_shared<ExplorationUsingRandomWalk<ClimbStrategy>>(
+        climbStrategy);
 }
-
-
 
 template <typename Strategy>
 class TestClimber {
     std::shared_ptr<Strategy> strategy;
 
-public:
+   public:
     TestClimber(std::shared_ptr<Strategy> strategy)
-    : strategy(std::move(strategy)) {}
+        : strategy(std::move(strategy)) {}
 
-    void increaseTerminationLimit() {
-        todoImpl();
-    }
-    void resetTerminationLimit() {
-        todoImpl();
-    }
+    void increaseTerminationLimit() { todoImpl(); }
+    void resetTerminationLimit() { todoImpl(); }
 
     void run(State& state, bool isOuterMostStrategy) {
-        ignoreUnused(state,isOuterMostStrategy);
+        ignoreUnused(state, isOuterMostStrategy);
         todoImpl();
     }
 };
@@ -306,18 +296,15 @@ auto makeTestClimb(std::shared_ptr<Strategy> strategy) {
     return std::make_shared<TestClimber<Strategy>>(std::move(strategy));
 }
 
-
-
 template <typename ClimbStrategy>
 class TestExploration {
     static constexpr double baseValue = 10;
     static constexpr double multiplier = 1.3;
     std::shared_ptr<ClimbStrategy> climbStrategy;
 
-
-public:
+   public:
     TestExploration(std::shared_ptr<ClimbStrategy> climbStrategy)
-    : climbStrategy(std::move(climbStrategy)) {}
+        : climbStrategy(std::move(climbStrategy)) {}
 
     void run(State& state, bool) {
         ignoreUnused(state);
@@ -326,11 +313,8 @@ public:
 };
 
 template <typename ClimbStrategy>
-auto makeTestExploration(
-                         std::shared_ptr<ClimbStrategy> climbStrategy) {
-    return std::make_shared<TestExploration<ClimbStrategy>>(
-                                                            climbStrategy);
+auto makeTestExploration(std::shared_ptr<ClimbStrategy> climbStrategy) {
+    return std::make_shared<TestExploration<ClimbStrategy>>(climbStrategy);
 }
-
 
 #endif /* SRC_SEARCH_SEARCHSTRATEGIES_H_ */

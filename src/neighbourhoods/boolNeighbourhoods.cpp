@@ -1,7 +1,7 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
-#include "types/bool.h"
+#include "types/boolVal.h"
 #include "utils/random.h"
 
 auto getRandomValueInDomain(const BoolDomain&, StatsContainer& stats) {
@@ -60,5 +60,7 @@ void boolAssignRandomGen(const BoolDomain& domain, int numberValsRequired,
 const NeighbourhoodVec<BoolDomain> NeighbourhoodGenList<BoolDomain>::value = {
     {1, boolAssignRandomGen}};
 
-const NeighbourhoodVec<BoolDomain> NeighbourhoodGenList<BoolDomain>::mergeNeighbourhoods = {};
-const NeighbourhoodVec<BoolDomain> NeighbourhoodGenList<BoolDomain>::splitNeighbourhoods = {};
+const NeighbourhoodVec<BoolDomain>
+    NeighbourhoodGenList<BoolDomain>::mergeNeighbourhoods = {};
+const NeighbourhoodVec<BoolDomain>
+    NeighbourhoodGenList<BoolDomain>::splitNeighbourhoods = {};

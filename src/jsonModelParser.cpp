@@ -10,7 +10,7 @@
 #include "operators/operatorMakers.h"
 #include "operators/quantifier.h"
 #include "search/model.h"
-#include "types/allTypes.h"
+#include "types/allVals.h"
 
 using namespace std;
 using namespace lib;

@@ -4,6 +4,7 @@
 #include "types/function.h"
 #include "types/int.h"
 #include "types/mSet.h"
+#include "types/partition.h"
 #include "types/sequence.h"
 #include "types/set.h"
 #include "types/tuple.h"

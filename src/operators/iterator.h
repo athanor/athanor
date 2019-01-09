@@ -3,7 +3,6 @@
 #define SRC_OPERATORS_ITERATOR_H_
 
 #include "base/base.h"
-#include "base/exprRef.h"
 #include "triggers/allTriggers.h"
 template <typename View>
 struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {

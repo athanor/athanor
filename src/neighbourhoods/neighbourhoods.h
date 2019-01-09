@@ -119,9 +119,9 @@ inline void assignRandomValueInDomain(const AnyDomainRef& domain,
         },
         domain);
 }
+static const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
 
 inline int calcNumberInsertionAttempts(UInt numberMembers, UInt domainSize) {
-    static const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
     double successChance = (domainSize - numberMembers) / (double)domainSize;
     if (successChance == 0) {
         return 0;

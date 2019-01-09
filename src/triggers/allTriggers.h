@@ -4,6 +4,7 @@
 #include "triggers/functionTrigger.h"
 #include "triggers/intTrigger.h"
 #include "triggers/mSetTrigger.h"
+#include "triggers/partitionTrigger.h"
 #include "triggers/sequenceTrigger.h"
 #include "triggers/setTrigger.h"
 #include "triggers/tupleTrigger.h"

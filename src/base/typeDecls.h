@@ -1,10 +1,10 @@
 
 #ifndef SRC_BASE_TYPEDECLS_H_
 #define SRC_BASE_TYPEDECLS_H_
-#include "../utils/variantOperations.h"
 #include "base/intSize.h"
 #include "base/typesMacros.h"
 #include "common/common.h"
+#include "utils/variantOperations.h"
 // forward declare structs
 #define declDomainsAndValues(name) \
     struct name##Value;            \

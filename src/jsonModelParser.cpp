@@ -391,6 +391,21 @@ shared_ptr<SetDomain> parseDomainSet(json& setDomainExpr,
                                   parseDomain(setDomainExpr[2], parsedModel));
 }
 
+shared_ptr<PartitionDomain> parseDomainPartition(json& partitionDomainExpr,
+                                                 ParsedModel& parsedModel) {
+    bool regular = partitionDomainExpr[1]["isRegular"];
+    SizeAttr sizeAttr =
+        parseSizeAttr(partitionDomainExpr[1]["partsNum"], parsedModel);
+    if (!regular || sizeAttr.sizeType != SizeAttr::SizeAttrType::EXACT_SIZE) {
+        cerr << "Only supporting partitions that are regular and a fixed "
+                "number of parts.  Make sure these attributes are specified.\n";
+        abort();
+    }
+    return make_shared<PartitionDomain>(
+        parseDomain(partitionDomainExpr[2], parsedModel), regular,
+        sizeAttr.minSize);
+}
+
 shared_ptr<MSetDomain> parseDomainMSet(json& mSetDomainExpr,
                                        ParsedModel& parsedModel) {
     SizeAttr sizeAttr = parseSizeAttr(mSetDomainExpr[1][0], parsedModel);
@@ -476,6 +491,7 @@ optional<AnyDomainRef> tryParseDomain(json& domainExpr,
          {"DomainSequence", parseDomainSequence},
          {"DomainTuple", parseDomainTuple},
          {"DomainFunction", parseDomainFunction},
+         {"DomainPartition", parseDomainPartition},
 
          {"DomainReference", parseDomainReference}},
         domainExpr, parsedModel);

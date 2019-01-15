@@ -16,19 +16,17 @@ struct PartitionView : public ExprInterface<PartitionView>,
     AnyExprVec members;
     std::vector<UInt> memberPartMap;
     std::unordered_map<HashType, UInt> hashIndexMap;
-    UInt numberParts = 0;
-    HashType cachedHashTotal = 0;
+    static const int INITIAL_HASH;
+    std::vector<HashType> partHashes;
+    HashType cachedHashTotal = INITIAL_HASH;
+
+    size_t numberParts() const { return partHashes.size(); }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline HashType calcMemberPartHash(UInt index) const {
-        auto& members = getMembers<InnerViewType>();
-        debug_code(assert(index < members.size()));
-        debug_code(assert(index < memberPartMap.size()));
-        HashType input[2];
-        input[0] = getValueHash(
-            members[index]->view().checkedGet(NO_PARTITION_UNDEFINED));
-        input[1] = memberPartMap[index];
-        return mix(((char*)input), sizeof(input));
+    HashType getMemberHash(UInt index) {
+        return getValueHash(
+            getMembers<InnerViewType>()[index]->getViewIfDefined().checkedGet(
+                NO_PARTITION_UNDEFINED));
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -38,12 +36,20 @@ struct PartitionView : public ExprInterface<PartitionView>,
         if (memberPartMap[member1Index] == memberPartMap[member2Index]) {
             return;
         }
+        UInt part1 = memberPartMap[member1Index];
+        UInt part2 = memberPartMap[member2Index];
+        HashType member1Hash = getMemberHash<InnerViewType>(member1Index);
+        HashType member2Hash = getMemberHash<InnerViewType>(member2Index);
 
-        cachedHashTotal -= calcMemberPartHash<InnerViewType>(member1Index);
-        cachedHashTotal -= calcMemberPartHash<InnerViewType>(member2Index);
+        cachedHashTotal -= mix(partHashes[part1]);
+        cachedHashTotal -= mix(partHashes[part2]);
+        partHashes[part1] -= mix(member1Hash);
+        partHashes[part2] -= mix(member2Hash);
+        partHashes[part1] += mix(member2Hash);
+        partHashes[part2] += mix(member1Hash);
+        cachedHashTotal += mix(partHashes[part1]);
+        cachedHashTotal += mix(partHashes[part2]);
         std::swap(memberPartMap[member1Index], memberPartMap[member2Index]);
-        cachedHashTotal += calcMemberPartHash<InnerViewType>(member1Index);
-        cachedHashTotal += calcMemberPartHash<InnerViewType>(member2Index);
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
@@ -56,9 +62,10 @@ struct PartitionView : public ExprInterface<PartitionView>,
     }
 
     void silentClear() {
-        cachedHashTotal = 0;
+        cachedHashTotal = INITIAL_HASH;
         memberPartMap.clear();
         hashIndexMap.clear();
+        partHashes.clear();
         mpark::visit([&](auto& members) { members.clear(); }, members);
     }
 

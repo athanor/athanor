@@ -7,8 +7,16 @@
 #include <utility>
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
+#include "optional.hpp"
 #include "utils/OptionalRef.h"
 #include "utils/flagSet.h"
+
+namespace lib {
+using std::experimental::make_optional;
+using std::experimental::nullopt;
+using std::experimental::optional;
+}  // namespace lib
+
 extern bool verboseSanityError;
 struct SanityCheckException {
     const std::string errorMessage;

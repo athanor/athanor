@@ -53,11 +53,15 @@ struct PartitionValue : public PartitionView, public ValBase {
         hashIndexMap[hash] = memberPartMap.size();
         memberPartMap.emplace_back(part);
         getMembers<InnerViewType>().emplace_back(member.asExpr());
-        if (part >= numberParts) {
-            numberParts = part + 1;
+        if (part >= partHashes.size()) {
+            size_t numberNewParts = (part + 1) - partHashes.size();
+            cachedHashTotal += (numberNewParts * mix(INITIAL_HASH));
+
+            partHashes.resize(part + 1, INITIAL_HASH);
         }
-        cachedHashTotal +=
-            calcMemberPartHash<InnerViewType>(memberPartMap.size() - 1);
+        cachedHashTotal -= mix(partHashes[part]);
+        partHashes[part] += mix(hash);
+        cachedHashTotal += mix(partHashes[part]);
         valBase(*member).container = this;
         valBase(*member).id = memberPartMap.size() - 1;
         return true;

@@ -5,6 +5,7 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 
+const int PartitionView::INITIAL_HASH = 0;
 template <>
 HashType getValueHash<PartitionView>(const PartitionView& val) {
     return val.cachedHashTotal;
@@ -30,7 +31,7 @@ ostream& prettyPrint<PartitionView>(ostream& os, const PartitionView& v) {
     os << "partition(";
     mpark::visit(
         [&](auto& membersImpl) {
-            vector<ExprRefVec<viewType(membersImpl)>> parts(v.numberParts);
+            vector<ExprRefVec<viewType(membersImpl)>> parts(v.numberParts());
             for (size_t i = 0; i < v.memberPartMap.size(); i++) {
                 parts[v.memberPartMap[i]].emplace_back(membersImpl[i]);
             }
@@ -153,7 +154,8 @@ bool largerValue<PartitionView>(const PartitionView&, const PartitionView&) {
 }
 
 void PartitionView::standardSanityChecksForThisType() const {
-    HashType checkCachedHashTotal = 0;
+    HashType checkCachedHashTotal = INITIAL_HASH;
+    vector<HashType> checkPartHashes(partHashes.size(), INITIAL_HASH);
     mpark::visit(
         [&](auto& members) {
             for (size_t i = 0; i < members.size(); i++) {
@@ -166,21 +168,30 @@ void PartitionView::standardSanityChecksForThisType() const {
                     hashIndexMap.count(hash),
                     toString("hash ", hash, " missing from hashIndexMap."));
                 sanityEqualsCheck(i, hashIndexMap.at(hash));
-                checkCachedHashTotal +=
-                    calcMemberPartHash<viewType(members)>(i);
+                UInt part = memberPartMap[i];
+                sanityCheck(
+                    part < checkPartHashes.size(),
+                    toString("Expected ", checkPartHashes.size(),
+                             " parts but member ", i, " maps to part ", part));
+                checkPartHashes[part] += mix(hash);
             }
+            for (size_t i = 0; i < checkPartHashes.size(); i++) {
+                sanityEqualsCheck(checkPartHashes[i], partHashes[i]);
+                checkCachedHashTotal += mix(checkPartHashes[i]);
+            }
+
             sanityEqualsCheck(checkCachedHashTotal, cachedHashTotal);
             sanityEqualsCheck(members.size(), hashIndexMap.size());
             sanityEqualsCheck(memberPartMap.size(), members.size());
         },
         members);
 
-    vector<bool> foundParts(numberParts, false);
+    vector<bool> foundParts(numberParts(), false);
     for (size_t i = 0; i < memberPartMap.size(); i++) {
         auto part = memberPartMap[i];
-        sanityCheck(part < numberParts,
+        sanityCheck(part < numberParts(),
                     toString("found part ", part, " but number parts is ",
-                             numberParts));
+                             numberParts()));
         foundParts[part] = true;
     }
     for (size_t i = 0; i < foundParts.size(); i++) {

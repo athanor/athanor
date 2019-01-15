@@ -3,7 +3,6 @@
 #include <vector>
 #include "base/base.h"
 #include "common/common.h"
-#include "optional.hpp"
 #include "triggers/functionTrigger.h"
 #include "types/sizeAttr.h"
 #include "utils/hashUtils.h"
@@ -46,11 +45,6 @@ void functionIndexToDomain<IntView>(const DimensionVec& dimensions, UInt index,
 template <>
 void functionIndexToDomain<TupleView>(const DimensionVec& dimensions, UInt,
                                       TupleView&);
-namespace lib {
-using std::experimental::make_optional;
-using std::experimental::nullopt;
-using std::experimental::optional;
-}  // namespace lib
 lib::optional<Int> getAsIntForFunctionIndex(const AnyExprRef& expr);
 
 struct FunctionView : public ExprInterface<FunctionView>,

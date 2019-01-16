@@ -302,12 +302,6 @@ OptionalRef<Op> getAs(ExprRef<View>& expr) {
         return EmptyOptional();
     }
 }
-
-template <typename Op, typename View>
-inline bool isInstanceOf(const ExprRef<View>&) {
-    return false;
-}
-
 struct PathExtension {
     PathExtension* parent;
     AnyExprRef expr;

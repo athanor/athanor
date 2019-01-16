@@ -170,11 +170,6 @@ ExprRef<SequenceView> OpMaker<IntRange>::make(ExprRef<IntView> l,
     return make_shared<IntRange>(move(l), move(r));
 }
 
-template <>
-bool isInstanceOf<IntRange, SequenceView>(const ExprRef<SequenceView>& expr) {
-    return dynamic_cast<IntRange*>(&(*expr)) != NULL;
-}
-
 string IntRange::getOpName() const {
     return toString("IntRange(", left->getViewIfDefined(), ",",
                     right->getViewIfDefined(), ")");

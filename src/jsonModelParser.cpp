@@ -1056,8 +1056,8 @@ void parseGenerator(json& generatorParent,
                 InnerViewType;
             overloaded(
                 [&](shared_ptr<SetDomain>&) {
-                    OpPowerSet* powerSetTest =
-                        dynamic_cast<OpPowerSet*>(&(*(quantifier->container)));
+                    auto powerSetTest =
+                        getAs<OpPowerSet>(quantifier->container);
                     if (powerSetTest != NULL) {
                         auto iterRef =
                             quantifier->template newIterRef<SetView>();

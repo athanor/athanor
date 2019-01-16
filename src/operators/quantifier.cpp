@@ -185,7 +185,7 @@ bool optimiseIfOpSumParentWithZeroingCondition(Quantifier& quant,
     if (path.parent == NULL || !isOpSum(path.parent->expr)) {
         return false;
     }
-    IntRange* intRangeTest = dynamic_cast<IntRange*>(&(*(quant.container)));
+    auto intRangeTest = getAs<IntRange>(quant.container);
     if (!intRangeTest) {
         return false;
     }
@@ -193,8 +193,7 @@ bool optimiseIfOpSumParentWithZeroingCondition(Quantifier& quant,
     if (!opProdTest) {
         return false;
     }
-    auto opProdOperands =
-        dynamic_cast<OpSequenceLit*>(&(*(opProdTest->operand)));
+    auto opProdOperands = getAs<OpSequenceLit>(opProdTest->operand);
     if (!opProdOperands) {
         return false;
     }
@@ -228,8 +227,7 @@ bool appendLimitsFromOpAndCondition(
     if (!opAndTest) {
         return false;
     }
-    auto opSequenceLitTest =
-        dynamic_cast<OpSequenceLit*>(&(*(opAndTest->operand)));
+    auto opSequenceLitTest = getAs<OpSequenceLit>(opAndTest->operand);
     if (!opSequenceLitTest) {
         return false;
     }
@@ -243,7 +241,7 @@ bool appendLimitsFromOpAndCondition(
 
 template <typename Quantifier>
 bool optimiseIfIntRangeWithConditions(Quantifier& quant) {
-    IntRange* intRangeTest = dynamic_cast<IntRange*>(&(*(quant.container)));
+    auto intRangeTest = getAs<IntRange>(quant.container);
     if (!intRangeTest) {
         return false;
     }

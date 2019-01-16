@@ -511,6 +511,8 @@ ExprRef<RetType> expect(Constraint&& constraint, Func&& func) {
                      << TypeAsString<typename AssociatedValueType<viewType(
                             constraint)>::type>::value
                      << endl;
+                debug_log(constraint);
+
                 abort();
             }),
         constraint);
@@ -800,7 +802,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpTogether(json& operandsExpr,
         });
 
     auto partition = expect<PartitionView>(
-        parseExpr(operandsExpr[0], parsedModel).second, [&](auto&&) {
+        parseExpr(operandsExpr[1], parsedModel).second, [&](auto&&) {
             cerr << "Error, together takes a partition as its second "
                     "parameter.\n";
         });
@@ -821,7 +823,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpTogether(json& operandsExpr,
                              OpMaker<OpTogether<View>>::make(
                                  partition, members[0], members[1]));
         },
-        setLit->members);
+        setLit->operands);
 }
 
 pair<AnyDomainRef, AnyExprRef> parseOpCatchUndef(json& operandsExpr,
@@ -1058,7 +1060,7 @@ void parseGenerator(json& generatorParent,
                 [&](shared_ptr<SetDomain>&) {
                     auto powerSetTest =
                         getAs<OpPowerSet>(quantifier->container);
-                    if (powerSetTest != NULL) {
+                    if (powerSetTest) {
                         auto iterRef =
                             quantifier->template newIterRef<SetView>();
                         quantifier->template setContainerInnerType<SetView>();

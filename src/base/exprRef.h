@@ -302,6 +302,19 @@ OptionalRef<Op> getAs(ExprRef<View>& expr) {
         return EmptyOptional();
     }
 }
+
+template <typename Op, typename View>
+OptionalRef<const Op> getAs(const ExprRef<View>& expr) {
+    const Op* opTest = dynamic_cast<const Op*>(&(*(expr)));
+    if (opTest) {
+        return *opTest;
+    } else {
+        return EmptyOptional();
+    }
+}
+
+template <typename Op, typename View>
+OptionalRef<Op> getAs(ExprRef<View>&& expr);
 struct PathExtension {
     PathExtension* parent;
     AnyExprRef expr;

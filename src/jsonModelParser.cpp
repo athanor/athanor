@@ -7,6 +7,7 @@
 #include "common/common.h"
 #include "jsonModelParser.h"
 #include "operators/opPowerSet.h"
+#include "operators/opSetLit.h"
 #include "operators/operatorMakers.h"
 #include "operators/quantifier.h"
 #include "search/model.h"
@@ -787,6 +788,42 @@ pair<AnyDomainRef, AnyExprRef> parseOpNotEq(json& operandsExpr,
         },
         left);
 }
+
+pair<AnyDomainRef, AnyExprRef> parseOpTogether(json& operandsExpr,
+                                               ParsedModel& parsedModel) {
+    const string UNSUPPORTED_MESSAGE =
+        "Only supporting together when given a set literal of two elements as "
+        "the first parameter.\n";
+    auto set = expect<SetView>(
+        parseExpr(operandsExpr[0], parsedModel).second, [&](auto&&) {
+            cerr << "Error, together takes a set as its first parameter.\n";
+        });
+
+    auto partition = expect<PartitionView>(
+        parseExpr(operandsExpr[0], parsedModel).second, [&](auto&&) {
+            cerr << "Error, together takes a partition as its second "
+                    "parameter.\n";
+        });
+    auto setLit = getAs<OpSetLit>(set);
+    if (!setLit) {
+        cerr << UNSUPPORTED_MESSAGE << endl;
+        abort();
+    }
+    return mpark::visit(
+        [&](auto& members) {
+            if (members.size() != 2) {
+                cerr << UNSUPPORTED_MESSAGE << endl;
+                abort();
+            }
+
+            typedef viewType(members) View;
+            return make_pair(fakeBoolDomain,
+                             OpMaker<OpTogether<View>>::make(
+                                 partition, members[0], members[1]));
+        },
+        setLit->members);
+}
+
 pair<AnyDomainRef, AnyExprRef> parseOpCatchUndef(json& operandsExpr,
                                                  ParsedModel& parsedModel) {
     auto domainExprPair = parseExpr(operandsExpr[0], parsedModel);
@@ -1358,6 +1395,7 @@ optional<pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpDiv", parseOpDiv},
              {"MkOpMinus", parseOpMinus},
              {"MkOpPow", parseOpPower},
+             {"MkOpTogether", parseOpTogether},
              {"MkOpTwoBars", parseOpTwoBars},
              {"MkOpPowerSet", parseOpPowerSet},
              {"MkOpSubsetEq", parseOpSubsetEq},

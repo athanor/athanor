@@ -294,6 +294,16 @@ inline ExprRef<T> findAndReplace(ExprRef<T>& expr,
 }
 
 template <typename Op, typename View>
+OptionalRef<Op> getAs(ExprRef<View>& expr) {
+    Op* opTest = dynamic_cast<Op*>(&(*(expr)));
+    if (opTest) {
+        return *opTest;
+    } else {
+        return EmptyOptional();
+    }
+}
+
+template <typename Op, typename View>
 inline bool isInstanceOf(const ExprRef<View>&) {
     return false;
 }

@@ -194,4 +194,13 @@ struct OpMaker<OpDiv> {
     static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
 
+template <typename View>
+struct OpTogether;
+
+template <typename View>
+struct OpMaker<OpTogether<View>> {
+    static ExprRef<BoolView> make(ExprRef<PartitionView> partition,
+                                  ExprRef<View> left, ExprRef<View> right);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

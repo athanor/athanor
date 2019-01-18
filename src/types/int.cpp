@@ -5,7 +5,7 @@ using namespace std;
 
 template <>
 HashType getValueHash<IntView>(const IntView& val) {
-    return val.value;
+    return HashType(val.value);
 }
 
 template <>

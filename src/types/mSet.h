@@ -15,7 +15,7 @@ struct MSetView : public ExprInterface<MSetView>,
                   public TriggerContainer<MSetView> {
     friend MSetValue;
     AnyExprVec members;
-    HashType cachedHashTotal = 0;
+    HashType cachedHashTotal = HashType(0);
 
    private:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -43,7 +43,7 @@ struct MSetView : public ExprInterface<MSetView>,
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline UInt memberChanged(HashType oldHash, UInt index) {
+    inline HashType memberChanged(HashType oldHash, UInt index) {
         auto& members = getMembers<InnerViewType>();
         HashType newHash = getValueHash(
             members[index]->view().checkedGet(NO_MSET_UNDEFINED_MEMBERS));
@@ -76,7 +76,7 @@ struct MSetView : public ExprInterface<MSetView>,
     void silentClear() {
         mpark::visit(
             [&](auto& membersImpl) {
-                cachedHashTotal = 0;
+                cachedHashTotal = HashType(0);
                 membersImpl.clear();
             },
             members);

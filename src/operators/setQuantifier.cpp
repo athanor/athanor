@@ -46,7 +46,7 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
 
     void valueChanged() {
         while (op->numberElements() != 0) {
-            this->valueRemoved(op->numberElements() - 1, 0);
+            this->valueRemoved(op->numberElements() - 1, HashType(0));
         }
         auto containerView = op->container->view();
         if (!containerView) {

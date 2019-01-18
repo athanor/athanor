@@ -71,23 +71,6 @@ debug_code(bool debugLogAllowed = true;
                "Included only for debug builds, can be used to silence logging "
                "but keeping assertions switched on.",
                [](auto&) { debugLogAllowed = false; }););
-void testHashes() {
-    const size_t max = 10000;
-    unordered_map<UInt, pair<UInt, UInt>> seenHashes;
-    for (UInt i = 0; i < max; ++i) {
-        for (UInt j = i; j < max; ++j) {
-            HashType hashSum = mix(i) + mix(j);
-            if (seenHashes.count(hashSum)) {
-                cerr << "Error, found collision:\n";
-                cerr << "mix(" << i << ") + mix(" << j << ") collides with ";
-                auto& pair = seenHashes[hashSum];
-                cerr << "mix(" << pair.first << ") + mix(" << pair.second
-                     << ")\nBoth produce total hash of " << hashSum << endl;
-                exit(1);
-            }
-        }
-    }
-}
 
 enum ImproveStrategyChoice { HILL_CLIMBING, TEST_CLIMB };
 enum ExploreStrategyChoice {

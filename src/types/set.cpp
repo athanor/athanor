@@ -178,9 +178,9 @@ bool largerValue<SetView>(const SetView& u, const SetView& v) {
 void SetView::assertValidState() {
     mpark::visit(
         [&](auto& valMembersImpl) {
-            std::unordered_set<UInt> seenHashes;
+            std::unordered_set<HashType> seenHashes;
             bool success = true;
-            UInt calculatedTotal = 0;
+            HashType calculatedTotal(0);
             if (memberHashes.size() != valMembersImpl.size()) {
                 cerr << "memberHashes and members differ in size.\n";
                 success = false;
@@ -270,7 +270,7 @@ void SetValue::printVarBases() {
 }
 
 void SetView::standardSanityChecksForThisType() const {
-    HashType checkCachedHashTotal = 0;
+    HashType checkCachedHashTotal(0);
     mpark::visit(
         [&](auto& members) {
             for (auto& member : members) {

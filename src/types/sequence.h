@@ -29,7 +29,7 @@ struct SequenceView : public ExprInterface<SequenceView>,
     inline HashType calcMemberHash(UInt index,
                                    const ExprRef<InnerViewType>& expr) const {
         HashType input[2];
-        input[0] = index;
+        input[0] = HashType(index);
         input[1] = getValueHash(
             expr->view().checkedGet(NO_SEQUENCE_HASHING_UNDEFINED));
         return mix(((char*)input), sizeof(input));
@@ -37,7 +37,7 @@ struct SequenceView : public ExprInterface<SequenceView>,
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline HashType calcSubsequenceHash(UInt start, UInt end) const {
-        HashType total = 0;
+        HashType total = HashType(0);
         for (size_t i = start; i < end; ++i) {
             total += calcMemberHash(i, getMembers<InnerViewType>()[i]);
         }
@@ -114,13 +114,14 @@ struct SequenceView : public ExprInterface<SequenceView>,
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline HashType changeSubsequence(UInt startIndex, UInt endIndex) {
         checkNotUsingCachedHash();
-        return changeSubsequence<InnerViewType>(startIndex, endIndex, 0);
+        return changeSubsequence<InnerViewType>(startIndex, endIndex,
+                                                HashType(0));
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline HashType changeSubsequence(UInt startIndex, UInt endIndex,
                                       HashType previousSubsequenceHash) {
-        HashType newHash = 0;
+        HashType newHash = HashType(0);
         cachedHashTotal.applyIfValid([&](auto& value) {
             newHash =
                 this->calcSubsequenceHash<InnerViewType>(startIndex, endIndex);
@@ -153,7 +154,7 @@ struct SequenceView : public ExprInterface<SequenceView>,
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void undefineMemberAndNotify(UInt index) {
         checkNotUsingCachedHash();
-        undefineMemberAndNotify<InnerViewType>(index, 0);
+        undefineMemberAndNotify<InnerViewType>(index, HashType(0));
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void undefineMemberAndNotify(UInt index,
@@ -197,7 +198,7 @@ struct SequenceView : public ExprInterface<SequenceView>,
     inline HashType notifyPossibleSubsequenceChange(UInt startIndex,
                                                     UInt endIndex) {
         debug_code(assertValidState());
-        HashType previousSubSequenceHash = 0;
+        HashType previousSubSequenceHash = HashType(0);
         if (cachedHashTotal.isValid()) {
             previousSubSequenceHash =
                 calcSubsequenceHash<InnerViewType>(startIndex, endIndex);

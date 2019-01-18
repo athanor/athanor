@@ -29,7 +29,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
                 indices.insert(i);
             }
             op->indicesHashMap.insert(op->indicesHashMap.begin() + aboveIndex,
-                                      0);
+                                      HashType(0));
 
         } else {
             for (size_t i = aboveIndex + 1; i < op->indicesHashMap.size();
@@ -48,7 +48,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
             [&](auto& expr) -> pair<bool, HashType> {
                 auto view = expr->getViewIfDefined();
                 if (!view) {
-                    return make_pair(false, 0);
+                    return make_pair(false, HashType(0));
                 }
                 return make_pair(true, getValueHash(*view));
             },

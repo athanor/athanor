@@ -219,7 +219,7 @@ struct SequenceValue : public SequenceView, public ValBase {
                                      HashType previousSubsequenceHash,
                                      Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        HashType cachedHashTotalBackup = 0;
+        HashType cachedHashTotalBackup = HashType(0);
         cachedHashTotal.applyIfValid(
             [&](auto& v) { cachedHashTotalBackup = v; });
         SequenceView::changeSubsequence<InnerViewType>(start, end,

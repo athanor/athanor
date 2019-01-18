@@ -10,6 +10,7 @@
 #include "optional.hpp"
 #include "utils/OptionalRef.h"
 #include "utils/flagSet.h"
+#include "utils/hashUtils.h"
 
 namespace lib {
 using std::experimental::make_optional;

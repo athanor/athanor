@@ -17,7 +17,7 @@ struct SetView : public ExprInterface<SetView>,
     friend SetValue;
     std::unordered_set<HashType> memberHashes;
     AnyExprVec members;
-    HashType cachedHashTotal = 0;
+    HashType cachedHashTotal = HashType(0);
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool addMember(const ExprRef<InnerViewType>& member) {
@@ -94,7 +94,7 @@ struct SetView : public ExprInterface<SetView>,
     void silentClear() {
         mpark::visit(
             [&](auto& membersImpl) {
-                cachedHashTotal = 0;
+                cachedHashTotal = HashType(0);
                 memberHashes.clear();
                 membersImpl.clear();
 

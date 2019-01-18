@@ -164,7 +164,7 @@ void MSetView::assertValidState() {
     mpark::visit(
         [&](auto& valMembersImpl) {
             bool success = true;
-            UInt calculatedTotal = 0;
+            HashType calculatedTotal = HashType(0);
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 auto& member = valMembersImpl[i];
                 HashType memberHash = getValueHash(
@@ -235,7 +235,7 @@ void MSetValue::printVarBases() {
 }
 
 void MSetView::standardSanityChecksForThisType() const {
-    HashType checkCachedHashTotal = 0;
+    HashType checkCachedHashTotal = HashType(0);
     mpark::visit(
         [&](auto& members) {
             for (auto& member : members) {

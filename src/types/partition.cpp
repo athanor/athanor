@@ -5,7 +5,7 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 
-const int PartitionView::INITIAL_HASH = 0;
+const HashType PartitionView::INITIAL_HASH(0);
 template <>
 HashType getValueHash<PartitionView>(const PartitionView& val) {
     return val.cachedHashTotal;

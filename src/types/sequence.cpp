@@ -185,7 +185,7 @@ void SequenceView::assertValidState() {
         [&](auto& valMembersImpl) {
             UInt numberUndefinedFound = 0;
             bool success = true;
-            UInt calculatedTotal = 0;
+            HashType calculatedTotal(0);
             for (size_t i = 0; i < valMembersImpl.size(); i++) {
                 auto& member = valMembersImpl[i];
                 if (cachedHashTotal.isValid()) {

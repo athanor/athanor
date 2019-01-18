@@ -117,6 +117,8 @@ template <typename Val>
 EnableIfViewAndReturn<Val, bool> smallerValue(const Val& u, const Val& v);
 template <typename Val>
 EnableIfViewAndReturn<Val, bool> largerValue(const Val& u, const Val& v);
+
+class HashType;
 template <typename View>
 EnableIfViewAndReturn<View, HashType> getValueHash(const View&);
 template <typename View>

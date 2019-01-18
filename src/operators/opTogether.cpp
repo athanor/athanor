@@ -266,6 +266,7 @@ ExprRef<BoolView> OpTogether<PartitionMemberViewType>::deepCopyForUnrollImpl(
         partitionOperand->deepCopyForUnroll(partitionOperand, iterator),
         left->deepCopyForUnroll(left, iterator),
         right->deepCopyForUnroll(right, iterator));
+    newOpTogether->violation = this->violation;
     newOpTogether->cachedLeftIndex = cachedLeftIndex;
     newOpTogether->cachedRightIndex = cachedRightIndex;
     return newOpTogether;

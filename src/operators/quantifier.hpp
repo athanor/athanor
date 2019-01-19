@@ -91,6 +91,9 @@ void Quantifier<ContainerType>::unroll(UInt index,
                     ? IterRef<ViewType>(nullptr)
                     : mpark::get<IterRef<ViewType>>(unrolledIterVals.back())
                           ->getValue();
+            if (!evaluateExpr) {
+                iterRef->changeValueSilent(oldValueOfIter);
+            }
             ExprRef<viewType(members)> newMember =
                 exprToCopy->deepCopyForUnroll(exprToCopy, iterRef);
             iterRef->changeValue(!evaluateExpr, oldValueOfIter, newView, [&]() {
@@ -162,18 +165,11 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopyForUnrollImpl(
         [&](const auto& expr) {
             newQuantifier->setExpression(
                 expr->deepCopyForUnroll(expr, iterator));
-            auto& members = this->template getMembers<viewType(expr)>();
-            for (size_t i = 0; i < members.size(); ++i) {
-                auto& member = members[i];
-                auto& iterVal = unrolledIterVals[i];
-                newQuantifier->template addMember<viewType(members)>(
-                    newQuantifier->numberElements(),
-                    member->deepCopyForUnroll(member, iterator));
-                newQuantifier->unrolledIterVals.emplace_back(iterVal);
+            if (this->isEvaluated()) {
+                newQuantifier->evaluateImpl();
             }
         },
         this->expr);
-    newQuantifier->containerDefined = containerDefined;
     return newQuantifier;
 }
 

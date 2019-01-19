@@ -1,6 +1,6 @@
-
 #ifndef SRC_OPERATORS_ITERATOR_H_
 #define SRC_OPERATORS_ITERATOR_H_
+
 
 #include "base/base.h"
 #include "triggers/allTriggers.h"
@@ -13,8 +13,13 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
     std::shared_ptr<RefTrigger> refTrigger;
     Iterator(u_int64_t id, ExprRef<View> ref) : id(id), ref(std::move(ref)) {}
     void reattachRefTrigger();
+
+    void changeValueSilent(const ExprRef<View>& newVal) {
+        ref = newVal;
+    }
     template <typename Func>
     inline void changeValue(bool triggering, const ExprRef<View>& oldVal,
+
                             const ExprRef<View>& newVal, Func&& callback) {
         if (!triggering) {
             ref = newVal;

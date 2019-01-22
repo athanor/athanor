@@ -6,55 +6,114 @@
 #include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-static const char* ERROR_NO_UNDEFINED_MEMBERS =
-    "Error: not handling OpSetLit with undefined values at the moment.\n";
+
+ostream& operator<<(std::ostream& os, const OpSetLit::OperandGroup& og) {
+    return os << "og(focus=" << og.focusOperand
+              << ",setIndex=" << og.focusOperandSetIndex
+              << ",operands=" << og.operands << ")" << endl;
+}
+void print(const string& message, OpSetLit& op) {
+    cout << message << ":\nhashIndicesMap: " << op.hashIndicesMap
+         << "\ncachedOperandHashes: " << op.cachedOperandHashes
+         << ",\ncachedSetHashes: " << op.cachedSetHashes << endl;
+    cout << "memberHashes: " << op.memberHashes << endl;
+    cout << "view: " << op.view() << endl;
+}
 
 template <typename View>
-void OpSetLit::addValue(size_t index, bool insert) {
+void OpSetLit::addOperandValue(size_t index, bool insert) {
+    print("add value start", *this);
+
     auto& expr = getOperands<View>()[index];
+    cout << "index: " << index << endl;
+    cout << "expr: " << expr << endl;
     HashType hash =
-        getValueHash(expr->view().checkedGet(ERROR_NO_UNDEFINED_MEMBERS));
-    auto& operandGroup = hashIndicesMap[hash];
-    debug_code(assert(!operandGroup.operands.count(index)));
-    operandGroup.operands.insert(index);
+        getValueHash(expr->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
+    auto& og = hashIndicesMap[hash];
+    debug_code(assert(!og.operands.count(index)));
+    og.operands.insert(index);
     if (insert) {
         cachedOperandHashes.insert(index, hash);
     } else {
         cachedOperandHashes.set(index, hash);
     }
-    if (operandGroup.operands.size() == 1) {
-        operandGroup.focusOperand = index;
+    if (!og.active || og.operands.size() == 1) {
+        og.active = true;
+        og.focusOperand = index;
         addMemberAndNotify(expr);
-        operandGroup.focusOperandSetIndex = numberElements() - 1;
+        og.focusOperandSetIndex = numberElements() - 1;
         cachedSetHashes.insert(numberElements() - 1, hash);
+    }
+    print("add value end", *this);
+}
+
+template <typename View>
+void OpSetLit::removeMemberFromSet(const HashType& hash,
+                                   OpSetLit::OperandGroup& operandGroup) {
+    UInt setIndex = operandGroup.focusOperandSetIndex;
+    removeMember<View>(setIndex, hash);
+    notifyMemberRemoved(setIndex, hash);
+    cachedSetHashes.swapErase(setIndex);
+    if (setIndex < numberElements()) {
+        // by deleting an element from the set, another member was moved.
+        // Must tell that operand that its location in the set has changed
+        hashIndicesMap[cachedSetHashes.get(setIndex)].focusOperandSetIndex =
+            setIndex;
     }
 }
 
 template <typename View>
-void OpSetLit::removeValue(size_t index, HashType hash) {
+void OpSetLit::addReplacementToSet(OpSetLit::OperandGroup& og) {
+    // search for an operand who's value has not changed.
+    // It shall be made the replacement operand for this set.
+    // If no operands have the same value, disable this operand group
+    // temperarily.
+    auto unchangedOperand =
+        find_if(begin(og.operands), end(og.operands),
+                [&](auto& o) { return hashNotChanged<View>(o); });
+    if (unchangedOperand != og.operands.end()) {
+        og.focusOperand = *unchangedOperand;
+        addMemberAndNotify(getOperands<View>()[og.focusOperand]);
+        og.focusOperandSetIndex = numberElements() - 1;
+        cachedSetHashes.insert(numberElements() - 1,
+                               cachedOperandHashes.get(og.focusOperand));
+    } else {
+        og.active = false;
+    }
+}
+
+template <typename View>
+void OpSetLit::removeOperandValue(size_t index, HashType hash) {
+    print("remove value start", *this);
     auto iter = hashIndicesMap.find(hash);
     debug_code(assert(iter != hashIndicesMap.end()));
     auto& operandGroup = iter->second;
     debug_code(assert(operandGroup.operands.count(index)));
     operandGroup.operands.erase(index);
-    if (operandGroup.focusOperand == index) {
-        UInt setIndex = operandGroup.focusOperandSetIndex;
-        removeMemberAndNotify<View>(setIndex);
-        cachedSetHashes.swapErase(setIndex);
-        if (setIndex < numberElements()) {
-            hashIndicesMap[cachedSetHashes.get(setIndex)].focusOperandSetIndex =
-                setIndex;
-        }
-        if (operandGroup.operands.empty()) {
-            hashIndicesMap.erase(iter);
-        } else {
-            operandGroup.focusOperand = *(operandGroup.operands.begin());
-            addMemberAndNotify(getOperands<View>()[operandGroup.focusOperand]);
-            operandGroup.focusOperandSetIndex = numberElements() - 1;
-        }
+    if (operandGroup.active && operandGroup.focusOperand == index) {
+        removeMemberFromSet<View>(hash, operandGroup);
+        // If another operand had the same value, it can be used in place of
+        // the one just deleted.  The problem is that each of the operands'
+        // values might have changed.  So we filter for operands that have not
+        // changed.  if no operands remain the same value, we temperarily
+        // disable this operand group.
+        addReplacementToSet<View>(operandGroup);
     }
+
+    if (operandGroup.operands.empty()) {
+        hashIndicesMap.erase(iter);
+    }
+    print("remove value end", *this);
 }
 
+template <typename View>
+bool OpSetLit::hashNotChanged(UInt index) {
+    debug_code(assert(index < getOperands<View>().size()));
+    HashType operandHash =
+        getValueHash(getOperands<View>()[index]->getViewIfDefined().checkedGet(
+            NO_SET_UNDEFINED_MEMBERS));
+    return cachedOperandHashes.get(index) == operandHash;
+}
 void OpSetLit::evaluateImpl() {
     debug_code(assert(exprTriggers.empty()));
     mpark::visit(
@@ -64,10 +123,10 @@ void OpSetLit::evaluateImpl() {
                 auto& operand = operands[i];
                 operand->evaluate();
                 if (!operand->appearsDefined()) {
-                    cerr << ERROR_NO_UNDEFINED_MEMBERS;
+                    cerr << NO_SET_UNDEFINED_MEMBERS;
                     abort();
                 }
-                addValue<viewType(operands)>(i, true);
+                addOperandValue<viewType(operands)>(i, true);
             }
 
         },
@@ -94,8 +153,8 @@ struct ExprTrigger
         return mpark::get<ExprRefVec<View>>(op->operands)[this->index];
     }
     void adapterValueChanged() {
-        op->removeValue<View>(index, op->cachedOperandHashes.get(index));
-        op->addValue<View>(index);
+        op->removeOperandValue<View>(index, op->cachedOperandHashes.get(index));
+        op->addOperandValue<View>(index);
     }
 
     void reattachTrigger() final {
@@ -175,7 +234,6 @@ void OpSetLit::updateVarViolationsImpl(const ViolationContext& context,
             }
         },
         operands);
-    standardSanityChecksForThisType();
 }
 
 ExprRef<SetView> OpSetLit::deepCopyForUnrollImpl(
@@ -267,14 +325,6 @@ pair<bool, ExprRef<SetView>> OpSetLit::optimise(PathExtension path) {
         },
         this->operands);
     return make_pair(changeMade, returnExpr);
-}
-
-ostream& operator<<(ostream& os, const OpSetLit::OperandGroup& og) {
-    os << "OperandGroup (";
-    os << "focusOperand=" << og.focusOperand << ",\n";
-    os << "focusOperandSetIndex=" << og.focusOperandSetIndex << ",\n";
-    os << "operands=" << og.operands << ")\n";
-    return os;
 }
 
 void OpSetLit::assertValidHashes() {
@@ -391,6 +441,7 @@ void OpSetLit::debugSanityCheckImpl() const {
             for (const auto& hashIndicesPair : hashIndicesMap) {
                 HashType hash = hashIndicesPair.first;
                 auto& og = hashIndicesPair.second;
+                sanityCheck(og.active, "There should not be any inactive operands.");
                 sanityCheck(og.operands.count(og.focusOperand),
                             "focus operand not in operand group.");
                 sanityEqualsCheck(hash,

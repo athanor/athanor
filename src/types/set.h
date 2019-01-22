@@ -37,12 +37,9 @@ struct SetView : public ExprInterface<SetView>,
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline ExprRef<InnerViewType> removeMember(UInt index) {
+    inline ExprRef<InnerViewType> removeMember(UInt index, HashType hash) {
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
-
-        HashType hash = getValueHash(
-            members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
         debug_code(assert(memberHashes.count(hash)));
         memberHashes.erase(hash);
         cachedHashTotal -= mix(hash);
@@ -50,6 +47,16 @@ struct SetView : public ExprInterface<SetView>,
         members[index] = std::move(members.back());
         members.pop_back();
         return removedMember;
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline ExprRef<InnerViewType> removeMember(UInt index) {
+        auto& members = getMembers<InnerViewType>();
+        debug_code(assert(index < members.size()));
+
+        HashType hash = getValueHash(
+            members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
+        return removeMember<InnerViewType>(index, hash);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

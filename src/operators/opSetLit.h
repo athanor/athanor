@@ -11,15 +11,23 @@ struct OpSetLit : public SetView {
         UInt index;
         ExprTriggerBase(OpSetLit* op, UInt index) : op(op), index(index) {}
     };
+    /*class for storing information on each value (hash) h.*/
     struct OperandGroup {
-        UInt focusOperand;
-        UInt focusOperandSetIndex;
-        std::unordered_set<UInt> operands;
+        bool active = true;  // This value is being used in the set.
+        // only false mid triggering, once stablised, this should always be
+        // true.
+        UInt focusOperand;  // index of operand that has hash h and is being
+                            // used in the set view
+        UInt focusOperandSetIndex;  // index of the operand as found in the set
+                                    // view members
+        std::unordered_set<UInt> operands;  // all operands with hash h
     };
     AnyExprVec operands;
     std::unordered_map<HashType, OperandGroup> hashIndicesMap;
-    PreviousValueCache<HashType> cachedOperandHashes;
-    PreviousValueCache<HashType> cachedSetHashes;
+    PreviousValueCache<HashType>
+        cachedOperandHashes;  // map from operand index to hash.
+    PreviousValueCache<HashType>
+        cachedSetHashes;  // map from set member index to hash.
 
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
     OpSetLit(AnyExprVec operands) : operands(std::move(operands)) {}
@@ -43,10 +51,18 @@ struct OpSetLit : public SetView {
     ExprRefVec<View>& getOperands() {
         return mpark::get<ExprRefVec<View>>(operands);
     }
+    template <typename InnerViewType>
+    void removeMemberFromSet(const HashType& hash,
+                             OpSetLit::OperandGroup& operandGroup);
     template <typename View>
-    void removeValue(size_t index, HashType hash);
+    void addReplacementToSet(OperandGroup& og);
+
+    template <typename InnerViewType>
+    bool hashNotChanged(UInt index);
     template <typename View>
-    void addValue(size_t index, bool insert = false);
+    void removeOperandValue(size_t index, HashType hash);
+    template <typename View>
+    void addOperandValue(size_t index, bool insert = false);
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };

@@ -1,7 +1,9 @@
 
 #ifndef SRC_SEARCH_SOLVER_H_
 #define SRC_SEARCH_SOLVER_H_
+#include <algorithm>
 #include <cassert>
+#include <iterator>
 #include "search/model.h"
 #include "search/statsContainer.h"
 #include "triggers/allTriggers.h"

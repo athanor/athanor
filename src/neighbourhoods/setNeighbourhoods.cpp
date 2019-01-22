@@ -107,7 +107,7 @@ void setCrossOverGenImpl(const SetDomain& domain, InnerDomainPtrType&,
 
     neighbourhoods.emplace_back(
         "setCrossOver", numberValsRequired,
-        [innerDomainSize, &domain](NeighbourhoodParams& params) {
+        [innerDomainSize](NeighbourhoodParams& params) {
             auto& vals = params.getVals<SetValue>();
             debug_code(assert(vals.size() == 2));
             auto& fromVal = *(vals[0]);

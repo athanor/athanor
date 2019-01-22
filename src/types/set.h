@@ -1,5 +1,6 @@
 #ifndef SRC_TYPES_SET_H_
 #define SRC_TYPES_SET_H_
+#include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>

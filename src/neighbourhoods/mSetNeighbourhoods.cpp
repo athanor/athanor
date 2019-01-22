@@ -50,8 +50,8 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
     for (auto& innerNh : innerDomainNeighbourhoods) {
         neighbourhoods.emplace_back(
             "mSetLiftSingle_" + innerNh.name, numberValsRequired,
-            [innerNhApply{std::move(innerNh.apply)},
-             innerDomainSize](NeighbourhoodParams& params) {
+            [innerNhApply{std::move(innerNh.apply)}](
+                NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<MSetValue>().front());
                 if (val.numberElements() == 0) {
                     ++params.stats.minorNodeCount;
@@ -126,8 +126,8 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain, const InnerDomainPtrType,
         neighbourhoods.emplace_back(
             "mSetLiftMultiple_" + innerNh.name, numberValsRequired,
             [innerNhApply{std::move(innerNh.apply)},
-             innerNhNumberValsRequired{innerNh.numberValsRequired},
-             innerDomainSize](NeighbourhoodParams& params) {
+             innerNhNumberValsRequired{innerNh.numberValsRequired}](
+                NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<MSetValue>().front());
                 if (val.numberElements() < (size_t)innerNhNumberValsRequired) {
                     ++params.stats.minorNodeCount;

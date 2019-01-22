@@ -22,8 +22,6 @@ void print(const string& message, OpSetLit& op) {
 
 template <typename View>
 void OpSetLit::addOperandValue(size_t index, bool insert) {
-    print("add value start", *this);
-
     auto& expr = getOperands<View>()[index];
     cout << "index: " << index << endl;
     cout << "expr: " << expr << endl;
@@ -44,7 +42,6 @@ void OpSetLit::addOperandValue(size_t index, bool insert) {
         og.focusOperandSetIndex = numberElements() - 1;
         cachedSetHashes.insert(numberElements() - 1, hash);
     }
-    print("add value end", *this);
 }
 
 template <typename View>
@@ -84,7 +81,6 @@ void OpSetLit::addReplacementToSet(OpSetLit::OperandGroup& og) {
 
 template <typename View>
 void OpSetLit::removeOperandValue(size_t index, HashType hash) {
-    print("remove value start", *this);
     auto iter = hashIndicesMap.find(hash);
     debug_code(assert(iter != hashIndicesMap.end()));
     auto& operandGroup = iter->second;
@@ -103,7 +99,6 @@ void OpSetLit::removeOperandValue(size_t index, HashType hash) {
     if (operandGroup.operands.empty()) {
         hashIndicesMap.erase(iter);
     }
-    print("remove value end", *this);
 }
 
 template <typename View>

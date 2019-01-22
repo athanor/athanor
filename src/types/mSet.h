@@ -1,5 +1,6 @@
 #ifndef SRC_TYPES_MSET_H_
 #define SRC_TYPES_MSET_H_
+#include <algorithm>
 #include <unordered_map>
 #include <vector>
 #include "base/base.h"

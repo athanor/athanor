@@ -70,6 +70,7 @@ struct OpTogether<PartitionMemberViewType>::PartitionOperandTrigger
     PartitionOperandTrigger(OpTogether<PartitionMemberViewType>* op) : op(op) {}
 
     void containingPartsSwapped(UInt index1, UInt index2) final {
+        ignoreUnused(index1, index2);
         debug_code(assert(
             index1 == op->cachedLeftIndex || index1 == op->cachedRightIndex ||
             index2 == op->cachedLeftIndex || index2 == op->cachedRightIndex));

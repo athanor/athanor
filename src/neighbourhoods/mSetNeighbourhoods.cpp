@@ -44,7 +44,6 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
                            std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(1, domain.inner, innerDomainNeighbourhoods);
-    UInt innerDomainSize = getDomainSize(domain.inner);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
@@ -115,7 +114,6 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain, const InnerDomainPtrType,
                              std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(0, domain.inner, innerDomainNeighbourhoods);
-    UInt innerDomainSize = getDomainSize(domain.inner);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {

@@ -241,20 +241,25 @@ ExprRef<SetView> OpSetLit::deepCopyForUnrollImpl(
     return mpark::visit(
         [&](auto& operands) {
             ExprRefVec<viewType(operands)> newOperands;
-            ExprRefVec<viewType(operands)> newSetMembers;
+            ExprRefVec<viewType(operands)> newSetMembers(numberElements(),
+                                                         nullptr);
 
             for (auto& operand : operands) {
                 newOperands.emplace_back(
                     operand->deepCopyForUnroll(operand, iterator));
-                if (newOperands.size() <= numberElements()) {
-                    newSetMembers.emplace_back(newOperands.back());
-                }
+            }
+            for (const auto& hashOGPair : hashIndicesMap) {
+                const auto& og = hashOGPair.second;
+                newSetMembers[og.focusOperandSetIndex] =
+                    newOperands[og.focusOperand];
             }
             auto newOpSetLit = make_shared<OpSetLit>(move(newOperands));
-            newOpSetLit->members = newSetMembers;
+            newOpSetLit->members = move(newSetMembers);
             newOpSetLit->memberHashes = memberHashes;
             newOpSetLit->cachedHashTotal = cachedHashTotal;
             newOpSetLit->hashIndicesMap = hashIndicesMap;
+            newOpSetLit->cachedOperandHashes = cachedOperandHashes;
+            newOpSetLit->cachedSetHashes = cachedSetHashes;
             return newOpSetLit;
         },
         operands);
@@ -441,7 +446,8 @@ void OpSetLit::debugSanityCheckImpl() const {
             for (const auto& hashIndicesPair : hashIndicesMap) {
                 HashType hash = hashIndicesPair.first;
                 auto& og = hashIndicesPair.second;
-                sanityCheck(og.active, "There should not be any inactive operands.");
+                sanityCheck(og.active,
+                            "There should not be any inactive operands.");
                 sanityCheck(og.operands.count(og.focusOperand),
                             "focus operand not in operand group.");
                 sanityEqualsCheck(hash,

@@ -195,7 +195,7 @@ struct ExprInterface : public Undefinable<View> {
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
     virtual std::pair<bool, ExprRef<View>> optimise(PathExtension path) = 0;
-    inline void debugSanityCheck() {
+    inline void debugSanityCheck() const {
         try {
             debugSanityCheckImpl();
         } catch (SanityCheckException& e) {

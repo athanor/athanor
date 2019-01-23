@@ -180,6 +180,13 @@ auto& iterationLimitArg = iterationLimitFlag.add<Arg<u_int64_t>>(
 auto& disableVioBiasFlag = argParser.add<Flag>(
     "--disableVioBias", Policy::OPTIONAL,
     "Disable the search from biasing towards violating variables.");
+extern bool noPrintSolutions;
+bool noPrintSolutions = false;
+auto& noPrintSolutionsFlag = argParser.add<Flag>(
+    "--noPrintSolutions", Policy::OPTIONAL,
+    "Do not print solutions, useful for timing experiements.",
+    [](auto&) { noPrintSolutions = true; });
+
 void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);
 void sigAlarmHandler(int);

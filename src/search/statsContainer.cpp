@@ -3,6 +3,7 @@
 #include "search/model.h"
 
 using namespace std;
+extern bool noPrintSolutions;
 
 Int NeighbourhoodResult::getDeltaViolation() const {
     return model.getViolation() - statsMarkPoint.lastViolation;
@@ -131,7 +132,7 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
 }
 void StatsContainer::printCurrentState(Model& model) {
     cout << (*this) << "\nTrigger event count " << triggerEventCount << "\n\n";
-    if (lastViolation == 0) {
+    if (!noPrintSolutions && lastViolation == 0) {
         cout << "solution start\n";
         model.printVariables();
         cout << "solution end\n";

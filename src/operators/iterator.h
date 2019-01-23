@@ -13,7 +13,11 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
     Iterator(u_int64_t id, ExprRef<View> ref) : id(id), ref(std::move(ref)) {}
     void reattachRefTrigger();
 
-    void changeValueSilent(const ExprRef<View>& newVal) { ref = newVal; }
+    void changeValueSilent(const ExprRef<View>& newVal) {
+        ref = newVal;
+        this->setAppearsDefined(ref->appearsDefined());
+    }
+
     template <typename Func>
     inline void changeValue(bool triggering, const ExprRef<View>& oldVal,
 

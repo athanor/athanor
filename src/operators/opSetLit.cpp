@@ -23,8 +23,6 @@ void print(const string& message, OpSetLit& op) {
 template <typename View>
 void OpSetLit::addOperandValue(size_t index, bool insert) {
     auto& expr = getOperands<View>()[index];
-    cout << "index: " << index << endl;
-    cout << "expr: " << expr << endl;
     HashType hash =
         getValueHash(expr->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
     auto& og = hashIndicesMap[hash];

@@ -9,8 +9,8 @@ Details coming soon...
 * GNU Make
 * cmake 3.0 onwards.
 * C++14 compatible compiler.
-* According to [clang's documentation](https://clang.llvm.org/cxx_status.html), c++14 is supported with versions of clang 3.4 and later.  However, it has only been tested on clang 5 onwards.  Further testing is being done with older versions.
-*  Unfortunately, due to some internal compiler bugs, Athanor currently cannot be compiled with several versions of GCC.  Looking for work arounds.  The clang compiler is strongly recommended.
+    * clang:  According to [clang's documentation](https://clang.llvm.org/cxx_status.html), c++14 is supported with versions of clang 3.4 and later.  However, it has only been tested on clang 5 onwards.
+    * gcc: Works with gcc 7 onwards, apart from gcc 7.3.1 due to a compiler bug.
 
 ## Installation:
 ### Quick install:
@@ -21,19 +21,17 @@ make
 ```
 For parallel build, `make -jn` replacing n with number of cores.
 
+*Note*, you can specify the compiler to use by writing `export CXX=PUT_COMPILER_COMMAND_HERE`.  For example `export CXX=clang++`.
+
 ### Manual install:
 ```
 git clone https://github.com/athanor/athanor
 cd athanor
 ```
-Now additional libraries need to be installed.  If you are running on bash, run the script:
-```
-./fetchAllLibs.sh
-```
-Otherwise run the following:
+Now additional libraries need to be pulled from github.
 ```
 git submodule init
-git submodule update --depth=10
+git submodule update
 ```
 
 Then make a build directory and build athanor there
@@ -41,11 +39,12 @@ Then make a build directory and build athanor there
 ```
 mkdir build
 cd build
-export CXX=clang++
 cmake ..
 make
 ```
 For parallel build, `make -jn` replacing n with number of cores.
+
+*Note*, you can specify the compiler to use by writing `export CXX=PUT_COMPILER_COMMAND_HERE`.  For example `export CXX=clang++`.
 
 # Usage:
 Athanor does not currently support direct parsing of Essence.  It requires a Essence to JSON translator, as provided by [conjure](https://github.com/conjure-cp/conjure).  Conjure is a much larger tool for automated modelling.  However, a script `script/buildAthanorInput.sh` is included in this repository which invokes the essence to json translator.  A stand alone parser will hopefully be included into Athanor soon.

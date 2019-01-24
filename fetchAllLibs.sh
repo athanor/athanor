@@ -1,1 +1,0 @@
-git submodule init && git submodule update --depth=10 && git submodule status

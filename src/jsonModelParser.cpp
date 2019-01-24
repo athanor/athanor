@@ -1116,12 +1116,10 @@ void parseGenerator(json& generatorParent,
                     addLocalVarsToScopeFromPatternMatch(
                         generatorExpr[0], iterDomain, iter, parsedModel,
                         variablesAddedToScope);
-
                 },
                 [&](auto&) {
                     cerr << "no support for this type\n";
                     abort();
-
                 })(containerDomain);
         },
         innerDomain);

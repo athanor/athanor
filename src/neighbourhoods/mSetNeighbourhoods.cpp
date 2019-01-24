@@ -64,7 +64,6 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
                     val.notifyPossibleMemberChange<InnerValueType>(
                         indexToChange);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
-
                     auto statusHashPair = val.tryMemberChange<InnerValueType>(
                         indexToChange, oldHash,
                         [&]() { return params.parentCheck(params.vals); });
@@ -141,7 +140,6 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain, const InnerDomainPtrType,
                 val.notifyPossibleMembersChange<InnerValueType>(indicesToChange,
                                                                 oldHashes);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
-
                     return val.tryMembersChange<InnerValueType>(
                         indicesToChange, oldHashes,
                         [&]() { return params.parentCheck(params.vals); });

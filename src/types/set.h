@@ -105,7 +105,6 @@ struct SetView : public ExprInterface<SetView>,
                 cachedHashTotal = HashType(0);
                 memberHashes.clear();
                 membersImpl.clear();
-
             },
             members);
     }

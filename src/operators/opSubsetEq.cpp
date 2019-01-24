@@ -90,7 +90,6 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
             }
             mpark::visit(
                 [&](auto& members) {
-
                     for (UInt index : indices) {
                         valueAddedImpl(
                             getValueHash(members[index]->view().checkedGet(
@@ -175,14 +174,12 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
             }
             mpark::visit(
                 [&](auto& members) {
-
                     for (UInt index : indices) {
                         valueAddedImpl(
                             getValueHash(members[index]->view().checkedGet(
                                 NO_UNDEFINED_IN_SUBSET)),
                             false);
                     }
-
                 },
                 op->right->view().checkedGet(NO_UNDEFINED_IN_SUBSET).members);
             return true;

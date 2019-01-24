@@ -139,6 +139,7 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
             return;
         }
         op->removeSingleValue(op->cachedValues.get(index));
+        op->cachedValues.set(index, 0);
         auto view = op->operand->view();
         if (!view) {
             hasBecomeUndefined();

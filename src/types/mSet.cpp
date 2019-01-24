@@ -256,7 +256,6 @@ void MSetValue::debugSanityCheckImpl() const {
             recurseSanityChecks(members);
             standardSanityChecksForThisType();
             varBaseSanityChecks(*this, members);
-
         },
         members);
 }

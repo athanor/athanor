@@ -87,7 +87,6 @@ struct InitialUnroller<MSetView> {
     static void initialUnroll(Quant& quantifier, MSetView& containerView) {
         mpark::visit(
             [&](auto& membersImpl) {
-
                 for (auto& member : membersImpl) {
                     quantifier.unroll(quantifier.numberElements(), member);
                 }

@@ -295,7 +295,6 @@ void SetValue::debugSanityCheckImpl() const {
             recurseSanityChecks(members);
             standardSanityChecksForThisType();
             varBaseSanityChecks(*this, members);
-
         },
         members);
 }

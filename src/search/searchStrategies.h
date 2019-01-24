@@ -260,11 +260,13 @@ class ExplorationUsingRandomWalk {
     }
     void run(State& state, bool) {
         randomWalkStrategy.allowViolations = true;
-        runImpl(state, [](State& state) { return state.model.getViolation(); },
-                [](State& state) { return state.model.getViolation() == 0; });
+        runImpl(
+            state, [](State& state) { return state.model.getViolation(); },
+            [](State& state) { return state.model.getViolation() == 0; });
         randomWalkStrategy.allowViolations = false;
-        runImpl(state, [](State& state) { return state.model.getObjective(); },
-                [](State&) { return false; });
+        runImpl(
+            state, [](State& state) { return state.model.getObjective(); },
+            [](State&) { return false; });
     }
 };
 template <typename ClimbStrategy>

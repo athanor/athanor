@@ -132,7 +132,6 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
                 debug_log(indicesToChange);
                 val.notifyPossibleImagesChange(indicesToChange);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
-
                     return val.tryImagesChange<InnerValueType>(
                         indicesToChange,
                         [&]() { return params.parentCheck(params.vals); });

@@ -123,7 +123,6 @@ void OpSetLit::evaluateImpl() {
                 }
                 addOperandValue<viewType(operands)>(i, true);
             }
-
         },
         operands);
     this->setAppearsDefined(true);

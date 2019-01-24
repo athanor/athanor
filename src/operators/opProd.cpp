@@ -161,6 +161,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
             return;
         }
         op->removeSingleValue(op->cachedValues.get(index));
+        op->cachedValues.set(index, 1);
         auto view = op->operand->view();
         if (!view) {
             hasBecomeUndefined();

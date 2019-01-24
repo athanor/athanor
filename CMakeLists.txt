@@ -9,7 +9,7 @@ rm -fr CMakeFiles CMakeCache.txt")
 
 endif()
 
-    message()
+    message("")
 message("Using compiler: ${CMAKE_CXX_COMPILER_ID}")
 message("version: ${CMAKE_CXX_COMPILER_VERSION}")
 #libs

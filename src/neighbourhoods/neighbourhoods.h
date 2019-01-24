@@ -41,6 +41,8 @@ struct NeighbourhoodParams {
     }
 };
 
+/* a neighbourhood: which is basically a name and a function that can be
+ * invokved with neighbourhood parameters */
 struct Neighbourhood {
     typedef std::function<void(NeighbourhoodParams&)> ApplyFunc;
     std::string name;
@@ -50,6 +52,33 @@ struct Neighbourhood {
         : name(std::move(name)),
           numberValsRequired(numberValsRequired),
           apply(std::move(apply)) {}
+};
+
+/* Neighbourhood func base class, a template class that can optionally be used
+ * to create neighbourhood ApplyFuncs, see the neighbourhood class.  All it does
+ * is gives the basic typedefs and references to useful info like domains. */
+template <typename DomainType, size_t numberVals, typename Derived>
+struct NeighbourhoodFunc {
+    typedef DomainType Domain;
+    typedef typename AssociatedValueType<Domain>::type Val;
+
+    template <size_t index, typename... Args>
+    typename std::enable_if<(index == numberVals), void>::type invokeApply(
+        NeighbourhoodParams& params, ValRefVec<Val>&, Args&... args) {
+        return static_cast<Derived&>(*this).apply(params, args...);
+    }
+
+    template <size_t index, typename... Args>
+    typename std::enable_if<(index < numberVals), void>::type invokeApply(
+        NeighbourhoodParams& params, ValRefVec<Val>& vals, Args&... args) {
+        return invokeApply<index + 1>(params, vals, args..., *vals[index]);
+    }
+
+    void operator()(NeighbourhoodParams& params) {
+        auto& vals = params.getVals<Val>();
+        debug_code(assert(numberVals < vals.size()));
+        invokeApply<0>(params, vals);
+    }
 };
 
 template <typename Domain>
@@ -119,6 +148,25 @@ inline void assignRandomValueInDomain(const AnyDomainRef& domain,
         },
         domain);
 }
+
+template <typename Domain>
+const AnyDomainRef getInner(const Domain& domain);
+template <typename Domain, template <typename> class NhFunc>
+void generateForAllTypes(const Domain& domain, int numberValsRequired,
+                         std::vector<Neighbourhood>& neighbourhoods) {
+    mpark::visit(
+        [&](const auto& innerDomainPtr) {
+            typedef typename BaseType<decltype(innerDomainPtr)>::element_type
+                InnerDomain;
+            typedef NhFunc<InnerDomain> Nh;
+            if (Nh::matches(domain)) {
+                neighbourhoods.emplace_back(Nh::getName(), numberValsRequired,
+                                            Nh(domain));
+            }
+        },
+        getInner(domain));
+}
+
 static const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
 
 inline int calcNumberInsertionAttempts(UInt numberMembers, UInt domainSize) {

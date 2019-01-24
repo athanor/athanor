@@ -182,160 +182,154 @@ void mSetLiftMultipleGen(const MSetDomain& domain, int numberValsRequired,
         domain.inner);
 }
 
-template <typename InnerDomainPtrType>
-void mSetAddGenImpl(const MSetDomain& domain,
-                    InnerDomainPtrType& innerDomainPtr, int numberValsRequired,
-                    std::vector<Neighbourhood>& neighbourhoods) {
-    typedef typename AssociatedValueType<
-        typename InnerDomainPtrType::element_type>::type InnerValueType;
-
-    neighbourhoods.emplace_back(
-        "mSetAdd", numberValsRequired,
-        [&domain, &innerDomainPtr](NeighbourhoodParams& params) {
-            auto& val = *(params.getVals<MSetValue>().front());
-            if (val.numberElements() == domain.sizeAttr.maxSize) {
-                ++params.stats.minorNodeCount;
-                return;
-            }
-            auto newMember = constructValueFromDomain(*innerDomainPtr);
-            int numberTries = 0;
-            const int tryLimit = params.parentCheckTryLimit;
-            debug_neighbourhood_action("Looking for value to add");
-            bool success;
-            do {
-                assignRandomValueInDomain(*innerDomainPtr, *newMember,
-                                          params.stats);
-                success = val.tryAddMember(newMember, [&]() {
-                    return params.parentCheck(params.vals);
-                });
-            } while (!success && ++numberTries < tryLimit);
-            if (!success) {
-                debug_neighbourhood_action(
-                    "Couldn't find value, number tries=" << tryLimit);
-                return;
-            }
-            debug_neighbourhood_action("Added value: " << newMember);
-            if (!params.changeAccepted()) {
-                debug_neighbourhood_action("Change rejected");
-                val.tryRemoveMember<InnerValueType>(val.numberElements() - 1,
-                                                    []() { return true; });
-            }
-        });
-}
-
-void mSetAddGen(const MSetDomain& domain, int numberValsRequired,
-                std::vector<Neighbourhood>& neighbourhoods) {
-    if (domain.sizeAttr.sizeType == SizeAttr::SizeAttrType::EXACT_SIZE) {
-        return;
+template <typename InnerDomain>
+struct MSetAdd : public NeighbourhoodFunc<MSetDomain, 1, MSetAdd<InnerDomain>> {
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    const MSetDomain& domain;
+    const InnerDomain& innerDomain;
+    const UInt innerDomainSize;
+    MSetAdd(const MSetDomain& domain)
+        : domain(domain),
+          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomainSize(getDomainSize(innerDomain)) {}
+    static string getName() { return "MSetAdd"; }
+    static bool matches(const MSetDomain& domain) {
+        return domain.sizeAttr.sizeType != SizeAttr::SizeAttrType::EXACT_SIZE;
     }
-    mpark::visit(
-        [&](const auto& innerDomainPtr) {
-            mSetAddGenImpl(domain, innerDomainPtr, numberValsRequired,
-                           neighbourhoods);
-        },
-        domain.inner);
-}
-
-template <typename InnerDomainPtrType>
-void mSetRemoveGenImpl(const MSetDomain& domain, InnerDomainPtrType&,
-                       int numberValsRequired,
-                       std::vector<Neighbourhood>& neighbourhoods) {
-    typedef typename AssociatedValueType<
-        typename InnerDomainPtrType::element_type>::type InnerValueType;
-    neighbourhoods.emplace_back(
-        "mSetRemove", numberValsRequired, [&](NeighbourhoodParams& params) {
+    void apply(NeighbourhoodParams& params, MSetValue& val) {
+        if (val.numberElements() == domain.sizeAttr.maxSize) {
             ++params.stats.minorNodeCount;
-            auto& val = *(params.getVals<MSetValue>().front());
-            if (val.numberElements() == domain.sizeAttr.minSize) {
-                ++params.stats.minorNodeCount;
-                return;
-            }
-            size_t indexToRemove;
-            int numberTries = 0;
-            ValRef<InnerValueType> removedMember(nullptr);
-            bool success;
-            debug_neighbourhood_action("Looking for value to remove");
-            do {
-                ++params.stats.minorNodeCount;
-                indexToRemove =
-                    globalRandom<size_t>(0, val.numberElements() - 1);
-                std::pair<bool, ValRef<InnerValueType>> removeStatus =
-                    val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
-                        return params.parentCheck(params.vals);
-                    });
-                success = removeStatus.first;
-                if (success) {
-                    removedMember = std::move(removeStatus.second);
-                    debug_neighbourhood_action("Removed " << removedMember);
-                }
-            } while (!success && ++numberTries < params.parentCheckTryLimit);
-            if (!success) {
-                debug_neighbourhood_action(
-                    "Couldn't find value, number tries=" << numberTries);
-                return;
-            }
-            if (!params.changeAccepted()) {
-                debug_neighbourhood_action("Change rejected");
-                val.tryAddMember(std::move(removedMember),
-                                 []() { return true; });
-            }
-        });
-}
-
-void mSetRemoveGen(const MSetDomain& domain, int numberValsRequired,
-                   std::vector<Neighbourhood>& neighbourhoods) {
-    if (domain.sizeAttr.sizeType == SizeAttr::SizeAttrType::EXACT_SIZE) {
-        return;
-    }
-    mpark::visit(
-        [&](const auto& innerDomainPtr) {
-            mSetRemoveGenImpl(domain, innerDomainPtr, numberValsRequired,
-                              neighbourhoods);
-        },
-        domain.inner);
-}
-
-void mSetAssignRandomGen(const MSetDomain& domain, int numberValsRequired,
-                         std::vector<Neighbourhood>& neighbourhoods) {
-    neighbourhoods.emplace_back(
-        "mSetAssignRandom", numberValsRequired,
-        [&domain](NeighbourhoodParams& params) {
-            auto& val = *(params.getVals<MSetValue>().front());
-            int numberTries = 0;
-            const int tryLimit = params.parentCheckTryLimit;
+            return;
+        }
+        auto newMember = constructValueFromDomain(innerDomain);
+        int numberTries = 0;
+        const int tryLimit = params.parentCheckTryLimit;
+        debug_neighbourhood_action("Looking for value to add");
+        bool success;
+        do {
+            assignRandomValueInDomain(innerDomain, *newMember, params.stats);
+            success = val.tryAddMember(
+                newMember, [&]() { return params.parentCheck(params.vals); });
+        } while (!success && ++numberTries < tryLimit);
+        if (!success) {
             debug_neighbourhood_action(
-                "Assigning random value: original value is " << asView(val));
-            auto backup = deepCopy(val);
-            backup->container = val.container;
-            auto newValue = constructValueFromDomain(domain);
-            newValue->container = val.container;
-            bool success;
-            do {
-                assignRandomValueInDomain(domain, *newValue, params.stats);
-                success = val.tryAssignNewValue(*newValue, [&]() {
+                "Couldn't find value, number tries=" << tryLimit);
+            return;
+        }
+        debug_neighbourhood_action("Added value: " << newMember);
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            val.tryRemoveMember<InnerValueType>(val.numberElements() - 1,
+                                                []() { return true; });
+        }
+    }
+};
+
+template <typename InnerDomain>
+struct MSetRemove
+    : public NeighbourhoodFunc<MSetDomain, 1, MSetRemove<InnerDomain>> {
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+
+    const MSetDomain& domain;
+    MSetRemove(const MSetDomain& domain) : domain(domain) {}
+    static string getName() { return "MSetRemove"; }
+    static bool matches(const MSetDomain& domain) {
+        return domain.sizeAttr.sizeType != SizeAttr::SizeAttrType::EXACT_SIZE;
+    }
+    void apply(NeighbourhoodParams& params, MSetValue& val) {
+        if (val.numberElements() == domain.sizeAttr.minSize) {
+            ++params.stats.minorNodeCount;
+            return;
+        }
+        size_t indexToRemove;
+        int numberTries = 0;
+        ValRef<InnerValueType> removedMember(nullptr);
+        bool success;
+        debug_neighbourhood_action("Looking for value to remove");
+        do {
+            ++params.stats.minorNodeCount;
+            indexToRemove = globalRandom<size_t>(0, val.numberElements() - 1);
+            std::pair<bool, ValRef<InnerValueType>> removeStatus =
+                val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
                     return params.parentCheck(params.vals);
                 });
-                if (success) {
-                    debug_neighbourhood_action("New value is " << asView(val));
-                }
-            } while (!success && ++numberTries < tryLimit);
-            if (!success) {
-                debug_neighbourhood_action(
-                    "Couldn't find value, number tries=" << tryLimit);
-                return;
+            success = removeStatus.first;
+            if (success) {
+                removedMember = std::move(removeStatus.second);
+                debug_neighbourhood_action("Removed " << removedMember);
             }
-            if (!params.changeAccepted()) {
-                debug_neighbourhood_action("Change rejected");
-                deepCopy(*backup, val);
+        } while (!success && ++numberTries < params.parentCheckTryLimit);
+        if (!success) {
+            debug_neighbourhood_action(
+                "Couldn't find value, number tries=" << numberTries);
+            return;
+        }
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            val.tryAddMember(std::move(removedMember), []() { return true; });
+        }
+    }
+};
+
+template <typename InnerDomain>
+struct MSetAssignRandom
+    : public NeighbourhoodFunc<MSetDomain, 1, MSetRemove<InnerDomain>> {
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+
+    const MSetDomain& domain;
+    const InnerDomain& innerDomain;
+    const UInt innerDomainSize;
+    MSetAssignRandom(const MSetDomain& domain)
+        : domain(domain),
+          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomainSize(getDomainSize(innerDomain)) {}
+
+    static string getName() { return "MSetAssignRandom"; }
+    static bool matches(const MSetDomain&) { return true; }
+    void apply(NeighbourhoodParams& params, MSetValue& val) {
+        int numberTries = 0;
+        const int tryLimit = params.parentCheckTryLimit;
+        debug_neighbourhood_action("Assigning random value: original value is "
+                                   << asView(val));
+        auto backup = deepCopy(val);
+        backup->container = val.container;
+        auto newValue = constructValueFromDomain(domain);
+        newValue->container = val.container;
+        bool success;
+        do {
+            assignRandomValueInDomain(domain, *newValue, params.stats);
+            success = val.tryAssignNewValue(
+                *newValue, [&]() { return params.parentCheck(params.vals); });
+            if (success) {
+                debug_neighbourhood_action("New value is " << asView(val));
             }
-        });
+        } while (!success && ++numberTries < tryLimit);
+        if (!success) {
+            debug_neighbourhood_action(
+                "Couldn't find value, number tries=" << tryLimit);
+            return;
+        }
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            deepCopy(*backup, val);
+        }
+    }
+};
+
+template <>
+const AnyDomainRef getInner<MSetDomain>(const MSetDomain& domain) {
+    return domain.inner;
 }
 
 const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::value = {
     {1, mSetLiftSingleGen},
     {1, mSetLiftMultipleGen},
-    {1, mSetRemoveGen},
-    {1, mSetAddGen}};
+    {1, generateForAllTypes<MSetDomain, MSetAdd>},    //
+    {1, generateForAllTypes<MSetDomain, MSetRemove>}  //
+};
 
 const NeighbourhoodVec<MSetDomain>
     NeighbourhoodGenList<MSetDomain>::mergeNeighbourhoods = {};

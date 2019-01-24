@@ -10,7 +10,7 @@ Details coming soon...
 * cmake 3.0 onwards.
 * C++14 compatible compiler.
     * clang:  According to [clang's documentation](https://clang.llvm.org/cxx_status.html), c++14 is supported with versions of clang 3.4 and later.  However, it has only been tested on clang 5 onwards.
-    * gcc: Works with gcc 7 onwards, apart from gcc 7.3.1 due to a compiler bug.
+    * gcc: Unfortunately, due to internal compiler bugs, only the newest gcc compilers are compatible with Athanor.  Use gcc 8 onwards.
 
 ## Installation:
 ### Quick install:

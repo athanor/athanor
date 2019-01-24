@@ -293,7 +293,12 @@ pair<shared_ptr<TupleDomain>, ExprRef<TupleView>> parseOpTupleLit(
 pair<shared_ptr<IntDomain>, ExprRef<IntView>> parseConstantInt(json& intExpr,
                                                                ParsedModel&) {
     auto val = make<IntValue>();
-    val->value = intExpr;
+    // handle tagged and untagged ints
+    if (intExpr.is_primitive()) {
+        val->value = intExpr;
+    } else {
+        val->value = intExpr[1];
+    }
     val->setConstant(true);
     return make_pair(fakeIntDomain, val.asExpr());
 }
@@ -322,8 +327,9 @@ shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
                                      ParsedModel& parsedModel) {
     vector<pair<Int, Int>> ranges;
     string errorMessage = "Within context of int domain";
-
-    for (auto& rangeExpr : intDomainExpr) {
+    auto& rangesToParse =
+        (intDomainExpr[0].count("TagInt")) ? intDomainExpr[1] : intDomainExpr;
+    for (auto& rangeExpr : rangesToParse) {
         Int from, to;
 
         if (rangeExpr.count("RangeBounded")) {
@@ -1436,7 +1442,8 @@ parseDomainGeneratorIntFromDomain(IntDomain& domain) {
 }
 
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>>
-parseDomainGeneratorIntFromExpr(json& intDomainExpr, ParsedModel& parsedModel) {
+parseDomainGeneratorIntFromExpr(json& expr, ParsedModel& parsedModel) {
+    auto& intDomainExpr = (expr[0].count("TagInt")) ? expr[1] : expr;
     if (intDomainExpr.size() != 1) {
         cerr << "Error: do not yet support unrolling (quantifying) "
                 "over int "

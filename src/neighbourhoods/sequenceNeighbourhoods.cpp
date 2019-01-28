@@ -51,7 +51,7 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
         neighbourhoods.emplace_back(
-            "sequenceLiftSingle_" + innerNh.name, numberValsRequired,
+            "SequenceLiftSingle_" + innerNh.name, numberValsRequired,
             [innerNhApply{std::move(innerNh.apply)}](
                 NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<SequenceValue>().front());
@@ -150,8 +150,7 @@ struct SequenceAdd
         bool success;
         size_t indexOfNewMember;
         do {
-            assignRandomValueInDomain(innerDomain, *newMember,
-                                      params.stats);
+            assignRandomValueInDomain(innerDomain, *newMember, params.stats);
             indexOfNewMember = globalRandom<UInt>(0, val.numberElements());
             success = val.tryAddMember(indexOfNewMember, newMember, [&]() {
                 return params.parentCheck(params.vals);
@@ -712,7 +711,8 @@ struct SequenceCrossover
 
 template <typename InnerDomain>
 struct SequenceAssignRandom
-    : public NeighbourhoodFunc<SequenceDomain, 1, SequenceRemove<InnerDomain>> {
+    : public NeighbourhoodFunc<SequenceDomain, 1,
+                               SequenceAssignRandom<InnerDomain>> {
     typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
     typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
 
@@ -763,14 +763,15 @@ const NeighbourhoodVec<SequenceDomain>
         {1, generateForAllTypes<SequenceDomain, SequenceRemove>},
         {1, generateForAllTypes<SequenceDomain, SequencePositionsSwap>},
         {1, generateForAllTypes<SequenceDomain, SequenceReverseSub>},
-//{1, generateForAllTypes<SequenceDomain, SequenceShuffleSub>},
+        //{1, generateForAllTypes<SequenceDomain, SequenceShuffleSub>},
         {1, generateForAllTypes<SequenceDomain, SequenceRelaxSub>},
         {2, generateForAllTypes<SequenceDomain, SequenceMove>},
         {2, generateForAllTypes<SequenceDomain, SequenceCrossover>},
 
 };
 
-template<> const AnyDomainRef getInner<SequenceDomain>(const SequenceDomain& domain) {
+template <>
+const AnyDomainRef getInner<SequenceDomain>(const SequenceDomain& domain) {
     return domain.inner;
 }
 const NeighbourhoodVec<SequenceDomain>

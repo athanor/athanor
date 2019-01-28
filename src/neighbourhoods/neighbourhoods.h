@@ -167,6 +167,22 @@ void generateForAllTypes(const Domain& domain, int numberValsRequired,
         getInner(domain));
 }
 
+template <typename Domain, typename NhFunc>
+void generate(const Domain& domain, int numberValsRequired,
+              std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename NhFunc::InnerDomainType InnerDomain;
+    mpark::visit(overloaded(
+                     [&](const std::shared_ptr<InnerDomain>&) {
+                         if (NhFunc::matches(domain)) {
+                             neighbourhoods.emplace_back(NhFunc::getName(),
+                                                         numberValsRequired,
+                                                         NhFunc(domain));
+                         }
+                     },
+                     [](const auto&) {}),
+                 getInner(domain));
+}
+
 static const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
 
 inline int calcNumberInsertionAttempts(UInt numberMembers, UInt domainSize) {

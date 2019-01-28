@@ -174,285 +174,273 @@ void functionLiftMultipleGen(const FunctionDomain& domain,
         domain.to);
 }
 
-template <typename InnerDomainPtrType>
-void functionImagesSwapGenImpl(const FunctionDomain&, InnerDomainPtrType&,
-                               int numberValsRequired,
-                               std::vector<Neighbourhood>& neighbourhoods) {
-    typedef typename AssociatedValueType<
-        typename InnerDomainPtrType::element_type>::type InnerValueType;
-
-    neighbourhoods.emplace_back(
-        "functionImagesSwap", numberValsRequired,
-        [](NeighbourhoodParams& params) {
-            auto& val = *(params.getVals<FunctionValue>().front());
-            if (val.rangeSize() < 2) {
-                ++params.stats.minorNodeCount;
-                return;
-            }
-            int numberTries = 0;
-            const int tryLimit = params.parentCheckTryLimit;
-            debug_neighbourhood_action("Looking for indices to swap");
-            bool success;
-            UInt index1, index2;
-            do {
-                ++params.stats.minorNodeCount;
-                index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
-                index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
-                success = val.trySwapImages<InnerValueType>(
-                    index1, index2,
-                    [&]() { return params.parentCheck(params.vals); });
-            } while (!success && ++numberTries < tryLimit);
-            if (!success) {
-                debug_neighbourhood_action(
-                    "Couldn't find positions to swap, number tries="
-                    << tryLimit);
-                return;
-            }
+template <typename InnerDomain>
+struct FunctionImagesSwap
+    : public NeighbourhoodFunc<FunctionDomain, 1,
+                               FunctionImagesSwap<InnerDomain>> {
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    const FunctionDomain& domain;
+    const InnerDomain& innerDomain;
+    const UInt innerDomainSize;
+    FunctionImagesSwap(const FunctionDomain& domain)
+        : domain(domain),
+          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
+          innerDomainSize(getDomainSize(innerDomain)) {}
+    static string getName() { return "FunctionImagesSwap"; }
+    static bool matches(const FunctionDomain&) { return true; }
+    void apply(NeighbourhoodParams& params, FunctionValue& val) {
+        if (val.rangeSize() < 2) {
+            ++params.stats.minorNodeCount;
+            return;
+        }
+        int numberTries = 0;
+        const int tryLimit = params.parentCheckTryLimit;
+        debug_neighbourhood_action("Looking for indices to swap");
+        bool success;
+        UInt index1, index2;
+        do {
+            ++params.stats.minorNodeCount;
+            index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
+            index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
+            success = val.trySwapImages<InnerValueType>(index1, index2, [&]() {
+                return params.parentCheck(params.vals);
+            });
+        } while (!success && ++numberTries < tryLimit);
+        if (!success) {
             debug_neighbourhood_action(
-                "positions swapped: " << index1 << " and " << index2);
-            if (!params.changeAccepted()) {
-                debug_neighbourhood_action("Change rejected");
-                val.trySwapImages<InnerValueType>(index1, index2,
-                                                  []() { return true; });
-            }
-        });
-}
+                "Couldn't find positions to swap, number tries=" << tryLimit);
+            return;
+        }
+        debug_neighbourhood_action("positions swapped: " << index1 << " and "
+                                                         << index2);
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            val.trySwapImages<InnerValueType>(index1, index2,
+                                              []() { return true; });
+        }
+    }
+};
 
-void functionImagesSwapGen(const FunctionDomain& domain, int numberValsRequired,
-                           std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(
-        overloaded(
-            [&](const shared_ptr<BoolDomain>& innerDomainPtr) {
-                functionImagesSwapGenImpl(domain, innerDomainPtr,
-                                          numberValsRequired, neighbourhoods);
-            },
-            [&](const shared_ptr<IntDomain>& innerDomainPtr) {
-                functionImagesSwapGenImpl(domain, innerDomainPtr,
-                                          numberValsRequired, neighbourhoods);
-            },
-            [&](const auto& innerDomainPtr) {
-                if (false) {
-                    functionImagesSwapGenImpl(domain, innerDomainPtr,
-                                              numberValsRequired,
-                                              neighbourhoods);
-                }
-            }),
-        domain.to);
-}
-void functionUnifyImagesGenImpl(const FunctionDomain&,
-                                const shared_ptr<IntDomain>& innerDomainPtr,
-                                int numberValsRequired,
-                                std::vector<Neighbourhood>& neighbourhoods) {
-    UInt innerDomainSize = innerDomainPtr->domainSize;
-    neighbourhoods.emplace_back(
-        "functionUnifyImages", numberValsRequired,
-        [innerDomainSize](NeighbourhoodParams& params) {
-            auto& val = *(params.getVals<FunctionValue>().front());
-            if (val.rangeSize() < 2) {
-                ++params.stats.minorNodeCount;
-                return;
-            }
-            int numberTries = 0;
-            const int tryLimit =
-                params.parentCheckTryLimit *
-                calcNumberInsertionAttempts(val.rangeSize(), innerDomainSize);
-            debug_neighbourhood_action("Looking for indices to unitfy");
-            bool success;
-            UInt index1, index2;
-            Int valueBackup;
+template <typename InnerDomain>
+struct FunctionUnifyImages
+    : public NeighbourhoodFunc<FunctionDomain, 1,
+                               FunctionUnifyImages<InnerDomain>> {
+                                   typedef InnerDomain InnerDomainType;
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    const FunctionDomain& domain;
+    const InnerDomain& innerDomain;
+    const UInt innerDomainSize;
+    FunctionUnifyImages(const FunctionDomain& domain)
+        : domain(domain),
+          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
+          innerDomainSize(getDomainSize(innerDomain)) {}
+    static string getName() { return "FunctionUnifyImages"; }
+    static bool matches(const FunctionDomain&) { return true; }
+    void apply(NeighbourhoodParams& params, FunctionValue& val) {
+        if (val.rangeSize() < 2) {
+            ++params.stats.minorNodeCount;
+            return;
+        }
+        int numberTries = 0;
+        const int tryLimit =
+            params.parentCheckTryLimit *
+            calcNumberInsertionAttempts(val.rangeSize(), innerDomainSize);
+        debug_neighbourhood_action("Looking for indices to unitfy");
+        bool success;
+        UInt index1, index2;
+        Int valueBackup;
 
-            do {
-                ++params.stats.minorNodeCount;
-                ++params.stats.minorNodeCount;
-                index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
-                index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
-                if (val.getRange<IntView>()[index1]->view()->value ==
-                    val.getRange<IntView>()[index2]->view()->value) {
-                    continue;
-                }
-                // randomly swap indices
-                if (globalRandom(0, 1)) {
-                    swap(index1, index2);
-                }
-                auto& view1 = val.getRange<IntView>()[index1]->view().get();
-                auto& view2 = val.getRange<IntView>()[index2]->view().get();
-                val.notifyPossibleImageChange(index2);
-                valueBackup = view2.value;
-                success = val.tryImageChange<IntValue>(index2, [&]() {
-                    return view2.changeValue([&]() {
-                        view2.value = view1.value;
-                        if (params.parentCheck(params.vals)) {
-                            return true;
-                        } else {
-                            view2.value = valueBackup;
-                            return false;
-                        }
-                    });
-                });
-            } while (!success && ++numberTries < tryLimit);
-            if (!success) {
-                debug_neighbourhood_action(
-                    "Couldn't find images to unify, number tries=" << tryLimit);
-                return;
+        do {
+            ++params.stats.minorNodeCount;
+            ++params.stats.minorNodeCount;
+            index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
+            index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
+            if (val.getRange<IntView>()[index1]->view()->value ==
+                val.getRange<IntView>()[index2]->view()->value) {
+                continue;
             }
-            debug_neighbourhood_action("images unified: " << index1 << " and "
-                                                          << index2);
-            if (!params.changeAccepted()) {
-                debug_neighbourhood_action("Change rejected");
-                val.notifyPossibleImageChange(index2);
-                auto& view2 = val.getRange<IntView>()[index2]->view().get();
-                val.tryImageChange<IntValue>(index2, [&]() {
-                    return view2.changeValue([&]() {
-                        view2.value = valueBackup;
+            // randomly swap indices
+            if (globalRandom(0, 1)) {
+                swap(index1, index2);
+            }
+            auto& view1 = val.getRange<IntView>()[index1]->view().get();
+            auto& view2 = val.getRange<IntView>()[index2]->view().get();
+            val.notifyPossibleImageChange(index2);
+            valueBackup = view2.value;
+            success = val.tryImageChange<IntValue>(index2, [&]() {
+                return view2.changeValue([&]() {
+                    view2.value = view1.value;
+                    if (params.parentCheck(params.vals)) {
                         return true;
-                    });
-                });
-            }
-        });
-}
-
-void functionUnifyImagesGen(const FunctionDomain& domain,
-                            int numberValsRequired,
-                            std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(overloaded(
-                     [&](const shared_ptr<IntDomain>& innerDomainPtr) {
-                         functionUnifyImagesGenImpl(domain, innerDomainPtr,
-                                                    numberValsRequired,
-                                                    neighbourhoods);
-                     },
-                     [&](const auto&) {}),
-                 domain.to);
-}
-
-void functionSplitImagesGenImpl(const FunctionDomain&,
-                                const shared_ptr<IntDomain>& innerDomainPtr,
-                                int numberValsRequired,
-                                std::vector<Neighbourhood>& neighbourhoods) {
-    UInt innerDomainSize = innerDomainPtr->domainSize;
-    neighbourhoods.emplace_back(
-        "functionSplitImages", numberValsRequired,
-        [innerDomainSize, &innerDomainPtr](NeighbourhoodParams& params) {
-            auto& val = *(params.getVals<FunctionValue>().front());
-            if (val.rangeSize() < 2) {
-                ++params.stats.minorNodeCount;
-                return;
-            }
-            int numberTries = 0;
-            const int tryLimit =
-                params.parentCheckTryLimit *
-                calcNumberInsertionAttempts(val.rangeSize(), innerDomainSize);
-            debug_neighbourhood_action("Looking for indices to split");
-            bool success;
-            UInt index1, index2;
-            Int valueBackup;
-
-            do {
-                ++params.stats.minorNodeCount;
-                index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
-                index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
-                if (val.getRange<IntView>()[index1]->view()->value !=
-                    val.getRange<IntView>()[index2]->view()->value) {
-                    continue;
-                }
-                // randomly swap indices
-                if (globalRandom(0, 1)) {
-                    swap(index1, index2);
-                }
-                auto& view1 = val.getRange<IntView>()[index1]->view().get();
-                static_cast<void>(view1);
-                auto value2 = val.member<IntValue>(index2);
-                val.notifyPossibleImageChange(index2);
-                valueBackup = value2->value;
-                success = val.tryImageChange<IntValue>(index2, [&]() {
-                    return value2->changeValue([&]() {
-                        assignRandomValueInDomain(*innerDomainPtr, *value2,
-                                                  params.stats);
-                        if (value2->value != valueBackup &&
-                            params.parentCheck(params.vals)) {
-                            return true;
-                        } else {
-                            value2->value = valueBackup;
-                            return false;
-                        }
-                    });
-                });
-            } while (!success && ++numberTries < tryLimit);
-            if (!success) {
-                debug_neighbourhood_action(
-                    "Couldn't find images to split, number tries=" << tryLimit);
-                return;
-            }
-            debug_neighbourhood_action("images split: " << index1 << " and "
-                                                        << index2);
-            if (!params.changeAccepted()) {
-                debug_neighbourhood_action("Change rejected");
-                val.notifyPossibleImageChange(index2);
-                auto& view2 = val.getRange<IntView>()[index2]->view().get();
-                val.tryImageChange<IntValue>(index2, [&]() {
-                    return view2.changeValue([&]() {
+                    } else {
                         view2.value = valueBackup;
-                        return true;
-                    });
+                        return false;
+                    }
                 });
-            }
-        });
-}
-
-void functionSplitImagesGen(const FunctionDomain& domain,
-                            int numberValsRequired,
-                            std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(overloaded(
-                     [&](const shared_ptr<IntDomain>& innerDomainPtr) {
-                         functionSplitImagesGenImpl(domain, innerDomainPtr,
-                                                    numberValsRequired,
-                                                    neighbourhoods);
-                     },
-                     [&](const auto&) {}),
-                 domain.to);
-}
-
-void functionAssignRandomGen(const FunctionDomain& domain,
-                             int numberValsRequired,
-                             std::vector<Neighbourhood>& neighbourhoods) {
-    neighbourhoods.emplace_back(
-        "functionAssignRandom", numberValsRequired,
-        [&domain](NeighbourhoodParams& params) {
-            auto& val = *(params.getVals<FunctionValue>().front());
-            int numberTries = 0;
-            const int tryLimit = params.parentCheckTryLimit;
+            });
+        } while (!success && ++numberTries < tryLimit);
+        if (!success) {
             debug_neighbourhood_action(
-                "Assigning random value: original value is " << asView(val));
-            auto backup = deepCopy(val);
-            backup->container = val.container;
-            auto newValue = constructValueFromDomain(domain);
-            newValue->container = val.container;
-            bool success;
-            do {
-                assignRandomValueInDomain(domain, *newValue, params.stats);
-                success = val.tryAssignNewValue(*newValue, [&]() {
-                    return params.parentCheck(params.vals);
+                "Couldn't find images to unify, number tries=" << tryLimit);
+            return;
+        }
+        debug_neighbourhood_action("images unified: " << index1 << " and "
+                                                      << index2);
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            val.notifyPossibleImageChange(index2);
+            auto& view2 = val.getRange<IntView>()[index2]->view().get();
+            val.tryImageChange<IntValue>(index2, [&]() {
+                return view2.changeValue([&]() {
+                    view2.value = valueBackup;
+                    return true;
                 });
-                if (success) {
-                    debug_neighbourhood_action("New value is " << asView(val));
-                }
-            } while (!success && ++numberTries < tryLimit);
-            if (!success) {
-                debug_neighbourhood_action(
-                    "Couldn't find value, number tries=" << tryLimit);
-                return;
+            });
+        }
+    }
+};
+
+template <typename InnerDomain>
+struct FunctionSplitImages
+    : public NeighbourhoodFunc<FunctionDomain, 1,
+                               FunctionSplitImages<InnerDomain>> {
+                                   typedef InnerDomain InnerDomainType;
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    const FunctionDomain& domain;
+    const InnerDomain& innerDomain;
+    const UInt innerDomainSize;
+    FunctionSplitImages(const FunctionDomain& domain)
+        : domain(domain),
+          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
+          innerDomainSize(getDomainSize(innerDomain)) {}
+    static string getName() { return "FunctionSplitImages"; }
+    static bool matches(const FunctionDomain&) { return true; }
+    void apply(NeighbourhoodParams& params, FunctionValue& val) {
+        if (val.rangeSize() < 2) {
+            ++params.stats.minorNodeCount;
+            return;
+        }
+        int numberTries = 0;
+        const int tryLimit =
+            params.parentCheckTryLimit *
+            calcNumberInsertionAttempts(val.rangeSize(), innerDomainSize);
+        debug_neighbourhood_action("Looking for indices to split");
+        bool success;
+        UInt index1, index2;
+        Int valueBackup;
+
+        do {
+            ++params.stats.minorNodeCount;
+            index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
+            index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
+            if (val.getRange<IntView>()[index1]->view()->value !=
+                val.getRange<IntView>()[index2]->view()->value) {
+                continue;
             }
-            if (!params.changeAccepted()) {
-                debug_neighbourhood_action("Change rejected");
-                deepCopy(*backup, val);
+            // randomly swap indices
+            if (globalRandom(0, 1)) {
+                swap(index1, index2);
             }
-        });
+            auto& view1 = val.getRange<IntView>()[index1]->view().get();
+            static_cast<void>(view1);
+            auto value2 = val.member<IntValue>(index2);
+            val.notifyPossibleImageChange(index2);
+            valueBackup = value2->value;
+            success = val.tryImageChange<IntValue>(index2, [&]() {
+                return value2->changeValue([&]() {
+                    assignRandomValueInDomain(innerDomain, *value2,
+                                              params.stats);
+                    if (value2->value != valueBackup &&
+                        params.parentCheck(params.vals)) {
+                        return true;
+                    } else {
+                        value2->value = valueBackup;
+                        return false;
+                    }
+                });
+            });
+        } while (!success && ++numberTries < tryLimit);
+        if (!success) {
+            debug_neighbourhood_action(
+                "Couldn't find images to split, number tries=" << tryLimit);
+            return;
+        }
+        debug_neighbourhood_action("images split: " << index1 << " and "
+                                                    << index2);
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            val.notifyPossibleImageChange(index2);
+            auto& view2 = val.getRange<IntView>()[index2]->view().get();
+            val.tryImageChange<IntValue>(index2, [&]() {
+                return view2.changeValue([&]() {
+                    view2.value = valueBackup;
+                    return true;
+                });
+            });
+        }
+    }
+};
+
+template <typename InnerDomain>
+struct FunctionAssignRandom
+    : public NeighbourhoodFunc<FunctionDomain, 1,
+                               FunctionAssignRandom<InnerDomain>> {
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+
+    const FunctionDomain& domain;
+    const InnerDomain& innerDomain;
+    const UInt innerDomainSize;
+    FunctionAssignRandom(const FunctionDomain& domain)
+        : domain(domain),
+          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
+          innerDomainSize(getDomainSize(innerDomain)) {}
+
+    static string getName() { return "FunctionAssignRandom"; }
+    static bool matches(const FunctionDomain&) { return true; }
+    void apply(NeighbourhoodParams& params, FunctionValue& val) {
+        int numberTries = 0;
+        const int tryLimit = params.parentCheckTryLimit;
+        debug_neighbourhood_action("Assigning random value: original value is "
+                                   << asView(val));
+        auto backup = deepCopy(val);
+        backup->container = val.container;
+        auto newValue = constructValueFromDomain(domain);
+        newValue->container = val.container;
+        bool success;
+        do {
+            assignRandomValueInDomain(domain, *newValue, params.stats);
+            success = val.tryAssignNewValue(
+                *newValue, [&]() { return params.parentCheck(params.vals); });
+            if (success) {
+                debug_neighbourhood_action("New value is " << asView(val));
+            }
+        } while (!success && ++numberTries < tryLimit);
+        if (!success) {
+            debug_neighbourhood_action(
+                "Couldn't find value, number tries=" << tryLimit);
+            return;
+        }
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            deepCopy(*backup, val);
+        }
+    }
+};
+
+template <>
+const AnyDomainRef getInner<FunctionDomain>(const FunctionDomain& domain) {
+    return domain.to;
 }
 
 const NeighbourhoodVec<FunctionDomain>
     NeighbourhoodGenList<FunctionDomain>::value = {
-        {1, functionLiftSingleGen},    //
-        {1, functionLiftMultipleGen},  //
-        {1, functionImagesSwapGen},    //
-        {1, functionUnifyImagesGen},   //
-        {1, functionSplitImagesGen},
+        {1, functionLiftSingleGen},                                     //
+        {1, functionLiftMultipleGen},                                   //
+        {1, generateForAllTypes<FunctionDomain, FunctionImagesSwap>},   //
+        {1, generate<FunctionDomain, FunctionUnifyImages<IntDomain>>},  //
+        {1, generate<FunctionDomain, FunctionSplitImages<IntDomain>>},  //
 };

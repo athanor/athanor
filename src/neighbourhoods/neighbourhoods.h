@@ -76,7 +76,7 @@ struct NeighbourhoodFunc {
 
     void operator()(NeighbourhoodParams& params) {
         auto& vals = params.getVals<Val>();
-        debug_code(assert(numberVals < vals.size()));
+        debug_code(assert(numberVals == vals.size()));
         invokeApply<0>(params, vals);
     }
 };

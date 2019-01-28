@@ -146,7 +146,14 @@ struct SetCrossover
                                 .tryMemberChange<InnerValueType>(
                                     toIndexToMove, toMemberHash,
                                     [&]() {
-                                        return params.parentCheck(params.vals);
+                                        if (params.parentCheck(params.vals)) {
+                                            return true;
+                                        } else {
+                                            swapValAssignments(
+                                                *fromMemberToMove,
+                                                *toMemberToMove);
+                                            return false;
+                                        }
                                     })
                                 .first;
                         })

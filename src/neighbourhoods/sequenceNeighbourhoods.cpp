@@ -643,7 +643,14 @@ struct SequenceCrossover
             fromValSubseqHash, [&]() {
                 return toVal.trySubsequenceChange<InnerValueType>(
                     indexToCrossOver, indexToCrossOver + 1, toValMemberHashes,
-                    toValSubseqHash, parentCheck);
+                    toValSubseqHash, [&]() {
+                        if (parentCheck()) {
+                            return true;
+                        } else {
+                            swapValAssignments(*member1, *member2);
+                            return false;
+                        }
+                    });
             });
         if (!success) {
             swapValAssignments(*member1, *member2);

@@ -652,9 +652,6 @@ struct SequenceCrossover
                         }
                     });
             });
-        if (!success) {
-            swapValAssignments(*member1, *member2);
-        }
         return success;
     }
 

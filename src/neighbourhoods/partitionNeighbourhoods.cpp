@@ -12,6 +12,7 @@ void assignRandomValueInDomainImpl(const PartitionDomain& domain,
                                    const InnerDomainPtrType& innerDomainPtr,
                                    PartitionValue& val, StatsContainer& stats) {
     // clear partition and populate with new random elements
+    val.silentClear();
     stats.minorNodeCount += val.memberPartMap.size();
     vector<UInt> parts;
     size_t partSize = domain.numberElements / domain.numberParts;

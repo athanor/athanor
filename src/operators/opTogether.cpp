@@ -239,7 +239,7 @@ void OpTogether<PartitionMemberViewType>::stopTriggering() {
 
 template <typename PartitionMemberViewType>
 void OpTogether<PartitionMemberViewType>::updateVarViolationsImpl(
-    const ViolationContext&, ViolationContainer& vioContainer) {
+    const ViolationContext& vioContext, ViolationContainer& vioContainer) {
     auto partition = partitionOperand->getViewIfDefined();
     if (!partition) {
         partitionOperand->updateVarViolations(violation, vioContainer);
@@ -254,10 +254,14 @@ void OpTogether<PartitionMemberViewType>::updateVarViolationsImpl(
         right->updateVarViolations(violation, vioContainer);
         return;
     }
+    auto* boolVioContextTest =
+        dynamic_cast<const BoolViolationContext*>(&vioContext);
+    UInt childViolation =
+        (boolVioContextTest && boolVioContextTest->negated) ? 1 : violation;
     partition->getMembers<PartitionMemberViewType>()[cachedLeftIndex]
-        ->updateVarViolations(violation, vioContainer);
+        ->updateVarViolations(childViolation, vioContainer);
     partition->getMembers<PartitionMemberViewType>()[cachedRightIndex]
-        ->updateVarViolations(violation, vioContainer);
+        ->updateVarViolations(childViolation, vioContainer);
 }
 
 template <typename PartitionMemberViewType>

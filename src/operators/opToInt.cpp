@@ -14,12 +14,23 @@ void OpToInt::updateVarViolationsImpl(const ViolationContext& vioContext,
     const IntViolationContext* intVioContextTest =
         dynamic_cast<const IntViolationContext*>(&vioContext);
     if (intVioContextTest) {
-        if ((intVioContextTest->reason ==
-                 IntViolationContext::Reason::TOO_LARGE &&
-             value == 0) ||
-            (intVioContextTest->reason ==
-                 IntViolationContext::Reason::TOO_SMALL &&
-             value == 1)) {
+        if (intVioContextTest->reason ==
+            IntViolationContext::Reason::TOO_LARGE) {
+            if (value == 1) {
+                operand->updateVarViolations(
+                    BoolViolationContext(intVioContextTest->parentViolation,
+                                         true),
+                    vioContainer);
+            }
+            return;
+        } else if (intVioContextTest->reason ==
+                   IntViolationContext::Reason::TOO_SMALL) {
+            if (value == 0) {
+                operand->updateVarViolations(
+                    BoolViolationContext(intVioContextTest->parentViolation,
+                                         false),
+                    vioContainer);
+            }
             return;
         }
     }

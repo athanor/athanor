@@ -197,12 +197,18 @@ struct FunctionImagesSwap
         int numberTries = 0;
         const int tryLimit = params.parentCheckTryLimit;
         debug_neighbourhood_action("Looking for indices to swap");
+        auto& vioContainerAtThisLevel =
+            params.vioContainer.childViolations(val.id);
+
         bool success;
         UInt index1, index2;
         do {
             ++params.stats.minorNodeCount;
-            index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
-            index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
+            index1 =
+                vioContainerAtThisLevel.selectRandomVar(val.rangeSize() - 1);
+            index2 = globalRandom<UInt>(0, val.rangeSize() - 1);
+            index2 = (index1 + index2) % val.rangeSize();
+
             success = val.trySwapImages<InnerValueType>(index1, index2, [&]() {
                 return params.parentCheck(params.vals);
             });
@@ -226,7 +232,7 @@ template <typename InnerDomain>
 struct FunctionUnifyImages
     : public NeighbourhoodFunc<FunctionDomain, 1,
                                FunctionUnifyImages<InnerDomain>> {
-                                   typedef InnerDomain InnerDomainType;
+    typedef InnerDomain InnerDomainType;
     typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
     typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
     const FunctionDomain& domain;
@@ -248,6 +254,10 @@ struct FunctionUnifyImages
             params.parentCheckTryLimit *
             calcNumberInsertionAttempts(val.rangeSize(), innerDomainSize);
         debug_neighbourhood_action("Looking for indices to unitfy");
+
+        auto& vioContainerAtThisLevel =
+            params.vioContainer.childViolations(val.id);
+
         bool success;
         UInt index1, index2;
         Int valueBackup;
@@ -255,8 +265,11 @@ struct FunctionUnifyImages
         do {
             ++params.stats.minorNodeCount;
             ++params.stats.minorNodeCount;
-            index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
-            index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
+            index1 =
+                vioContainerAtThisLevel.selectRandomVar(val.rangeSize() - 1);
+            index2 = globalRandom<UInt>(0, val.rangeSize() - 1);
+            index2 = (index1 + index2) % val.rangeSize();
+
             if (val.getRange<IntView>()[index1]->view()->value ==
                 val.getRange<IntView>()[index2]->view()->value) {
                 continue;
@@ -306,7 +319,7 @@ template <typename InnerDomain>
 struct FunctionSplitImages
     : public NeighbourhoodFunc<FunctionDomain, 1,
                                FunctionSplitImages<InnerDomain>> {
-                                   typedef InnerDomain InnerDomainType;
+    typedef InnerDomain InnerDomainType;
     typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
     typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
     const FunctionDomain& domain;
@@ -328,14 +341,20 @@ struct FunctionSplitImages
             params.parentCheckTryLimit *
             calcNumberInsertionAttempts(val.rangeSize(), innerDomainSize);
         debug_neighbourhood_action("Looking for indices to split");
+        auto& vioContainerAtThisLevel =
+            params.vioContainer.childViolations(val.id);
+
         bool success;
         UInt index1, index2;
         Int valueBackup;
 
         do {
             ++params.stats.minorNodeCount;
-            index1 = globalRandom<UInt>(0, val.rangeSize() - 2);
-            index2 = globalRandom<UInt>(index1 + 1, val.rangeSize() - 1);
+            index1 =
+                vioContainerAtThisLevel.selectRandomVar(val.rangeSize() - 1);
+            index2 = globalRandom<UInt>(0, val.rangeSize() - 1);
+            index2 = (index1 + index2) % val.rangeSize();
+
             if (val.getRange<IntView>()[index1]->view()->value !=
                 val.getRange<IntView>()[index2]->view()->value) {
                 continue;

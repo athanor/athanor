@@ -61,12 +61,16 @@ void partitionContainingPartsSwapGenImpl(
                                      domain.numberElements / domain.numberParts,
                                      domain.numberElements);
             debug_neighbourhood_action("Looking for indices to swap");
+            auto& vioContainerAtThisLevel =
+            params.vioContainer.childViolations(val.id);
 
             bool success;
             UInt index1, index2;
             do {
                 ++params.stats.minorNodeCount;
-                index1 = globalRandom<UInt>(0, domain.numberElements - 1);
+
+                index1 = vioContainerAtThisLevel.selectRandomVar(
+                                                                              domain.numberElements - 1);
                 index2 = globalRandom<UInt>(0, domain.numberElements - 1);
                 index2 = (index1 + index2) % domain.numberElements;
                 if (val.memberPartMap[index1] == val.memberPartMap[index2]) {

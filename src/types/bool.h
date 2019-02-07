@@ -21,7 +21,6 @@ struct BoolView : public ExprInterface<BoolView>,
     void standardSanityChecksForThisType() const;
 };
 
-
 struct BoolViolationContext : public ViolationContext {
     bool negated;
     BoolViolationContext(UInt parentViolation, bool negated)

@@ -208,7 +208,9 @@ struct FunctionImagesSwap
                 vioContainerAtThisLevel.selectRandomVar(val.rangeSize() - 1);
             index2 = globalRandom<UInt>(0, val.rangeSize() - 1);
             index2 = (index1 + index2) % val.rangeSize();
-
+            if (index2 < index1) {
+                swap(index1, index2);
+            }
             success = val.trySwapImages<InnerValueType>(index1, index2, [&]() {
                 return params.parentCheck(params.vals);
             });

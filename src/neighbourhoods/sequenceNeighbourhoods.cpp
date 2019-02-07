@@ -517,13 +517,21 @@ struct SequencePositionsSwap
         int numberTries = 0;
         const int tryLimit = params.parentCheckTryLimit;
         debug_neighbourhood_action("Looking for indices to swap");
+        auto& vioContainerAtThisLevel =
+            params.vioContainer.childViolations(val.id);
 
         bool success;
         UInt index1, index2;
         do {
             ++params.stats.minorNodeCount;
-            index1 = globalRandom<UInt>(0, val.numberElements() - 2);
-            index2 = globalRandom<UInt>(index1 + 1, val.numberElements() - 1);
+            index1 = vioContainerAtThisLevel.selectRandomVar(
+                val.numberElements() - 1);
+            index2 = globalRandom<UInt>(0, val.numberElements() - 1);
+            index2 = (index1 + index2) % val.numberElements();
+            if (index2 < index1) {
+                swap(index1, index2);
+            }
+
             success = val.trySwapPositions<InnerValueType>(
                 index1, index2,
                 [&]() { return params.parentCheck(params.vals); });

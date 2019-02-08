@@ -104,11 +104,11 @@ struct StatsContainer {
         startTime = std::chrono::high_resolution_clock::now();
         startCpuTime = std::clock();
     }
-    inline auto getOsTime() {
+    inline auto getOsTime() const {
         return std::chrono::high_resolution_clock::now();
     }
 
-    inline double getRealTime() {
+    inline double getRealTime() const {
         return std::chrono::duration<double>(getOsTime() - startTime).count();
     }
 

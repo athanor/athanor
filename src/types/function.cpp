@@ -172,7 +172,6 @@ HashType getValueHash<FunctionView>(const FunctionView& val) {
 template <>
 ostream& prettyPrint<FunctionView>(ostream& os, const FunctionView& v) {
     os << "function(";
-    return os << ")";
     mpark::visit(
         [&](auto& rangeImpl) {
             for (size_t i = 0; i < rangeImpl.size(); i++) {

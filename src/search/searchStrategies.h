@@ -34,51 +34,21 @@ class ExponentialIncrementer {
 template <typename Strategy>
 class HillClimbing {
     static constexpr double EXPONENT = 1.3;
-    static constexpr double FAST_EXPONENT = 2;
     std::shared_ptr<Strategy> strategy;
-    ExponentialIncrementer<u_int64_t> multiplier =
+    ExponentialIncrementer<u_int64_t> allowedIterationsAtPeak =
         ExponentialIncrementer<u_int64_t>(DEFAULT_PEAK_ITERATIONS, EXPONENT);
-    ExponentialIncrementer<u_int64_t> fastMultiplier =
-        ExponentialIncrementer<u_int64_t>(DEFAULT_PEAK_ITERATIONS,
-                                          FAST_EXPONENT);
-    bool usingFastMultiplier = false;
-    u_int64_t allowedIterationsAtPeak = DEFAULT_PEAK_ITERATIONS;
 
    public:
     HillClimbing(std::shared_ptr<Strategy> strategy)
         : strategy(std::move(strategy)) {}
 
     void reset() {
-        multiplier.reset(DEFAULT_PEAK_ITERATIONS, EXPONENT);
-        fastMultiplier.reset(DEFAULT_PEAK_ITERATIONS, FAST_EXPONENT);
-        usingFastMultiplier = false;
-        allowedIterationsAtPeak = DEFAULT_PEAK_ITERATIONS;
+        allowedIterationsAtPeak.reset(DEFAULT_PEAK_ITERATIONS, EXPONENT);
     }
-    void increaseTerminationLimit() {
-        if (usingFastMultiplier) {
-            fastMultiplier.increment();
-        }
-        if (usingFastMultiplier &&
-            fastMultiplier.getValue() < multiplier.getValue()) {
-            allowedIterationsAtPeak = fastMultiplier.getValue();
-        } else {
-            usingFastMultiplier = false;
-            multiplier.increment();
-            allowedIterationsAtPeak = multiplier.getValue();
-        }
-        //        std::cout << "increase to " << allowedIterationsAtPeak <<
-        //        std::endl;
-    }
+    void increaseTerminationLimit() { allowedIterationsAtPeak.increment(); }
 
     void resetTerminationLimit() {
-        if (usingFastMultiplier) {
-            multiplier.reset(fastMultiplier.getValue(), EXPONENT);
-        }
-        usingFastMultiplier = true;
-        fastMultiplier.reset(DEFAULT_PEAK_ITERATIONS, FAST_EXPONENT);
-        allowedIterationsAtPeak = fastMultiplier.getValue();
-        //        std::cout << "reset to " << allowedIterationsAtPeak <<
-        //        std::endl;
+        allowedIterationsAtPeak.reset(DEFAULT_PEAK_ITERATIONS, EXPONENT);
     }
 
     void run(State& state, bool isOuterMostStrategy) {
@@ -101,7 +71,7 @@ class HillClimbing {
             });
             if (!isOuterMostStrategy && !strictImprovement) {
                 ++iterationsAtPeak;
-                if (iterationsAtPeak > allowedIterationsAtPeak) {
+                if (iterationsAtPeak > allowedIterationsAtPeak.getValue()) {
                     break;
                 }
             }
@@ -274,7 +244,6 @@ class ExplorationUsingRandomWalk {
                 // smaller is better
                 bestQuality = quality(state);
                 numberRandomMoves.reset(baseValue, multiplier);
-                climbStrategy->resetTerminationLimit();
             } else {
                 numberRandomMoves.increment();
                 climbStrategy->increaseTerminationLimit();

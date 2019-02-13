@@ -8,7 +8,7 @@
 #include "search/solver.h"
 #include "search/statsContainer.h"
 
-u_int64_t DEFAULT_PEAK_ITERATIONS = 1000;
+u_int64_t DEFAULT_PEAK_ITERATIONS = 5000;
 
 template <typename Integer>
 class ExponentialIncrementer {
@@ -33,23 +33,17 @@ class ExponentialIncrementer {
 
 template <typename Strategy>
 class HillClimbing {
-    static constexpr double EXPONENT = 1.3;
     std::shared_ptr<Strategy> strategy;
-    ExponentialIncrementer<u_int64_t> allowedIterationsAtPeak =
-        ExponentialIncrementer<u_int64_t>(DEFAULT_PEAK_ITERATIONS, EXPONENT);
+    const u_int64_t allowedIterationsAtPeak = DEFAULT_PEAK_ITERATIONS;
 
    public:
     HillClimbing(std::shared_ptr<Strategy> strategy)
         : strategy(std::move(strategy)) {}
 
-    void reset() {
-        allowedIterationsAtPeak.reset(DEFAULT_PEAK_ITERATIONS, EXPONENT);
-    }
-    void increaseTerminationLimit() { allowedIterationsAtPeak.increment(); }
+    void reset() {}
+    void increaseTerminationLimit() {}
 
-    void resetTerminationLimit() {
-        allowedIterationsAtPeak.reset(DEFAULT_PEAK_ITERATIONS, EXPONENT);
-    }
+    void resetTerminationLimit() {}
 
     void run(State& state, bool isOuterMostStrategy) {
         u_int64_t iterationsAtPeak = 0;
@@ -69,9 +63,14 @@ class HillClimbing {
                 }
                 return allowed;
             });
-            if (!isOuterMostStrategy && !strictImprovement) {
+            if (isOuterMostStrategy) {
+                continue;
+            }
+            if (strictImprovement) {
+                iterationsAtPeak = 0;
+            } else {
                 ++iterationsAtPeak;
-                if (iterationsAtPeak > allowedIterationsAtPeak.getValue()) {
+                if (iterationsAtPeak > allowedIterationsAtPeak) {
                     break;
                 }
             }
@@ -219,9 +218,9 @@ auto makeExplorationUsingViolationBackOff(
 
 template <typename ClimbStrategy>
 class ExplorationUsingRandomWalk {
+    static constexpr u_int64_t MAX_NUMBER_RANDOM_MOVES = 500;
     static constexpr double baseValue = 10;
     static constexpr double multiplier = 1.3;
-
     std::shared_ptr<ClimbStrategy> climbStrategy;
     RandomWalk randomWalkStrategy = RandomWalk(false);
 
@@ -250,7 +249,7 @@ class ExplorationUsingRandomWalk {
             }
             randomWalkStrategy.numberMovesToTake = numberRandomMoves.getValue();
             randomWalkStrategy.run(state, false);
-            if (numberRandomMoves.getValue() > DEFAULT_PEAK_ITERATIONS) {
+            if (numberRandomMoves.getValue() > MAX_NUMBER_RANDOM_MOVES) {
                 // reset
                 bestQuality = quality(state);
                 numberRandomMoves.reset(baseValue, multiplier);

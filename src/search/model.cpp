@@ -102,3 +102,7 @@ FindAndReplaceFunction ModelBuilder::makeFindReplaceFunc(AnyValRef& var,
         },
         var);
 }
+
+size_t randomSize(size_t minSize, size_t maxSize) {
+    return globalRandom<size_t>(minSize, std::min(maxSize, minSize + 1000));
+}

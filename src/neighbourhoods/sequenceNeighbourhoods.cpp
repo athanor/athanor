@@ -14,7 +14,7 @@ void assignRandomValueInDomainImpl(const SequenceDomain& domain,
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     size_t newNumberElements =
-        globalRandom(domain.sizeAttr.minSize, domain.sizeAttr.maxSize);
+        randomSize(domain.sizeAttr.minSize, domain.sizeAttr.maxSize);
     // clear sequence and populate with new random elements
     while (val.numberElements() > 0) {
         val.removeMember<InnerValueType>(val.numberElements() - 1);

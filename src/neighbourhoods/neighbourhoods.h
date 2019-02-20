@@ -195,4 +195,6 @@ inline int calcNumberInsertionAttempts(UInt numberMembers, UInt domainSize) {
 
 template <typename Val>
 void swapValAssignments(Val& val1, Val& val2);
+
+size_t randomSize(size_t minSize, size_t maxSize);
 #endif /* SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_ */

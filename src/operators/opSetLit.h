@@ -23,7 +23,7 @@ struct OpSetLit : public SetView {
         std::unordered_set<UInt> operands;  // all operands with hash h
     };
     AnyExprVec operands;
-    std::unordered_map<HashType, OperandGroup> hashIndicesMap;
+    HashMap<HashType, OperandGroup> hashIndicesMap;
     PreviousValueCache<HashType>
         cachedOperandHashes;  // map from operand index to hash.
     PreviousValueCache<HashType>

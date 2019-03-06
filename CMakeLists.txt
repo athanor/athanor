@@ -21,6 +21,7 @@ add_subdirectory (include/variant)
 add_subdirectory (include/Optional)
 include_directories( include/PicoSHA2)
 include_directories( include/json)
+include_directories( include/flat_hash_map)
 #allow includes relative to src
 include_directories( src )
 

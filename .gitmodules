@@ -10,3 +10,6 @@
 [submodule "include/Optional"]
 	path = include/Optional
 	url = https://github.com/akrzemi1/Optional
+[submodule "include/flat_hash_map"]
+	path = include/flat_hash_map
+	url = https://github.com/skarupke/flat_hash_map

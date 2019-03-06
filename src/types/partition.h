@@ -15,7 +15,7 @@ struct PartitionView : public ExprInterface<PartitionView>,
     friend PartitionValue;
     AnyExprVec members;
     std::vector<UInt> memberPartMap;
-    std::unordered_map<HashType, UInt> hashIndexMap;
+    HashMap<HashType, UInt> hashIndexMap;
     static const HashType INITIAL_HASH;
     std::vector<HashType> partHashes;
     HashType cachedHashTotal = INITIAL_HASH;

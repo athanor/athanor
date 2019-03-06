@@ -8,9 +8,9 @@
 class ModelBuilder;
 struct ParsedModel {
     std::unique_ptr<ModelBuilder> builder;
-    std::unordered_map<std::string, std::pair<AnyDomainRef, AnyExprRef>>
+    HashMap<std::string, std::pair<AnyDomainRef, AnyExprRef>>
         namedExprs;
-    std::unordered_map<std::string, AnyDomainRef> domainLettings;
+    HashMap<std::string, AnyDomainRef> domainLettings;
     ParsedModel();
 };
 typedef std::vector<std::reference_wrapper<std::istream>> ISRefVec;

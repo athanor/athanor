@@ -21,7 +21,7 @@ struct OpAllDiff
 
     using SimpleUnaryOperator<BoolView, SequenceView,
                               OpAllDiff>::SimpleUnaryOperator;
-    std::unordered_map<HashType, FastIterableIntSet> hashIndicesMap;
+    HashMap<HashType, FastIterableIntSet> hashIndicesMap;
     std::vector<HashType> indicesHashMap;
     FastIterableIntSet violatingOperands;
 

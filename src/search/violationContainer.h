@@ -15,7 +15,7 @@ class ViolationContainer {
     UInt totalViolation = 0;
     std::vector<UInt> varViolations;
     std::vector<UInt> varsWithViolation;
-    std::unordered_map<UInt, std::unique_ptr<ViolationContainer>>
+    HashMap<UInt, std::unique_ptr<ViolationContainer>>
         _childViolations;
 
    public:

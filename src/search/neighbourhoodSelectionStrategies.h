@@ -8,7 +8,7 @@
 #include "search/model.h"
 #include "search/solver.h"
 #include "search/statsContainer.h"
-#include "search/ucbNeighbourhoodSelection.h"
+#include "search/ucbSelector.h"
 #include "utils/random.h"
 
 class InteractiveNeighbourhoodSelector {
@@ -79,6 +79,56 @@ class RandomNeighbourhood {
                     state.model.varNeighbourhoodMapping[biasRandomVar].size() -
                         1)];
         }
+    }
+};
+
+class UcbNeighbourhoodSelection
+    : public UcbSelector<UcbNeighbourhoodSelection> {
+    const State& state;
+
+   public:
+    UcbNeighbourhoodSelection(const State& state, double ucbExplorationBias)
+        : UcbSelector<UcbNeighbourhoodSelection>(ucbExplorationBias),
+          state(state) {}
+
+    bool optimising() {
+        return state.model.optimiseMode != OptimiseMode::NONE &&
+               state.model.getViolation() == 0;
+    }
+    const NeighbourhoodStats& nhStats(size_t i) {
+        return state.stats.neighbourhoodStats[i];
+    }
+
+    inline double reward(size_t i) {
+        auto& s = nhStats(i);
+        return (optimising()) ? s.numberObjImprovements
+                              : s.numberVioImprovmenents;
+    }
+    inline double individualCost(size_t i) {
+        auto& s = nhStats(i);
+        return (optimising()) ? s.minorNodeCount - s.vioMinorNodeCount
+                              : s.vioMinorNodeCount;
+    }
+    inline double totalCost() {
+        return (optimising())
+                   ? state.stats.minorNodeCount - state.stats.vioMinorNodeCount
+                   : state.stats.vioMinorNodeCount;
+    }
+    inline bool wasActivated(size_t i) {
+        auto& s = nhStats(i);
+        return (optimising()) ? s.numberActivations - s.numberVioActivations > 0
+                              : s.numberVioActivations > 0;
+    }
+    inline size_t numberOptions() {
+        return state.stats.neighbourhoodStats.size();
+    }
+    template <typename ParentStrategy>
+    inline void run(State& state, ParentStrategy&& parentStrategy) {
+        size_t chosenNeighbourhood = next();
+
+        state.runNeighbourhood(chosenNeighbourhood, [&](const auto& result) {
+            return parentStrategy(result);
+        });
     }
 };
 

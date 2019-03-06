@@ -246,7 +246,7 @@ void runSearch(State& state) {
         }
         case UCB: {
             constructStratAndRun(state, make_shared<UcbNeighbourhoodSelection>(
-                                            ucbExplorationBias));
+                                            state, ucbExplorationBias));
             return;
         }
         case INTERACTIVE: {

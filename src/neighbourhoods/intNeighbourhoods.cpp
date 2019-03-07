@@ -89,7 +89,7 @@ struct IntAssignRandom {
         debug_neighbourhood_action("Assigning random value: original value is "
                                    << asView(val));
         auto backup = val.value;
-        UInt varViolation = params.vioContainer.getTotalViolation();
+        UInt varViolation = params.vioContainer.varViolation(val.id);
         bool success;
         size_t selectedOption;
         do {

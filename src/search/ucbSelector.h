@@ -82,6 +82,7 @@ class StandardUcbSelector : public UcbSelector<StandardUcbSelector> {
     void reportResult(size_t option, double reward, double cost) {
         rewards[option] += reward;
         costs[option] += cost;
+        _totalCost += cost;
         _wasActivated[option] = true;
     }
 };

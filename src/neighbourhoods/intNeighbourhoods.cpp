@@ -39,22 +39,19 @@ Int chooseBound(const pair<Int, Int>& bound1, const pair<Int, Int>& bound2,
 Int getRandomValueInDomain(const IntDomain& domain, Int minValue, Int maxValue,
                            StatsContainer& stats) {
     ++stats.minorNodeCount;
+    if (domain.bounds.empty()) {
+        cerr << "Error: empty domain\n";
+        throw EndOfSearchException();
+    }
+    minValue = max(minValue, domain.bounds.front().first);
+    maxValue = min(maxValue, domain.bounds.back().second);
+
     Int newValue = globalRandom<Int>(minValue, maxValue);
     // check that number is in domain
     // if not choose upper of previous bound, lower of next, which ever is
-    // closer binary search is likely most efficient here, just using simpler
+    // closer.
+    // binary search is likely most efficient here, just using simpler
     // loop for now
-    if (domain.bounds.empty()) {
-        cerr << "Error: empty domain\n";
-        assert(false);
-        throw EndOfSearchException();
-    }
-    if (newValue < domain.bounds.front().first) {
-        return domain.bounds.front().first;
-    }
-    if (newValue > domain.bounds.back().second) {
-        return domain.bounds.back().second;
-    }
     for (size_t i = 0; i < domain.bounds.size(); i++) {
         auto& bound = domain.bounds[i];
         if (bound.first <= newValue && newValue <= bound.second) {
@@ -92,8 +89,7 @@ struct IntAssignRandom {
         debug_neighbourhood_action("Assigning random value: original value is "
                                    << asView(val));
         auto backup = val.value;
-        UInt varViolation =
-            params.vioContainer.childViolations(val.id).getTotalViolation();
+        UInt varViolation = params.vioContainer.getTotalViolation();
         bool success;
         size_t selectedOption;
         do {
@@ -134,9 +130,6 @@ struct IntAssignRandom {
                 return true;
             });
         }
-        cout << "UCB0: " << selector.reward(0) << ", "  << selector.individualCost(0) << endl;
-cout << "UCB1: " << selector.reward(1) << ", "  << selector.individualCost(1) << endl;
-        cout << "ucbTotal: " << selector.totalCost() << endl;
     }
 };
 

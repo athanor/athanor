@@ -86,7 +86,7 @@ ImproveStrategyChoice improveStrategyChoice = HILL_CLIMBING;
 ExploreStrategyChoice exploreStrategyChoice = RANDOM_WALK;
 SelectionStrategyChoice selectionStrategyChoice = UCB;
 
-double ucbExplorationBias = 2;
+double DEFAULT_UCB_EXPLORATION_BIAS = 2;
 
 auto& improveStratGroup =
     argParser
@@ -246,7 +246,7 @@ void runSearch(State& state) {
         }
         case UCB: {
             constructStratAndRun(state, make_shared<UcbNeighbourhoodSelection>(
-                                            state, ucbExplorationBias));
+                                            state, DEFAULT_UCB_EXPLORATION_BIAS));
             return;
         }
         case INTERACTIVE: {

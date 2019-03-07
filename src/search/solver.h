@@ -7,6 +7,7 @@
 #include "search/model.h"
 #include "search/statsContainer.h"
 #include "triggers/allTriggers.h"
+#include "search/endOfSearchException.h"
 void dumpVarViolations(const ViolationContainer& vioContainer);
 extern volatile bool sigIntActivated;
 extern volatile bool sigAlarmActivated;
@@ -14,7 +15,7 @@ extern u_int64_t iterationLimit;
 extern bool runSanityChecks;
 inline bool alwaysTrue(const AnyValVec&) { return true; }
 
-struct EndOfSearchException {};
+
 class State {
    public:
     bool disableVarViolations = false;

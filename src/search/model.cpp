@@ -1,5 +1,7 @@
 #include "search/model.h"
-
+#include <iostream>
+#include "search/endOfSearchException.h"
+using namespace std;
 void ModelBuilder::createNeighbourhoods() {
     for (size_t i = 0; i < model.variables.size(); ++i) {
         if (valBase(model.variables[i].second).container == &definedPool) {
@@ -23,7 +25,10 @@ void ModelBuilder::createNeighbourhoods() {
             iter->name = model.variableNames[i] + "_" + iter->name;
         }
     }
-    assert(model.neighbourhoods.size() > 0);
+    if (model.neighbourhoods.empty()) {
+        cerr << "Could not create any neighbourhoods\n";
+        throw EndOfSearchException();
+    }
 }
 
 void ModelBuilder::addConstraints() {

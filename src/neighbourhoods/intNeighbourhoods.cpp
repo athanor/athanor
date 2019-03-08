@@ -107,12 +107,13 @@ struct IntAssignRandom {
                     return true;
                 } else {
                     val.value = backup;
-                    selector.reportResult(selectedOption, 0, 1);
-                    return false;
+                                        return false;
                 }
             });
             if (success) {
                 debug_neighbourhood_action("New value is " << asView(val));
+            } else {
+                selector.reportResult(selectedOption, 0, 1);
             }
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
@@ -120,6 +121,7 @@ struct IntAssignRandom {
                 "Couldn't find value, number tries=" << tryLimit);
             return;
         }
+
         if (params.changeAccepted()) {
             selector.reportResult(selectedOption, 1, 1);
         } else {
@@ -130,7 +132,8 @@ struct IntAssignRandom {
                 return true;
             });
         }
-    }
+            }
+
 };
 
 void intAssignRandomGen(const IntDomain& domain, int numberValsRequired,

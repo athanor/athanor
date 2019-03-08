@@ -58,29 +58,25 @@ void StatsContainer::initialSolution(Model& model) {
 
 void StatsContainer::reportResult(bool solutionAccepted,
                                   const NeighbourhoodResult& result) {
+    u_int64_t minorNodeCountDiff =
+        minorNodeCount - result.statsMarkPoint.minorNodeCount;
+    u_int64_t triggerEventCountDiff =
+        triggerEventCount - result.statsMarkPoint.triggerEventCount;
     ++numberIterations;
+    ++neighbourhoodStats[result.neighbourhoodIndex].numberActivations;
+    neighbourhoodStats[result.neighbourhoodIndex].minorNodeCount +=
+        minorNodeCountDiff;
+    neighbourhoodStats[result.neighbourhoodIndex].triggerEventCount +=
+        triggerEventCountDiff;
     if (result.statsMarkPoint.lastViolation > 0) {
         ++numberVioIterations;
-    }
-    if (result.statsMarkPoint.lastViolation > 0) {
-        vioMinorNodeCount +=
-            minorNodeCount - result.statsMarkPoint.minorNodeCount;
-    }
-    ++neighbourhoodStats[result.neighbourhoodIndex].numberActivations;
-    if (result.statsMarkPoint.lastViolation > 0) {
+        vioMinorNodeCount += minorNodeCountDiff;
+        vioTriggerEventCount += triggerEventCountDiff;
         ++neighbourhoodStats[result.neighbourhoodIndex].numberVioActivations;
-    }
-    neighbourhoodStats[result.neighbourhoodIndex].minorNodeCount +=
-        minorNodeCount - result.statsMarkPoint.minorNodeCount;
-    if (result.statsMarkPoint.lastViolation > 0) {
         neighbourhoodStats[result.neighbourhoodIndex].vioMinorNodeCount +=
-            minorNodeCount - result.statsMarkPoint.minorNodeCount;
-    }
-    neighbourhoodStats[result.neighbourhoodIndex].triggerEventCount +=
-        triggerEventCount - result.statsMarkPoint.triggerEventCount;
-    if (result.statsMarkPoint.lastViolation > 0) {
+            minorNodeCountDiff;
         neighbourhoodStats[result.neighbourhoodIndex].vioTriggerEventCount +=
-            triggerEventCount - result.statsMarkPoint.triggerEventCount;
+            triggerEventCountDiff;
     }
     double time = getRealTime() - result.statsMarkPoint.realTime;
     neighbourhoodStats[result.neighbourhoodIndex].totalRealTime += time;

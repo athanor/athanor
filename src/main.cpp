@@ -276,12 +276,12 @@ void saveUcbResults(const State& state, const T& ucb) {
     auto& os = saveUcbArg.get();
     auto totalCost = ucb->totalCost();
     os << "totalCost," << totalCost << endl;
-    os << "name,reward,cost,ucbValue\n";
+    csvRow(os, "name", "reward", "cost", "ucbValue");
     for (size_t i = 0; i < state.model.neighbourhoods.size(); i++) {
-        os << state.model.neighbourhoods[i].name << "," << ucb->reward(i) << ","
-           << ucb->individualCost(i) << ","
-           << ucb->ucbValue(ucb->reward(i), totalCost, ucb->individualCost(i))
-           << endl;
+        csvRow(
+            os, state.model.neighbourhoods[i].name, ucb->reward(i),
+            ucb->individualCost(i),
+            ucb->ucbValue(ucb->reward(i), totalCost, ucb->individualCost(i)));
     }
 }
 void runSearch(State& state) {

@@ -327,9 +327,9 @@ const AnyDomainRef getInner<MSetDomain>(const MSetDomain& domain) {
 const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::value = {
     {1, mSetLiftSingleGen},
     {1, mSetLiftMultipleGen},
-    {1, generateForAllTypes<MSetDomain, MSetAdd>},          //
-    {1, generateForAllTypes<MSetDomain, MSetRemove>}       //
-//    {1, generateForAllTypes<MSetDomain, MSetAssignRandom>}  //
+    {1, generateForAllTypes<MSetDomain, MSetAdd>},    //
+    {1, generateForAllTypes<MSetDomain, MSetRemove>}  //
+    //    {1, generateForAllTypes<MSetDomain, MSetAssignRandom>}  //
 };
 
 const NeighbourhoodVec<MSetDomain>

@@ -135,4 +135,20 @@ struct StatsContainer {
     void printNeighbourhoodStats(std::ostream& os) const;
 };
 
+template <typename... Args>
+void csvRow(std::ostream& os, Args&&... args) {
+    bool first = true;
+    auto print = [&](auto&& arg) {
+        if (first) {
+            first = false;
+        } else {
+            os << ",";
+        }
+        os << arg;
+    };
+    int unpack[]{0, (print(args), 0)...};
+    static_cast<void>(unpack);
+    os << "\n";
+}
+
 #endif /* SRC_SEARCH_STATSCONTAINER_H_ */

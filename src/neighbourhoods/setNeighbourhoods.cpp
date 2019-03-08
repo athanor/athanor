@@ -537,13 +537,13 @@ const AnyDomainRef getInner<SetDomain>(const SetDomain& domain) {
 }
 
 const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::value = {
-    {1, setLiftSingleGen},                                //
-    {1, setLiftMultipleGen},                              //
-    {1, generateForAllTypes<SetDomain, SetAdd>},          //
-    {1, generateForAllTypes<SetDomain, SetRemove>},       //
-    {2, generateForAllTypes<SetDomain, SetMove>},         //
-    {2, generateForAllTypes<SetDomain, SetCrossover>}    //
-//    {1, generateForAllTypes<SetDomain, SetAssignRandom>}  //
+    {1, setLiftSingleGen},                             //
+    {1, setLiftMultipleGen},                           //
+    {1, generateForAllTypes<SetDomain, SetAdd>},       //
+    {1, generateForAllTypes<SetDomain, SetRemove>},    //
+    {2, generateForAllTypes<SetDomain, SetMove>},      //
+    {2, generateForAllTypes<SetDomain, SetCrossover>}  //
+    //    {1, generateForAllTypes<SetDomain, SetAssignRandom>}  //
 };
 
 const NeighbourhoodVec<SetDomain>

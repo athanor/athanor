@@ -64,12 +64,17 @@ struct NeighbourhoodStats {
     u_int64_t vioMinorNodeCount = 0;
     u_int64_t vioTriggerEventCount = 0;
     u_int64_t numberObjImprovements = 0;
-    u_int64_t numberVioImprovmenents = 0;
+    u_int64_t numberVioImprovements = 0;
 
     NeighbourhoodStats(const std::string& name) : name(name) {}
     inline double getAverage(double value) const {
+        if (value == 0 && numberActivations == 0) {
+            return 0;
+            // maybe should be 1, I prefer 0
+        }
         return value / numberActivations;
     }
+
     friend std::ostream& operator<<(std::ostream& os,
                                     const NeighbourhoodStats& stats);
 };
@@ -86,6 +91,7 @@ struct StatsContainer {
     std::clock_t startCpuTime = std::clock();
     double cpuTimeTillBestSolution;
     double realTimeTillBestSolution;
+    double vioTotalTime = 0;
     UInt bestViolation;
     UInt lastViolation;
     Int bestObjective;
@@ -120,11 +126,13 @@ struct StatsContainer {
     friend std::ostream& operator<<(std::ostream& os,
                                     const StatsContainer& stats);
 
-    std::pair<double, double> getTime() {
+    std::pair<double, double> getTime() const {
         double realTime = getRealTime();
         double cpuTime = (double)(std::clock() - startCpuTime) / CLOCKS_PER_SEC;
         return std::make_pair(cpuTime, realTime);
     }
+
+    void printNeighbourhoodStats(std::ostream& os) const;
 };
 
 #endif /* SRC_SEARCH_STATSCONTAINER_H_ */

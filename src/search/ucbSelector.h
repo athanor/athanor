@@ -28,6 +28,7 @@ class UcbSelector {
         double bestUCTValue = -(std::numeric_limits<double>::max());
         bool allOptionsTryed = true;
         std::vector<int> bestOptions;
+        double totalCost = derived().totalCost();
         for (size_t i = 0; i < derived().numberOptions(); i++) {
             if (!derived().wasActivated(i)) {
                 if (allOptionsTryed) {
@@ -38,7 +39,7 @@ class UcbSelector {
             }
             if (allOptionsTryed) {
                 double currentUCBValue =
-                    ucbValue(derived().reward(i), derived().totalCost(),
+                    ucbValue(derived().reward(i), totalCost,
                              derived().individualCost(i));
                 if (currentUCBValue > bestUCTValue) {
                     bestUCTValue = currentUCBValue;

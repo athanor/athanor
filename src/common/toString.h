@@ -4,7 +4,6 @@
 #define COMMON_TOSTRING_H
 
 #include <deque>
-#include "flat_hash_map.hpp"
 #include <iostream>
 #include <list>
 #include <map>
@@ -14,6 +13,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include "flat_hash_map.hpp"
 #include "tupleForEach.h"
 
 // forward decls of operator<< for different containers
@@ -36,7 +36,7 @@ std::ostream& operator<<(std::ostream& os,
                          const std::unordered_map<T, U>& iterable);
 template <typename T, typename U>
 std::ostream& operator<<(std::ostream& os,
-                         const ska::flat_hash_map<T,U>& iterable);
+                         const ska::flat_hash_map<T, U>& iterable);
 template <typename... Ts>
 std::ostream& operator<<(std::ostream& os, const std::tuple<Ts...>& tuple);
 
@@ -115,7 +115,7 @@ std::ostream& operator<<(std::ostream& os,
 
 template <typename T, typename U>
 std::ostream& operator<<(std::ostream& os,
-                         const ska::flat_hash_map<T,U>& iterable) {
+                         const ska::flat_hash_map<T, U>& iterable) {
     return containerToArrayString(os, iterable);
 }
 

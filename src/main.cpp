@@ -80,13 +80,13 @@ enum ExploreStrategyChoice {
     TEST_EXPLORE
 };
 
-enum SelectionStrategyChoice { RANDOM, UCB, INTERACTIVE };
+enum SelectionStrategyChoice { RANDOM, UCB, UCB_WITH_TRIGGER, INTERACTIVE };
 
 ImproveStrategyChoice improveStrategyChoice = HILL_CLIMBING;
 ExploreStrategyChoice exploreStrategyChoice = RANDOM_WALK;
 SelectionStrategyChoice selectionStrategyChoice = UCB;
 
-double DEFAULT_UCB_EXPLORATION_BIAS = 2;
+double DEFAULT_UCB_EXPLORATION_BIAS = 1;
 
 auto& improveStratGroup =
     argParser
@@ -145,6 +145,12 @@ auto& ucbFlag = selectionStratGroup.add<Flag>(
     "neighbourhoods are best performing.",
     [](auto&&) { selectionStrategyChoice = UCB; });
 
+auto& ucbWithTriggerFlag = selectionStratGroup.add<Flag>(
+    "ucbWithTrigger",
+    "Experimental, like flag \"ucb\" but cost measurements include trigger "
+    "counts.",
+    [](auto&&) { selectionStrategyChoice = UCB_WITH_TRIGGER; });
+
 auto& interactiveFlag = selectionStratGroup.add<Flag>(
     "i", "interactive, Prompt user for neighbourhood to select.",
     [](auto&&) { selectionStrategyChoice = INTERACTIVE; });
@@ -186,6 +192,30 @@ auto& noPrintSolutionsFlag = argParser.add<Flag>(
     "--noPrintSolutions", Policy::OPTIONAL,
     "Do not print solutions, useful for timing experiements.",
     [](auto&) { noPrintSolutions = true; });
+
+ofstream outFileChecker(const string& path) {
+    ofstream os(path);
+    if (os.good()) {
+        return os;
+    } else {
+        throw ErrorMessage("Could not open file " + path);
+    }
+}
+
+auto& saveNeighbourhoodStatsArg =
+    argParser
+        .add<ComplexFlag>(
+            "--saveNhStats", Policy::OPTIONAL,
+            "Print neighbourhood stats into a file instead of stdout.\n")
+        .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY, "",
+                            outFileChecker);
+
+auto& saveUcbArg =
+    argParser
+        .add<ComplexFlag>("--saveUcbState", Policy::OPTIONAL,
+                          "Save learned neighbourhood UCB info.\n")
+        .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY,
+                            "File to save results to.", outFileChecker);
 
 void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);
@@ -238,6 +268,22 @@ void constructStratAndRun(State& state, SelectionStrategy&& nhSelection) {
     }
 }
 
+template <typename T>
+void saveUcbResults(const State& state, const T& ucb) {
+    if (!saveUcbArg) {
+        return;
+    }
+    auto& os = saveUcbArg.get();
+    auto totalCost = ucb->totalCost();
+    os << "totalCost," << totalCost << endl;
+    os << "name,reward,cost,ucbValue\n";
+    for (size_t i = 0; i < state.model.neighbourhoods.size(); i++) {
+        os << state.model.neighbourhoods[i].name << "," << ucb->reward(i) << ","
+           << ucb->individualCost(i) << ","
+           << ucb->ucbValue(ucb->reward(i), totalCost, ucb->individualCost(i))
+           << endl;
+    }
+}
 void runSearch(State& state) {
     switch (selectionStrategyChoice) {
         case RANDOM: {
@@ -245,10 +291,20 @@ void runSearch(State& state) {
             return;
         }
         case UCB: {
-            constructStratAndRun(state, make_shared<UcbNeighbourhoodSelection>(
-                                            state, DEFAULT_UCB_EXPLORATION_BIAS));
+            auto ucb = make_shared<UcbWithMinorNodeCount>(
+                state, DEFAULT_UCB_EXPLORATION_BIAS);
+            constructStratAndRun(state, ucb);
+            saveUcbResults(state, ucb);
             return;
         }
+        case UCB_WITH_TRIGGER: {
+            auto ucb = make_shared<UcbWithTriggerCount>(
+                state, DEFAULT_UCB_EXPLORATION_BIAS);
+            constructStratAndRun(state, ucb);
+            saveUcbResults(state, ucb);
+            return;
+        }
+
         case INTERACTIVE: {
             constructStratAndRun(
                 state, make_shared<InteractiveNeighbourhoodSelector>());
@@ -269,6 +325,24 @@ void setSignalsAndHandlers() {
     } else if (realTimeLimitFlag) {
         setTimeout(realTimeLimitArg.get(), false);
     }
+}
+
+void printFinalStats(const State& state) {
+    std::cout << "\n\n";
+    if (saveNeighbourhoodStatsArg) {
+        state.stats.printNeighbourhoodStats(saveNeighbourhoodStatsArg.get());
+    } else {
+        state.stats.printNeighbourhoodStats(cout);
+    }
+    std::cout << "\n\n";
+    cout << state.stats << "\nTrigger event count " << triggerEventCount
+         << "\n";
+
+    auto times = state.stats.getTime();
+    std::cout << "total real time actually spent in neighbourhoods: "
+              << state.totalTimeInNeighbourhoods << std::endl;
+    std::cout << "Total CPU time: " << times.first << std::endl;
+    std::cout << "Total real time: " << times.second << std::endl;
 }
 
 int main(const int argc, const char** argv) {
@@ -302,6 +376,7 @@ int main(const int argc, const char** argv) {
         cout << "Using seed: " << seed << endl;
         state.disableVarViolations = disableVioBiasFlag;
         runSearch(state);
+        printFinalStats(state);
     } catch (SanityCheckException& e) {
         cerr << "***SANITY CHECK ERROR: " << e.errorMessage << endl;
         if (!e.file.empty()) {

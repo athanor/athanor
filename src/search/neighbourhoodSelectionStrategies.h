@@ -82,13 +82,71 @@ class RandomNeighbourhood {
     }
 };
 
-class UcbNeighbourhoodSelection
-    : public UcbSelector<UcbNeighbourhoodSelection> {
+class UcbWithTriggerCount : public UcbSelector<UcbWithTriggerCount> {
     const State& state;
 
    public:
-    UcbNeighbourhoodSelection(const State& state, double ucbExplorationBias)
-        : UcbSelector<UcbNeighbourhoodSelection>(ucbExplorationBias),
+    UcbWithTriggerCount(const State& state, double ucbExplorationBias)
+        : UcbSelector<UcbWithTriggerCount>(ucbExplorationBias), state(state) {}
+
+    bool optimising() const {
+        return state.model.optimiseMode != OptimiseMode::NONE &&
+               state.model.getViolation() == 0;
+    }
+    const NeighbourhoodStats& nhStats(size_t i) const {
+        return state.stats.neighbourhoodStats[i];
+    }
+
+    inline double reward(size_t i) const {
+        auto& s = nhStats(i);
+        return (optimising()) ? s.numberObjImprovements
+                              : s.numberVioImprovements;
+    }
+
+    inline double individualCost(size_t i) const {
+        auto& s = nhStats(i);
+        double penalty = 0;
+        if (s.minorNodeCount > s.triggerEventCount) {
+            u_int64_t minorNodeCount =
+                std::max(state.stats.minorNodeCount, ((u_int64_t)1));
+            double penaltyRatio = ((double)triggerEventCount) / minorNodeCount;
+            penalty = s.minorNodeCount * penaltyRatio;
+        }
+        u_int64_t vioCost = s.vioMinorNodeCount + s.vioTriggerEventCount;
+        u_int64_t cost = s.minorNodeCount + s.triggerEventCount;
+        return (optimising()) ? (cost + penalty) - vioCost : vioCost + penalty;
+    }
+    inline double totalCost() {
+        double total = 0;
+        for (size_t i = 0; i < numberOptions(); i++) {
+            total += individualCost(i);
+        }
+        return total;
+    }
+    inline bool wasActivated(size_t i) const {
+        auto& s = nhStats(i);
+        return (optimising()) ? s.numberActivations - s.numberVioActivations > 0
+                              : s.numberVioActivations > 0;
+    }
+    inline size_t numberOptions() {
+        return state.stats.neighbourhoodStats.size();
+    }
+    template <typename ParentStrategy>
+    inline void run(State& state, ParentStrategy&& parentStrategy) {
+        size_t chosenNeighbourhood = next();
+
+        state.runNeighbourhood(chosenNeighbourhood, [&](const auto& result) {
+            return parentStrategy(result);
+        });
+    }
+};
+
+class UcbWithMinorNodeCount : public UcbSelector<UcbWithMinorNodeCount> {
+    const State& state;
+
+   public:
+    UcbWithMinorNodeCount(const State& state, double ucbExplorationBias)
+        : UcbSelector<UcbWithMinorNodeCount>(ucbExplorationBias),
           state(state) {}
 
     bool optimising() {
@@ -102,7 +160,7 @@ class UcbNeighbourhoodSelection
     inline double reward(size_t i) {
         auto& s = nhStats(i);
         return (optimising()) ? s.numberObjImprovements
-                              : s.numberVioImprovmenents;
+                              : s.numberVioImprovements;
     }
     inline double individualCost(size_t i) {
         auto& s = nhStats(i);

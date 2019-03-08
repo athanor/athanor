@@ -8,8 +8,7 @@
 class ModelBuilder;
 struct ParsedModel {
     std::unique_ptr<ModelBuilder> builder;
-    HashMap<std::string, std::pair<AnyDomainRef, AnyExprRef>>
-        namedExprs;
+    HashMap<std::string, std::pair<AnyDomainRef, AnyExprRef>> namedExprs;
     HashMap<std::string, AnyDomainRef> domainLettings;
     ParsedModel();
 };

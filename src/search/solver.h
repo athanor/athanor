@@ -98,12 +98,6 @@ class State {
         }
     }
 
-    void printNeighbourhoodStats() {
-        std::cout << "---------------------\n";
-        for (auto& nhStats : stats.neighbourhoodStats) {
-            std::cout << nhStats << std::endl;
-        }
-    }
     void updateVarViolations() {
         if (disableVarViolations) {
             return;
@@ -180,16 +174,6 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
         searchStrategy->run(state, true);
     } catch (EndOfSearchException&) {
     }
-    std::cout << "\n\n";
-    state.printNeighbourhoodStats();
-    std::cout << "\n\n"
-              << state.stats << "\nTrigger event count " << triggerEventCount
-              << "\n";
-    auto times = state.stats.getTime();
-    std::cout << "total real time actually spent in neighbourhoods: "
-              << state.totalTimeInNeighbourhoods << std::endl;
-    std::cout << "Total CPU time: " << times.first << std::endl;
-    std::cout << "Total real time: " << times.second << std::endl;
 }
 
 #endif /* SRC_SEARCH_SOLVER_H_ */

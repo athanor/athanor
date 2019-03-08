@@ -107,7 +107,7 @@ struct IntAssignRandom {
                     return true;
                 } else {
                     val.value = backup;
-                                        return false;
+                    return false;
                 }
             });
             if (success) {
@@ -132,8 +132,7 @@ struct IntAssignRandom {
                 return true;
             });
         }
-            }
-
+    }
 };
 
 void intAssignRandomGen(const IntDomain& domain, int numberValsRequired,

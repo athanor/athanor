@@ -27,8 +27,8 @@ ostream& operator<<(ostream& os, const NeighbourhoodStats& stats) {
        << stats.numberObjImprovements << ","
        << stats.getAverage(stats.numberObjImprovements) << endl;
     os << indent << "Number violation improvements,"
-       << stats.numberVioImprovmenents << ","
-       << stats.getAverage(stats.numberVioImprovmenents) << endl;
+       << stats.numberVioImprovements << ","
+       << stats.getAverage(stats.numberVioImprovements) << endl;
     os << indent << "Number minor nodes," << stats.minorNodeCount << ","
        << stats.getAverage(stats.minorNodeCount) << endl;
     os << indent << "Number trigger events," << stats.triggerEventCount << ","
@@ -68,6 +68,11 @@ void StatsContainer::reportResult(bool solutionAccepted,
         minorNodeCountDiff;
     neighbourhoodStats[result.neighbourhoodIndex].triggerEventCount +=
         triggerEventCountDiff;
+    double timeDiff = getRealTime() - result.statsMarkPoint.realTime;
+    neighbourhoodStats[result.neighbourhoodIndex].totalRealTime += timeDiff;
+    neighbourhoodStats[result.neighbourhoodIndex].numberObjImprovements +=
+        (result.statsMarkPoint.lastViolation == 0 &&
+         result.model.getViolation() == 0 && result.getDeltaObjective() < 0);
     if (result.statsMarkPoint.lastViolation > 0) {
         ++numberVioIterations;
         vioMinorNodeCount += minorNodeCountDiff;
@@ -77,16 +82,11 @@ void StatsContainer::reportResult(bool solutionAccepted,
             minorNodeCountDiff;
         neighbourhoodStats[result.neighbourhoodIndex].vioTriggerEventCount +=
             triggerEventCountDiff;
+        neighbourhoodStats[result.neighbourhoodIndex].vioTotalRealTime +=
+            timeDiff;
+        vioTotalTime += timeDiff;
     }
-    double time = getRealTime() - result.statsMarkPoint.realTime;
-    neighbourhoodStats[result.neighbourhoodIndex].totalRealTime += time;
-    if (result.statsMarkPoint.lastViolation > 0) {
-        neighbourhoodStats[result.neighbourhoodIndex].vioTotalRealTime += time;
-    }
-    neighbourhoodStats[result.neighbourhoodIndex].numberObjImprovements +=
-        (result.statsMarkPoint.lastViolation == 0 &&
-         result.model.getViolation() == 0 && result.getDeltaObjective() < 0);
-    neighbourhoodStats[result.neighbourhoodIndex].numberVioImprovmenents +=
+    neighbourhoodStats[result.neighbourhoodIndex].numberVioImprovements +=
         (result.getDeltaViolation() < 0);
     if (!solutionAccepted) {
         return;
@@ -155,4 +155,45 @@ ostream& operator<<(ostream& os, const StatsContainer& stats) {
     os << "Number iterations: " << stats.numberIterations << endl;
     os << "Minor node count: " << stats.minorNodeCount;
     return os;
+}
+
+template <typename... Args>
+void csvRow(std::ostream& os, Args&&... args) {
+    bool first = true;
+    auto print = [&](auto&& arg) {
+        if (first) {
+            first = false;
+        } else {
+            os << ",";
+        }
+        os << arg;
+    };
+    int unpack[]{0, (print(args), 0)...};
+    static_cast<void>(unpack);
+    os << "\n";
+}
+
+void StatsContainer::printNeighbourhoodStats(std::ostream& os) const {
+    csvRow(os, "name", "activations", "objImprovements",
+           "objImprovementsAverage", "vioImprovements",
+           "vioImprovementsAverage", "minorNodes", "minorNodesAverage",
+           "triggerEvents", "triggerEventsAverage", "realTime",
+           "realTimeAverage");
+    for (auto& s : neighbourhoodStats) {
+        double averageObjImprovements =
+            (s.numberObjImprovements == 0)
+                ? 0
+                : ((double)s.numberObjImprovements) /
+                      (s.numberActivations - s.numberVioActivations);
+        double averageVioImprovements =
+            (s.numberVioImprovements == 0)
+                ? 0
+                : ((double)s.numberVioImprovements) / s.numberVioActivations;
+        csvRow(os, s.name, s.numberActivations, s.numberObjImprovements,
+               averageObjImprovements, s.numberVioImprovements,
+               averageVioImprovements, s.minorNodeCount,
+               s.getAverage(s.minorNodeCount), s.triggerEventCount,
+               s.getAverage(s.triggerEventCount), s.totalRealTime,
+               s.getAverage(s.totalRealTime));
+    }
 }

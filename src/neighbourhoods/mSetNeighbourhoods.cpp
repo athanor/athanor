@@ -275,7 +275,7 @@ struct MSetRemove
 
 template <typename InnerDomain>
 struct MSetAssignRandom
-    : public NeighbourhoodFunc<MSetDomain, 1, MSetRemove<InnerDomain>> {
+    : public NeighbourhoodFunc<MSetDomain, 1, MSetAssignRandom<InnerDomain>> {
     typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
     typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
 
@@ -327,8 +327,9 @@ const AnyDomainRef getInner<MSetDomain>(const MSetDomain& domain) {
 const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::value = {
     {1, mSetLiftSingleGen},
     {1, mSetLiftMultipleGen},
-    {1, generateForAllTypes<MSetDomain, MSetAdd>},    //
-    {1, generateForAllTypes<MSetDomain, MSetRemove>}  //
+    {1, generateForAllTypes<MSetDomain, MSetAdd>},          //
+    {1, generateForAllTypes<MSetDomain, MSetRemove>}       //
+//    {1, generateForAllTypes<MSetDomain, MSetAssignRandom>}  //
 };
 
 const NeighbourhoodVec<MSetDomain>

@@ -3,6 +3,7 @@
 #include <csignal>
 #include <fstream>
 #include <iostream>
+#include <json.hpp>
 #include <unordered_map>
 #include "common/common.h"
 #include "gitRevision.h"
@@ -377,6 +378,9 @@ int main(const int argc, const char** argv) {
         state.disableVarViolations = disableVioBiasFlag;
         runSearch(state);
         printFinalStats(state);
+    } catch (nlohmann::detail::exception& e) {
+        cerr << "Error parsing JSON: " << e.what() << endl;
+        exit(1);
     } catch (SanityCheckException& e) {
         cerr << "***SANITY CHECK ERROR: " << e.errorMessage << endl;
         if (!e.file.empty()) {

@@ -537,6 +537,15 @@ pair<AnyDomainRef, AnyExprRef> parseOpMod(json& modExpr,
                      OpMaker<OpMod>::make(move(left), move(right)));
 }
 
+pair<AnyDomainRef, AnyExprRef> parseOpNegate(json& negateExpr,
+                                             ParsedModel& parsedModel) {
+    string errorMessage = "Expected int returning expression within OpNegate: ";
+    ExprRef<IntView> operand =
+        expect<IntView>(parseExpr(negateExpr, parsedModel).second,
+                        [&](auto&&) { cerr << errorMessage << negateExpr[0]; });
+    return make_pair(fakeIntDomain, OpMaker<OpNegate>::make(move(operand)));
+}
+
 pair<AnyDomainRef, AnyExprRef> parseOpDiv(json& modExpr,
                                           ParsedModel& parsedModel) {
     string errorMessage = "Expected int returning expression within Op div: ";
@@ -1398,6 +1407,7 @@ optional<pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpCatchUndef", parseOpCatchUndef},
              {"MkOpIn", parseOpIn},
              {"MkOpMod", parseOpMod},
+             {"MkOpNegate", parseOpNegate},
              {"MkOpDiv", parseOpDiv},
              {"MkOpMinus", parseOpMinus},
              {"MkOpPow", parseOpPower},

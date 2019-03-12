@@ -36,14 +36,20 @@ void ModelBuilder::addConstraints() {
         addConstraint(OpMaker<OpIsDefined<IntView>>::make(model.objective));
     }
     // insure that defining expressions, expressions that define a variable are
-    // always defined
-    for (auto& nameExprPair : model.definingExpressions) {
+    // always in the domainof the variable being defined
+    for (auto& indexExprPair : model.definingExpressions) {
+        size_t varIndex = indexExprPair.first;
+        debug_code(assert(varIndex < model.variables.size()));
+        auto& expr = indexExprPair.second;
         mpark::visit(
             [&](auto& expr) {
                 typedef viewType(expr) View;
-                addConstraint(OpMaker<OpIsDefined<View>>::make(expr));
+                typedef typename AssociatedValueType<View>::type Value;
+                typedef typename AssociatedDomain<Value>::type Domain;
+                auto& domain = mpark::get<shared_ptr<Domain>>(model.variables[varIndex].first);
+                addConstraint(OpMaker<OpInDomain<View>>::make(domain,expr));
             },
-            nameExprPair.second);
+            expr);
     }
     model.csp = std::make_shared<OpAnd>(
         std::make_shared<OpSequenceLit>(move(constraints)));

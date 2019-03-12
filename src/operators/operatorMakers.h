@@ -209,4 +209,23 @@ struct OpMaker<OpTogether<View>> {
                                   ExprRef<View> left, ExprRef<View> right);
 };
 
+template <typename view>
+struct OpInDomain;
+template <>
+struct OpInDomain<IntView>;
+template <typename View>
+struct OpMaker<OpInDomain<View>> {
+    typedef typename AssociatedValueType<View>::type Value;
+    typedef typename AssociatedDomain<Value>::type Domain;
+    static ExprRef<BoolView> make(std::shared_ptr<Domain>, ExprRef<View>) {
+        todoImpl();
+    }
+};
+
+template <>
+struct OpMaker<OpInDomain<IntView>> {
+    static ExprRef<BoolView> make(std::shared_ptr<IntDomain>,
+                                  ExprRef<IntView> o);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

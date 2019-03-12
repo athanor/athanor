@@ -34,4 +34,13 @@ struct IntViolationContext : public ViolationContext {
     IntViolationContext(UInt parentViolation, Reason reason)
         : ViolationContext(parentViolation), reason(reason) {}
 };
+inline std::ostream& operator<<(std::ostream& os,
+                                const IntViolationContext::Reason& r) {
+    if (r == IntViolationContext::Reason::TOO_SMALL) {
+        os << "TO_SMALL";
+    } else {
+        os << "TO_LARGE";
+    }
+    return os;
+}
 #endif /* SRC_TYPES_INT_H_ */

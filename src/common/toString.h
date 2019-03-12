@@ -135,6 +135,7 @@ std::ostream& operator<<(std::ostream& os, const std::tuple<Ts...>& tuple) {
             os << ",";
         }
         os << member;
+        return true;
     });
     os << ")";
     return os;

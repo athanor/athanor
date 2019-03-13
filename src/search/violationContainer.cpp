@@ -17,19 +17,17 @@ UInt ViolationContainer::calcMinViolation() const {
 }
 
 static UInt findContainingInterval(const ViolationContainer &vioCont,
-                                   UInt maxVar, double rand,
-                                   double simulatedMinViolation) {
+                                   UInt maxVar, const double rand,
+                                   const double simulatedMinViolation) {
+    double consumedInterval = 0;
     for (size_t varId = 0; varId <= maxVar; varId++) {
         double violation = vioCont.varViolation(varId);
-
         if (violation == 0) {
             violation = simulatedMinViolation;
         }
-
-        if (violation > rand) {
+        consumedInterval += violation;
+        if (consumedInterval >= rand) {
             return varId;
-        } else {
-            rand -= violation;
         }
     }
     assert(false);
@@ -45,27 +43,25 @@ static UInt pickRandomVariable(const ViolationContainer &vioCont, UInt maxVar,
     double rand;
     const int numberNonViolatingVars =
         (maxVar + 1) - vioCont.getVarsWithViolation().size();
-    if (numberNonViolatingVars > 0) {
+    if (numberNonViolatingVars == 0) {
+                    rand = globalRandom<double>(0, vioCont.getTotalViolation());
+    } else {
+        // There are some non violating variables, we now pretend that these variables  now
+        // have a violation of min/n where n=numberNonViolatingVars and
+        // min= the minimum violation.
+        //The idea is that the sum of all the simulated violations cannot be greater than the minimum violation.
+
+        //first calculate min violation, skip if already passed in
         if (minViolation == 0) {
-            // not been calculated before, calculate now
             minViolation = vioCont.calcMinViolation();
         }
-        // we now pretend that the violations that had a violation of 0, now
-        // have a violation of min/n where n=numberNonViolatingVars and
-        // min=minViolation.
-        // does not work with n=1, in this case n defaults to 2
-        UInt n = (numberNonViolatingVars != 1) ? numberNonViolatingVars : 2;
-        simulatedMinViolation = ((double)minViolation) / n;
+        simulatedMinViolation = ((double)minViolation) / numberNonViolatingVars;
         // now generate a random number in the range that includes the new
         // simulated min violations
-        double additionalVio = (numberNonViolatingVars != 1)
-                                   ? minViolation
-                                   : ((double)minViolation) / 2;
         rand = globalRandom<double>(
-            0, (vioCont.getTotalViolation() + additionalVio) - 1);
-    } else {
-        rand = globalRandom<UInt>(0, vioCont.getTotalViolation() - 1);
+            0, vioCont.getTotalViolation() + minViolation);
     }
+    debug_log("max = " << (vioCont.getTotalViolation() + minViolation) << " rand = " << rand);
     return findContainingInterval(vioCont, maxVar, rand, simulatedMinViolation);
 }
 

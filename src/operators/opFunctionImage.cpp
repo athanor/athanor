@@ -151,7 +151,7 @@ bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
             deleteTrigger(functionMemberTrigger);
             functionMemberTrigger = nullptr;
         }
-        if (!memberTrigger) {
+        if (memberTrigger) {
             deleteTrigger(memberTrigger);
             memberTrigger = nullptr;
         }

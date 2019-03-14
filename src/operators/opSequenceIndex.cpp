@@ -120,7 +120,7 @@ bool OpSequenceIndex<SequenceMemberViewType>::eventForwardedAsDefinednessChange(
             deleteTrigger(sequenceMemberTrigger);
             sequenceMemberTrigger = nullptr;
         }
-        if (!memberTrigger) {
+        if (memberTrigger) {
             deleteTrigger(memberTrigger);
             memberTrigger = nullptr;
         }

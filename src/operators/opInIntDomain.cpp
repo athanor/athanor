@@ -78,10 +78,11 @@ std::ostream& OpInDomain<IntView>::dumpState(std::ostream& os) const {
 string OpInDomain<IntView>::getOpName() const { return "OpInDomain<IntView>"; }
 void OpInDomain<IntView>::debugSanityCheckImpl() const {
     operand->debugSanityCheck();
-    this->standardSanityDefinednessChecks();
 
-    auto view = operand->view();
+
+    auto view = operand->getViewIfDefined();
     if (!view) {
+        sanityLargeViolationCheck(violation);
         return;
     }
     auto& operandView = *view;

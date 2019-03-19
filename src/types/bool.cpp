@@ -10,7 +10,7 @@ HashType getValueHash<BoolView>(const BoolView& val) {
 
 template <>
 ostream& prettyPrint<BoolView>(ostream& os, const BoolView& v) {
-    os << (v.violation == 1);
+    os << ((v.violation == 0)? "true" : "false");
     return os;
 }
 

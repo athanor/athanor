@@ -26,15 +26,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType>,
                     ExprRef<IntView> indexOperand)
         : sequenceOperand(std::move(sequenceOperand)),
           indexOperand(std::move(indexOperand)) {
-        if (std::is_same<BoolView, SequenceMemberViewType>::value) {
-            std::cerr << "I've temperarily disabled OpSequenceIndex for "
-                         "sequences of booleans as "
-                         "I'm not correctly handling relational semantics "
-                         "forthe case where the sequence indexbecomes "
-                         "undefined.\n";
-            abort();
-        }
-    }
+}
     OpSequenceIndex(const OpSequenceIndex<SequenceMemberViewType>&) = delete;
     OpSequenceIndex(OpSequenceIndex<SequenceMemberViewType>&& other);
     ~OpSequenceIndex() { this->stopTriggeringOnChildren(); }
@@ -60,20 +52,17 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType>,
 
     OptionalRef<ExprRef<SequenceMemberViewType>> getMember();
     OptionalRef<const ExprRef<SequenceMemberViewType>> getMember() const;
-    void reevaluate(bool recalculateCachedIndex = true);
+    void reevaluate();
     std::pair<bool, ExprRef<SequenceMemberViewType>> optimise(
         PathExtension path) final;
 
     void reattachSequenceMemberTrigger();
-    bool eventForwardedAsDefinednessChange(bool recalculateIndex);
+    bool eventForwardedAsDefinednessChange();
     template <typename View = SequenceMemberViewType,
               typename std::enable_if<std::is_same<BoolView, View>::value,
                                       int>::type = 0>
     void setAppearsDefined(bool) {
-        std::cerr << "Not handling sequence to bools where a sequence member "
-                     "becomes undefined.\n";
-        todoImpl();
-    }
+}
     template <typename View = SequenceMemberViewType,
               typename std::enable_if<!std::is_same<BoolView, View>::value,
                                       int>::type = 0>

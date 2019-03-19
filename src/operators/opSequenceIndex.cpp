@@ -41,6 +41,19 @@ OpSequenceIndex<SequenceMemberViewType>::getMember() const {
     return member;
 }
 
+/*helper functions, returns empty optional if not BoolView return type otherwise
+ * returns violating BoolView. */
+
+template <typename View>
+OptionalRef<View> emptyOrViolatingOptional() {
+    return EmptyOptional();
+}
+
+template <>
+OptionalRef<BoolView> emptyOrViolatingOptional<BoolView>() {
+    return VIOLATING_BOOL_VIEW;
+}
+
 template <typename SequenceMemberViewType>
 OptionalRef<SequenceMemberViewType>
 OpSequenceIndex<SequenceMemberViewType>::view() {
@@ -48,9 +61,10 @@ OpSequenceIndex<SequenceMemberViewType>::view() {
     if (member) {
         return (*member)->view();
     } else {
-        return EmptyOptional();
+        return emptyOrViolatingOptional<SequenceMemberViewType>();
     }
 }
+
 template <typename SequenceMemberViewType>
 OptionalRef<const SequenceMemberViewType>
 OpSequenceIndex<SequenceMemberViewType>::view() const {
@@ -58,7 +72,7 @@ OpSequenceIndex<SequenceMemberViewType>::view() const {
     if (member) {
         return (*member)->view();
     } else {
-        return EmptyOptional();
+        return emptyOrViolatingOptional<SequenceMemberViewType>();
     }
 }
 
@@ -68,8 +82,7 @@ bool OpSequenceIndex<SequenceMemberViewType>::allowForwardingOfTrigger() {
 }
 
 template <typename SequenceMemberViewType>
-void OpSequenceIndex<SequenceMemberViewType>::reevaluate(
-    bool recalculateCachedIndex) {
+void OpSequenceIndex<SequenceMemberViewType>::reevaluate() {
     auto sequenceView = sequenceOperand->view();
     auto indexView = indexOperand->getViewIfDefined();
 
@@ -78,9 +91,7 @@ void OpSequenceIndex<SequenceMemberViewType>::reevaluate(
         this->setAppearsDefined(false);
         return;
     }
-    if (recalculateCachedIndex) {
-        cachedIndex = indexView->value - 1;
-    }
+    cachedIndex = indexView->value - 1;
     locallyDefined =
         cachedIndex >= 0 && cachedIndex < (Int)sequenceView->numberElements();
     setAppearsDefined(locallyDefined && getMember().get()->appearsDefined());
@@ -110,11 +121,11 @@ OpSequenceIndex<SequenceMemberViewType>::OpSequenceIndex(
 }
 
 template <typename SequenceMemberViewType>
-bool OpSequenceIndex<SequenceMemberViewType>::eventForwardedAsDefinednessChange(
-    bool recalculateIndex) {
+bool OpSequenceIndex<
+    SequenceMemberViewType>::eventForwardedAsDefinednessChange() {
     bool wasDefined = this->appearsDefined();
     bool wasLocallyDefined = locallyDefined;
-    reevaluate(recalculateIndex);
+    reevaluate();
     if (!locallyDefined) {
         if (sequenceMemberTrigger) {
             deleteTrigger(sequenceMemberTrigger);
@@ -134,6 +145,10 @@ bool OpSequenceIndex<SequenceMemberViewType>::eventForwardedAsDefinednessChange(
     } else if (!wasDefined && this->appearsDefined()) {
         visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, this->triggers);
         return true;
+    } else if (is_same<BoolView, SequenceMemberViewType>::value &&
+               wasLocallyDefined != locallyDefined) {
+        visitTriggers([&](auto& t) { t->valueChanged(); }, this->triggers);
+        return true;
     } else {
         return !this->appearsDefined();
     }
@@ -146,7 +161,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
     SequenceOperandTrigger(OpSequenceIndex<SequenceMemberViewType>* op)
         : op(op) {}
     inline void valueAdded(UInt index, const AnyExprRef&) final {
-        if (!op->eventForwardedAsDefinednessChange(false) &&
+        if (!op->eventForwardedAsDefinednessChange() &&
             (Int)index <= op->cachedIndex) {
             visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
             op->reattachSequenceMemberTrigger();
@@ -157,7 +172,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         if (!op->locallyDefined) {
             return;
         }
-        if (!op->eventForwardedAsDefinednessChange(false) &&
+        if (!op->eventForwardedAsDefinednessChange() &&
             (Int)index <= op->cachedIndex) {
             visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
             op->reattachSequenceMemberTrigger();
@@ -169,6 +184,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
     }
 
     void memberHasBecomeUndefined(UInt index) final {
+        debug_code(assert((!is_same<BoolView, SequenceMemberViewType>::value)));
         if (!op->appearsDefined() || (Int)index != op->cachedIndex) {
             return;
         }
@@ -177,6 +193,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
     }
 
     void memberHasBecomeDefined(UInt index) final {
+        debug_code(assert((!is_same<BoolView, SequenceMemberViewType>::value)));
         if (!op->locallyDefined || (Int)index != op->cachedIndex) {
             return;
         }
@@ -196,24 +213,24 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         if ((Int)index1 != op->cachedIndex) {
             swap(index1, index2);
         }
-        if (!op->eventForwardedAsDefinednessChange(false)) {
+        if (!op->eventForwardedAsDefinednessChange()) {
             visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
             op->reattachSequenceMemberTrigger();
         }
     }
 
     void valueChanged() final {
-        if (!op->eventForwardedAsDefinednessChange(true)) {
+        if (!op->eventForwardedAsDefinednessChange()) {
             visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
             op->reattachSequenceMemberTrigger();
         }
     }
 
     inline void hasBecomeUndefined() {
-        op->eventForwardedAsDefinednessChange(false);
+        op->eventForwardedAsDefinednessChange();
     }
 
-    void hasBecomeDefined() { op->eventForwardedAsDefinednessChange(false); }
+    void hasBecomeDefined() { op->eventForwardedAsDefinednessChange(); }
     void reattachTrigger() final {
         deleteTrigger(op->sequenceOperandTrigger);
         if (op->sequenceMemberTrigger) {
@@ -237,7 +254,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::IndexTrigger
     OpSequenceIndex<SequenceMemberViewType>* op;
     IndexTrigger(OpSequenceIndex<SequenceMemberViewType>* op) : op(op) {}
     void valueChanged() {
-        if (!op->eventForwardedAsDefinednessChange(true)) {
+        if (!op->eventForwardedAsDefinednessChange()) {
             visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
             op->reattachSequenceMemberTrigger();
         }
@@ -250,9 +267,9 @@ struct OpSequenceIndex<SequenceMemberViewType>::IndexTrigger
         op->indexOperand->addTrigger(trigger);
         op->indexTrigger = trigger;
     }
-    void hasBecomeDefined() { op->eventForwardedAsDefinednessChange(true); }
+    void hasBecomeDefined() { op->eventForwardedAsDefinednessChange(); }
 
-    void hasBecomeUndefined() { op->eventForwardedAsDefinednessChange(false); }
+    void hasBecomeUndefined() { op->eventForwardedAsDefinednessChange(); }
 };
 
 template <typename SequenceMemberViewType>

@@ -517,7 +517,7 @@ ExprRef<RetType> expect(Constraint&& constraint, Func&& func) {
                      << TypeAsString<typename AssociatedValueType<viewType(
                             constraint)>::type>::value
                      << endl;
-                debug_log(constraint);
+
 
                 abort();
             }),

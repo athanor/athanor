@@ -24,7 +24,7 @@ void boolAssignRandomGen(const BoolDomain& domain, int numberValsRequired,
     neighbourhoods.emplace_back(
         "boolAssignRandom", numberValsRequired,
         [&domain](NeighbourhoodParams& params) {
-            auto val = *(params.getVals<BoolValue>().front());
+            auto& val = *(params.getVals<BoolValue>().front());
             int numberTries = 0;
             const int tryLimit = params.parentCheckTryLimit;
             auto backup = val.violation;
@@ -36,7 +36,12 @@ void boolAssignRandomGen(const BoolDomain& domain, int numberValsRequired,
                 success = val.changeValue([&]() {
                     val.violation =
                         getRandomValueInDomain(domain, params.stats);
-                    return params.parentCheck(params.vals);
+                    if (params.parentCheck(params.vals)) {
+                        return true;
+                    } else {
+                        val.violation = backup;
+                        return false;
+                    }
                 });
                 if (success) {
                     debug_neighbourhood_action("New value is " << asView(val));

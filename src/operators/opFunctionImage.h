@@ -30,16 +30,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType>,
     OpFunctionImage(ExprRef<FunctionView> functionOperand,
                     AnyExprRef preImageOperand)
         : functionOperand(std::move(functionOperand)),
-          preImageOperand(std::move(preImageOperand)) {
-        if (std::is_same<BoolView, FunctionMemberViewType>::value) {
-            std::cerr << "I've temperarily disabled OpFunctionImage for "
-                         "functions to booleans as "
-                         "I'm not correctly handling relational semantics "
-                         "forthe case where the function pre image becomes "
-                         "undefined.\n";
-            abort();
-        }
-    }
+          preImageOperand(std::move(preImageOperand)) {}
     OpFunctionImage(const OpFunctionImage<FunctionMemberViewType>&) = delete;
     OpFunctionImage(OpFunctionImage<FunctionMemberViewType>&& other);
     ~OpFunctionImage() { this->stopTriggeringOnChildren(); }
@@ -75,11 +66,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType>,
     template <typename View = FunctionMemberViewType,
               typename std::enable_if<std::is_same<BoolView, View>::value,
                                       int>::type = 0>
-    void setAppearsDefined(bool) {
-        std::cerr << "Not handling function to bools where a function member "
-                     "becomes undefined.\n";
-        todoImpl();
-    }
+    void setAppearsDefined(bool) {}
     template <typename View = FunctionMemberViewType,
               typename std::enable_if<!std::is_same<BoolView, View>::value,
                                       int>::type = 0>

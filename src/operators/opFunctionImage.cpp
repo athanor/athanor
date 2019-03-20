@@ -50,6 +50,19 @@ OpFunctionImage<FunctionMemberViewType>::getMember() const {
     return member;
 }
 
+/*helper functions, returns empty optional if not BoolView return type otherwise
+ * returns violating BoolView. */
+
+template <typename View>
+inline OptionalRef<View> emptyOrViolatingOptional() {
+    return EmptyOptional();
+}
+
+template <>
+inline OptionalRef<BoolView> emptyOrViolatingOptional<BoolView>() {
+    return VIOLATING_BOOL_VIEW;
+}
+
 template <typename FunctionMemberViewType>
 OptionalRef<FunctionMemberViewType>
 OpFunctionImage<FunctionMemberViewType>::view() {
@@ -57,9 +70,10 @@ OpFunctionImage<FunctionMemberViewType>::view() {
     if (member) {
         return (*member)->view();
     } else {
-        return EmptyOptional();
+        return emptyOrViolatingOptional<FunctionMemberViewType>();
     }
 }
+
 template <typename FunctionMemberViewType>
 OptionalRef<const FunctionMemberViewType>
 OpFunctionImage<FunctionMemberViewType>::view() const {
@@ -67,7 +81,7 @@ OpFunctionImage<FunctionMemberViewType>::view() const {
     if (member) {
         return (*member)->view();
     } else {
-        return EmptyOptional();
+        return emptyOrViolatingOptional<FunctionMemberViewType>();
     }
 }
 
@@ -165,6 +179,10 @@ bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
     } else if (!wasDefined && this->appearsDefined()) {
         visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, this->triggers);
         return true;
+    } else if (is_same<BoolView, FunctionMemberViewType>::value &&
+               wasLocallyDefined != locallyDefined) {
+        visitTriggers([&](auto& t) { t->valueChanged(); }, this->triggers);
+        return true;
     } else {
         return !this->appearsDefined();
     }
@@ -215,6 +233,7 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
     }
 
     void hasBecomeDefined() { op->eventForwardedAsDefinednessChange(true); }
+
     void reattachTrigger() final {
         deleteTrigger(op->functionOperandTrigger);
         if (op->functionMemberTrigger) {

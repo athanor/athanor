@@ -15,10 +15,17 @@ template <>
 struct OpMaker<OpMod> {
     static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
+
 struct OpNegate;
 template <>
 struct OpMaker<OpNegate> {
     static ExprRef<IntView> make(ExprRef<IntView> o);
+};
+
+struct OpNot;
+template <>
+struct OpMaker<OpNot> {
+    static ExprRef<BoolView> make(ExprRef<BoolView> o);
 };
 
 struct OpAnd;

@@ -518,7 +518,6 @@ ExprRef<RetType> expect(Constraint&& constraint, Func&& func) {
                             constraint)>::type>::value
                      << endl;
 
-
                 abort();
             }),
         constraint);
@@ -544,6 +543,15 @@ pair<AnyDomainRef, AnyExprRef> parseOpNegate(json& negateExpr,
         expect<IntView>(parseExpr(negateExpr, parsedModel).second,
                         [&](auto&&) { cerr << errorMessage << negateExpr[0]; });
     return make_pair(fakeIntDomain, OpMaker<OpNegate>::make(move(operand)));
+}
+
+pair<AnyDomainRef, AnyExprRef> parseOpNot(json& notExpr,
+                                          ParsedModel& parsedModel) {
+    string errorMessage = "Expected bool returning expression within OpNot: ";
+    ExprRef<BoolView> operand =
+        expect<BoolView>(parseExpr(notExpr, parsedModel).second,
+                         [&](auto&&) { cerr << errorMessage << notExpr[0]; });
+    return make_pair(fakeBoolDomain, OpMaker<OpNot>::make(move(operand)));
 }
 
 pair<AnyDomainRef, AnyExprRef> parseOpDiv(json& modExpr,
@@ -1408,6 +1416,7 @@ optional<pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"MkOpIn", parseOpIn},
              {"MkOpMod", parseOpMod},
              {"MkOpNegate", parseOpNegate},
+             {"MkOpNot", parseOpNot},
              {"MkOpDiv", parseOpDiv},
              {"MkOpMinus", parseOpMinus},
              {"MkOpPow", parseOpPower},

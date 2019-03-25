@@ -7,7 +7,19 @@ using namespace std;
 
 template <>
 HashType getValueHash<MSetView>(const MSetView& val) {
-    return val.cachedHashTotal;
+    return val.cachedHashTotal.getOrSet([&]() {
+        return mpark::visit(
+            [&](auto& membersImpl) {
+                HashType total(0);
+                for (auto& member : membersImpl) {
+                    total +=
+                        mix(getValueHash(member->getViewIfDefined().checkedGet(
+                            NO_MSET_UNDEFINED_MEMBERS)));
+                }
+                return total;
+            },
+            val.members);
+    });
 }
 
 template <>
@@ -40,7 +52,7 @@ void deepCopyImpl(const MSetValue&,
     for (auto& member : srcMemnersImpl) {
         target.addMember(deepCopy(*assumeAsValue(member)));
     }
-    debug_code(target.assertValidState());
+    debug_code(target.debugSanityCheck());
     target.notifyEntireMSetChange();
 }
 
@@ -83,7 +95,8 @@ void matchInnerType(const MSetDomain& domain, MSetValue& target) {
 
 template <>
 UInt getDomainSize<MSetDomain>(const MSetDomain& domain) {
-    todoImpl(domain);
+    return MAX_DOMAIN_SIZE;
+//    todoImpl(domain);
 }
 
 void evaluateImpl(MSetValue&) {}
@@ -160,62 +173,7 @@ bool largerValue<MSetView>(const MSetView& u, const MSetView& v) {
         },
         u.members);
 }
-void MSetView::assertValidState() {
-    mpark::visit(
-        [&](auto& valMembersImpl) {
-            bool success = true;
-            HashType calculatedTotal = HashType(0);
-            for (size_t i = 0; i < valMembersImpl.size(); i++) {
-                auto& member = valMembersImpl[i];
-                HashType memberHash = getValueHash(
-                    member->view().checkedGet(NO_MSET_UNDEFINED_MEMBERS));
-                calculatedTotal += mix(memberHash);
-            }
-            if (success) {
-                success = calculatedTotal == cachedHashTotal;
-                if (!success) {
-                    cerr << "Calculated hash total should be "
-                         << calculatedTotal << " but it was actually "
-                         << cachedHashTotal << endl;
-                }
-            }
-            if (!success) {
-                cerr << "Members: " << valMembersImpl << endl;
-                assert(false);
-                abort();
-            }
-        },
-        members);
-}
 
-void MSetValue::assertValidVarBases() {
-    mpark::visit(
-        [&](auto& valMembersImpl) {
-            if (valMembersImpl.empty()) {
-                return;
-            }
-            bool success = true;
-            for (size_t i = 0; i < valMembersImpl.size(); i++) {
-                const ValBase& base =
-                    valBase(*assumeAsValue(valMembersImpl[i]));
-                if (base.container != this) {
-                    success = false;
-                    cerr << "member " << i
-                         << "'s container does not point to this mSet." << endl;
-                } else if (base.id != i) {
-                    success = false;
-                    cerr << "MSet member " << i << "has id " << base.id
-                         << " but it should be " << i << endl;
-                }
-            }
-            if (!success) {
-                cerr << "Members: " << valMembersImpl << endl;
-                this->printVarBases();
-                assert(false);
-            }
-        },
-        members);
-}
 
 void MSetValue::printVarBases() {
     mpark::visit(
@@ -235,17 +193,21 @@ void MSetValue::printVarBases() {
 }
 
 void MSetView::standardSanityChecksForThisType() const {
-    HashType checkCachedHashTotal = HashType(0);
+    HashType checkCachedHashTotal(0);
     mpark::visit(
         [&](auto& members) {
             for (auto& member : members) {
                 auto viewOption = member->getViewIfDefined();
                 sanityCheck(viewOption, NO_MSET_UNDEFINED_MEMBERS);
                 auto& view = *viewOption;
-                HashType hash = getValueHash(view);
-                checkCachedHashTotal += mix(hash);
+                if (cachedHashTotal.isValid()) {
+                    HashType hash = getValueHash(view);
+                    checkCachedHashTotal += mix(hash);
+                }
             }
-            sanityEqualsCheck(checkCachedHashTotal, cachedHashTotal);
+            cachedHashTotal.applyIfValid([&](const auto& value) {
+                sanityEqualsCheck(checkCachedHashTotal, value);
+            });
         },
         members);
 }

@@ -44,7 +44,7 @@ struct MSetValue : public MSetView, public ValBase {
         MSetView::addMember(member.asExpr());
         valBase(*member).container = this;
         valBase(*member).id = numberElements() - 1;
-        debug_code(assertValidVarBases());
+        debug_code(debugSanityCheck());
     }
 
     template <typename InnerValueType, typename Func,
@@ -56,7 +56,7 @@ struct MSetValue : public MSetView, public ValBase {
             valBase(*member).container = this;
             valBase(*member).id = numberElements() - 1;
             MSetView::notifyMemberAdded(member.asExpr());
-            debug_code(assertValidVarBases());
+            debug_code(debugSanityCheck());
             return true;
         } else {
             typedef
@@ -75,7 +75,7 @@ struct MSetValue : public MSetView, public ValBase {
         if (index < numberElements()) {
             valBase(*member<InnerValueType>(index)).id = index;
         }
-        debug_code(assertValidVarBases());
+        debug_code(debugSanityCheck());
         return removedMember;
     }
 
@@ -91,21 +91,21 @@ struct MSetValue : public MSetView, public ValBase {
             if (index < numberElements()) {
                 valBase(*member<InnerValueType>(index)).id = index;
             }
-            debug_code(assertValidVarBases());
+            debug_code(debugSanityCheck());
             MSetView::notifyMemberRemoved(index, removedMember.asExpr());
             return std::make_pair(true, std::move(removedMember));
         } else {
             MSetView::addMember<InnerViewType>(removedMember.asExpr());
             auto& members = getMembers<InnerViewType>();
             std::swap(members[index], members.back());
-            debug_code(assertValidState());
-            debug_code(assertValidVarBases());
+            debug_code(standardSanityChecksForThisType());
+            debug_code(debugSanityCheck());
             return std::make_pair(false, ValRef<InnerValueType>(nullptr));
         }
     }
 
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline HashType notifyPossibleMemberChange(UInt index) {
+    inline lib::optional<HashType> notifyPossibleMemberChange(UInt index) {
         return MSetView::notifyPossibleMemberChange<
             typename AssociatedViewType<InnerValueType>::type>(index);
     }
@@ -119,19 +119,20 @@ struct MSetValue : public MSetView, public ValBase {
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline std::pair<bool, HashType> tryMemberChange(size_t index,
-                                                     HashType oldHash,
-                                                     Func&& func) {
+    inline std::pair<bool, lib::optional<HashType>> tryMemberChange(
+        size_t index, lib::optional<HashType> oldHash, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        HashType newHash = memberChanged<InnerViewType>(oldHash, index);
+        auto newHash = memberChanged<InnerViewType>(oldHash, index);
         if (func()) {
             MSetView::notifyMemberChanged(index);
             return std::make_pair(true, newHash);
         } else {
-            if (oldHash != newHash) {
-                cachedHashTotal -= mix(newHash);
-                cachedHashTotal += mix(oldHash);
-            }
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                if (oldHash && oldHash != newHash) {
+                    value -= mix(*newHash);
+                    value += mix(*oldHash);
+                }
+            });
             return std::make_pair(false, oldHash);
         }
     }
@@ -141,13 +142,18 @@ struct MSetValue : public MSetView, public ValBase {
     inline bool tryMembersChange(const std::vector<UInt>& indices,
                                  std::vector<HashType>& hashes, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        SimpleCache<HashType> cachedHashTotalBackup;
+        cachedHashTotal.applyIfValid(
+            [&](const auto& value) { cachedHashTotalBackup.set(value); });
         membersChanged<InnerViewType>(hashes, indices);
-        HashType cachedHashTotalBackup = cachedHashTotal;
         if (func()) {
             MSetView::notifyMembersChanged(indices);
             return true;
         } else {
-            cachedHashTotal = cachedHashTotalBackup;
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                cachedHashTotalBackup.applyIfValid(
+                    [&](auto& valueBackup) { value = valueBackup; });
+            });
             return false;
         }
     }
@@ -164,7 +170,6 @@ struct MSetValue : public MSetView, public ValBase {
         }
         return allowed;
     }
-    void assertValidVarBases();
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     void setInnerType() {

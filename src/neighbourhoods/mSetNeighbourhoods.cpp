@@ -60,9 +60,8 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
                     params.vioContainer.childViolations(val.id);
                 UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
                     val.numberElements() - 1);
-                auto oldHash =
-                    val.notifyPossibleMemberChange<InnerValueType>(
-                        indexToChange);
+                auto oldHash = val.notifyPossibleMemberChange<InnerValueType>(
+                    indexToChange);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
                     auto statusHashPair = val.tryMemberChange<InnerValueType>(
                         indexToChange, oldHash,

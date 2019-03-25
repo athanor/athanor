@@ -33,7 +33,7 @@ struct SequenceDomain {
 
 struct SequenceValue : public SequenceView, public ValBase {
     bool injective = false;
-    std::unordered_set<HashType> memberHashes;
+    HashSet<HashType> memberHashes;
     void silentClear() {
         SequenceView::silentClear();
         memberHashes.clear();

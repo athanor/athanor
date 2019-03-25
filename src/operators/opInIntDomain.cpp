@@ -79,7 +79,6 @@ string OpInDomain<IntView>::getOpName() const { return "OpInDomain<IntView>"; }
 void OpInDomain<IntView>::debugSanityCheckImpl() const {
     operand->debugSanityCheck();
 
-
     auto view = operand->getViewIfDefined();
     if (!view) {
         sanityLargeViolationCheck(violation);

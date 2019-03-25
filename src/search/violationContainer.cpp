@@ -44,24 +44,26 @@ static UInt pickRandomVariable(const ViolationContainer &vioCont, UInt maxVar,
     const int numberNonViolatingVars =
         (maxVar + 1) - vioCont.getVarsWithViolation().size();
     if (numberNonViolatingVars == 0) {
-                    rand = globalRandom<double>(0, vioCont.getTotalViolation());
+        rand = globalRandom<double>(0, vioCont.getTotalViolation());
     } else {
-        // There are some non violating variables, we now pretend that these variables  now
-        // have a violation of min/n where n=numberNonViolatingVars and
-        // min= the minimum violation.
-        //The idea is that the sum of all the simulated violations cannot be greater than the minimum violation.
+        // There are some non violating variables, we now pretend that these
+        // variables  now have a violation of min/n where
+        // n=numberNonViolatingVars and min= the minimum violation.
+        // The idea is that the sum of all the simulated violations cannot be
+        // greater than the minimum violation.
 
-        //first calculate min violation, skip if already passed in
+        // first calculate min violation, skip if already passed in
         if (minViolation == 0) {
             minViolation = vioCont.calcMinViolation();
         }
         simulatedMinViolation = ((double)minViolation) / numberNonViolatingVars;
         // now generate a random number in the range that includes the new
         // simulated min violations
-        rand = globalRandom<double>(
-            0, vioCont.getTotalViolation() + minViolation);
+        rand =
+            globalRandom<double>(0, vioCont.getTotalViolation() + minViolation);
     }
-    debug_log("max = " << (vioCont.getTotalViolation() + minViolation) << " rand = " << rand);
+    debug_log("max = " << (vioCont.getTotalViolation() + minViolation)
+                       << " rand = " << rand);
     return findContainingInterval(vioCont, maxVar, rand, simulatedMinViolation);
 }
 

@@ -16,7 +16,7 @@ static const char* NO_SET_UNDEFINED_MEMBERS =
 struct SetView : public ExprInterface<SetView>,
                  public TriggerContainer<SetView> {
     friend SetValue;
-    std::unordered_set<HashType> memberHashes;
+    HashSet<HashType> memberHashes;
     AnyExprVec members;
     HashType cachedHashTotal = HashType(0);
 

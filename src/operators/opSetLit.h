@@ -20,7 +20,7 @@ struct OpSetLit : public SetView {
                             // used in the set view
         UInt focusOperandSetIndex;  // index of the operand as found in the set
                                     // view members
-        std::unordered_set<UInt> operands;  // all operands with hash h
+        HashSet<UInt> operands;     // all operands with hash h
     };
     AnyExprVec operands;
     HashMap<HashType, OperandGroup> hashIndicesMap;

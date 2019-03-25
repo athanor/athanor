@@ -96,7 +96,7 @@ void matchInnerType(const MSetDomain& domain, MSetValue& target) {
 template <>
 UInt getDomainSize<MSetDomain>(const MSetDomain& domain) {
     return MAX_DOMAIN_SIZE;
-//    todoImpl(domain);
+    //    todoImpl(domain);
 }
 
 void evaluateImpl(MSetValue&) {}
@@ -173,7 +173,6 @@ bool largerValue<MSetView>(const MSetView& u, const MSetView& v) {
         },
         u.members);
 }
-
 
 void MSetValue::printVarBases() {
     mpark::visit(

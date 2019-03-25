@@ -25,8 +25,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType>,
     OpSequenceIndex(ExprRef<SequenceView> sequenceOperand,
                     ExprRef<IntView> indexOperand)
         : sequenceOperand(std::move(sequenceOperand)),
-          indexOperand(std::move(indexOperand)) {
-}
+          indexOperand(std::move(indexOperand)) {}
     OpSequenceIndex(const OpSequenceIndex<SequenceMemberViewType>&) = delete;
     OpSequenceIndex(OpSequenceIndex<SequenceMemberViewType>&& other);
     ~OpSequenceIndex() { this->stopTriggeringOnChildren(); }
@@ -61,8 +60,7 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType>,
     template <typename View = SequenceMemberViewType,
               typename std::enable_if<std::is_same<BoolView, View>::value,
                                       int>::type = 0>
-    void setAppearsDefined(bool) {
-}
+    void setAppearsDefined(bool) {}
     template <typename View = SequenceMemberViewType,
               typename std::enable_if<!std::is_same<BoolView, View>::value,
                                       int>::type = 0>

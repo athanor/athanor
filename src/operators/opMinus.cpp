@@ -8,8 +8,20 @@ void OpMinus::reevaluateImpl(IntView& leftView, IntView& rightView) {
 
 void OpMinus::updateVarViolationsImpl(const ViolationContext& vioContext,
                                       ViolationContainer& vioContainer) {
+    using Reason = IntViolationContext::Reason;
+    auto* intVioContext = dynamic_cast<const IntViolationContext*>(&vioContext);
+
     left->updateVarViolations(vioContext, vioContainer);
-    right->updateVarViolations(vioContext, vioContainer);
+    if (intVioContext) {
+        right->updateVarViolations(
+            IntViolationContext(intVioContext->parentViolation,
+                                (intVioContext->reason == Reason::TOO_LARGE)
+                                    ? Reason::TOO_SMALL
+                                    : Reason::TOO_LARGE),
+            vioContainer);
+    } else {
+        right->updateVarViolations(vioContext, vioContainer);
+    }
 }
 
 void OpMinus::copy(OpMinus& newOp) const { newOp.value = value; }

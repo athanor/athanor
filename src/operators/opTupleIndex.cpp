@@ -90,11 +90,10 @@ bool OpTupleIndex<TupleMemberViewType>::eventForwardedAsDefinednessChange() {
     bool wasDefined = this->appearsDefined();
     reevaluate();
     if (wasDefined && !this->appearsDefined()) {
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                      this->triggers);
+        this->notifyValueUndefined();
         return true;
     } else if (!wasDefined && this->appearsDefined()) {
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, this->triggers);
+        this->notifyValueDefined();
         return true;
     } else {
         return !this->appearsDefined();
@@ -117,19 +116,19 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
             return;
         }
         op->setAppearsDefined(false);
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); }, op->triggers);
+        op->notifyValueUndefined();
     }
 
     void memberHasBecomeDefined(UInt index) final {
         debug_code(assert(index == op->indexOperand));
         ignoreUnused(index);
         op->setAppearsDefined(true);
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
+        op->notifyValueDefined();
     }
 
     void valueChanged() final {
         if (!op->eventForwardedAsDefinednessChange()) {
-            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+            op->notifyEntireValueChanged();
             op->reattachTupleMemberTrigger();
         }
     }

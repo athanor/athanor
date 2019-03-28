@@ -20,7 +20,8 @@ struct SequenceTrigger : public virtual SequenceOuterTrigger,
                          public virtual SequenceMemberTrigger {};
 
 template <>
-struct TriggerContainer<SequenceView> {
+struct TriggerContainer<SequenceView>
+    : public TriggerContainerBase<TriggerContainer<SequenceView>> {
     TriggerQueue<SequenceOuterTrigger> triggers;
     TriggerQueue<SequenceMemberTrigger> allMemberTriggers;
     std::vector<TriggerQueue<SequenceMemberTrigger>> singleMemberTriggers;

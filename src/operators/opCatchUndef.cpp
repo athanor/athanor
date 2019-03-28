@@ -38,7 +38,7 @@ void OpCatchUndef<ExprViewType>::setAppearsDefined(bool set) {
     swap(set, exprDefined);
     if (set != exprDefined) {
         recentlyTriggeredChange = true;
-        visitTriggers([&](auto& t) { t->valueChanged(); }, this->triggers);
+        this->notifyEntireValueChanged();
     }
 }
 template <typename ExprViewType>

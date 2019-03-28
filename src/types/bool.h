@@ -12,8 +12,7 @@ struct BoolView : public ExprInterface<BoolView>,
     inline bool changeValue(Func&& func) {
         UInt oldViolation = violation;
         if (func() && violation != oldViolation) {
-            visitTriggers([&](auto& trigger) { trigger->valueChanged(); },
-                          triggers);
+            notifyEntireValueChanged();
             return true;
         }
         return false;

@@ -55,7 +55,7 @@ void deepCopyImpl(const SetValue& src,
         }
     }
     debug_code(target.assertValidState());
-    target.notifyEntireSetChange();
+    target.notifyEntireValueChanged();
 }
 
 template <>

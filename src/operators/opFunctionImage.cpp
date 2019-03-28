@@ -173,15 +173,14 @@ bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
         reattachFunctionMemberTrigger();
     }
     if (wasDefined && !this->appearsDefined()) {
-        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                      this->triggers);
+        this->notifyValueUndefined();
         return true;
     } else if (!wasDefined && this->appearsDefined()) {
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, this->triggers);
+        this->notifyValueDefined();
         return true;
     } else if (is_same<BoolView, FunctionMemberViewType>::value &&
                wasLocallyDefined != locallyDefined) {
-        visitTriggers([&](auto& t) { t->valueChanged(); }, this->triggers);
+        this->notifyEntireValueChanged();
         return true;
     } else {
         return !this->appearsDefined();
@@ -216,14 +215,14 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
             swap(index1, index2);
         }
         if (!op->eventForwardedAsDefinednessChange(false)) {
-            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+            op->notifyEntireValueChanged();
             op->reattachFunctionMemberTrigger();
         }
     }
 
     void valueChanged() final {
         if (!op->eventForwardedAsDefinednessChange(true)) {
-            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+            op->notifyEntireValueChanged();
             op->reattachFunctionMemberTrigger();
         }
     }
@@ -270,7 +269,7 @@ struct PreImageTrigger
     }
     void adapterValueChanged() {
         if (!op->eventForwardedAsDefinednessChange(true)) {
-            visitTriggers([&](auto& t) { t->valueChanged(); }, op->triggers);
+            op->notifyEntireValueChanged();
             op->reattachFunctionMemberTrigger();
         }
     }

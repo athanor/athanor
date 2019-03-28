@@ -36,14 +36,11 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
             bool newValUndefined = !newVal->appearsDefined();
             this->setAppearsDefined(!newValUndefined);
             if (oldValUndefined && !newValUndefined) {
-                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                              this->triggers);
+                this->notifyValueDefined();
             } else if (!oldValUndefined && newValUndefined) {
-                visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                              this->triggers);
+                this->notifyValueUndefined();
             } else if (!newValUndefined) {
-                visitTriggers([&](auto t) { t->valueChanged(); },
-                              this->triggers);
+                this->notifyEntireValueChanged();
             }
         }
     }

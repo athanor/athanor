@@ -14,8 +14,7 @@ struct DefinedContainer {
         bool wasDefined = isDefined();
         setDefined(false);
         if (wasDefined) {
-            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op.triggers);
+            op.notifyValueUndefined();
         }
     }
     inline void setDefinedAndTrigger() {
@@ -23,7 +22,7 @@ struct DefinedContainer {
         bool wasDefined = isDefined();
         setDefined(true);
         if (!wasDefined) {
-            visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op.triggers);
+            op.notifyValueDefined();
         }
     }
     void reevaluateDefinedAndTrigger() {
@@ -31,8 +30,7 @@ struct DefinedContainer {
         if (!isDefined()) {
             op.reevaluate();
             if (isDefined()) {
-                visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                              op.triggers);
+                op.notifyValueDefined();
             }
         }
     }

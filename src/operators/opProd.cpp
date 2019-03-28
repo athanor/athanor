@@ -50,8 +50,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
             op->cachedValues.insert(index, 1);
             if (op->operand->view()->numberUndefined == 1) {
                 op->setDefined(false);
-                visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                              op->triggers);
+                op->notifyValueUndefined();
             }
             return;
         }
@@ -135,11 +134,9 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
             return op->isDefined();
         });
         if (wasDefined && !op->isDefined()) {
-            visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
-                          op->triggers);
+            op->notifyValueUndefined();
         } else if (!wasDefined && op->isDefined()) {
-            visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
-                          op->triggers);
+            op->notifyValueDefined();
         }
     }
 

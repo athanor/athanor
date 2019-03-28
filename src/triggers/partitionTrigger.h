@@ -13,7 +13,8 @@ struct PartitionTrigger : public virtual PartitionOuterTrigger,
                           public virtual PartitionMemberTrigger {};
 
 template <>
-struct TriggerContainer<PartitionView> {
+struct TriggerContainer<PartitionView>
+    : public TriggerContainerBase<TriggerContainer<PartitionView>> {
     TriggerQueue<PartitionOuterTrigger> triggers;
     TriggerQueue<PartitionMemberTrigger> allMemberTriggers;
     std::vector<TriggerQueue<PartitionMemberTrigger>> singleMemberTriggers;

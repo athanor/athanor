@@ -18,7 +18,8 @@ struct FunctionTrigger : public virtual FunctionOuterTrigger,
                          public virtual FunctionMemberTrigger {};
 
 template <>
-struct TriggerContainer<FunctionView> {
+struct TriggerContainer<FunctionView>
+    : public TriggerContainerBase<TriggerContainer<FunctionView>> {
     TriggerQueue<FunctionOuterTrigger> triggers;
     TriggerQueue<FunctionMemberTrigger> allMemberTriggers;
     std::vector<TriggerQueue<FunctionMemberTrigger>> singleMemberTriggers;

@@ -27,9 +27,6 @@ struct DelayedTrigger : public virtual TriggerBase {
     virtual void trigger() = 0;
 };
 
-template <typename View>
-struct TriggerContainer;
-
 static const size_t MIN_CLEAN_SIZE = 16;
 
 template <typename T>
@@ -266,5 +263,24 @@ struct ForwardingTriggerBase : public virtual TriggerType {
 };
 template <typename Trigger, typename Op, typename Child>
 struct ForwardingTrigger;
+
+template <typename View>
+struct TriggerContainer;
+
+template <typename Derived>
+struct TriggerContainerBase {
+    void notifyEntireValueChanged() {
+        visitTriggers([&](auto& t) { t->valueChanged(); },
+                      static_cast<Derived&>(*this).triggers);
+    }
+    void notifyValueDefined() {
+        visitTriggers([&](auto& t) { t->hasBecomeDefined(); },
+                      static_cast<Derived&>(*this).triggers);
+    }
+    void notifyValueUndefined() {
+        visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                      static_cast<Derived&>(*this).triggers);
+    }
+};
 
 #endif /* SRC_BASE_TRIGGERS_H_ */

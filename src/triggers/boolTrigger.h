@@ -4,7 +4,8 @@
 #include "base/base.h"
 
 template <>
-struct TriggerContainer<BoolView> {
+struct TriggerContainer<BoolView>
+    : public TriggerContainerBase<TriggerContainer<BoolView>> {
     TriggerQueue<BoolTrigger> triggers;
 };
 template <typename Child>

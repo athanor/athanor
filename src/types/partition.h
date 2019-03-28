@@ -69,11 +69,6 @@ struct PartitionView : public ExprInterface<PartitionView>,
         mpark::visit([&](auto& members) { members.clear(); }, members);
     }
 
-    inline void notifyEntirePartitionChange() {
-        debug_code(standardSanityChecksForThisType());
-        visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
-    }
-
     size_t numberElements() { return memberPartMap.size(); }
     void standardSanityChecksForThisType() const;
 };

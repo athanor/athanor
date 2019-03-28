@@ -43,7 +43,7 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
 
     void valueChanged() {
         op->reevaluate();
-        op->notifyEntireSetChange();
+        op->notifyEntireValueChanged();
     }
 
     void hasBecomeUndefined() { todoImpl(); }

@@ -212,16 +212,6 @@ struct SequenceView : public ExprInterface<SequenceView>,
         notifySubsequenceChanged(startIndex, endIndex);
     }
 
-    inline void notifyEntireSequenceChange() {
-        cachedHashTotal.invalidate();
-        visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
-    }
-    inline void initFrom(SequenceView&) {
-        std::cerr << "Deprecated, Should never be called\n"
-                  << __func__ << std::endl;
-        abort();
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
         return mpark::get<ExprRefVec<InnerViewType>>(members);

@@ -5,7 +5,8 @@
 struct IntTrigger : public virtual TriggerBase {};
 
 template <>
-struct TriggerContainer<IntView> {
+struct TriggerContainer<IntView>
+    : public TriggerContainerBase<TriggerContainer<IntView> > {
     TriggerQueue<IntTrigger> triggers;
 };
 template <typename Child>

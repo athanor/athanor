@@ -62,7 +62,7 @@ void deepCopyImpl(const PartitionValue& src,
                          assumeAsValue(srcMembersImpl[i]));
     }
     debug_code(target.debugSanityCheck());
-    target.notifyEntirePartitionChange();
+    target.notifyEntireValueChanged();
 }
 
 template <>

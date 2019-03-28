@@ -20,7 +20,7 @@ struct IntView : public ExprInterface<IntView>,
         Int oldValue = value;
 
         if (func() && value != oldValue) {
-            visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
+            notifyEntireValueChanged();
             return true;
         }
         return false;

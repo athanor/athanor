@@ -43,6 +43,7 @@ template <typename InnerViewType>
 void deepCopyImpl(const SequenceValue&,
                   const ExprRefVec<InnerViewType>& srcMemnersImpl,
                   SequenceValue& target) {
+    target.cachedHashTotal.invalidate();
     // to be optimised later
     target.silentClear();
     for (auto& member : srcMemnersImpl) {
@@ -50,7 +51,7 @@ void deepCopyImpl(const SequenceValue&,
                          deepCopy(*assumeAsValue(member)));
     }
     debug_code(target.assertValidState());
-    target.notifyEntireSequenceChange();
+    target.notifyEntireValueChanged();
 }
 
 template <>

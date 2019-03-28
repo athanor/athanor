@@ -15,7 +15,8 @@ struct TupleTrigger : public virtual TupleOuterTrigger,
                       public virtual TupleMemberTrigger {};
 
 template <>
-struct TriggerContainer<TupleView> {
+struct TriggerContainer<TupleView>
+    : public TriggerContainerBase<TriggerContainer<TupleView>> {
     TriggerQueue<TupleOuterTrigger> triggers;
     TriggerQueue<TupleMemberTrigger> allMemberTriggers;
     std::vector<TriggerQueue<TupleMemberTrigger>> singleMemberTriggers;

@@ -131,7 +131,8 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
     void valueChanged() {
         op->reevaluate();
         op->reattachAllInnerSequenceTriggers(true);
-        op->notifyEntireSequenceChange();
+        op->cachedHashTotal.invalidate();
+        op->notifyEntireValueChanged();
     }
 
     void hasBecomeUndefined() final { todoImpl(); }

@@ -58,7 +58,7 @@ struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
         } else {
             adjustUpper(*rightView, false);
         }
-        visitTriggers([&](auto& t) { t->hasBecomeDefined(); }, op->triggers);
+        op->notifyValueDefined();
     }
     inline void adjustLower(const IntView& leftView, bool trigger) {
         Int newLower = leftView.value;

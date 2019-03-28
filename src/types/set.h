@@ -160,11 +160,6 @@ struct SetView : public ExprInterface<SetView>,
         return newHash;
     }
 
-    inline void notifyEntireSetChange() {
-        debug_code(assertValidState());
-        visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
         return mpark::get<ExprRefVec<InnerViewType>>(members);

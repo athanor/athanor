@@ -124,10 +124,6 @@ struct FunctionView : public ExprInterface<FunctionView>,
         debug_code(assertValidState());
     }
 
-    inline void notifyEntireFunctionChange() {
-        visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
-    }
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getRange() {
         return mpark::get<ExprRefVec<InnerViewType>>(range);

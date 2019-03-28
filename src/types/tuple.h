@@ -26,11 +26,6 @@ struct TupleView : public ExprInterface<TupleView>,
         notifyMemberChanged(index);
     }
 
-    inline void entireTupleChangeAndNotify() {
-        cachedHashTotal.invalidate();
-        visitTriggers([&](auto& t) { t->valueChanged(); }, triggers);
-    }
-
     inline void defineMemberAndNotify(UInt index) {
         cachedHashTotal.invalidate();
         debug_code(assert(numberUndefined > 0));

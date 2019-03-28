@@ -53,7 +53,7 @@ void deepCopyImpl(const MSetValue&,
         target.addMember(deepCopy(*assumeAsValue(member)));
     }
     debug_code(target.debugSanityCheck());
-    target.notifyEntireMSetChange();
+    target.notifyEntireValueChanged();
 }
 
 template <>

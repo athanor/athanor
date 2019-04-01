@@ -1,7 +1,8 @@
 #include "operators/opEnumEq.h"
 #include "operators/simpleOperator.hpp"
 using namespace std;
-void OpEnumEq::reevaluateImpl(EnumView& leftView, EnumView& rightView) {
+void OpEnumEq::reevaluateImpl(EnumView& leftView, EnumView& rightView, bool,
+                              bool) {
     violation = (leftView.value == rightView.value) ? 0 : 1;
 }
 

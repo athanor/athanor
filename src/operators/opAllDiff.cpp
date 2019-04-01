@@ -244,7 +244,7 @@ std::ostream& OpAllDiff::dumpState(std::ostream& os) const {
     return operand->dumpState(os) << ")";
 }
 
-bool OpAllDiff::optimiseImpl() { return false; }
+bool OpAllDiff::optimiseImpl(const PathExtension&) { return false; }
 
 void OpAllDiff::assertValidState() {
     bool success = true;

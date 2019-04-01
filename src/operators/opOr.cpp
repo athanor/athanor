@@ -182,7 +182,9 @@ std::ostream& OpOr::dumpState(std::ostream& os) const {
     return operand->dumpState(os);
 }
 
-bool OpOr::optimiseImpl() { return flatten<BoolView>(*this); }
+bool OpOr::optimiseImpl(const PathExtension&) {
+    return flatten<BoolView>(*this);
+}
 
 string OpOr::getOpName() const { return "OpOr"; }
 void OpOr::debugSanityCheckImpl() const {

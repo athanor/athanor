@@ -63,23 +63,23 @@ void ModelBuilder::addConstraints() {
         make_shared<OpAnd>(make_shared<OpSequenceLit>(move(constraints)));
 }
 
+template <typename View>
+void optimiseExpr(ExprRef<View> expr) {
+    while (expr->optimise(PathExtension::begin(expr)).first) {
+    }
+}
 Model ModelBuilder::build() {
     clock_t startBuildTime = clock();
     addConstraints();
     createNeighbourhoods();
     substituteVarsToBeDefined();
-    ExprRef<BoolView> cspExpr(model.csp);
-    model.csp->optimise(PathExtension::begin(cspExpr));
+    optimiseExpr<BoolView>(model.csp);
     for (auto& nameExprPair : model.definingExpressions) {
-        mpark::visit(
-            [&](auto& expr) { expr->optimise(PathExtension::begin(expr)); },
-            nameExprPair.second);
+        mpark::visit([&](auto& expr) { optimiseExpr(expr); },
+                     nameExprPair.second);
     }
-    mpark::visit(
-        [&](auto& objective) {
-            objective->optimise(PathExtension::begin(objective));
-        },
-        model.objective);
+    mpark::visit([&](auto& objective) { optimiseExpr(objective); },
+                 model.objective);
     clock_t endBuildTime = clock();
     cout << "Model build time (CPU): "
          << ((double)(endBuildTime - startBuildTime) / CLOCKS_PER_SEC) << "s\n";

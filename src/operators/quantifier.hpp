@@ -1,6 +1,7 @@
 #ifndef SRC_OPERATORS_QUANTIFIER_HPP_
 #define SRC_OPERATORS_QUANTIFIER_HPP_
 #include <vector>
+#include "operators/definedVarHelper.h"
 #include "operators/quantifier.h"
 #include "operators/quantifierTriggers.h"
 #include "triggers/allTriggers.h"
@@ -53,6 +54,7 @@ bool Quantifier<ContainerType>::triggering() {
 template <typename View1, typename View2>
 ExprRef<View1> deepCopyExprAndAssignNewValue(ExprRef<View1> exprToCopy,
                                              ExprRef<View2> newValue,
+
                                              IterRef<View2> iterRef) {
     ExprRef<View1> newMember =
         exprToCopy->deepCopyForUnroll(exprToCopy, iterRef);

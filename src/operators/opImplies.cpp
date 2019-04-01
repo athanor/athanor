@@ -2,7 +2,8 @@
 #include "operators/simpleOperator.hpp"
 using namespace std;
 
-void OpImplies::reevaluateImpl(BoolView& leftView, BoolView& rightView) {
+void OpImplies::reevaluateImpl(BoolView& leftView, BoolView& rightView, bool,
+                               bool) {
     if (leftView.violation != 0) {
         violation = 0;
     } else {

@@ -209,7 +209,9 @@ std::ostream& OpSum::dumpState(std::ostream& os) const {
     return operand->dumpState(os);
 }
 
-bool OpSum::optimiseImpl() { return flatten<IntView>(*this); }
+bool OpSum::optimiseImpl(const PathExtension&) {
+    return flatten<IntView>(*this);
+}
 
 string OpSum::getOpName() const { return "OpSum"; }
 

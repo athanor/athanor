@@ -234,7 +234,9 @@ std::ostream& OpProd::dumpState(std::ostream& os) const {
     return operand->dumpState(os);
 }
 
-bool OpProd::optimiseImpl() { return flatten<IntView>(*this); }
+bool OpProd::optimiseImpl(const PathExtension&) {
+    return flatten<IntView>(*this);
+}
 
 string OpProd::getOpName() const { return "OpProd"; }
 

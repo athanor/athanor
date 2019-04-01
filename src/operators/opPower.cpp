@@ -9,7 +9,8 @@ using namespace std;
 namespace {
 UInt MAX_NUMBER_ALLOWED = (((UInt)1) << 61) - 10;
 }  // namespace
-void OpPower::reevaluateImpl(IntView& leftView, IntView& rightView) {
+void OpPower::reevaluateImpl(IntView& leftView, IntView& rightView, bool,
+                             bool) {
     if (leftView.value == 0) {
         if (rightView.value == 0) {
             value = 1;

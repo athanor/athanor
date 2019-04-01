@@ -17,7 +17,7 @@ struct OpEnumEq : public SimpleBinaryOperator<BoolView, EnumView, OpEnumEq> {
     using SimpleBinaryOperator<BoolView, EnumView,
                                OpEnumEq>::SimpleBinaryOperator;
 
-    void reevaluateImpl(EnumView& leftView, EnumView& rightView);
+    void reevaluateImpl(EnumView& leftView, EnumView& rightView, bool, bool);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpEnumEq& newOp) const;

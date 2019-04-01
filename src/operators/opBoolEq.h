@@ -16,7 +16,8 @@ struct OpBoolEq : public SimpleBinaryOperator<BoolView, BoolView, OpBoolEq> {
     using SimpleBinaryOperator<BoolView, BoolView,
                                OpBoolEq>::SimpleBinaryOperator;
 
-    void reevaluateImpl(BoolView& leftView, BoolView& rightView);
+    void reevaluateImpl(BoolView& leftView, BoolView& rightView,
+                        bool leftChanged, bool rightChanged);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpBoolEq& newOp) const;

@@ -70,6 +70,9 @@ template <>
 void assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
                                           IntValue& val,
                                           StatsContainer& stats) {
+    if (!val.domain) {
+        val.domain = &domain;
+    }
     val.changeValue([&]() {
         val.value = getRandomValueInDomain(domain, stats);
         return true;

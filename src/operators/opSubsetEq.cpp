@@ -8,7 +8,8 @@ static const char* NO_UNDEFINED_IN_SUBSET =
     "OpSubSet does not yet handle all the cases where sets become undefined.  "
     "Especially if returned views are undefined\n";
 
-void OpSubsetEq::reevaluateImpl(SetView& leftView, SetView& rightView) {
+void OpSubsetEq::reevaluateImpl(SetView& leftView, SetView& rightView, bool,
+                                bool) {
     violation = 0;
     for (auto& hash : leftView.memberHashes) {
         violation += !rightView.memberHashes.count(hash);
@@ -62,7 +63,7 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
     }
     inline void valueChanged() final {
         op->changeValue([&]() {
-            op->reevaluate();
+            op->reevaluate(true, false);
             return true;
         });
     }
@@ -146,7 +147,7 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
 
     inline void valueChanged() final {
         op->changeValue([&]() {
-            op->reevaluate();
+            op->reevaluate(false, true);
             return true;
         });
     }

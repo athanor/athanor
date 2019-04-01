@@ -18,7 +18,6 @@ struct InitialUnroller<FunctionView> {
     static void initialUnroll(Quant& quantifier, FunctionView& containerView) {
         mpark::visit(
             [&](auto& membersImpl) {
-                typedef viewType(membersImpl) View;
                 for (size_t i = 0; i < membersImpl.size(); i++) {
                     mpark::visit(
                         [&](auto& fromDomain) {

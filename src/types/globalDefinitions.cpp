@@ -76,11 +76,9 @@ void invokeSetDefined<BoolValue>(ValRef<BoolValue>&) {}
 buildForAllTypes(specialised, )
 #undef specialised
 
-    vector<shared_ptr<DelayedTrigger>> emptyEndOfTriggerQueue;
-
-inline pair<bool, ViolationContainer&> registerViolations(
-    const ValBase* val, const UInt violation,
-    ViolationContainer& vioContainer) {
+    inline pair<bool, ViolationContainer&> registerViolations(
+        const ValBase* val, const UInt violation,
+        ViolationContainer& vioContainer) {
     if (val->container == &constantPool) {
         return pair<bool, ViolationContainer&>(false, vioContainer);
     }

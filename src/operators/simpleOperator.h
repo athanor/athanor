@@ -28,7 +28,7 @@ struct DefinedContainer {
     void reevaluateDefinedAndTrigger() {
         auto& op = static_cast<Derived&>(*this);
         if (!isDefined()) {
-            op.reevaluate();
+            op.reevaluate(true, true);
             if (isDefined()) {
                 op.notifyValueDefined();
             }
@@ -61,7 +61,7 @@ struct DefinedContainer<BoolView, Derived> {
     inline void reevaluateDefinedAndTrigger() {
         auto& op = static_cast<Derived&>(*this);
         op.changeValue([&]() {
-            op.reevaluate();
+            op.reevaluate(true, true);
             return true;
         });
     }
@@ -99,14 +99,14 @@ struct SimpleBinaryOperator : public View,
     virtual ~SimpleBinaryOperator() { this->stopTriggeringOnChildren(); }
 
     void evaluateImpl() final;
-    void reevaluate();
+    void reevaluate(bool leftChange, bool rightChange);
     void startTriggeringImpl() final;
     void stopTriggeringOnChildren();
     void stopTriggering() final;
     ExprRef<View> deepCopyForUnrollImpl(const ExprRef<View>&,
                                         const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
-    bool optimiseImpl();
+    bool optimiseImpl(const PathExtension& path);
     std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
     void standardSanityDefinednessChecks() const;
 };
@@ -130,14 +130,18 @@ struct SimpleUnaryOperator : public View,
         delete;
     virtual ~SimpleUnaryOperator() { this->stopTriggeringOnChildren(); }
     void evaluateImpl() final;
-    void reevaluate();
+    void reevaluate(
+        bool = false,
+        bool = false);  // ignore bools, they are there to make it easier to
+                        // compile between unary and binary ops
+
     void startTriggeringImpl() final;
     void stopTriggeringOnChildren();
     void stopTriggering() final;
     ExprRef<View> deepCopyForUnrollImpl(const ExprRef<View>&,
                                         const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
-    bool optimiseImpl();
+    bool optimiseImpl(const PathExtension& path);
     std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
     void standardSanityDefinednessChecks() const;
 };

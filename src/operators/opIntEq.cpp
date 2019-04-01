@@ -1,10 +1,27 @@
 #include "operators/opIntEq.h"
+#include "operators/definedVarHelper.h"
+#include "operators/opAnd.h"
 #include "operators/simpleOperator.hpp"
+#include "types/intVal.h"
 using namespace std;
-void OpIntEq::reevaluateImpl(IntView& leftView, IntView& rightView) {
-    violation = abs(leftView.value - rightView.value);
+OpIntEq::~OpIntEq() {
+    if (definedVarTrigger) {
+        definedVarTrigger->active() = false;
+        definedVarTrigger = NULL;
+    }
 }
 
+void OpIntEq::reevaluateImpl(IntView& leftView, IntView& rightView,
+                             bool leftChanged, bool rightChanged) {
+    handledByForwardingValueChange(*this, leftView, rightView, leftChanged,
+                                   rightChanged);
+}
+void OpIntEq::updateValue(IntView& leftView, IntView& rightView) {
+    changeValue([&]() {
+        violation = abs(rightView.value - leftView.value);
+        return true;
+    });
+}
 void OpIntEq::updateVarViolationsImpl(const ViolationContext&,
                                       ViolationContainer& vioContainer) {
     if (violation == 0) {
@@ -30,6 +47,31 @@ void OpIntEq::updateVarViolationsImpl(const ViolationContext&,
 }
 
 void OpIntEq::copy(OpIntEq& newOp) const { newOp.violation = violation; }
+
+bool OpIntEq::optimiseImpl(const PathExtension& path) {
+    // if path up to root consists of only OpAnd and sequence view operators,
+    // allow this OpIntEq to forward changes from one side to the other, i.e.
+    // enable functional definedness.
+    PathExtension* current = path.parent;
+    bool success = true;
+    while (current && success) {
+        mpark::visit(
+            [&](auto& expr) {
+                if (!getAs<OpAnd>(expr) &&
+                    !is_same<SequenceView, viewType(expr)>::value) {
+                    success = false;
+                }
+                current = current->parent;
+            },
+            current->expr);
+    }
+    if (success) {
+        definesLock.reset();
+    } else {
+        definesLock.disable();
+    }
+    return success;
+}
 
 ostream& OpIntEq::dumpState(ostream& os) const {
     os << "OpIntEq: violation=" << violation << "\nleft: ";

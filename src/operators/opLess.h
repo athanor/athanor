@@ -15,7 +15,7 @@ struct OperatorTrates<OpLess> {
 struct OpLess : public SimpleBinaryOperator<BoolView, IntView, OpLess> {
     using SimpleBinaryOperator<BoolView, IntView, OpLess>::SimpleBinaryOperator;
 
-    void reevaluateImpl(IntView& leftView, IntView& rightView);
+    void reevaluateImpl(IntView& leftView, IntView& rightView, bool, bool);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpLess& newOp) const;

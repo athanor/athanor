@@ -2,7 +2,8 @@
 #include "operators/simpleOperator.hpp"
 using namespace std;
 
-void OpMinus::reevaluateImpl(IntView& leftView, IntView& rightView) {
+void OpMinus::reevaluateImpl(IntView& leftView, IntView& rightView, bool,
+                             bool) {
     value = leftView.value - rightView.value;
 }
 

@@ -158,15 +158,19 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
 
     state.stats.startTimer();
     assignRandomValueToVariables(state);
-    evaluateAndStartTriggeringDefinedExpressions(state);
-    state.model.csp->evaluate();
-    state.model.csp->startTriggering();
-    mpark::visit(
-        [&](auto& objective) {
-            objective->evaluate();
-            objective->startTriggering();
-        },
-        state.model.objective);
+    {
+        TriggerDepthTracker d;
+        evaluateAndStartTriggeringDefinedExpressions(state);
+        state.model.csp->evaluate();
+        state.model.csp->startTriggering();
+        mpark::visit(
+            [&](auto& objective) {
+                objective->evaluate();
+                objective->startTriggering();
+            },
+            state.model.objective);
+        handleDefinedVarTriggers();
+    }
 
     if (runSanityChecks) {
         state.model.csp->debugSanityCheck();

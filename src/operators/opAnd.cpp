@@ -87,7 +87,7 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
     void valueChanged() final {
         op->changeValue([&]() {
-            op->reevaluate();
+            op->reevaluate(true, true);
             return true;
         });
     }
@@ -155,7 +155,9 @@ std::ostream& OpAnd::dumpState(std::ostream& os) const {
     return operand->dumpState(os) << ")";
 }
 
-bool OpAnd::optimiseImpl() { return flatten<BoolView>(*this); }
+bool OpAnd::optimiseImpl(const PathExtension&) {
+    return flatten<BoolView>(*this);
+}
 
 string OpAnd::getOpName() const { return "OpAnd"; }
 void OpAnd::debugSanityCheckImpl() const {

@@ -266,7 +266,7 @@ std::ostream& OpMinMax<minMode>::dumpState(std::ostream& os) const {
 }
 
 template <bool minMode>
-bool OpMinMax<minMode>::optimiseImpl() {
+bool OpMinMax<minMode>::optimiseImpl(const PathExtension&) {
     return flatten<IntView>(*this);
 }
 template <bool minMode>

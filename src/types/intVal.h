@@ -18,9 +18,66 @@ struct IntDomain {
               [](UInt total, auto& range) {
                   return total + (range.second - range.first) + 1;
               })) {}
+    // structs for possible return values of findContainingBound function below
+    struct FoundBound {
+        size_t index;
+        FoundBound(size_t index) : index(index) {}
+    };
+
+    struct BetweenBounds {
+        size_t lower;
+        size_t upper;
+        BetweenBounds(size_t lower, size_t upper)
+            : lower(lower), upper(upper) {}
+    };
+    struct OutOfBoundsSmall {};
+    struct OutOfBoundsLarge {};
+    typedef mpark::variant<FoundBound, BetweenBounds, OutOfBoundsLarge,
+                           OutOfBoundsSmall>
+        ContainingBound;
+    inline ContainingBound findContainingBound(Int value) const {
+        if (bounds.empty()) {
+            std::cerr << "Error: empty domain.'n";
+            abort();
+        }
+
+        if (value < bounds.front().first) {
+            return OutOfBoundsSmall();
+        }
+        if (value > bounds.back().second) {
+            return OutOfBoundsLarge();
+        }
+        for (size_t i = 0; i < bounds.size(); i++) {
+            const auto& bound = bounds[i];
+            if (bound.first <= value && bound.second >= value) {
+                return FoundBound(i);
+            }
+            if (i + 1 < bounds.size()) {
+                // has next bound
+                auto& nextBound = bounds[i + 1];
+                if (value > bound.second && value < nextBound.first) {
+                    return BetweenBounds(i, i + 1);
+                }
+            }
+        }
+        // should never reach here
+        shouldNotBeCalledPanic;
+    }
+
+    inline bool containsValue(Int value) const {
+        auto c = findContainingBound(value);
+        return mpark::get_if<FoundBound>(&c);
+    }
 };
 
 struct IntValue : public IntView, ValBase {
+    const IntDomain* domain = NULL;
+
+    inline bool domainContainsValue(Int value) {
+        debug_code(assert(domain));
+        return domain->containsValue(value);
+    }
+
     void evaluateImpl() final;
     void startTriggeringImpl() final;
     void stopTriggering() final;

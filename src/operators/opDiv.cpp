@@ -1,7 +1,7 @@
 #include "operators/opDiv.h"
 #include "operators/simpleOperator.hpp"
 using namespace std;
-void OpDiv::reevaluateImpl(IntView& leftView, IntView& rightView) {
+void OpDiv::reevaluateImpl(IntView& leftView, IntView& rightView, bool, bool) {
     if (rightView.value == 0) {
         setDefined(false);
         return;

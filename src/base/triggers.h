@@ -23,10 +23,6 @@ struct TriggerBase {
     virtual void hasBecomeDefined() = 0;
 };
 
-struct DelayedTrigger : public virtual TriggerBase {
-    virtual void trigger() = 0;
-};
-
 static const size_t MIN_CLEAN_SIZE = 16;
 
 template <typename T>
@@ -36,7 +32,7 @@ template <typename T>
 class TriggerQueue {
     bool currentlyProcessing = false;
     size_t lastCleanSize = 0;
-    std::vector<std::shared_ptr<T>> triggers;
+    std::deque<std::shared_ptr<T>> triggers;
 
    public:
     struct QueueAccess {
@@ -46,7 +42,7 @@ class TriggerQueue {
         TriggerQueue<T>& queue;
 
        public:
-        std::vector<std::shared_ptr<T>>& triggers;
+        std::deque<std::shared_ptr<T>>& triggers;
 
        private:
         QueueAccess(TriggerQueue<T>& queue)
@@ -126,24 +122,20 @@ void handleTriggerAdd(const std::shared_ptr<Trigger>& trigger,
     }
 }
 
-struct DelayedTriggerStack;
-extern DelayedTriggerStack* currentDelayedTriggerStack;
+class TriggerDepthTracker {
+    static int globalDepth;
 
-struct DelayedTriggerStack {
-    std::vector<std::shared_ptr<DelayedTrigger>> stack;
-    DelayedTriggerStack* oldStack;
-    DelayedTriggerStack() : oldStack(currentDelayedTriggerStack) {
-        currentDelayedTriggerStack = this;
-    }
-    ~DelayedTriggerStack() {
-        debug_code(assert(currentDelayedTriggerStack == this));
-        currentDelayedTriggerStack = oldStack;
-    }
+   public:
+    TriggerDepthTracker() { ++globalDepth; }
+    ~TriggerDepthTracker() { --globalDepth; }
+    inline int depth() { return globalDepth; }
+    inline bool atBottom() { return depth() == 0; }
 };
 
+void handleDefinedVarTriggers();
 template <typename Visitor, typename Trigger>
 void visitTriggers(Visitor&& func, TriggerQueue<Trigger>& queue) {
-    DelayedTriggerStack delayedTriggers;
+    TriggerDepthTracker triggerDepth;
     auto access = queue.access();
 
     size_t size = access.triggers.size();
@@ -163,25 +155,17 @@ void visitTriggers(Visitor&& func, TriggerQueue<Trigger>& queue) {
         ((double)triggerNullCount) / access.triggers.size() > 0.5) {
         queue.cleanNullTriggers();
     }
-
-    while (!delayedTriggers.stack.empty()) {
-        auto trigger = std::move(delayedTriggers.stack.back());
-        delayedTriggers.stack.pop_back();
-        if (trigger && trigger->active()) {
-            trigger->trigger();
-        }
+    if (triggerDepth.atBottom()) {
+        // outer most visit triggers call
+        handleDefinedVarTriggers();
     }
 }
 
 template <typename Trigger>
-void addDelayedTrigger(const std::shared_ptr<Trigger>& trigger) {
-    debug_code(assert(currentDelayedTriggerStack != NULL));
-    currentDelayedTriggerStack->stack.emplace_back(trigger);
-}
-
-template <typename Trigger>
 void deleteTrigger(const std::shared_ptr<Trigger>& trigger) {
-    trigger->active() = false;
+    if (trigger) {
+        trigger->active() = false;
+    }
 }
 
 struct BoolTrigger : public virtual TriggerBase {

@@ -7,16 +7,18 @@ template <typename View, typename OperandView, typename Derived>
 void SimpleBinaryOperator<View, OperandView, Derived>::evaluateImpl() {
     left->evaluate();
     right->evaluate();
-    reevaluate();
+    reevaluate(true, true);
 }
 template <typename View, typename OperandView, typename Derived>
-void SimpleBinaryOperator<View, OperandView, Derived>::reevaluate() {
+void SimpleBinaryOperator<View, OperandView, Derived>::reevaluate(
+    bool leftChanged, bool rightChanged) {
     auto leftView = left->getViewIfDefined();
     if (leftView) {
         auto rightView = right->getViewIfDefined();
         if (rightView) {
             this->setDefined(true);
-            derived().reevaluateImpl(*leftView, *rightView);
+            derived().reevaluateImpl(*leftView, *rightView, leftChanged,
+                                     rightChanged);
             return;
         }
     }
@@ -75,34 +77,22 @@ void SimpleBinaryOperator<View, OperandView, Derived>::findAndReplaceSelf(
 }
 
 template <typename View, typename OperandView, typename Derived>
-bool SimpleBinaryOperator<View, OperandView, Derived>::optimiseImpl() {
+bool SimpleBinaryOperator<View, OperandView, Derived>::optimiseImpl(
+    const PathExtension&) {
     return false;
 }
 
 template <typename View, typename OperandView, typename Derived>
 std::pair<bool, ExprRef<View>>
 SimpleBinaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
-    bool changeMade = false, first = true;
-    while (true) {
-        auto leftOptResult = left->optimise(path.extend(left));
-        bool tempChangeMade = leftOptResult.first;
-        left = leftOptResult.second;
-        changeMade |= tempChangeMade;
-        auto rightOptResult = right->optimise(path.extend(right));
-        tempChangeMade |= rightOptResult.first;
-        right = rightOptResult.second;
-
-        changeMade |= tempChangeMade;
-        if (first || tempChangeMade) {
-            first = false;
-            tempChangeMade = derived().optimiseImpl();
-            changeMade |= tempChangeMade;
-            if (tempChangeMade) {
-                continue;
-            }
-        }
-        break;
-    }
+    bool changeMade = false;
+    auto leftOptResult = left->optimise(path.extend(left));
+    changeMade |= leftOptResult.first;
+    left = leftOptResult.second;
+    auto rightOptResult = right->optimise(path.extend(right));
+    changeMade |= rightOptResult.first;
+    right = rightOptResult.second;
+    changeMade = derived().optimiseImpl(path);
     return std::make_pair(changeMade, mpark::get<ExprRef<View>>(path.expr));
 }
 
@@ -126,7 +116,9 @@ void SimpleUnaryOperator<View, OperandView, Derived>::evaluateImpl() {
     reevaluate();
 }
 template <typename View, typename OperandView, typename Derived>
-void SimpleUnaryOperator<View, OperandView, Derived>::reevaluate() {
+void SimpleUnaryOperator<View, OperandView, Derived>::reevaluate(
+    bool, bool) {  // ignore bools, they are there to make it easier to compile
+                   // between unary and binary ops
     auto view = operand->getViewIfDefined();
     if (view) {
         this->setDefined(true);
@@ -180,28 +172,18 @@ void SimpleUnaryOperator<View, OperandView, Derived>::findAndReplaceSelf(
 }
 
 template <typename View, typename OperandView, typename Derived>
-bool SimpleUnaryOperator<View, OperandView, Derived>::optimiseImpl() {
+bool SimpleUnaryOperator<View, OperandView, Derived>::optimiseImpl(
+    const PathExtension&) {
     return false;
 }
 template <typename View, typename OperandView, typename Derived>
 std::pair<bool, ExprRef<View>>
 SimpleUnaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
-    bool changeMade = false, first = true;
-    while (true) {
-        auto optResult = operand->optimise(path.extend(operand));
-        bool tempChangeMade = optResult.first;
-        operand = optResult.second;
-        changeMade |= tempChangeMade;
-        if (first || tempChangeMade) {
-            first = false;
-            tempChangeMade = derived().optimiseImpl();
-            changeMade |= tempChangeMade;
-            if (tempChangeMade) {
-                continue;
-            }
-        }
-        break;
-    }
+    bool changeMade = false;
+    auto optResult = operand->optimise(path.extend(operand));
+    changeMade |= optResult.first;
+    operand = optResult.second;
+    changeMade = derived().optimiseImpl(path);
     return std::make_pair(changeMade, mpark::get<ExprRef<View>>(path.expr));
 }
 template <typename View, typename OperandView, typename Derived>

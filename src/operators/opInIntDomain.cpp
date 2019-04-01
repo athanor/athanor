@@ -10,50 +10,38 @@ static const auto TO_SMALL = IntViolationContext::Reason::TOO_SMALL;
 static const auto TO_LARGE = IntViolationContext::Reason::TOO_LARGE;
 
 void OpInDomain<IntView>::reevaluateImpl(IntView& operandView) {
-    const auto& bounds = domain->bounds;
-    if (bounds.empty()) {
-        cerr << "Error: empty domain.\n";
-        abort();
-    }
-    debug_code(assert(closestBound >= 0 && closestBound < bounds.size()));
-
+    debug_code(
+        assert(closestBound >= 0 && closestBound < domain->bounds.size()));
     Int v = operandView.value;
-    if (bounds[closestBound].first <= v && bounds[closestBound].second >= v) {
+    if (domain->bounds[closestBound].first <= v &&
+        domain->bounds[closestBound].second >= v) {
         this->violation = 0;
         return;
     }
-
-    if (v < bounds.front().first) {
-        tie(violation, closestBound, reason) =
-            make_tuple(bounds.front().first - v, 0, TO_SMALL);
-        return;
-    }
-
-    if (v > bounds.back().second) {
-        tie(violation, closestBound, reason) =
-            make_tuple(v - bounds.back().second, bounds.size() - 1, TO_LARGE);
-        return;
-    }
-
-    for (size_t i = 0; i < bounds.size() - 1; i++) {
-        const auto& bound = bounds[i];
-        const auto& nextBound = bounds[i + 1];
-        if (bound.first <= v && bound.second >= v) {
-            tie(violation, i) = make_tuple(0, i);
-            return;
-        }
-        if (v > bound.second && v < nextBound.first) {
-            Int distanceToBound = v - bound.second;
-            Int distanceToNextBound = nextBound.second - v;
-            tie(violation, closestBound, reason) =
-                (distanceToBound < distanceToNextBound)
-                    ? make_tuple(distanceToBound, i, TO_LARGE)
-                    : make_tuple(distanceToNextBound, i + 1, TO_SMALL);
-            return;
-        }
-    }
-    assert(false);
-    abort();
+    mpark::visit(
+        overloaded(
+            [&](IntDomain::FoundBound bound) {
+                violation = 0;
+                closestBound = bound.index;
+            },
+            [&](IntDomain::BetweenBounds betweenBounds) {
+                Int d1 = v - domain->bounds[betweenBounds.lower].second;
+                Int d2 = domain->bounds[betweenBounds.upper].first - v;
+                tie(violation, closestBound, reason) =
+                    (d1 < d2) ? make_tuple(d1, betweenBounds.lower, TO_LARGE)
+                              : make_tuple(d2, betweenBounds.upper, TO_SMALL);
+            },
+            [&](IntDomain::OutOfBoundsSmall) {
+                violation = domain->bounds.front().first - v;
+                closestBound = 0;
+                reason = TO_SMALL;
+            },
+            [&](IntDomain::OutOfBoundsLarge) {
+                violation = v - domain->bounds.back().second;
+                closestBound = domain->bounds.size() - 1;
+                reason = TO_LARGE;
+            }),
+        domain->findContainingBound(v));
 }
 
 void OpInDomain<IntView>::updateVarViolationsImpl(

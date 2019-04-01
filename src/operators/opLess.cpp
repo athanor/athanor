@@ -1,7 +1,7 @@
 #include "operators/opLess.h"
 #include "operators/simpleOperator.hpp"
 using namespace std;
-void OpLess::reevaluateImpl(IntView& leftView, IntView& rightView) {
+void OpLess::reevaluateImpl(IntView& leftView, IntView& rightView, bool, bool) {
     Int diff = (rightView.value - 1) - leftView.value;
     violation = abs(min<Int>(diff, 0));
 }

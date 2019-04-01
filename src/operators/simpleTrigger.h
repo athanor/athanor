@@ -24,7 +24,7 @@ struct SimpleBinaryTrigger
     inline void adapterValueChanged() {
         bool wasDefined = op->isDefined();
         op->changeValue([&]() {
-            op->reevaluate();
+            op->reevaluate(isLeftTrigger, !isLeftTrigger);
             return wasDefined && op->isDefined();
         });
         if (wasDefined && !op->isDefined()) {

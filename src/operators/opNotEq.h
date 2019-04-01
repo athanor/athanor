@@ -22,7 +22,8 @@ struct OpNotEq
     using SimpleBinaryOperator<BoolView, OperandView,
                                OpNotEq<OperandView>>::SimpleBinaryOperator;
 
-    void reevaluateImpl(OperandView& leftView, OperandView& rightView);
+    void reevaluateImpl(OperandView& leftView, OperandView& rightView, bool,
+                        bool);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpNotEq& newOp) const;

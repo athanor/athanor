@@ -27,7 +27,7 @@ struct OpProd : public SimpleUnaryOperator<IntView, SequenceView, OpProd> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpProd& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
-    bool optimiseImpl();
+    bool optimiseImpl(const PathExtension&);
     void addSingleValue(Int exprValue);
     void removeSingleValue(Int exprValue);
     std::string getOpName() const final;

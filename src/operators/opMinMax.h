@@ -30,7 +30,7 @@ struct OpMinMax
     static bool compare(Int u, Int v);
     void handleMemberUndefined(UInt);
     void handleMemberDefined(UInt);
-    bool optimiseImpl();
+    bool optimiseImpl(const PathExtension&);
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };

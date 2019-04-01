@@ -13,8 +13,6 @@ struct IntView : public ExprInterface<IntView>,
                  public TriggerContainer<IntView> {
     Int value;
 
-    inline void initFrom(IntView& other) { value = other.value; }
-
     template <typename Func>
     inline bool changeValue(Func&& func) {
         Int oldValue = value;
@@ -24,6 +22,12 @@ struct IntView : public ExprInterface<IntView>,
             return true;
         }
         return false;
+    }
+    void matchValueOf(IntView& other) {
+        changeValue([&]() {
+            value = other.value;
+            return true;
+        });
     }
     void standardSanityChecksForThisType() const;
 };

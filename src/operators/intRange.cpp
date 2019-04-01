@@ -6,7 +6,8 @@
 
 using namespace std;
 
-void IntRange::reevaluateImpl(IntView& leftView, IntView& rightView) {
+void IntRange::reevaluateImpl(IntView& leftView, IntView& rightView, bool,
+                              bool) {
     cachedLower = leftView.value;
     cachedUpper = rightView.value;
     this->silentClear();

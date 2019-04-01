@@ -1,7 +1,8 @@
 #include "operators/opBoolEq.h"
 #include "operators/simpleOperator.hpp"
 using namespace std;
-void OpBoolEq::reevaluateImpl(BoolView& leftView, BoolView& rightView) {
+void OpBoolEq::reevaluateImpl(BoolView& leftView, BoolView& rightView, bool,
+                              bool) {
     UInt leftVio = leftView.violation;
     UInt rightVio = rightView.violation;
     if (leftVio > rightVio) {

@@ -323,6 +323,17 @@ pair<AnyDomainRef, AnyExprRef> parseValueReference(json& essenceReference,
     }
 }
 
+shared_ptr<EnumDomain> parseDomainEnum(json& enumDomainExpr,
+                                       ParsedModel& parsedModel) {
+    string name = enumDomainExpr[0]["Name"];
+    auto iter = parsedModel.domainLettings.find(name);
+    if (iter == parsedModel.domainLettings.end()) {
+        cerr << "Could Not find enum " << name << endl;
+        abort();
+    }
+    return mpark::get<shared_ptr<EnumDomain>>(iter->second);
+}
+
 shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
                                      ParsedModel& parsedModel) {
     vector<pair<Int, Int>> ranges;
@@ -348,6 +359,30 @@ shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
         ranges.emplace_back(from, to);
     }
     return make_shared<IntDomain>(move(ranges));
+}
+
+void handleEnumDeclaration(json& enumDeclExpr, ParsedModel& parsedModel) {
+    const string& enumName = enumDeclExpr[0]["Name"];
+    vector<string> valueNames;
+    for (auto& nameExpr : enumDeclExpr[1]) {
+        string name = nameExpr["Name"];
+        valueNames.emplace_back(move(name));
+    }
+    auto enumDomain = make_shared<EnumDomain>(enumName, move(valueNames));
+    parsedModel.domainLettings.emplace(enumName, enumDomain);
+    for (size_t i = 0; i < enumDomain->valueNames.size(); i++) {
+        auto val = make<EnumValue>();
+        val->value = i;
+        const string& name = enumDomain->valueNames[i];
+        bool inserted = parsedModel.namedExprs
+                            .emplace(name, make_pair(enumDomain, val.asExpr()))
+                            .second;
+        if (!inserted) {
+            cerr << "Error: whilst defining enum domain " << enumName
+                 << ", the name " << name << " has already been used.\n";
+            abort();
+        }
+    }
 }
 
 shared_ptr<BoolDomain> parseDomainBool(json&, ParsedModel&) {
@@ -492,6 +527,7 @@ optional<AnyDomainRef> tryParseDomain(json& domainExpr,
                                       ParsedModel& parsedModel) {
     return stringMatch<ParseDomainFunction>(
         {{"DomainInt", parseDomainInt},
+         {"DomainEnum", parseDomainEnum},
          {"DomainBool", parseDomainBool},
          {"DomainSet", parseDomainSet},
          {"DomainMSet", parseDomainMSet},
@@ -499,7 +535,6 @@ optional<AnyDomainRef> tryParseDomain(json& domainExpr,
          {"DomainTuple", parseDomainTuple},
          {"DomainFunction", parseDomainFunction},
          {"DomainPartition", parseDomainPartition},
-
          {"DomainReference", parseDomainReference}},
         domainExpr, parsedModel);
 }
@@ -637,7 +672,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpAllDiff(json& operandExpr,
         fakeBoolDomain,
         OpMaker<OpAllDiff>::make(expect<SequenceView>(
             parseExpr(operandExpr, parsedModel).second, [&](auto&&) {
-                cerr << "OpAllDiff expects a sequence returning expression.\n";
+                cerr << "OpAllDiff expects a sequence returning "
+                        "expression.\n";
                 cerr << operandExpr << endl;
             })));
 }
@@ -748,7 +784,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpRelationProj(json& operandsExpr,
                                             operandsExpr[1], parsedModel);
             },
             [&](auto&& operand) -> pair<AnyDomainRef, AnyExprRef> {
-                cerr << "Error, not yet handling op relation projection with a "
+                cerr << "Error, not yet handling op relation projection "
+                        "with a "
                         "left operand "
                         "of type "
                      << TypeAsString<typename AssociatedValueType<viewType(
@@ -782,11 +819,11 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
                 },
                 [&](auto&& left)
                     -> pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> {
-                    cerr
-                        << "Error, not yet handling OpEq with operands of type "
-                        << TypeAsString<typename AssociatedValueType<viewType(
-                               left)>::type>::value
-                        << ": " << operandsExpr << endl;
+                    cerr << "Error, not yet handling OpEq with operands of "
+                            "type "
+                         << TypeAsString<typename AssociatedValueType<viewType(
+                                left)>::type>::value
+                         << ": " << operandsExpr << endl;
                     abort();
                 })(left);
         },
@@ -817,7 +854,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpNotEq(json& operandsExpr,
 pair<AnyDomainRef, AnyExprRef> parseOpTogether(json& operandsExpr,
                                                ParsedModel& parsedModel) {
     const string UNSUPPORTED_MESSAGE =
-        "Only supporting together when given a set literal of two elements as "
+        "Only supporting together when given a set literal of two elements "
+        "as "
         "the first parameter.\n";
     auto set = expect<SetView>(
         parseExpr(operandsExpr[0], parsedModel).second, [&](auto&&) {
@@ -1298,7 +1336,8 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseComprehension(
     if (compr) {
         return move(*compr);
     } else {
-        cerr << "Failed to find a generator to parse in the comprehension.\n";
+        cerr << "Failed to find a generator to parse in the "
+                "comprehension.\n";
         abort();
     }
 }
@@ -1594,6 +1633,8 @@ void parseJson(json& j, ParsedModel& parsedModel) {
             } else if (declaration.count("FindOrGiven") &&
                        declaration["FindOrGiven"][0] == "Find") {
                 handleFindDeclaration(declaration["FindOrGiven"], parsedModel);
+            } else if (declaration.count("LettingDomainDefnEnum")) {
+                handleEnumDeclaration(declaration["LettingDomainDefnEnum"], parsedModel);
             }
         } else if (statement.count("SuchThat")) {
             parseExprs(statement["SuchThat"], parsedModel);

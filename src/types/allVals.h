@@ -1,6 +1,7 @@
 #ifndef SRC_TYPES_ALLVALS_H_
 #define SRC_TYPES_ALLVALS_H_
 #include "types/boolVal.h"
+#include "types/enumVal.h"
 #include "types/functionVal.h"
 #include "types/intVal.h"
 #include "types/mSetVal.h"

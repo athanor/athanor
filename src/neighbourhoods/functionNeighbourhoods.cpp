@@ -16,7 +16,7 @@ void assignRandomValueInDomainImpl(const FunctionDomain& domain,
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
     val.resetDimensions<InnerViewType>(
-        FunctionView::makeDimensionVecFromDomain(domain.from));
+        domain.from, FunctionView::makeDimensionVecFromDomain(domain.from));
     for (size_t i = 0; i < val.rangeSize(); i++) {
         auto newMember = constructValueFromDomain(*innerDomainPtr);
         assignRandomValueInDomain(*innerDomainPtr, *newMember, stats);

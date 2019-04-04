@@ -138,6 +138,12 @@ typename std::enable_if<IsDomainType<BaseType<DomainType>>::value,
 prettyPrint(std::ostream& os, const DomainType&);
 
 template <typename View>
+EnableIfViewAndReturn<View, std::ostream&> prettyPrint(
+    std::ostream& os,
+    const typename AssociatedDomain<
+        typename AssociatedValueType<View>::type>::type& domain,
+    const View& view);
+template <typename View>
 inline EnableIfViewAndReturn<View, std::ostream&> operator<<(std::ostream& os,
                                                              const View& v) {
     return prettyPrint(os, v);

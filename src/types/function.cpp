@@ -4,6 +4,7 @@
 #include <utility>
 #include "common/common.h"
 #include "types/boolVal.h"
+#include "types/enumVal.h"
 #include "types/functionVal.h"
 #include "types/intVal.h"
 #include "types/tupleVal.h"
@@ -18,32 +19,40 @@ Dimension intDomainToDimension(IntDomain& dom) {
     }
     return Dimension(dom.bounds.front().first, dom.bounds.front().second);
 }
-DimensionVec FunctionView::makeDimensionVecFromDomain(
-    const AnyDomainRef& domain) {
-    const shared_ptr<IntDomain>* intDomainTest;
-    const shared_ptr<TupleDomain>* tupleDomainTest;
+
+void makeDimensionVecFromDomainHelper(const AnyDomainRef& domain,
+                                      DimensionVec& dimVec) {
     try {
-        if ((intDomainTest = mpark::get_if<shared_ptr<IntDomain>>(&domain)) !=
-            NULL) {
-            return {intDomainToDimension(**intDomainTest)};
-        } else if ((tupleDomainTest = mpark::get_if<shared_ptr<TupleDomain>>(
-                        &domain)) != NULL) {
-            DimensionVec dimVec;
-            for (auto& innerDomain : (*tupleDomainTest)->inners) {
-                auto innerIntDomain =
-                    mpark::get<shared_ptr<IntDomain>>(innerDomain);
-                dimVec.emplace_back(intDomainToDimension(*innerIntDomain));
-            }
-            return dimVec;
-        } else {
-            throw NoSupportException();
-        }
+        mpark::visit(
+            overloaded(
+                [&](const shared_ptr<IntDomain>& domain) {
+                    dimVec.emplace_back(intDomainToDimension(*domain));
+                },
+                [&](const shared_ptr<EnumDomain>& domain) {
+                    dimVec.emplace_back(0, domain->valueNames.size() - 1);
+                },
+                [&](const shared_ptr<TupleDomain>& domain) {
+                    for (auto& inner : domain->inners) {
+                        makeDimensionVecFromDomainHelper(inner, dimVec);
+                    }
+                },
+                [&](const auto&) { throw NoSupportException(); }),
+            domain);
+
     } catch (...) {
         cerr << "Currently no support for building DimensionVecs from function "
                 "domain: ";
         prettyPrint(cerr, domain) << endl;
         abort();
     }
+}
+
+DimensionVec FunctionView::makeDimensionVecFromDomain(
+    const AnyDomainRef& domain) {
+    DimensionVec dimVec;
+    makeDimensionVecFromDomainHelper(domain, dimVec);
+
+    return dimVec;
 }
 
 template <typename Op>
@@ -63,84 +72,137 @@ lib::optional<UInt> translateValueFromDimension(Int value,
     }
     return lib::nullopt;
 }
-
-lib::optional<Int> getAsIntForFunctionIndex(const AnyExprRef& expr) {
-    const ExprRef<IntView>* intTest = mpark::get_if<ExprRef<IntView>>(&expr);
-    if (intTest) {
-        auto view = (*intTest)->getViewIfDefined();
-        if (view) {
-            return (*view).value;
-        } else {
-            return lib::nullopt;
-        }
-    }
-
-    const ExprRef<BoolView>* boolTest = mpark::get_if<ExprRef<BoolView>>(&expr);
-    if (boolTest) {
-        auto view = (*boolTest)->getViewIfDefined();
-        if (view) {
-            return (*view).violation == 0;
-        } else {
-            return lib::nullopt;
-        }
-    }
-    cerr << "Error: sorry only handling function from int, bool or tuples of "
-            "int/bool\n";
-    abort();
+template <typename View>
+lib::optional<UInt> domainToIndexHelper(const View&, const DimensionVec&,
+                                        size_t&) {
+    todoImpl();
 }
 
-lib::optional<UInt> FunctionView::domainToIndex(const IntView& intV) {
-    debug_code(assert(dimensions.size() == 1));
-    return translateValueFromDimension(intV.value, dimensions[0]);
+lib::optional<UInt> domainToIndexHelper(const EnumView& v,
+                                        const DimensionVec& dimVec,
+                                        size_t& dimIndex) {
+    debug_code(assert(dimIndex < dimVec.size()));
+    auto i = translateValueFromDimension(v.value, dimVec[dimIndex]);
+    ++dimIndex;
+    return i;
 }
 
-lib::optional<UInt> FunctionView::domainToIndex(const TupleView& tupleV) {
-    debug_code(assert(dimensions.size() == tupleV.members.size()));
+lib::optional<UInt> domainToIndexHelper(const IntView& v,
+                                        const DimensionVec& dimVec,
+                                        size_t& dimIndex) {
+    debug_code(assert(dimIndex < dimVec.size()));
+    auto i = translateValueFromDimension(v.value, dimVec[dimIndex]);
+    ++dimIndex;
+    return i;
+}
+lib::optional<UInt> domainToIndexHelper(const TupleView& tupleV,
+                                        const DimensionVec& dimVec,
+                                        size_t& dimIndex) {
+    debug_code(assert(dimIndex < dimVec.size()));
     size_t indexTotal = 0;
-    for (size_t i = 0; i < tupleV.members.size(); i++) {
-        auto asInt = getAsIntForFunctionIndex(tupleV.members[i]);
-        if (!asInt) {
+    bool undefined = false;
+    for (auto& member : tupleV.members) {
+        size_t origDimIndex = dimIndex;
+        mpark::visit(
+            [&](const auto& expr) {
+                const auto memberView = expr->getViewIfDefined();
+                if (!memberView) {
+                    undefined = true;
+                    return;
+                }
+                auto index = domainToIndexHelper(*memberView, dimVec, dimIndex);
+                if (!index) {
+                    undefined = true;
+                    return;
+                }
+                indexTotal += dimVec[origDimIndex].blockSize * (*index);
+            },
+            member);
+        if (undefined) {
             return lib::nullopt;
         }
-        auto index = translateValueFromDimension(*asInt, dimensions[i]);
-        if (!index) {
-            return lib::nullopt;
-        }
-        indexTotal += dimensions[i].blockSize * (*index);
     }
-    debug_code(assert(indexTotal < rangeSize()));
     return indexTotal;
 }
 
+lib::optional<UInt> FunctionView::domainToIndex(const IntView& v) {
+    size_t index = 0;
+    return domainToIndexHelper(v, dimensions, index);
+}
+
+lib::optional<UInt> FunctionView::domainToIndex(const EnumView& v) {
+    size_t index = 0;
+    return domainToIndexHelper(v, dimensions, index);
+}
+
+lib::optional<UInt> FunctionView::domainToIndex(const TupleView& v) {
+    size_t index = 0;
+    return domainToIndexHelper(v, dimensions, index);
+}
+
 template <>
-ExprRef<IntView> functionIndexToDomain<IntView>(const DimensionVec& dimensions,
-                                                UInt index) {
-    debug_code(assert(dimensions.size() == 1));
+ExprRef<IntView> functionIndexToDomain<IntDomain>(
+    const IntDomain&, const DimensionVec& dimensions, UInt index,
+    size_t& dimIndex) {
+    debug_code(assert(dimIndex < dimensions.size()));
     auto val = make<IntValue>();
-    val->value = dimensions[0].lower + index;
+    val->value = dimensions[dimIndex].lower + index;
+    ++dimIndex;
     return val.asExpr();
 }
 
 template <>
-void functionIndexToDomain<IntView>(const DimensionVec& dimensions, UInt index,
-                                    IntView& view) {
-    debug_code(assert(dimensions.size() == 1));
+void functionIndexToDomain<IntDomain>(const IntDomain&,
+                                      const DimensionVec& dimensions,
+                                      UInt index, IntView& view,
+                                      size_t& dimIndex) {
+    debug_code(assert(dimIndex < dimensions.size()));
     view.changeValue([&]() {
-        view.value = dimensions[0].lower + index;
+        view.value = dimensions[dimIndex].lower + index;
         return true;
     });
+    ++dimIndex;
 }
 
 template <>
-ExprRef<TupleView> functionIndexToDomain<TupleView>(
-    const DimensionVec& dimensions, UInt index) {
+ExprRef<EnumView> functionIndexToDomain<EnumDomain>(
+    const EnumDomain&, const DimensionVec& dimensions, UInt index,
+    size_t& dimIndex) {
+    debug_code(assert(dimIndex < dimensions.size()));
+    auto val = make<EnumValue>();
+    val->value = dimensions[dimIndex].lower + index;
+    ++dimIndex;
+    return val.asExpr();
+}
+
+template <>
+void functionIndexToDomain<EnumDomain>(const EnumDomain&,
+                                       const DimensionVec& dimensions,
+                                       UInt index, EnumView& view,
+                                       size_t& dimIndex) {
+    debug_code(assert(dimIndex < dimensions.size()));
+    view.changeValue([&]() {
+        view.value = dimensions[dimIndex].lower + index;
+        return true;
+    });
+    ++dimIndex;
+}
+
+template <>
+ExprRef<TupleView> functionIndexToDomain<TupleDomain>(
+    const TupleDomain& domain, const DimensionVec& dimVec, UInt index,
+    size_t& dimIndex) {
     vector<AnyExprRef> tupleMembers;
-    for (auto& dim : dimensions) {
-        auto intVal = make<IntValue>();
-        UInt row = index / dim.blockSize;
-        index %= dim.blockSize;
-        intVal->value = row + dim.lower;
-        tupleMembers.emplace_back(intVal.asExpr());
+
+    for (auto& inner : domain.inners) {
+        UInt row = index / dimVec[dimIndex].blockSize;
+        index %= dimVec[dimIndex].blockSize;
+        mpark::visit(
+            [&](auto& innerDomainPtr) {
+                tupleMembers.emplace_back(functionIndexToDomain(
+                    *innerDomainPtr, dimVec, row, dimIndex));
+            },
+            inner);
     }
     auto tuple = OpMaker<OpTupleLit>::make(move(tupleMembers));
     tuple->setAppearsDefined(true);
@@ -149,18 +211,28 @@ ExprRef<TupleView> functionIndexToDomain<TupleView>(
 }
 
 template <>
-void functionIndexToDomain<TupleView>(const DimensionVec& dimensions,
-                                      UInt index, TupleView& view) {
-    for (size_t dimIndex = 0; dimIndex < dimensions.size(); dimIndex++) {
+void functionIndexToDomain<TupleDomain>(const TupleDomain& domain,
+                                        const DimensionVec& dimensions,
+                                        UInt index, TupleView& view,
+                                        size_t& dimIndex) {
+    debug_code(assert(view.members.size() == domain.inners.size()));
+    for (size_t i = 0; i < domain.inners.size(); i++) {
         auto& dim = dimensions[dimIndex];
-        auto& memberExpr = mpark::get<ExprRef<IntView>>(view.members[dimIndex]);
-        auto& memberView = memberExpr->view().get();
-        UInt row = index / dim.blockSize;
-        index %= dim.blockSize;
-        memberView.changeValue([&]() {
-            memberView.value = row + dim.lower;
-            return true;
-        });
+        mpark::visit(
+            [&](auto& innerDomainPtr) {
+                typedef
+                    typename BaseType<decltype(innerDomainPtr)>::element_type
+                        Domain;
+                typedef typename AssociatedValueType<Domain>::type Value;
+                typedef typename AssociatedViewType<Value>::type View;
+                auto& memberExpr = mpark::get<ExprRef<View>>(view.members[i]);
+                auto& memberView = memberExpr->view().get();
+                UInt row = index / dim.blockSize;
+                index %= dim.blockSize;
+                functionIndexToDomain(*innerDomainPtr, dimensions, row,
+                                      memberView, dimIndex);
+            },
+            domain.inners[i]);
     }
 }
 
@@ -178,15 +250,48 @@ ostream& prettyPrint<FunctionView>(ostream& os, const FunctionView& v) {
                 if (i > 0) {
                     os << ",\n";
                 }
-                if (v.dimensions.size() == 1) {
-                    auto from = v.indexToDomain<IntView>(i);
-                    prettyPrint(os, from->view());
-                } else {
-                    auto from = v.indexToDomain<TupleView>(i);
-                    prettyPrint(os, from->view());
-                }
+                mpark::visit(
+                    [&](auto& fromDomain) {
+                        typedef typename BaseType<decltype(
+                            fromDomain)>::element_type Domain;
+                        auto from = v.indexToDomain<Domain>(i);
+                        prettyPrint(os, from->view());
+                    },
+                    v.fromDomain);
                 os << " --> ";
                 prettyPrint(os, rangeImpl[i]->view());
+            }
+        },
+        v.range);
+    os << ")";
+    return os;
+}
+
+template <>
+ostream& prettyPrint<FunctionView>(ostream& os, const FunctionDomain& domain,
+                                   const FunctionView& v) {
+    os << "function(";
+    mpark::visit(
+        [&](auto& rangeImpl) {
+            typedef
+                typename AssociatedValueType<viewType(rangeImpl)>::type Value;
+            typedef typename AssociatedDomain<Value>::type Domain;
+            const auto& toDomainPtr = mpark::get<shared_ptr<Domain>>(domain.to);
+
+            for (size_t i = 0; i < rangeImpl.size(); i++) {
+                if (i > 0) {
+                    os << ",\n";
+                }
+                mpark::visit(
+                    [&](auto& fromDomain) {
+                        typedef typename BaseType<decltype(
+                            fromDomain)>::element_type Domain;
+                        auto from = v.indexToDomain<Domain>(i);
+                        prettyPrint(os, *fromDomain, from->view());
+                    },
+                    v.fromDomain);
+                os << " --> ";
+                prettyPrint(os, *toDomainPtr, rangeImpl[i]->view());
             }
         },
         v.range);

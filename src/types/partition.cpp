@@ -26,6 +26,22 @@ void printPart(std::ostream& os, const ExprRefVec<InnerViewType>& part) {
     os << "}";
 }
 
+template <typename InnerDomainType, typename InnerViewType>
+void printPart(std::ostream& os, const InnerDomainType& domain,
+               const ExprRefVec<InnerViewType>& part) {
+    bool first = true;
+    os << "{";
+    for (auto& member : part) {
+        if (first) {
+            first = false;
+        } else {
+            os << ",";
+        }
+        prettyPrint(os, domain, member->view());
+    }
+    os << "}";
+}
+
 template <>
 ostream& prettyPrint<PartitionView>(ostream& os, const PartitionView& v) {
     os << "partition(";
@@ -43,6 +59,37 @@ ostream& prettyPrint<PartitionView>(ostream& os, const PartitionView& v) {
                     os << ",";
                 }
                 printPart(os, part);
+            }
+        },
+        v.members);
+    os << ")";
+    return os;
+}
+
+template <>
+ostream& prettyPrint<PartitionView>(ostream& os, const PartitionDomain& domain,
+                                    const PartitionView& v) {
+    os << "partition(";
+    mpark::visit(
+        [&](auto& membersImpl) {
+            typedef
+                typename AssociatedValueType<viewType(membersImpl)>::type Value;
+            typedef typename AssociatedDomain<Value>::type Domain;
+            const auto& domainPtr =
+                mpark::get<shared_ptr<Domain>>(domain.inner);
+
+            vector<ExprRefVec<viewType(membersImpl)>> parts(v.numberParts());
+            for (size_t i = 0; i < v.memberPartMap.size(); i++) {
+                parts[v.memberPartMap[i]].emplace_back(membersImpl[i]);
+            }
+            bool first = true;
+            for (auto& part : parts) {
+                if (first) {
+                    first = false;
+                } else {
+                    os << ",";
+                }
+                printPart(os, *domainPtr, part);
             }
         },
         v.members);

@@ -118,3 +118,27 @@ FindAndReplaceFunction ModelBuilder::makeFindReplaceFunc(AnyValRef& var,
 size_t randomSize(size_t minSize, size_t maxSize) {
     return globalRandom<size_t>(minSize, std::min(maxSize, minSize + 1000));
 }
+
+void Model::printVariables() const {
+    for (size_t i = 0; i < variables.size(); ++i) {
+        auto& v = variables[i];
+        std::cout << "letting " << variableNames[i] << " be ";
+        mpark::visit(
+            [&](auto& domain) {
+                typedef
+                    typename BaseType<decltype(domain)>::element_type Domain;
+                typedef typename AssociatedValueType<Domain>::type Value;
+                typedef typename AssociatedViewType<Value>::type View;
+                ExprRef<View> expr(nullptr);
+                if (valBase(v.second).container != &definedPool) {
+                    expr = mpark::get<ValRef<Value>>(v.second).asExpr();
+                } else {
+                    expr = mpark::get<ExprRef<View>>(
+                        definingExpressions.at(valBase(v.second).id));
+                }
+                prettyPrint(std::cout, *domain, expr->getViewIfDefined());
+            },
+            v.first);
+        std::cout << std::endl;
+    }
+}

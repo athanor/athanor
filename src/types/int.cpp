@@ -15,6 +15,12 @@ ostream& prettyPrint<IntView>(ostream& os, const IntView& v) {
 }
 
 template <>
+ostream& prettyPrint<IntView>(ostream& os, const IntDomain&, const IntView& v) {
+    os << v.value;
+    return os;
+}
+
+template <>
 void deepCopy<IntValue>(const IntValue& src, IntValue& target) {
     target.changeValue([&]() {
         target.value = src.value;

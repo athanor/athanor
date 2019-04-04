@@ -30,6 +30,32 @@ ostream& prettyPrint<SetView>(ostream& os, const SetView& v) {
     return os;
 }
 
+template <>
+ostream& prettyPrint<SetView>(ostream& os, const SetDomain& domain,
+                              const SetView& v) {
+    os << "{";
+    mpark::visit(
+        [&](auto& membersImpl) {
+            typedef
+                typename AssociatedValueType<viewType(membersImpl)>::type Value;
+            typedef typename AssociatedDomain<Value>::type Domain;
+            const auto& domainPtr =
+                mpark::get<shared_ptr<Domain>>(domain.inner);
+            bool first = true;
+            for (auto& memberPtr : membersImpl) {
+                if (first) {
+                    first = false;
+                } else {
+                    os << ",";
+                }
+                prettyPrint(os, *domainPtr, memberPtr->view());
+            }
+        },
+        v.members);
+    os << "}";
+    return os;
+}
+
 template <typename InnerViewType>
 void deepCopyImpl(const SetValue& src,
                   const ExprRefVec<InnerViewType>& srcMemnersImpl,

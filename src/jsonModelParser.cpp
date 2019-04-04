@@ -159,50 +159,53 @@ void append(AnyExprVec& vec, AnyExprRef& expr) {
         },
         vec);
 }
-void updateDimensions(AnyExprRef preImage, DimensionVec& dimVec) {
-    string errorMessage =
-        "\nOnly supporting functions from int or tuple of int.";
+void updateDimensions(AnyDomainRef functionFromDomain, AnyExprRef preImage,
+                      DimensionVec& dimVec, size_t& index) {
+    debug_code(assert(index <= dimVec.size()));
+    // chosen <= not < deliberately
     mpark::visit(
         overloaded(
             [&](ExprRef<IntView>& expr) {
                 Int v = expr->view().checkedGet(ERROR_UNDEFINED).value;
-                if (dimVec.empty()) {
+                if (index == dimVec.size()) {
                     dimVec.emplace_back(v, v);
                 } else {
-                    dimVec.front().lower = min(dimVec.front().lower, v);
-                    dimVec.front().upper = max(dimVec.front().upper, v);
+                    dimVec[index].lower = min(dimVec[index].lower, v);
+                    dimVec[index].upper = max(dimVec[index].upper, v);
                 }
             },
-            [&](ExprRef<TupleView>& tuple) {
-                if (dimVec.empty()) {
-                    for (auto& member :
-                         tuple->view().checkedGet(ERROR_UNDEFINED).members) {
-                        Int v = parseExprAsInt(member, errorMessage);
-                        dimVec.emplace_back(v, v);
-                    }
+
+            [&](ExprRef<EnumView>&) {
+                size_t numberValues =
+                    mpark::get<shared_ptr<EnumDomain>>(functionFromDomain)
+                        ->valueNames.size();
+                if (index == dimVec.size()) {
+                    dimVec.emplace_back(0, numberValues - 1);
                 } else {
-                    debug_code(assert(tuple->view()
-                                          .checkedGet(ERROR_UNDEFINED)
-                                          .members.size() == dimVec.size()));
-                    for (size_t i = 0; i < tuple->view()
-                                               .checkedGet(ERROR_UNDEFINED)
-                                               .members.size();
-                         i++) {
-                        Int v = parseExprAsInt(tuple->view()
-                                                   .checkedGet(ERROR_UNDEFINED)
-                                                   .members[i],
-                                               errorMessage);
-                        auto& dim = dimVec[i];
-                        dim.lower = min(dim.lower, v);
-                        dim.upper = max(dim.upper, v);
-                    }
+                    debug_code(
+                        assert(dimVec[index].lower == 0 &&
+                               dimVec[index].upper == ((Int)numberValues) - 1));
+                }
+            },
+
+            [&](ExprRef<TupleView>& tuple) {
+                auto& domain =
+                    *mpark::get<shared_ptr<TupleDomain>>(functionFromDomain);
+                auto& members =
+                    tuple->view().checkedGet(ERROR_UNDEFINED).members;
+                debug_code(assert(members.size() == domain.inners.size()));
+                for (size_t i = 0; i < domain.inners.size(); i++) {
+                    updateDimensions(domain.inners[i], members[i], dimVec,
+                                     index);
                 }
             },
             [&](auto&) {
-                cerr << "Error: " << errorMessage << endl;
+                cerr << "Error: only supporting functions maping from int, "
+                        "enum or tuple of such.\n";
                 abort();
             }),
         preImage);
+    ++index;
 }
 
 pair<AnyDomainRef, AnyDomainRef> parseDefinedAndRange(json& functionDomainExpr,
@@ -224,10 +227,39 @@ pair<AnyDomainRef, AnyDomainRef> parseDefinedAndRange(json& functionDomainExpr,
         }
         append(defined, preImage.second);
         append(range, image.second);
-        updateDimensions(preImage.second, dimVec);
+        size_t index = 0;
+        updateDimensions(functionDomain.first, preImage.second, dimVec, index);
     }
     return functionDomain;
 }
+
+AnyDomainRef buildRealFunctionFromDomain(const AnyDomainRef& functionFromDomain,
+                                         const DimensionVec& dimVec,
+                                         size_t index) {
+    debug_code(assert(index < dimVec.size()));
+    return mpark::visit(
+        overloaded(
+            [&](const shared_ptr<IntDomain>&) -> AnyDomainRef {
+                return make_shared<IntDomain>(vector<pair<Int, Int>>(
+                    {{dimVec[index].lower, dimVec[index].upper}}));
+            },
+            [&](const shared_ptr<EnumDomain>& domain) -> AnyDomainRef {
+                return domain;
+            },
+            [&](const shared_ptr<TupleDomain>& domain) -> AnyDomainRef {
+                vector<AnyDomainRef> newTupleInnerDomains;
+                for (auto& innerDomain : domain->inners) {
+                    newTupleInnerDomains.emplace_back(
+                        buildRealFunctionFromDomain(innerDomain, dimVec,
+                                                    index));
+                    ++index;
+                }
+                return make_shared<TupleDomain>(move(newTupleInnerDomains));
+            },
+            [&](const auto&) -> AnyDomainRef { todoImpl(); }),
+        functionFromDomain);
+}
+
 // will not work with expressions
 pair<shared_ptr<FunctionDomain>, ExprRef<FunctionView>> parseConstantFunction(
     json& functionDomainExpr, ParsedModel& parsedModel) {
@@ -236,19 +268,24 @@ pair<shared_ptr<FunctionDomain>, ExprRef<FunctionView>> parseConstantFunction(
     AnyExprVec range;
     pair<AnyDomainRef, AnyDomainRef> functionDomain = parseDefinedAndRange(
         functionDomainExpr, parsedModel, defined, range, dimVec);
+    functionDomain.first =
+        buildRealFunctionFromDomain(functionDomain.first, dimVec, 0);
     auto function = make<FunctionValue>();
     function->setConstant(true);
     mpark::visit(
         [&](auto& defined, auto& range) {
             if (range.empty()) {
-                cerr << "Not handling empty functions yet, sorry.\n";
+                cerr << "Not handling empty functions yet, "
+                        "sorry.\n";
                 cerr << functionDomainExpr << endl;
                 abort();
             }
-            function->resetDimensions<viewType(range)>(dimVec);
+            function->resetDimensions<viewType(range)>(functionDomain.first,
+                                                       dimVec);
             for (size_t i = 0; i < defined.size(); i++) {
                 if (!defined[i]->isConstant() || !range[i]->isConstant()) {
-                    cerr << "At the moment, only handling constant function "
+                    cerr << "At the moment, only handling "
+                            "constant function "
                             "literals.\n";
                     abort();
                 }
@@ -263,6 +300,7 @@ pair<shared_ptr<FunctionDomain>, ExprRef<FunctionView>> parseConstantFunction(
         fakeFunctionDomain(functionDomain.first, functionDomain.second),
         function.asExpr());
 }
+
 template <typename View,
           typename Value = typename AssociatedValueType<View>::type>
 inline ValRef<Value> getIfConstValue(ExprRef<View>& expr) {
@@ -318,7 +356,8 @@ pair<AnyDomainRef, AnyExprRef> parseValueReference(json& essenceReference,
         return parsedModel.namedExprs.at(referenceName);
     } else {
         cerr << "Found reference to value with name \"" << referenceName
-             << "\" but this does not appear to be in scope.\n";
+             << "\" but this does not appear to be in "
+                "scope.\n";
         abort();
     }
 }
@@ -439,8 +478,10 @@ shared_ptr<PartitionDomain> parseDomainPartition(json& partitionDomainExpr,
     SizeAttr sizeAttr =
         parseSizeAttr(partitionDomainExpr[1]["partsNum"], parsedModel);
     if (!regular || sizeAttr.sizeType != SizeAttr::SizeAttrType::EXACT_SIZE) {
-        cerr << "Only supporting partitions that are regular and a fixed "
-                "number of parts.  Make sure these attributes are specified.\n";
+        cerr << "Only supporting partitions that are "
+                "regular and a fixed "
+                "number of parts.  Make sure these "
+                "attributes are specified.\n";
         abort();
     }
     return make_shared<PartitionDomain>(
@@ -452,7 +493,8 @@ shared_ptr<MSetDomain> parseDomainMSet(json& mSetDomainExpr,
                                        ParsedModel& parsedModel) {
     SizeAttr sizeAttr = parseSizeAttr(mSetDomainExpr[1][0], parsedModel);
     if (!mSetDomainExpr[1][1].count("OccurAttr_None")) {
-        cerr << "Error: for the moment, given attribute must be "
+        cerr << "Error: for the moment, given attribute "
+                "must be "
                 "OccurAttr_None.  This is not handled yet: "
              << mSetDomainExpr[1][1] << endl;
         abort();
@@ -471,7 +513,8 @@ shared_ptr<SequenceDomain> parseDomainSequence(json& sequenceDomainExpr,
         return make_shared<SequenceDomain>(
             sizeAttr, parseDomain(sequenceDomainExpr[2], parsedModel), true);
     } else {
-        cerr << "Not sure what this attribute for domain sequence is:\n"
+        cerr << "Not sure what this attribute for domain "
+                "sequence is:\n"
              << sequenceDomainExpr[1][1] << endl;
         abort();
     }
@@ -482,16 +525,19 @@ shared_ptr<FunctionDomain> parseDomainFunction(json& functionDomainExpr,
     SizeAttr sizeAttr = parseSizeAttr(functionDomainExpr[1][0], parsedModel);
 
     if (sizeAttr.sizeType != SizeAttr::SizeAttrType::NO_SIZE) {
-        cerr << "Do not support/understand function with size attribute.\nn";
+        cerr << "Do not support/understand function with "
+                "size attribute.\nn";
         abort();
     }
     PartialAttr partialAttr = parsePartialAttr(functionDomainExpr[1][1]);
     if (partialAttr != PartialAttr::TOTAL) {
-        cerr << "Error: currently only support total functions.\n";
+        cerr << "Error: currently only support total "
+                "functions.\n";
         abort();
     }
     if (functionDomainExpr[1][2] != "JectivityAttr_None") {
-        cerr << "Error, not supporting jectivity attributes on functions at "
+        cerr << "Error, not supporting jectivity attributes "
+                "on functions at "
                 "the moment.\n";
         abort();
     }
@@ -515,7 +561,8 @@ AnyDomainRef parseDomainReference(json& domainReference,
     string referenceName = domainReference[0]["Name"];
     if (!parsedModel.domainLettings.count(referenceName)) {
         cerr << "Found reference to domainwith name \"" << referenceName
-             << "\" but this does not appear to be in scope.\n"
+             << "\" but this does not appear to be in "
+                "scope.\n"
              << domainReference << endl;
         abort();
     } else {
@@ -573,7 +620,9 @@ pair<AnyDomainRef, AnyExprRef> parseOpMod(json& modExpr,
 
 pair<AnyDomainRef, AnyExprRef> parseOpNegate(json& negateExpr,
                                              ParsedModel& parsedModel) {
-    string errorMessage = "Expected int returning expression within OpNegate: ";
+    string errorMessage =
+        "Expected int returning expression within "
+        "OpNegate: ";
     ExprRef<IntView> operand =
         expect<IntView>(parseExpr(negateExpr, parsedModel).second,
                         [&](auto&&) { cerr << errorMessage << negateExpr[0]; });
@@ -604,7 +653,9 @@ pair<AnyDomainRef, AnyExprRef> parseOpDiv(json& modExpr,
 
 pair<AnyDomainRef, AnyExprRef> parseOpMinus(json& minusExpr,
                                             ParsedModel& parsedModel) {
-    string errorMessage = "Expected int returning expression within Op minus: ";
+    string errorMessage =
+        "Expected int returning expression within Op "
+        "minus: ";
     ExprRef<IntView> left =
         expect<IntView>(parseExpr(minusExpr[0], parsedModel).second,
                         [&](auto&&) { cerr << errorMessage << minusExpr[0]; });
@@ -617,7 +668,9 @@ pair<AnyDomainRef, AnyExprRef> parseOpMinus(json& minusExpr,
 
 pair<AnyDomainRef, AnyExprRef> parseOpPower(json& powerExpr,
                                             ParsedModel& parsedModel) {
-    string errorMessage = "Expected int returning expression within Op power: ";
+    string errorMessage =
+        "Expected int returning expression within Op "
+        "power: ";
     ExprRef<IntView> left =
         expect<IntView>(parseExpr(powerExpr[0], parsedModel).second,
                         [&](auto&&) { cerr << errorMessage << powerExpr[0]; });
@@ -642,7 +695,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpIn(json& inExpr,
 pair<AnyDomainRef, AnyExprRef> parseOpSubsetEq(json& subsetExpr,
                                                ParsedModel& parsedModel) {
     string errorMessage =
-        "Expected set returning expression within Op subset: ";
+        "Expected set returning expression within Op "
+        "subset: ";
     ExprRef<SetView> left =
         expect<SetView>(parseExpr(subsetExpr[0], parsedModel).second,
                         [&](auto&&) { cerr << errorMessage << subsetExpr[0]; });
@@ -656,7 +710,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpSubsetEq(json& subsetExpr,
 pair<AnyDomainRef, AnyExprRef> parseOpPowerSet(json& powerSetExpr,
                                                ParsedModel& parsedModel) {
     string errorMessage =
-        "Expected set returning expression within Op PowerSet: ";
+        "Expected set returning expression within Op "
+        "PowerSet: ";
     auto parsedExpr = parseExpr(powerSetExpr, parsedModel);
     auto operand = expect<SetView>(parsedExpr.second, [&](auto&&) {
         cerr << errorMessage << powerSetExpr << endl;
@@ -672,7 +727,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpAllDiff(json& operandExpr,
         fakeBoolDomain,
         OpMaker<OpAllDiff>::make(expect<SequenceView>(
             parseExpr(operandExpr, parsedModel).second, [&](auto&&) {
-                cerr << "OpAllDiff expects a sequence returning "
+                cerr << "OpAllDiff expects a sequence "
+                        "returning "
                         "expression.\n";
                 cerr << operandExpr << endl;
             })));
@@ -692,7 +748,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
                                  OpMaker<OpSequenceSize>::make(sequence));
             },
             [&](auto&& operand) -> pair<shared_ptr<IntDomain>, AnyExprRef> {
-                cerr << "Error, not yet handling OpTwoBars with an operand "
+                cerr << "Error, not yet handling OpTwoBars "
+                        "with an operand "
                         "of type "
                      << TypeAsString<typename AssociatedValueType<viewType(
                             operand)>::type>::value
@@ -707,7 +764,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpSequenceIndex(
     ParsedModel& parsedModel) {
     auto index = expect<IntView>(
         parseExpr(indexExpr[0], parsedModel).second, [](auto&&) {
-            cerr << "Sequence must be indexed by an int expression.\n";
+            cerr << "Sequence must be indexed by an int "
+                    "expression.\n";
         });
     return mpark::visit(
         [&](auto& innerDomain) -> pair<AnyDomainRef, AnyExprRef> {
@@ -784,7 +842,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpRelationProj(json& operandsExpr,
                                             operandsExpr[1], parsedModel);
             },
             [&](auto&& operand) -> pair<AnyDomainRef, AnyExprRef> {
-                cerr << "Error, not yet handling op relation projection "
+                cerr << "Error, not yet handling op "
+                        "relation projection "
                         "with a "
                         "left operand "
                         "of type "
@@ -803,7 +862,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
     return mpark::visit(
         [&](auto& left) {
             auto errorHandler = [&](auto&&) {
-                cerr << "Expected right operand to be of same type as left, "
+                cerr << "Expected right operand to be of "
+                        "same type as left, "
                         "i.e. "
                      << TypeAsString<typename AssociatedValueType<viewType(
                             left)>::type>::value
@@ -819,7 +879,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
                 },
                 [&](auto&& left)
                     -> pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> {
-                    cerr << "Error, not yet handling OpEq with operands of "
+                    cerr << "Error, not yet handling OpEq "
+                            "with operands of "
                             "type "
                          << TypeAsString<typename AssociatedValueType<viewType(
                                 left)>::type>::value
@@ -837,7 +898,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpNotEq(json& operandsExpr,
     return mpark::visit(
         [&](auto& left) {
             auto errorHandler = [&](auto&&) {
-                cerr << "Expected right operand to be of same type as left, "
+                cerr << "Expected right operand to be of "
+                        "same type as left, "
                         "i.e. "
                      << TypeAsString<typename AssociatedValueType<viewType(
                             left)>::type>::value
@@ -854,17 +916,20 @@ pair<AnyDomainRef, AnyExprRef> parseOpNotEq(json& operandsExpr,
 pair<AnyDomainRef, AnyExprRef> parseOpTogether(json& operandsExpr,
                                                ParsedModel& parsedModel) {
     const string UNSUPPORTED_MESSAGE =
-        "Only supporting together when given a set literal of two elements "
+        "Only supporting together when given a set literal "
+        "of two elements "
         "as "
         "the first parameter.\n";
-    auto set = expect<SetView>(
-        parseExpr(operandsExpr[0], parsedModel).second, [&](auto&&) {
-            cerr << "Error, together takes a set as its first parameter.\n";
-        });
+    auto set = expect<SetView>(parseExpr(operandsExpr[0], parsedModel).second,
+                               [&](auto&&) {
+                                   cerr << "Error, together takes a set as its "
+                                           "first parameter.\n";
+                               });
 
     auto partition = expect<PartitionView>(
         parseExpr(operandsExpr[1], parsedModel).second, [&](auto&&) {
-            cerr << "Error, together takes a partition as its second "
+            cerr << "Error, together takes a partition as "
+                    "its second "
                     "parameter.\n";
         });
     auto setLit = getAs<OpSetLit>(set);
@@ -896,7 +961,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpCatchUndef(json& operandsExpr,
     return mpark::visit(
         [&](auto& left) -> pair<AnyDomainRef, AnyExprRef> {
             auto errorHandler = [&](auto&&) {
-                cerr << "Expected right operand to be of same type as left, "
+                cerr << "Expected right operand to be of "
+                        "same type as left, "
                         "i.e. "
                      << TypeAsString<typename AssociatedValueType<viewType(
                             left)>::type>::value
@@ -956,7 +1022,8 @@ pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> parseOpLessEq(
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> parseOpSequenceLit(
     json& matrixExpr, ParsedModel& parsedModel) {
     if (matrixExpr[1].size() == 0) {
-        cerr << "Not sure how to work out type of empty matrix or sequence "
+        cerr << "Not sure how to work out type of empty "
+                "matrix or sequence "
                 "yet, will handle "
                 "this later.";
         todoImpl();
@@ -1002,7 +1069,8 @@ void checkTuplePatternMatchSize(json& tupleMatchExpr,
     if (tupleMatchExpr.size() != domain->inners.size()) {
         cerr << "Error, given pattern match assumes exactly "
              << tupleMatchExpr.size()
-             << " members to be present in tuple.  However, it appears "
+             << " members to be present in tuple.  However, "
+                "it appears "
                 "that the number of members in the "
                 "tuple is "
              << domain->inners.size() << ".\n";
@@ -1050,7 +1118,8 @@ void addLocalVarsToScopeFromPatternMatch(
     } else if (patternExpr.count("AbsPatTuple")) {
         overloaded(
             [&](auto&, auto&) {
-                cerr << "Error, Found tuple pattern, but in this context "
+                cerr << "Error, Found tuple pattern, but in "
+                        "this context "
                         "expected a different expression.\n";
                 cerr << "Found domain: " << *domain << endl;
                 cerr << "Expr: " << patternExpr << endl;
@@ -1075,7 +1144,8 @@ void addLocalVarsToScopeFromPatternMatch(
     } else if (patternExpr.count("AbsPatSet")) {
         overloaded(
             [&](auto&, auto&) {
-                cerr << "Error, found set pattern, but did not expect a set "
+                cerr << "Error, found set pattern, but did "
+                        "not expect a set "
                         "pattern in this context\n";
                 cerr << "Found domain: " << *domain << endl;
                 cerr << "Expr: " << patternExpr << endl;
@@ -1206,7 +1276,8 @@ void addConditionsToQuantifier(json& comprExpr, Quantifier& quantifier,
         }
         auto parsedCondition = expect<BoolView>(
             parseExpr(expr["Condition"], parsedModel).second, [&](auto&&) {
-                cerr << "Conitions for quantifiers must be bool "
+                cerr << "Conitions for quantifiers must be "
+                        "bool "
                         "returning.\n";
             });
         conditions.emplace_back(parsedCondition);
@@ -1287,7 +1358,8 @@ parseComprehensionImpl(json& comprExpr, ParsedModel& parsedModel,
 
     auto errorHandler = [&](auto &&)
         -> pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>> {
-        cerr << "Error, not yet handling quantifier for this type: "
+        cerr << "Error, not yet handling quantifier for "
+                "this type: "
              << generatorExpr << endl;
         abort();
     };
@@ -1348,8 +1420,10 @@ auto makeVaradicOpParser(const Domain& domain) {
                ParsedModel& parsedModel) -> pair<AnyDomainRef, AnyExprRef> {
         auto sequence = expect<SequenceView>(
             parseExpr(essenceExpr, parsedModel).second, [&](auto&&) {
-                cerr << "In the context of parsing arguments to a function, "
-                        "requires matrix/sequence/quantifier.\n"
+                cerr << "In the context of parsing "
+                        "arguments to a function, "
+                        "requires "
+                        "matrix/sequence/quantifier.\n"
                      << essenceExpr << endl;
             });
         return make_pair(domain, OpMaker<Op>::make(sequence));
@@ -1480,7 +1554,8 @@ optional<pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
 pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>>
 parseDomainGeneratorIntFromDomain(IntDomain& domain) {
     if (domain.bounds.size() != 1) {
-        cerr << "Do not currently support unrolling over int domains with "
+        cerr << "Do not currently support unrolling over "
+                "int domains with "
                 "holes.\n";
         abort();
     }
@@ -1503,14 +1578,16 @@ pair<shared_ptr<SequenceDomain>, ExprRef<SequenceView>>
 parseDomainGeneratorIntFromExpr(json& expr, ParsedModel& parsedModel) {
     auto& intDomainExpr = (expr[0].count("TagInt")) ? expr[1] : expr;
     if (intDomainExpr.size() != 1) {
-        cerr << "Error: do not yet support unrolling (quantifying) "
+        cerr << "Error: do not yet support unrolling "
+                "(quantifying) "
                 "over int "
                 "domains with holes in them.\n";
         abort();
     }
     ExprRef<IntView> from(nullptr), to(nullptr);
     auto errorFunc = [](auto&&) {
-        cerr << "Expected int returning expression when parsing an int "
+        cerr << "Expected int returning expression when "
+                "parsing an int "
                 "domain "
                 "for unrolling.\n";
     };
@@ -1546,7 +1623,8 @@ pair<AnyDomainRef, AnyExprRef> parseDomainGeneratorReference(
                 return parseDomainGeneratorIntFromDomain(*domain);
             },
             [&](auto& domain) -> pair<AnyDomainRef, AnyExprRef> {
-                cerr << "Error: do not yet support unrolling this domain.\n";
+                cerr << "Error: do not yet support "
+                        "unrolling this domain.\n";
                 prettyPrint(cerr, domain) << endl;
                 cerr << domainExpr << endl;
                 abort();
@@ -1563,7 +1641,8 @@ pair<AnyDomainRef, AnyExprRef> parseDomainGenerator(json& domainExpr,
     if (generator) {
         return *generator;
     } else {
-        cerr << "Error: do not yet support unrolling this domain.\n";
+        cerr << "Error: do not yet support unrolling this "
+                "domain.\n";
         cerr << domainExpr << endl;
         abort();
     }
@@ -1603,7 +1682,8 @@ void parseExprs(json& suchThat, ParsedModel& parsedModel) {
     for (auto& op : suchThat) {
         ExprRef<BoolView> constraint =
             expect<BoolView>(parseExpr(op, parsedModel).second, [&](auto&&) {
-                cerr << "Expected Bool returning constraint within "
+                cerr << "Expected Bool returning constraint "
+                        "within "
                         "such that: "
                      << op << endl;
             });
@@ -1618,7 +1698,8 @@ inline void parseObjective(json& objExpr, ParsedModel& parsedModel) {
 
     ExprRef<IntView> objConstraint =
         expect<IntView>(parseExpr(objExpr[1], parsedModel).second, [&](auto&&) {
-            cerr << "Expected int returning expression for objective: "
+            cerr << "Expected int returning expression for "
+                    "objective: "
                  << objExpr << endl;
         });
     parsedModel.builder->setObjective(mode, objConstraint);
@@ -1634,7 +1715,8 @@ void parseJson(json& j, ParsedModel& parsedModel) {
                        declaration["FindOrGiven"][0] == "Find") {
                 handleFindDeclaration(declaration["FindOrGiven"], parsedModel);
             } else if (declaration.count("LettingDomainDefnEnum")) {
-                handleEnumDeclaration(declaration["LettingDomainDefnEnum"], parsedModel);
+                handleEnumDeclaration(declaration["LettingDomainDefnEnum"],
+                                      parsedModel);
             }
         } else if (statement.count("SuchThat")) {
             parseExprs(statement["SuchThat"], parsedModel);

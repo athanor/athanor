@@ -19,21 +19,18 @@ struct InitialUnroller<FunctionView> {
         mpark::visit(
             [&](auto& membersImpl) {
                 for (size_t i = 0; i < membersImpl.size(); i++) {
-                    if (containerView.dimensions.size() == 1) {
-                        auto tupleFirstMember =
-                            containerView.template indexToDomain<IntView>(i);
-                        auto unrolledExpr = OpMaker<OpTupleLit>::make(
-                            {tupleFirstMember, membersImpl[i]});
-                        unrolledExpr->evaluate();
-                        quantifier.unroll(i, unrolledExpr);
-                    } else {
-                        auto tupleFirstMember =
-                            containerView.template indexToDomain<TupleView>(i);
-                        auto unrolledExpr = OpMaker<OpTupleLit>::make(
-                            {tupleFirstMember, membersImpl[i]});
-                        unrolledExpr->evaluate();
-                        quantifier.unroll(i, unrolledExpr);
-                    }
+                    mpark::visit(
+                        [&](auto& fromDomain) {
+                            typedef typename BaseType<decltype(
+                                fromDomain)>::element_type Domain;
+                            auto tupleFirstMember =
+                                containerView.template indexToDomain<Domain>(i);
+                            auto unrolledExpr = OpMaker<OpTupleLit>::make(
+                                {tupleFirstMember, membersImpl[i]});
+                            unrolledExpr->evaluate();
+                            quantifier.unroll(i, unrolledExpr);
+                        },
+                        containerView.fromDomain);
                 }
             },
             containerView.range);
@@ -70,15 +67,19 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
         debug_log("Correcting tuple index " << index);
         auto& tuple =
             mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
-        if (op->container->view()->dimensions.size() == 1) {
-            auto& preImage =
-                mpark::get<ExprRef<IntView>>(tuple->view()->members[0]);
-            op->container->view()->indexToDomain(index, (*preImage->view()));
-        } else {
-            auto& preImage =
-                mpark::get<ExprRef<TupleView>>(tuple->view()->members[0]);
-            op->container->view()->indexToDomain(index, (*preImage->view()));
-        }
+        auto& containerView = *op->container->view();
+        mpark::visit(
+            [&](auto& fromDomain) {
+                typedef typename BaseType<decltype(fromDomain)>::element_type
+                    Domain;
+                typedef typename AssociatedValueType<Domain>::type Value;
+                typedef typename AssociatedViewType<Value>::type View;
+                auto& preImage =
+                    mpark::get<ExprRef<View>>(tuple->view()->members[0]);
+                containerView.template indexToDomain<Domain>(
+                    index, (*preImage->view()));
+            },
+            containerView.fromDomain);
     }
 
     void hasBecomeUndefined() {

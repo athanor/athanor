@@ -15,6 +15,14 @@ ostream& prettyPrint<EnumView>(ostream& os, const EnumView& v) {
 }
 
 template <>
+ostream& prettyPrint<EnumView>(ostream& os, const EnumDomain& domain,
+                               const EnumView& v) {
+    debug_code(assert(v.value < domain.valueNames.size()));
+    os << domain.valueNames[v.value];
+    return os;
+}
+
+template <>
 void deepCopy<EnumValue>(const EnumValue& src, EnumValue& target) {
     target.changeValue([&]() {
         target.value = src.value;

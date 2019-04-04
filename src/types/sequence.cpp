@@ -39,6 +39,33 @@ ostream& prettyPrint<SequenceView>(ostream& os, const SequenceView& v) {
     return os;
 }
 
+template <>
+ostream& prettyPrint<SequenceView>(ostream& os, const SequenceDomain& domain,
+                                   const SequenceView& v) {
+    os << "sequence(";
+    mpark::visit(
+        [&](auto& membersImpl) {
+            typedef
+                typename AssociatedValueType<viewType(membersImpl)>::type Value;
+            typedef typename AssociatedDomain<Value>::type Domain;
+            const auto& domainPtr =
+                mpark::get<shared_ptr<Domain>>(domain.inner);
+
+            bool first = true;
+            for (auto& memberPtr : membersImpl) {
+                if (first) {
+                    first = false;
+                } else {
+                    os << ",";
+                }
+                prettyPrint(os, *domainPtr, memberPtr->view());
+            }
+        },
+        v.members);
+    os << ")";
+    return os;
+}
+
 template <typename InnerViewType>
 void deepCopyImpl(const SequenceValue&,
                   const ExprRefVec<InnerViewType>& srcMemnersImpl,

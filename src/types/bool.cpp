@@ -15,6 +15,13 @@ ostream& prettyPrint<BoolView>(ostream& os, const BoolView& v) {
 }
 
 template <>
+ostream& prettyPrint<BoolView>(ostream& os, const BoolDomain&,
+                               const BoolView& v) {
+    os << ((v.violation == 0) ? "true" : "false");
+    return os;
+}
+
+template <>
 void deepCopy<BoolValue>(const BoolValue& src, BoolValue& target) {
     target.changeValue([&]() {
         target.violation = src.violation;

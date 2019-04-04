@@ -16,44 +16,66 @@ struct Dimension {
     UInt blockSize = 0;
     Dimension(Int lower, Int upper) : lower(lower), upper(upper) {}
 };
+
 typedef std::vector<Dimension> DimensionVec;
 
-template <typename View>
-ExprRef<View> functionIndexToDomain(const DimensionVec&, UInt) {
-    static_assert(!std::is_same<View, IntView>::value,
-                  "Currently do not support function from this type.\n");
+template <typename Domain>
+ExprRef<typename AssociatedViewType<
+    typename AssociatedValueType<Domain>::type>::type>
+functionIndexToDomain(const Domain&, const DimensionVec&, UInt, size_t&) {
+    todoImpl();
 }
 
 template <>
-ExprRef<IntView> functionIndexToDomain<IntView>(const DimensionVec& dimensions,
-                                                UInt index);
+ExprRef<IntView> functionIndexToDomain<IntDomain>(
+    const IntDomain& domain, const DimensionVec& dimensions, UInt index,
+    size_t& dimIndex);
 
 template <>
-ExprRef<TupleView> functionIndexToDomain<TupleView>(
-    const DimensionVec& dimensions, UInt);
+ExprRef<EnumView> functionIndexToDomain<EnumDomain>(
+    const EnumDomain& domain, const DimensionVec& dimensions, UInt index,
+    size_t& dimIndex);
 
-template <typename View>
-void functionIndexToDomain(const DimensionVec&, UInt, View&) {
-    static_assert(!std::is_same<View, IntView>::value,
-                  "Currently do not support function from this type.\n");
+template <>
+ExprRef<TupleView> functionIndexToDomain<TupleDomain>(
+    const TupleDomain&, const DimensionVec& dimensions, UInt index,
+    size_t& dimIndex);
+
+template <typename Domain>
+void functionIndexToDomain(
+    const Domain&, const DimensionVec&, UInt,
+    typename AssociatedViewType<
+        typename AssociatedValueType<Domain>::type>::type&,
+    size_t&) {
+    todoImpl();
 }
 
 template <>
-void functionIndexToDomain<IntView>(const DimensionVec& dimensions, UInt index,
-                                    IntView&);
+void functionIndexToDomain<IntDomain>(const IntDomain&,
+                                      const DimensionVec& dimensions,
+                                      UInt index, IntView&, size_t& dimIndex);
 
 template <>
-void functionIndexToDomain<TupleView>(const DimensionVec& dimensions, UInt,
-                                      TupleView&);
+void functionIndexToDomain<EnumDomain>(const EnumDomain&,
+                                       const DimensionVec& dimensions,
+                                       UInt index, EnumView&, size_t& dimIndex);
+
+template <>
+void functionIndexToDomain<TupleDomain>(const TupleDomain&,
+                                        const DimensionVec& dimensions, UInt,
+                                        TupleView&, size_t& index);
+
 lib::optional<Int> getAsIntForFunctionIndex(const AnyExprRef& expr);
 
 struct FunctionView : public ExprInterface<FunctionView>,
                       TriggerContainer<FunctionView> {
     friend FunctionValue;
+    AnyDomainRef fromDomain;
     DimensionVec dimensions;
     AnyExprVec range;
 
     lib::optional<UInt> domainToIndex(const IntView& intV);
+    lib::optional<UInt> domainToIndex(const EnumView& tupleV);
     lib::optional<UInt> domainToIndex(const TupleView& tupleV);
 
     template <typename View, EnableIfView<BaseType<View>> = 0>
@@ -61,21 +83,36 @@ struct FunctionView : public ExprInterface<FunctionView>,
         shouldNotBeCalledPanic;
     }
 
-    template <typename View, EnableIfView<View> = 0>
+    template <
+        typename Domain,
+        typename View = typename AssociatedViewType<
+            typename AssociatedValueType<Domain>::type>::type,
+        typename std::enable_if<IsDomainType<Domain>::value, int>::type = 0>
     void indexToDomain(UInt index, View& view) const {
-        functionIndexToDomain<View>(dimensions, index, view);
+        size_t dimIndex = 0;
+        functionIndexToDomain<Domain>(
+            *mpark::get<std::shared_ptr<Domain>>(fromDomain), dimensions, index,
+            view, dimIndex);
     }
 
-    template <typename View, EnableIfView<View> = 0>
+    template <
+        typename Domain,
+        typename View = typename AssociatedViewType<
+            typename AssociatedValueType<Domain>::type>::type,
+        typename std::enable_if<IsDomainType<Domain>::value, int>::type = 0>
     ExprRef<View> indexToDomain(UInt index) const {
-        return functionIndexToDomain<View>(dimensions, index);
+        size_t dimIndex = 0;
+        return functionIndexToDomain<Domain>(
+            *mpark::get<std::shared_ptr<Domain>>(fromDomain), dimensions, index,
+            dimIndex);
     }
 
     static DimensionVec makeDimensionVecFromDomain(const AnyDomainRef& domain);
 
     template <typename InnerViewType, typename DimVec,
               EnableIfView<InnerViewType> = 0>
-    void resetDimensions(DimVec&& dim) {
+    void resetDimensions(AnyDomainRef fromDom, DimVec&& dim) {
+        fromDomain = std::move(fromDom);
         dimensions = std::forward<DimVec>(dim);
         size_t requiredSize = 1;
         for (auto iter = dimensions.rbegin(); iter != dimensions.rend();
@@ -87,6 +124,7 @@ struct FunctionView : public ExprInterface<FunctionView>,
         range.emplace<ExprRefVec<InnerViewType>>().assign(requiredSize,
                                                           nullptr);
     }
+
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void assignImage(size_t index,
                             const ExprRef<InnerViewType>& member) {

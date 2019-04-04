@@ -262,6 +262,19 @@ inline std::ostream& prettyPrint(std::ostream& os,
 }
 
 template <typename View>
+inline std::ostream& prettyPrint(
+    std::ostream& os,
+    const typename AssociatedDomain<
+        typename AssociatedValueType<View>::type>::type& domain,
+    const OptionalRef<View>& ref) {
+    if (ref) {
+        return prettyPrint(os, domain, *ref);
+    } else {
+        return os << "undefined";
+    }
+}
+
+template <typename View>
 inline std::ostream& operator<<(std::ostream& os,
                                 const OptionalRef<View>& ref) {
     return prettyPrint(os, ref);

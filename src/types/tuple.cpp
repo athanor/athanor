@@ -35,6 +35,29 @@ ostream& prettyPrint<TupleView>(ostream& os, const TupleView& v) {
 }
 
 template <>
+ostream& prettyPrint<TupleView>(ostream& os, const TupleDomain& domain,
+                                const TupleView& v) {
+    os << "tuple(";
+    for (size_t i = 0; i < v.members.size(); i++) {
+        if (i != 0) {
+            os << ",";
+        }
+        mpark::visit(
+            [&](auto& member) {
+                typedef
+                    typename AssociatedValueType<viewType(member)>::type Value;
+                typedef typename AssociatedDomain<Value>::type Domain;
+                const auto& domainPtr =
+                    mpark::get<shared_ptr<Domain>>(domain.inners[i]);
+                prettyPrint(os, *domainPtr, member->view());
+            },
+            v.members[i]);
+    }
+    os << ")";
+    return os;
+}
+
+template <>
 void deepCopy<TupleValue>(const TupleValue& src, TupleValue& target) {
     target.cachedHashTotal.invalidate();
     target.members.clear();

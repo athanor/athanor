@@ -857,8 +857,8 @@ pair<AnyDomainRef, AnyExprRef> parseOpRelationProj(json& operandsExpr,
 
 pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
                                          ParsedModel& parsedModel) {
-    AnyExprRef left = parseExpr(operandsExpr[0], parsedModel).second;
-    AnyExprRef right = parseExpr(operandsExpr[1], parsedModel).second;
+    AnyExprRef leftAnyExpr = parseExpr(operandsExpr[0], parsedModel).second;
+    AnyExprRef rightAnyExpr = parseExpr(operandsExpr[1], parsedModel).second;
     return mpark::visit(
         [&](auto& left) {
             auto errorHandler = [&](auto&&) {
@@ -869,15 +869,22 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
                             left)>::type>::value
                      << endl;
             };
+            auto right = expect<viewType(left)>(rightAnyExpr, errorHandler);
+
+            // adding fake template args to stop functions from being compiled
+            // until invoked
             return overloaded(
-                [&](ExprRef<IntView>& left)
+                [&](ExprRef<IntView>& left, auto &&)
                     -> pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> {
-                    return make_pair(
-                        fakeBoolDomain,
-                        OpMaker<OpIntEq>::make(
-                            left, expect<IntView>(right, errorHandler)));
+                    return make_pair(fakeBoolDomain,
+                                     OpMaker<OpIntEq>::make(left, right));
                 },
-                [&](auto&& left)
+                [&](ExprRef<EnumView>& left, auto &&)
+                    -> pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> {
+                    return make_pair(fakeBoolDomain,
+                                     OpMaker<OpEnumEq>::make(left, right));
+                },
+                [&](auto&& left, auto &&)
                     -> pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> {
                     cerr << "Error, not yet handling OpEq "
                             "with operands of "
@@ -886,9 +893,11 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
                                 left)>::type>::value
                          << ": " << operandsExpr << endl;
                     abort();
-                })(left);
+                })(left, 0);
+            // 0 is a fake arg put there to match the auto parameter to the
+            // above lambdas
         },
-        left);
+        leftAnyExpr);
 }
 
 pair<AnyDomainRef, AnyExprRef> parseOpNotEq(json& operandsExpr,

@@ -10,6 +10,13 @@ template <>
 struct OpMaker<OpIntEq> {
     static ExprRef<BoolView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
+
+struct OpEnumEq;
+template <>
+struct OpMaker<OpEnumEq> {
+    static ExprRef<BoolView> make(ExprRef<EnumView> l, ExprRef<EnumView> r);
+};
+
 struct OpMod;
 template <>
 struct OpMaker<OpMod> {

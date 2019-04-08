@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 #include "base/base.h"
+#include "search/objective.h"
 struct Model;
 struct StatsMarkPoint {
     u_int64_t numberIterations;
@@ -11,14 +12,15 @@ struct StatsMarkPoint {
     double realTime;
     UInt bestViolation;
     UInt lastViolation;
-    Int bestObjective;
-    Int lastObjective;
+    Objective bestObjective;
+    Objective lastObjective;
     bool lastObjectiveDefined;
 
     StatsMarkPoint(u_int64_t numberIterations, u_int64_t minorNodeCount,
                    u_int64_t triggerEventCount, double realTime,
-                   UInt bestViolation, UInt lastViolation, Int bestObjective,
-                   Int lastObjective, bool lastObjectiveDefined)
+                   UInt bestViolation, UInt lastViolation,
+                   Objective bestObjective, Objective lastObjective,
+                   bool lastObjectiveDefined)
         : numberIterations(numberIterations),
           minorNodeCount(minorNodeCount),
           triggerEventCount(triggerEventCount),
@@ -44,14 +46,10 @@ struct NeighbourhoodResult {
           statsMarkPoint(statsMarkPoint) {}
 
     Int getDeltaViolation() const;
-    Int getDeltaObjective() const;
+    bool objectiveStrictlyBetter() const;
+    bool objectiveBetterOrEqual() const;
     Int getDeltaDefinedness() const;
 };
-
-#ifndef CLASS_OPTIMISEMODE
-#define CLASS_OPTIMISEMODE
-enum class OptimiseMode { NONE, MAXIMISE, MINIMISE };
-#endif
 
 struct NeighbourhoodStats {
     std::string name;
@@ -94,8 +92,8 @@ struct StatsContainer {
     double vioTotalTime = 0;
     UInt bestViolation;
     UInt lastViolation;
-    Int bestObjective;
-    Int lastObjective;
+    Objective bestObjective;
+    Objective lastObjective;
     bool lastObjectiveDefined;
     std::vector<NeighbourhoodStats> neighbourhoodStats;
 

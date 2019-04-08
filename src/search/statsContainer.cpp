@@ -8,11 +8,16 @@ extern bool noPrintSolutions;
 Int NeighbourhoodResult::getDeltaViolation() const {
     return model.getViolation() - statsMarkPoint.lastViolation;
 }
-Int NeighbourhoodResult::getDeltaObjective() const {
-    return model.getObjective() - statsMarkPoint.lastObjective;
+
+bool NeighbourhoodResult::objectiveStrictlyBetter() const {
+    return model.getObjective() < statsMarkPoint.lastObjective;
 }
+bool NeighbourhoodResult::objectiveBetterOrEqual() const {
+    return model.getObjective() <= statsMarkPoint.lastObjective;
+}
+
 Int NeighbourhoodResult::getDeltaDefinedness() const {
-    bool currentDefined = model.objective->getViewIfDefined().hasValue();
+    bool currentDefined = model.objectiveDefined();
     return currentDefined - statsMarkPoint.lastObjectiveDefined;
 }
 
@@ -39,7 +44,9 @@ ostream& operator<<(ostream& os, const NeighbourhoodStats& stats) {
 }
 
 StatsContainer::StatsContainer(Model& model)
-    : optimiseMode(model.optimiseMode) {
+    : optimiseMode(model.optimiseMode),
+      bestObjective(optimiseMode, make<IntValue>().asExpr()),
+      lastObjective(bestObjective) {
     for (auto& neighbourhood : model.neighbourhoods) {
         neighbourhoodStats.emplace_back(neighbourhood.name);
     }
@@ -47,7 +54,7 @@ StatsContainer::StatsContainer(Model& model)
 
 void StatsContainer::initialSolution(Model& model) {
     lastViolation = model.csp->view()->violation;
-    lastObjectiveDefined = model.objective->getViewIfDefined().hasValue();
+    lastObjectiveDefined = model.objectiveDefined();
     if (lastObjectiveDefined) {
         lastObjective = model.getObjective();
     }
@@ -72,7 +79,7 @@ void StatsContainer::reportResult(bool solutionAccepted,
     neighbourhoodStats[result.neighbourhoodIndex].totalRealTime += timeDiff;
     neighbourhoodStats[result.neighbourhoodIndex].numberObjImprovements +=
         (result.statsMarkPoint.lastViolation == 0 &&
-         result.model.getViolation() == 0 && result.getDeltaObjective() < 0);
+         result.model.getViolation() == 0 && result.objectiveStrictlyBetter());
     if (result.statsMarkPoint.lastViolation > 0) {
         ++numberVioIterations;
         vioMinorNodeCount += minorNodeCountDiff;
@@ -92,8 +99,7 @@ void StatsContainer::reportResult(bool solutionAccepted,
         return;
     }
     lastViolation = result.model.csp->view()->violation;
-    lastObjectiveDefined =
-        result.model.objective->getViewIfDefined().hasValue();
+    lastObjectiveDefined = result.model.objectiveDefined();
     if (lastObjectiveDefined) {
         lastObjective = result.model.getObjective();
     }
@@ -117,8 +123,7 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
         cout << "\nNew solution:\n";
         cout << "Violation = " << lastViolation << endl;
         if (model.optimiseMode != OptimiseMode::NONE) {
-            cout << "objective = "
-                 << transposeObjective(optimiseMode, lastObjective) << endl;
+            cout << "objective = " << lastObjective << endl;
         }
     }
 
@@ -138,7 +143,8 @@ void StatsContainer::printCurrentState(Model& model) {
         model.csp->dumpState(cout) << endl;
         if (model.optimiseMode != OptimiseMode::NONE) {
             debug_log("Objective state:");
-            model.objective->dumpState(cout) << endl;
+            mpark::visit([&](auto& o) { o->dumpState(cout) << endl; },
+                         model.objective);
         }
     });
 }
@@ -146,8 +152,7 @@ void StatsContainer::printCurrentState(Model& model) {
 ostream& operator<<(ostream& os, const StatsContainer& stats) {
     os << "Stats:\n";
     os << "Best violation: " << stats.bestViolation << endl;
-    os << "Best objective: "
-       << transposeObjective(stats.optimiseMode, stats.bestObjective) << endl;
+    os << "Best objective: " << stats.bestObjective << endl;
     os << "CPU time till best solution: " << stats.cpuTimeTillBestSolution
        << endl;
     os << "Real time till best solution: " << stats.realTimeTillBestSolution

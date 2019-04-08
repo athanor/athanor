@@ -56,9 +56,9 @@ class HillClimbing {
                         strictImprovement = result.getDeltaViolation() < 0;
                     } else {
                         allowed = result.model.getViolation() == 0 &&
-                                  result.getDeltaObjective() <= 0;
+                                  result.objectiveBetterOrEqual();
                         strictImprovement =
-                            allowed && result.getDeltaObjective() < 0;
+                            allowed && result.objectiveStrictlyBetter();
                     }
                 }
                 return allowed;
@@ -136,10 +136,10 @@ class ExplorationUsingViolationBackOff {
         }
     }
 
-    void backOff(State& state, Int objToBeat,
+    void backOff(State& state, const Objective& objToBeat,
                  ExponentialIncrementer<UInt>& violationBackOff) {
         u_int64_t iterationsWithoutChange = 0;
-        while (state.model.getObjective() >= objToBeat) {
+        while (objToBeat <= state.model.getObjective()) {
             bool allowed = false;
             exploreStrategy->run(state, [&](const auto& result) {
                 if (!result.foundAssignment) {
@@ -170,7 +170,7 @@ class ExplorationUsingViolationBackOff {
         }
     }
 
-    bool repair(State& state, Int objToBeat) {
+    bool repair(State& state, const Objective& objToBeat) {
         u_int64_t iterationsWithoutChange = 0;
         while (state.model.getViolation() != 0) {
             bool allowed = false;
@@ -192,7 +192,7 @@ class ExplorationUsingViolationBackOff {
         return true;
     }
     void explore(State& state) {
-        int objToBeat = state.model.getObjective();
+        auto objToBeat = state.model.getObjective();
         ExponentialIncrementer<UInt> violationBackOff(1, 1.1);
         while (true) {
             backOff(state, objToBeat, violationBackOff);

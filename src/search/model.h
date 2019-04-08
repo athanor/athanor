@@ -1,28 +1,22 @@
 #ifndef SRC_SEARCH_MODEL_H_
 #define SRC_SEARCH_MODEL_H_
 #include <algorithm>
-#include <chrono>
-
 #include <cassert>
+#include <chrono>
 #include "base/base.h"
 #include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
-#include "operators/operatorMakers.h"
-
 #include "operators/opAnd.h"
 #include "operators/opIntEq.h"
 #include "operators/opSequenceLit.h"
+#include "operators/operatorMakers.h"
+#include "search/objective.h"
 #include "search/violationContainer.h"
 #include "types/allVals.h"
+
 extern ValBase definedPool;
 class ModelBuilder;
-#ifndef CLASS_OPTIMISEMODE
-#define CLASS_OPTIMISEMODE
-enum class OptimiseMode { NONE, MAXIMISE, MINIMISE };
-#endif
-inline Int transposeObjective(OptimiseMode mode, Int objective) {
-    return (mode == OptimiseMode::MAXIMISE) ? -objective : objective;
-}
+
 struct Model {
     friend ModelBuilder;
     std::vector<std::pair<AnyDomainRef, AnyValRef>> variables;
@@ -31,29 +25,21 @@ struct Model {
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
     std::shared_ptr<OpAnd> csp = nullptr;
-    ExprRef<IntView> objective = make<IntValue>().asExpr();
+    AnyExprRef objective = make<IntValue>().asExpr();
     OptimiseMode optimiseMode = OptimiseMode::NONE;
     HashMap<size_t, AnyExprRef> definingExpressions;
 
    private:
-    Model() { objective->view()->value = 0; }
+    Model() { mpark::get<ExprRef<IntView>>(objective)->view()->value = 0; }
 
    public:
     void printVariables() const;
-    void debugSanityCheck() const {
-        csp->debugSanityCheck();
-        objective->debugSanityCheck();
-        for (auto& indexExprPair : definingExpressions) {
-            mpark::visit([&](auto& expr) { expr->debugSanityCheck(); },
-                         indexExprPair.second);
-        }
-    }
+    void debugSanityCheck() const;
 
    public:
     inline UInt getViolation() const { return csp->view()->violation; }
-    inline Int getObjective() const {
-        return transposeObjective(optimiseMode, objective->view()->value);
-    }
+    Objective getObjective() const;
+    bool objectiveDefined() const;
 };
 
 class ModelBuilder {
@@ -91,7 +77,7 @@ class ModelBuilder {
         return val;
     }
 
-    inline void setObjective(OptimiseMode mode, ExprRef<IntView> obj) {
+    inline void setObjective(OptimiseMode mode, AnyExprRef obj) {
         model.objective = std::move(obj);
         model.optimiseMode = mode;
     }

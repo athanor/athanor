@@ -1650,18 +1650,33 @@ void parseExprs(json& suchThat, ParsedModel& parsedModel) {
     }
 }
 
+void validateObjectiveType(json& expr, AnyDomainRef domain) {
+    const char* errorMessage =
+        "Error: objective must be int or tuple of int.\n";
+    mpark::visit(
+        overloaded([&](const shared_ptr<IntDomain>&) {},
+                   [&](const shared_ptr<TupleDomain>& domain) {
+                       for (auto& inner : domain->inners) {
+                           if (!mpark::get_if<shared_ptr<IntDomain>>(&inner)) {
+                               cerr << errorMessage;
+                               abort();
+                           }
+                       }
+                   },
+                   [&](const auto&) {
+                       cerr << errorMessage;
+                       abort();
+                   }),
+        domain);
+}
+
 inline void parseObjective(json& objExpr, ParsedModel& parsedModel) {
     string modeStr = objExpr[0];
     OptimiseMode mode = (modeStr == "Minimising") ? OptimiseMode::MINIMISE
                                                   : OptimiseMode::MAXIMISE;
-
-    ExprRef<IntView> objConstraint =
-        expect<IntView>(parseExpr(objExpr[1], parsedModel).second, [&](auto&&) {
-            cerr << "Expected int returning expression for "
-                    "objective: "
-                 << objExpr << endl;
-        });
-    parsedModel.builder->setObjective(mode, objConstraint);
+    auto domainExprPair = parseExpr(objExpr[1], parsedModel);
+    validateObjectiveType(objExpr[1], domainExprPair.first);
+    parsedModel.builder->setObjective(mode, domainExprPair.second);
 }
 
 void parseJson(json& j, ParsedModel& parsedModel) {

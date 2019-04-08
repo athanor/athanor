@@ -33,7 +33,12 @@ void ModelBuilder::createNeighbourhoods() {
 
 void ModelBuilder::addConstraints() {
     if (model.optimiseMode != OptimiseMode::NONE) {
-        addConstraint(OpMaker<OpIsDefined<IntView>>::make(model.objective));
+        mpark::visit(
+            [&](auto& objective) {
+                addConstraint(
+                    OpMaker<OpIsDefined<viewType(objective)>>::make(objective));
+            },
+            model.objective);
     }
     // insure that defining expressions, expressions that define a variable are
     // always in the domainof the variable being defined
@@ -68,9 +73,11 @@ Model ModelBuilder::build() {
             [&](auto& expr) { expr->optimise(PathExtension::begin(expr)); },
             nameExprPair.second);
     }
-    if (model.optimiseMode != OptimiseMode::NONE) {
-        model.objective->optimise(PathExtension::begin(model.objective));
-    }
+    mpark::visit(
+        [&](auto& objective) {
+            objective->optimise(PathExtension::begin(objective));
+        },
+        model.objective);
     std::clock_t endBuildTime = std::clock();
     std::cout << "Model build time: "
               << ((double)(endBuildTime - startBuildTime) / CLOCKS_PER_SEC)
@@ -83,7 +90,11 @@ void ModelBuilder::substituteVarsToBeDefined() {
         auto func = makeFindReplaceFunc(
             var, model.definingExpressions.at(valBase(var).id));
         model.csp->operand = findAndReplace(model.csp->operand, func);
-        model.objective = findAndReplace(model.objective, func);
+        mpark::visit(
+            [&](auto& objective) {
+                objective = findAndReplace(objective, func);
+            },
+            model.objective);
         for (auto& varIdExprPair : model.definingExpressions) {
             if (varIdExprPair.first != valBase(var).id) {
                 mpark::visit(
@@ -141,4 +152,38 @@ void Model::printVariables() const {
             v.first);
         std::cout << std::endl;
     }
+}
+
+void Model::debugSanityCheck() const {
+    csp->debugSanityCheck();
+    mpark::visit([&](auto& objective) { objective->debugSanityCheck(); },
+                 objective);
+    for (auto& indexExprPair : definingExpressions) {
+        mpark::visit([&](auto& expr) { expr->debugSanityCheck(); },
+                     indexExprPair.second);
+    }
+}
+
+Objective Model::getObjective() const {
+    return mpark::visit(overloaded(
+                            [&](const ExprRef<IntView>& e) {
+                                return Objective(optimiseMode, e);
+                            },
+                            [&](const ExprRef<TupleView>& e) {
+                                return Objective(optimiseMode, e);
+                            },
+                            [&](const auto& e) -> Objective {
+                                cerr << "unsupported objective type\n";
+                                cerr << "value = " << e << endl;
+                                todoImpl();
+                            }),
+                        objective);
+}
+
+bool Model::objectiveDefined() const {
+    return mpark::visit(
+        [&](const auto& objective) {
+            return objective->getViewIfDefined().hasValue();
+        },
+        objective);
 }

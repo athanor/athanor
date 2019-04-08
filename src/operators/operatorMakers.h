@@ -134,6 +134,12 @@ struct OpMaker<IntRange> {
     static ExprRef<SequenceView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
 
+struct EnumRange;
+template <>
+struct OpMaker<EnumRange> {
+    static ExprRef<SequenceView> make(std::shared_ptr<EnumDomain> domain);
+};
+
 struct OpToInt;
 template <>
 struct OpMaker<OpToInt> {

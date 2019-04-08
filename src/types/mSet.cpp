@@ -121,7 +121,7 @@ void matchInnerType(const MSetDomain& domain, MSetValue& target) {
 }
 
 template <>
-UInt getDomainSize<MSetDomain>(const MSetDomain& domain) {
+UInt getDomainSize<MSetDomain>(const MSetDomain&) {
     return MAX_DOMAIN_SIZE;
     //    todoImpl(domain);
 }

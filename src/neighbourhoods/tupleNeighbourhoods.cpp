@@ -77,8 +77,69 @@ void tupleAssignRandomGen(const TupleDomain& domain, int numberValsRequired,
         });
 }
 
+template <typename InnerDomainPtrType>
+void tupleLiftSingleGenImpl(const TupleDomain& domain,
+                            const InnerDomainPtrType&, int numberValsRequired,
+                            size_t indexToChange,
+                            std::vector<Neighbourhood>& neighbourhoods) {
+    std::vector<Neighbourhood> innerDomainNeighbourhoods;
+    generateNeighbourhoods(1, domain.inners[indexToChange],
+                           innerDomainNeighbourhoods);
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    for (auto& innerNh : innerDomainNeighbourhoods) {
+        neighbourhoods.emplace_back(
+            toString("TupleLiftSingle_indexToChange", indexToChange, "_",
+                     innerNh.name),
+            numberValsRequired,
+            [indexToChange, innerNhApply{std::move(innerNh.apply)}](
+                NeighbourhoodParams& params) {
+                auto& val = *(params.getVals<TupleValue>().front());
+                debug_code(assert(indexToChange < val.members.size()));
+                auto& vioContainerAtThisLevel =
+                    params.vioContainer.childViolations(val.id);
+                ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
+                    return val.tryMemberChange<InnerValueType>(
+                        indexToChange,
+                        [&]() { return params.parentCheck(params.vals); });
+                };
+                bool requiresRevert = false;
+                AcceptanceCallBack changeAccepted = [&]() {
+                    requiresRevert = !params.changeAccepted();
+                    return !requiresRevert;
+                };
+                AnyValVec changingMembers;
+                auto& changingMembersImpl =
+                    changingMembers.emplace<ValRefVec<InnerValueType>>();
+                changingMembersImpl.emplace_back(
+                    val.member<InnerValueType>(indexToChange));
+                NeighbourhoodParams innerNhParams(
+                    changeAccepted, parentCheck, 1, changingMembers,
+                    params.stats, vioContainerAtThisLevel);
+                innerNhApply(innerNhParams);
+                if (requiresRevert) {
+                    val.tryMemberChange<InnerValueType>(indexToChange,
+                                                        [&]() { return true; });
+                }
+            });
+    }
+}
+
+void tupleLiftSingleGen(const TupleDomain& domain, int numberValsRequired,
+                        std::vector<Neighbourhood>& neighbourhoods) {
+    for (size_t i = 0; i < domain.inners.size(); i++) {
+        mpark::visit(
+            [&](const auto& innerDomainPtr) {
+                tupleLiftSingleGenImpl(domain, innerDomainPtr,
+                                       numberValsRequired, i, neighbourhoods);
+            },
+            domain.inners[i]);
+    }
+}
+
 const NeighbourhoodVec<TupleDomain> NeighbourhoodGenList<TupleDomain>::value = {
-    {1, tupleAssignRandomGen}};
+    {1, tupleAssignRandomGen},  //
+    {1, tupleLiftSingleGen}};
 
 const NeighbourhoodVec<TupleDomain>
     NeighbourhoodGenList<TupleDomain>::mergeNeighbourhoods = {};

@@ -194,6 +194,16 @@ auto& noPrintSolutionsFlag = argParser.add<Flag>(
     "Do not print solutions, useful for timing experiements.",
     [](auto&) { noPrintSolutions = true; });
 
+extern bool quietMode;
+bool quietMode = false;
+auto& quietModeFlag = argParser.add<Flag>(
+    "--quietMode", Policy::OPTIONAL,
+    "Do not print stats information every time an improvement to the objective "
+    "or violation is made.  If enabled, during search, the output consists "
+    "solely of feasible solutions.  Note that stats are still printed once at "
+    "the end of search.",
+    [](auto&) { quietMode = true; });
+
 ofstream outFileChecker(const string& path) {
     ofstream os(path);
     if (os.good()) {

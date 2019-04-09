@@ -4,7 +4,7 @@
 
 using namespace std;
 extern bool noPrintSolutions;
-
+extern bool quietMode;
 Int NeighbourhoodResult::getDeltaViolation() const {
     return model.getViolation() - statsMarkPoint.lastViolation;
 }
@@ -120,10 +120,12 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
     }
     if (vioImproved || (lastViolation == 0 && objImproved)) {
         tie(cpuTimeTillBestSolution, realTimeTillBestSolution) = getTime();
-        cout << "\nNew solution:\n";
-        cout << "Violation = " << lastViolation << endl;
-        if (model.optimiseMode != OptimiseMode::NONE) {
-            cout << "objective = " << lastObjective << endl;
+        if (!quietMode) {
+            cout << "\nNew solution:\n";
+            cout << "Violation = " << lastViolation << endl;
+            if (model.optimiseMode != OptimiseMode::NONE) {
+                cout << "objective = " << lastObjective << endl;
+            }
         }
     }
 
@@ -132,7 +134,10 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
     }
 }
 void StatsContainer::printCurrentState(Model& model) {
-    cout << (*this) << "\nTrigger event count " << triggerEventCount << "\n\n";
+    if (!quietMode) {
+        cout << (*this) << "\nTrigger event count " << triggerEventCount
+             << "\n\n";
+    }
     if (!noPrintSolutions && lastViolation == 0) {
         cout << "solution start\n";
         model.printVariables();

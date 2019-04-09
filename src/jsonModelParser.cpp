@@ -800,7 +800,7 @@ pair<AnyDomainRef, AnyExprRef> parseOpTupleIndex(
     shared_ptr<TupleDomain>& tupleDomain, ExprRef<TupleView>& tuple,
     json& indexExpr, ParsedModel& parsedModel) {
     string errorMessage = "within tuple index expression.";
-    UInt index = parseExprAsInt(indexExpr[0], parsedModel, errorMessage) - 1;
+    UInt index = parseExprAsInt(indexExpr, parsedModel, errorMessage) - 1;
     return mpark::visit(
         [&](auto& innerDomain) -> pair<AnyDomainRef, AnyExprRef> {
             typedef typename BaseType<decltype(innerDomain)>::element_type
@@ -827,12 +827,6 @@ pair<AnyDomainRef, AnyExprRef> parseOpRelationProj(json& operandsExpr,
                 return parseOpSequenceIndex(innerDomain, sequence,
                                             operandsExpr[1], parsedModel);
             },
-            [&](ExprRef<TupleView>& tuple) -> pair<AnyDomainRef, AnyExprRef> {
-                auto& tupleDomain =
-                    mpark::get<shared_ptr<TupleDomain>>(leftOperand.first);
-                return parseOpTupleIndex(tupleDomain, tuple, operandsExpr[1],
-                                         parsedModel);
-            },
             [&](ExprRef<FunctionView>& function)
                 -> pair<AnyDomainRef, AnyExprRef> {
                 auto& innerDomain =
@@ -844,6 +838,31 @@ pair<AnyDomainRef, AnyExprRef> parseOpRelationProj(json& operandsExpr,
             [&](auto&& operand) -> pair<AnyDomainRef, AnyExprRef> {
                 cerr << "Error, not yet handling op "
                         "relation projection "
+                        "with a "
+                        "left operand "
+                        "of type "
+                     << TypeAsString<typename AssociatedValueType<viewType(
+                            operand)>::type>::value
+                     << ": " << operandsExpr << endl;
+                abort();
+            }),
+        leftOperand.second);
+}
+
+pair<AnyDomainRef, AnyExprRef> parseOpIndexing(json& operandsExpr,
+                                               ParsedModel& parsedModel) {
+    auto leftOperand = parseExpr(operandsExpr[0], parsedModel);
+    return mpark::visit(
+        overloaded(
+            [&](ExprRef<TupleView>& tuple) -> pair<AnyDomainRef, AnyExprRef> {
+                auto& tupleDomain =
+                    mpark::get<shared_ptr<TupleDomain>>(leftOperand.first);
+                return parseOpTupleIndex(tupleDomain, tuple, operandsExpr[1],
+                                         parsedModel);
+            },
+            [&](auto&& operand) -> pair<AnyDomainRef, AnyExprRef> {
+                cerr << "Error, not yet handling op "
+                        "Indexing "
                         "with a "
                         "left operand "
                         "of type "
@@ -1553,6 +1572,7 @@ optional<pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
               makeVaradicOpParser<IntView, OpProd>(fakeIntDomain)},
              {"MkOpAllDiff", parseOpAllDiff},
              {"MkOpRelationProj", parseOpRelationProj},
+             {"MkOpIndexing", parseOpIndexing},
              {"MkOpMin", parseOpMinMax<true>},
              {"MkOpMax", parseOpMinMax<false>},
              {"MkOpToInt", parseOpToInt}},

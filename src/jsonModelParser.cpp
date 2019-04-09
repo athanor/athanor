@@ -1679,12 +1679,14 @@ void validateObjectiveType(json& expr, AnyDomainRef domain) {
                        for (auto& inner : domain->inners) {
                            if (!mpark::get_if<shared_ptr<IntDomain>>(&inner)) {
                                cerr << errorMessage;
+                               cerr << expr << endl;
                                abort();
                            }
                        }
                    },
                    [&](const auto&) {
                        cerr << errorMessage;
+                       cerr << expr << endl;
                        abort();
                    }),
         domain);

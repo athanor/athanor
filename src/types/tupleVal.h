@@ -18,7 +18,7 @@ struct TupleDomain {
 
 struct TupleValue : public TupleView, public ValBase {
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline ValRef<InnerValueType> value(UInt index) {
+    inline ValRef<InnerValueType> member(UInt index) {
         return assumeAsValue(
             mpark::get<
                 ExprRef<typename AssociatedViewType<InnerValueType>::type>>(

@@ -487,7 +487,7 @@ void setLiftMultipleGen(const SetDomain& domain, int numberValsRequired,
 
 template <typename InnerDomain>
 struct SetAssignRandom
-    : public NeighbourhoodFunc<SetDomain, 1, SetRemove<InnerDomain>> {
+    : public NeighbourhoodFunc<SetDomain, 1, SetAssignRandom<InnerDomain>> {
     typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
     typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
 

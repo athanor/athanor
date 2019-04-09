@@ -89,7 +89,7 @@ void tupleLiftSingleGenImpl(const TupleDomain& domain,
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
         neighbourhoods.emplace_back(
-            toString("TupleLiftSingle_indexToChange", indexToChange, "_",
+            toString("TupleLiftSingle_index", indexToChange, "_",
                      innerNh.name),
             numberValsRequired,
             [indexToChange, innerNhApply{std::move(innerNh.apply)}](

@@ -735,6 +735,20 @@ pair<AnyDomainRef, AnyExprRef> parseOpAllDiff(json& operandExpr,
 }
 pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
                                               ParsedModel& parsedModel) {
+    if (operandExpr.count("Domain")) {
+        auto domain = parseDomain(operandExpr["Domain"], parsedModel);
+        return mpark::visit(
+            [&](auto& domain) {
+                UInt domainSize = getDomainSize(*domain);
+                if (domainSize > numeric_limits<Int>().max()) {
+                    domainSize = numeric_limits<Int>().max();
+                }
+                auto val = make<IntValue>();
+                val->value = domainSize;
+                return make_pair(fakeIntDomain, val.asExpr());
+            },
+            domain);
+    }
     AnyExprRef operand = parseExpr(operandExpr, parsedModel).second;
     return mpark::visit(
         overloaded(

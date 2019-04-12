@@ -10,10 +10,15 @@ inline static u_int64_t nextQuantId() {
 template <typename Container>
 struct ContainerTrigger;
 template <typename ContainerType>
-struct OptionalIndices {};
+struct OptionalIndices {
+    void copyOptionalIndices(OptionalIndices<ContainerType>&) const {}
+};
 template <>
 struct OptionalIndices<SequenceView> {
     std::vector<size_t> indicesOfValuesToUnroll;
+    void copyOptionalIndices(OptionalIndices<SequenceView>& o) const {
+        o.indicesOfValuesToUnroll = indicesOfValuesToUnroll;
+    }
 };
 
 template <typename ContainerType>

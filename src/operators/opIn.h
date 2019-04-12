@@ -6,11 +6,11 @@
 #include "utils/fastIterableIntSet.h"
 
 struct OpIn : public BoolView {
-    struct SetOperandTrigger;
     struct ExprTriggerBase : public virtual TriggerBase {
         OpIn* op;
         ExprTriggerBase(OpIn* op) : op(op) {}
     };
+    struct SetOperandTrigger;
     AnyExprRef expr;
     ExprRef<SetView> setOperand;
     std::shared_ptr<ExprTriggerBase> exprTrigger;

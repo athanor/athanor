@@ -40,14 +40,11 @@ OpIn::OpIn(OpIn&& other)
 namespace {
 
 template <typename Derived, typename TriggerType>
-struct Trigger : public ChangeTriggerAdapter<TriggerType, Derived>,
-                 public OpIn::ExprTriggerBase {
-    typedef typename AssociatedViewType<TriggerType>::type ExprType;
-
-    Trigger(OpIn* op)
-        : ChangeTriggerAdapter<TriggerType, Derived>(
-              mpark::get<ExprRef<ExprType>>(op->expr)),
-          ExprTriggerBase(op) {}
+    struct Trigger : public ChangeTriggerAdapter<TriggerType, Derived>, public OpIn::ExprTriggerBase {
+    typedef typename AssociatedViewType<TriggerType>::type OperandType;
+    Trigger(OpIn* op, ExprRef<OperandType> operand)
+        : ChangeTriggerAdapter<TriggerType, Derived>(operand),
+        OpIn::ExprTriggerBase(op) {}
     void adapterValueChanged() {
         op->changeValue([&]() {
             op->reevaluate();
@@ -67,32 +64,36 @@ struct Trigger : public ChangeTriggerAdapter<TriggerType, Derived>,
         });
     }
 };
+}  // namespace
+
 template <typename ExprTriggerType>
-struct ExprTrigger
+    struct ExprTrigger
     : public Trigger<ExprTrigger<ExprTriggerType>, ExprTriggerType> {
     typedef typename AssociatedViewType<ExprTriggerType>::type ExprType;
-    using Trigger<ExprTrigger<ExprTriggerType>, ExprTriggerType>::Trigger;
+        using Trigger<ExprTrigger<ExprTriggerType>, ExprTriggerType>::Trigger;
     ExprRef<ExprType>& getTriggeringOperand() {
         return mpark::get<ExprRef<ExprType>>(this->op->expr);
     }
     void reattachTrigger() {
         deleteTrigger(this->op->exprTrigger);
-        typedef typename AssociatedViewType<ExprTriggerType>::type View;
-        auto& expr = mpark::get<ExprRef<View>>(this->op->expr);
-        auto trigger = make_shared<ExprTrigger<ExprTriggerType>>(this->op);
+        auto& expr = mpark::get<ExprRef<ExprType>>(this->op->expr);
+        auto trigger = make_shared<ExprTrigger<ExprTriggerType>>(this->op,getTriggeringOperand());
         expr->addTrigger(trigger);
         this->op->exprTrigger = trigger;
     }
 };
-}  // namespace
 
 struct OpIn::SetOperandTrigger : public Trigger<SetOperandTrigger, SetTrigger> {
     using Trigger<SetOperandTrigger, SetTrigger>::Trigger;
+    ExprRef<SetView>& getTriggeringOperand() {
+        return this->op->setOperand;
+    }
+
     void reattachTrigger() final {
-        deleteTrigger(op->setOperandTrigger);
-        auto trigger = make_shared<SetOperandTrigger>(op);
-        op->setOperand->addTrigger(trigger);
-        op->setOperandTrigger = trigger;
+        deleteTrigger(this->op->setOperandTrigger);
+        auto trigger = make_shared<SetOperandTrigger>(this->op,getTriggeringOperand());
+        this->op->setOperand->addTrigger(trigger);
+        this->op->setOperandTrigger = trigger;
     }
 };
 
@@ -102,13 +103,13 @@ void OpIn::startTriggeringImpl() {
             [&](auto& expr) {
                 typedef typename AssociatedTriggerType<viewType(expr)>::type
                     TriggerType;
-                auto trigger = make_shared<ExprTrigger<TriggerType>>(this);
+                auto trigger = make_shared<ExprTrigger<TriggerType>>(this,expr);
                 exprTrigger = trigger;
                 expr->addTrigger(trigger);
                 expr->startTriggering();
             },
             expr);
-        setOperandTrigger = make_shared<SetOperandTrigger>(this);
+        setOperandTrigger = make_shared<SetOperandTrigger>(this,setOperand);
         setOperand->addTrigger(setOperandTrigger);
         setOperand->startTriggering();
     }

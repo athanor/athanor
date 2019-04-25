@@ -76,7 +76,7 @@ struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
     }
     bool triggering();
     template <typename ViewType>
-    void unroll(UInt index, const ExprRef<ViewType>& newView);
+    void unroll(UInt index, ExprRef<ViewType> newView);
     void roll(UInt index);
     void swapExprs(UInt index1, UInt index2);
     template <typename ViewType>

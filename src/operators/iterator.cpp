@@ -102,6 +102,7 @@ ExprRef<View> Iterator<View>::deepCopyForUnrollImpl(
     const auto iteratorPtr =
         mpark::get_if<IterRef<View>>(&iterator.asVariant());
     if (iteratorPtr != NULL && (**iteratorPtr).id == id) {
+        (**iteratorPtr).ref = this->ref;
         return *iteratorPtr;
     } else {
         return self;

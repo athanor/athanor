@@ -53,7 +53,7 @@ bool Quantifier<ContainerType>::triggering() {
 template <typename ContainerType>
 template <typename ViewType>
 void Quantifier<ContainerType>::unroll(UInt index,
-                                       const ExprRef<ViewType>& newView) {
+                                       ExprRef<ViewType> newView) {
     mpark::visit(
         [&](auto& members) {
             debug_log("unrolling " << newView << " at index " << index);
@@ -72,17 +72,9 @@ void Quantifier<ContainerType>::unroll(UInt index,
             // instead copying from an already unrolled expr, it  need not be
             // evaluated, simply copy it and trigger the change in value.
             bool evaluateExpr = members.empty();
-            const ExprRef<ViewType>& oldValueOfIter =
-                (members.empty())
-                    ? IterRef<ViewType>(nullptr)
-                    : mpark::get<IterRef<ViewType>>(unrolledIterVals.back())
-                          ->getValue();
-            if (!evaluateExpr) {
-                iterRef->changeValueSilent(oldValueOfIter);
-            }
             ExprRef<viewType(members)> newMember =
                 exprToCopy->deepCopyForUnroll(exprToCopy, iterRef);
-            iterRef->changeValue(!evaluateExpr, oldValueOfIter, newView, [&]() {
+            iterRef->changeValue(!evaluateExpr, newView, [&]() {
                 if (evaluateExpr) {
                     newMember->evaluate();
                 }

@@ -19,19 +19,25 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
     }
 
     template <typename Func>
-    inline void changeValue(bool triggering, const ExprRef<View>& oldVal,
-
-                            const ExprRef<View>& newVal, Func&& callback) {
+    inline void changeValue(bool triggering, ExprRef<View>& newVal,
+                            Func&& callback) {
         if (!triggering) {
             ref = newVal;
             callback();
             this->setAppearsDefined(ref->appearsDefined());
         } else {
-            ref = newVal;
+            // slight hack, ref currently has old val.  Temp assign it to new
+            // new val and tell iterator to trigger off of new val then reassign
+            // iter ator back to old val.  This means that when startTriggering
+            // is called on the iterator, it will not bother triggering on the
+            // old val as it is already triggering on something (the new val).
+            // The old val needs to be there as parent expressions will expect
+            // it to be so when startTriggering is called.
+            std::swap(ref, newVal);
             reattachRefTrigger();
-            ref = oldVal;
+            std::swap(ref, newVal);
             callback();
-            bool oldValUndefined = !oldVal->appearsDefined();
+            bool oldValUndefined = !ref->appearsDefined();
             ref = newVal;
             bool newValUndefined = !newVal->appearsDefined();
             this->setAppearsDefined(!newValUndefined);

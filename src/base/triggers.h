@@ -65,6 +65,11 @@ class TriggerQueue {
    public:
     inline QueueAccess access() { return QueueAccess(*this); }
 
+    void takeFrom(TriggerQueue<T>& other) {
+        triggers.insert(triggers.end(), other.triggers.begin(),
+                        other.triggers.end());
+        other.triggers.clear();
+    }
     template <typename Trigger>
     void add(Trigger&& trigger) {
         if (!currentlyProcessing &&

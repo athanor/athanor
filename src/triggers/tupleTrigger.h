@@ -20,6 +20,18 @@ struct TriggerContainer<TupleView>
     TriggerQueue<TupleOuterTrigger> triggers;
     TriggerQueue<TupleMemberTrigger> allMemberTriggers;
     std::vector<TriggerQueue<TupleMemberTrigger>> singleMemberTriggers;
+
+    void takeFrom(TriggerContainer<TupleView>& other) {
+        triggers.takeFrom(other.triggers);
+        allMemberTriggers.takeFrom(other.allMemberTriggers);
+        for (size_t i = 0; i < singleMemberTriggers.size(); i++) {
+            if (i >= other.singleMemberTriggers.size()) {
+                break;
+            }
+            singleMemberTriggers[i].takeFrom(other.singleMemberTriggers[i]);
+        }
+    }
+
     template <typename Func>
     void visitMemberTriggers(Func&& func, UInt index) {
         visitTriggers(func, allMemberTriggers);

@@ -8,6 +8,10 @@ template <>
 struct TriggerContainer<IntView>
     : public TriggerContainerBase<TriggerContainer<IntView> > {
     TriggerQueue<IntTrigger> triggers;
+
+    void takeFrom(TriggerContainer<IntView>& other) {
+        triggers.takeFrom(other.triggers);
+    }
 };
 template <typename Child>
 struct ChangeTriggerAdapter<IntTrigger, Child>

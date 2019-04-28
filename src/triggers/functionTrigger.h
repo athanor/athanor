@@ -23,6 +23,18 @@ struct TriggerContainer<FunctionView>
     TriggerQueue<FunctionOuterTrigger> triggers;
     TriggerQueue<FunctionMemberTrigger> allMemberTriggers;
     std::vector<TriggerQueue<FunctionMemberTrigger>> singleMemberTriggers;
+
+    void takeFrom(TriggerContainer<FunctionView>& other) {
+        triggers.takeFrom(other.triggers);
+        allMemberTriggers.takeFrom(other.allMemberTriggers);
+        for (size_t i = 0; i < singleMemberTriggers.size(); i++) {
+            if (i >= other.singleMemberTriggers.size()) {
+                break;
+            }
+            singleMemberTriggers[i].takeFrom(other.singleMemberTriggers[i]);
+        }
+    }
+
     template <typename Func>
     void visitMemberTriggers(Func&& func, UInt index) {
         visitTriggers(func, allMemberTriggers);

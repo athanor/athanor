@@ -26,6 +26,17 @@ struct TriggerContainer<SequenceView>
     TriggerQueue<SequenceMemberTrigger> allMemberTriggers;
     std::vector<TriggerQueue<SequenceMemberTrigger>> singleMemberTriggers;
 
+    void takeFrom(TriggerContainer<SequenceView>& other) {
+        triggers.takeFrom(other.triggers);
+        allMemberTriggers.takeFrom(other.allMemberTriggers);
+        for (size_t i = 0; i < singleMemberTriggers.size(); i++) {
+            if (i >= other.singleMemberTriggers.size()) {
+                break;
+            }
+            singleMemberTriggers[i].takeFrom(other.singleMemberTriggers[i]);
+        }
+    }
+
     template <typename Func>
     void visitAllMemberTriggersInRange(Func&& func, size_t startIndex,
                                        size_t endIndex) {

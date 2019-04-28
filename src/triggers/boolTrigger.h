@@ -7,6 +7,10 @@ template <>
 struct TriggerContainer<BoolView>
     : public TriggerContainerBase<TriggerContainer<BoolView>> {
     TriggerQueue<BoolTrigger> triggers;
+
+    void takeFrom(TriggerContainer<BoolView>& other) {
+        triggers.takeFrom(other.triggers);
+    }
 };
 template <typename Child>
 struct ChangeTriggerAdapter<BoolTrigger, Child>

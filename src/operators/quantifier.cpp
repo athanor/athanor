@@ -82,13 +82,6 @@ pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimise(
                          expr = optResult.second;
                      }),
                  expr);
-
-    if (condition) {
-        cerr << "Error, for the moment, not supporting conditions on "
-                "quantifiers unless they can be optimised into the an integer "
-                "range.\n";
-        abort();
-    }
     if (changeMade) {
         container->optimise(path.extend(container));
         mpark::visit([&](auto& expr) { expr->optimise(path.extend(expr)); },

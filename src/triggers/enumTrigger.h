@@ -8,6 +8,10 @@ template <>
 struct TriggerContainer<EnumView>
     : public TriggerContainerBase<TriggerContainer<EnumView> > {
     TriggerQueue<EnumTrigger> triggers;
+
+    void takeFrom(TriggerContainer<EnumView>& other) {
+        triggers.takeFrom(other.triggers);
+    }
 };
 template <typename Child>
 struct ChangeTriggerAdapter<EnumTrigger, Child>

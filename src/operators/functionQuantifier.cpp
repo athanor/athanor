@@ -18,6 +18,9 @@ struct InitialUnroller<FunctionView> {
     static void initialUnroll(Quant& quantifier, FunctionView& containerView) {
         mpark::visit(
             [&](auto& membersImpl) {
+                typedef viewType(membersImpl) View;
+                quantifier.valuesToUnroll
+                    .template emplace<QueuedUnrollValueVec<View>>();
                 for (size_t i = 0; i < membersImpl.size(); i++) {
                     mpark::visit(
                         [&](auto& fromDomain) {
@@ -28,7 +31,8 @@ struct InitialUnroller<FunctionView> {
                             auto unrolledExpr = OpMaker<OpTupleLit>::make(
                                 {tupleFirstMember, membersImpl[i]});
                             unrolledExpr->evaluate();
-                            quantifier.unroll(i, unrolledExpr);
+                            quantifier.template unroll<TupleView>(
+                                {false, i, unrolledExpr});
                         },
                         containerView.fromDomain);
                 }
@@ -38,7 +42,8 @@ struct InitialUnroller<FunctionView> {
 };
 
 template <>
-struct ContainerTrigger<FunctionView> : public FunctionTrigger {
+struct ContainerTrigger<FunctionView> : public FunctionTrigger,
+                                        public DelayedTrigger {
     Quantifier<FunctionView>* op;
 
     ContainerTrigger(Quantifier<FunctionView>* op) : op(op) {}
@@ -48,8 +53,8 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     void imageChanged(const std::vector<UInt>&) final {}
 
     void valueChanged() {
-        while (op->numberElements() != 0) {
-            op->roll(op->numberElements() - 1);
+        while (op->numberUnrolled() != 0) {
+            op->roll(op->numberUnrolled() - 1);
         }
         auto view = op->container->getViewIfDefined();
         if (!view) {
@@ -58,7 +63,7 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     }
 
     void imageSwap(UInt index1, UInt index2) final {
-        op->swapExprs(index1, index2);
+        op->notifyContainerMembersSwapped(index1, index2);
         correctUnrolledTupleIndex(index1);
         correctUnrolledTupleIndex(index2);
     }
@@ -101,13 +106,20 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
         op->container->addTrigger(trigger);
         op->containerTrigger = trigger;
     }
+
+    void trigger() { shouldNotBeCalledPanic; }
 };
 
 template <>
 struct ContainerSanityChecker<FunctionView> {
     static void debugSanityCheck(const Quantifier<FunctionView>& quant,
                                  const FunctionView& container) {
-        sanityEqualsCheck(container.rangeSize(), quant.numberElements());
+        if (quant.condition) {
+            sanityEqualsCheck(container.rangeSize(),
+                              quant.unrolledConditions.size());
+        } else {
+            sanityEqualsCheck(container.rangeSize(), quant.numberElements());
+        }
     }
 };
 

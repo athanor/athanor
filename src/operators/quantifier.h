@@ -2,44 +2,85 @@
 #define SRC_OPERATORS_QUANTIFIER_H_
 #include "base/base.h"
 #include "operators/iterator.h"
+#include "types/bool.h"
 #include "types/sequence.h"
+
 inline static u_int64_t nextQuantId() {
     static u_int64_t quantId = 0;
     return quantId++;
 }
+
 template <typename Container>
 struct ContainerTrigger;
-template <typename ContainerType>
-struct OptionalIndices {
-    void copyOptionalIndices(OptionalIndices<ContainerType>&) const {}
-};
-template <>
-struct OptionalIndices<SequenceView> {
-    std::vector<size_t> indicesOfValuesToUnroll;
-    void copyOptionalIndices(OptionalIndices<SequenceView>& o) const {
-        o.indicesOfValuesToUnroll = indicesOfValuesToUnroll;
-    }
+template <typename View, EnableIfView<View> = 0>
+struct QueuedUnrollValue {
+    bool directUnrollExpr = false;  // if true, when unrolling unrollExpr() will
+                                    // be called, not unroll()
+    UInt index;                     // index of where to unroll this value
+    ExprRef<View> value;            // value to unroll
+    QueuedUnrollValue(bool directUnrollExpr, UInt index, ExprRef<View> value)
+        : directUnrollExpr(directUnrollExpr), index(index), value(value) {}
 };
 
+template <typename View>
+using QueuedUnrollValueVec = std::vector<QueuedUnrollValue<View>>;
+
+template <typename Val>
+using QueuedUnrollValueVecMaker =
+    QueuedUnrollValueVec<typename AssociatedViewType<Val>::type>;
+
+template <typename T>
+struct ViewType<QueuedUnrollValueVec<T>> {
+    typedef T type;
+};
+
+typedef Variantised<QueuedUnrollValueVecMaker> AnyQueuedUnrollValueVec;
+
 template <typename ContainerType>
-struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
-    struct ExprTriggerBase {
+struct Quantifier : public SequenceView {
+    // for each expr or condition that is unrolled, this class is used as the
+    // base class for triggers on that expr/condition
+    struct ExprTriggerBase : public virtual TriggerBase {
         Quantifier<ContainerType>* op;
         UInt index;
         ExprTriggerBase(Quantifier<ContainerType>* op, UInt index)
             : op(op), index(index) {}
         virtual ~ExprTriggerBase() {}
     };
+    // for quantifiers with conditions
+    struct UnrolledCondition {
+        static const UInt UNASSIGNED_EXPR_INDEX =
+            std::numeric_limits<UInt>::max();
+
+        // the unrolled condition
+        ExprRef<BoolView> condition;
+        // the cached state of the condition
+        bool cachedValue;
+        // the index of the unrolled expr that this condition maps to
+        // when this condition is false, index points to previous expr.  If ther
+        // is no previous expr, it points to  UNASSIGNED_EXPR_INDEX
+        UInt exprIndex;
+        // the trigger watching this condition
+        std::shared_ptr<ExprTriggerBase> trigger;
+        UnrolledCondition(ExprRef<BoolView> condition, UInt exprIndex)
+            : condition(std::move(condition)),
+              cachedValue(this->condition->view().get().violation == 0),
+              exprIndex(exprIndex) {
+            debug_code(assert(this->condition->isEvaluated()));
+        }
+    };
+
     const int quantId;
     ExprRef<ContainerType> container;
     AnyExprRef expr = ExprRef<BoolView>(nullptr);
     ExprRef<BoolView> condition = nullptr;
+    std::vector<UnrolledCondition> unrolledConditions;
     bool containerDefined = true;
     std::vector<AnyIterRef> unrolledIterVals;
+    AnyQueuedUnrollValueVec valuesToUnroll;
     std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
     std::shared_ptr<ContainerTrigger<ContainerType>> containerDelayedTrigger;
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
-    AnyExprVec valuesToUnroll;
 
     Quantifier(ExprRef<ContainerType> container, const int id = nextQuantId())
         : quantId(id), container(std::move(container)) {}
@@ -72,17 +113,40 @@ struct Quantifier : public SequenceView, public OptionalIndices<ContainerType> {
 
     template <typename View>
     void setContainerInnerType() {
-        valuesToUnroll.emplace<ExprRefVec<View>>();
+        valuesToUnroll.emplace<QueuedUnrollValueVec<View>>();
     }
+
     bool triggering();
-    template <typename ViewType>
-    void unroll(UInt index, ExprRef<ViewType> newView);
+
+    UInt numberUnrolled() const {
+        //if quantifier has conditions, number unrolled is the number of conditions unrolled.  Otherwise it is the number of actual exprs unrolled.
+        return unrolledIterVals.size();
+    }
+
+    template <typename View>
+    void unroll(QueuedUnrollValue<View> queuedValue);
+
+    template <typename View>
+    UnrolledCondition& unrollCondition(UInt index, ExprRef<View> newView,
+                                       IterRef<View> newIterRef);
+
+    template <typename View>
+    void unrollExpr(UInt index, ExprRef<View> newView, IterRef<View> iterRef);
+
     void roll(UInt index);
-    void swapExprs(UInt index1, UInt index2);
-    template <typename ViewType>
-    void startTriggeringOnExpr(UInt index, ExprRef<ViewType>& expr);
-    template <typename ViewType>
+    UnrolledCondition rollCondition(UInt index);
+    void rollExpr(UInt index);
+
+    void notifyContainerMembersSwapped(UInt index1, UInt index2);
+
+    template <typename View>
+    void startTriggeringOnExpr(UInt index, ExprRef<View>& expr);
+
+    void startTriggeringOnCondition(UInt index);
+
     void stopTriggeringOnExpr(UInt oldIndex);
+    void stopTriggeringOnCondition(UInt oldIndex, UnrolledCondition& condition);
+
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 
     std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension path);

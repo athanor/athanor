@@ -19,6 +19,17 @@ struct TriggerContainer<PartitionView>
     TriggerQueue<PartitionMemberTrigger> allMemberTriggers;
     std::vector<TriggerQueue<PartitionMemberTrigger>> singleMemberTriggers;
 
+    void takeFrom(TriggerContainer<PartitionView>& other) {
+        triggers.takeFrom(other.triggers);
+        allMemberTriggers.takeFrom(other.allMemberTriggers);
+        for (size_t i = 0; i < singleMemberTriggers.size(); i++) {
+            if (i >= other.singleMemberTriggers.size()) {
+                break;
+            }
+            singleMemberTriggers[i].takeFrom(other.singleMemberTriggers[i]);
+        }
+    }
+
     inline void notifyContainingPartsSwapped(UInt member1, UInt member2) {
         auto triggerFunc = [&](auto& t) {
             t->containingPartsSwapped(member1, member2);

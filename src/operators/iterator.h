@@ -53,6 +53,9 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
 
     inline ExprRef<View>& getValue() { return ref; }
 
+    void moveTriggersFrom(Iterator<View>& other) {
+        TriggerContainer<View>::takeFrom(other);
+    }
     Iterator(const Iterator<View>&) = delete;
     Iterator(Iterator<View>&&) = delete;
     ~Iterator() { this->stopTriggeringOnChildren(); }

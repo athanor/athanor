@@ -8,16 +8,17 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
 
     ContainerTrigger(Quantifier<SetView>* op) : op(op) {}
     void valueRemoved(UInt indexOfRemovedValue, HashType) final {
-        if (indexOfRemovedValue < op->numberElements() - 1) {
-            op->swapExprs(indexOfRemovedValue, op->numberElements() - 1);
+        if (indexOfRemovedValue < op->numberUnrolled() - 1) {
+            op->notifyContainerMembersSwapped(indexOfRemovedValue,
+                                              op->numberUnrolled() - 1);
         }
-        op->roll(op->numberElements() - 1);
+        op->roll(op->numberUnrolled() - 1);
     }
     void trigger() final {
         mpark::visit(
             [&](auto& vToUnroll) {
-                for (auto& value : vToUnroll) {
-                    op->unroll(op->numberElements(), value);
+                for (auto& queuedValue : vToUnroll) {
+                    op->unroll(queuedValue);
                 }
                 vToUnroll.clear();
             },
@@ -29,8 +30,9 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
     void valueAdded(const AnyExprRef& member) final {
         mpark::visit(
             [&](auto& vToUnroll) {
-                vToUnroll.emplace_back(
-                    mpark::get<ExprRef<viewType(vToUnroll)>>(member));
+                typedef viewType(vToUnroll) View;
+                vToUnroll.emplace_back(false, op->numberUnrolled(),
+                                       mpark::get<ExprRef<View>>(member));
                 if (!op->containerDelayedTrigger) {
                     op->containerDelayedTrigger =
                         make_shared<ContainerTrigger<SetView>>(op);
@@ -45,8 +47,8 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
                              const vector<HashType>&) final{};
 
     void valueChanged() {
-        while (op->numberElements() != 0) {
-            this->valueRemoved(op->numberElements() - 1, HashType(0));
+        while (op->numberUnrolled() != 0) {
+            this->valueRemoved(op->numberUnrolled() - 1, HashType(0));
         }
         auto containerView = op->container->view();
         if (!containerView) {
@@ -88,10 +90,13 @@ struct InitialUnroller<SetView> {
     static void initialUnroll(Quant& quantifier, SetView& containerView) {
         mpark::visit(
             [&](auto& membersImpl) {
+                typedef viewType(membersImpl) View;
                 quantifier.valuesToUnroll
-                    .template emplace<BaseType<decltype(membersImpl)>>();
-                for (auto& member : membersImpl) {
-                    quantifier.unroll(quantifier.numberElements(), member);
+                    .template emplace<QueuedUnrollValueVec<View>>();
+                for (size_t i = 0; i < membersImpl.size(); i++) {
+                    auto& member = membersImpl[i];
+                    quantifier.template unroll<viewType(member)>(
+                        {false, i, member});
                 }
             },
             containerView.members);
@@ -102,7 +107,26 @@ template <>
 struct ContainerSanityChecker<SetView> {
     static void debugSanityCheck(const Quantifier<SetView>& quant,
                                  const SetView& container) {
-        sanityEqualsCheck(container.numberElements(), quant.numberElements());
+        sanityEqualsCheck(container.numberElements(), quant.numberUnrolled());
+        sanityEqualsCheck(container.numberElements(),
+                          quant.unrolledIterVals.size());
+        mpark::visit(
+            [&](auto& containerMembers) {
+                for (size_t i = 0; i < containerMembers.size(); i++) {
+                    const auto& view1 = containerMembers[i]->getViewIfDefined();
+                    const auto& view2 =
+                        mpark::get<IterRef<viewType(containerMembers)>>(
+                            quant.unrolledIterVals[i])
+                            ->getViewIfDefined();
+                    sanityEqualsCheck(view1.hasValue(), view2.hasValue());
+                    if (view1.hasValue()) {
+                        sanityEqualsCheck(getValueHash(*view1),
+                                          getValueHash(*view2));
+                    }
+                }
+            },
+            quant.container->view()->members);
     }
 };
+
 template struct Quantifier<SetView>;

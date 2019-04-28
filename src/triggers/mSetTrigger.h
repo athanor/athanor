@@ -14,6 +14,11 @@ template <>
 struct TriggerContainer<MSetView>
     : public TriggerContainerBase<TriggerContainer<MSetView>> {
     TriggerQueue<MSetTrigger> triggers;
+
+    void takeFrom(TriggerContainer<MSetView>& other) {
+        triggers.takeFrom(other.triggers);
+    }
+
     inline void notifyMemberAdded(const AnyExprRef& newMember) {
         visitTriggers([&](auto& t) { t->valueAdded(newMember); }, triggers);
     }

@@ -172,6 +172,16 @@ struct FunctionView : public ExprInterface<FunctionView>,
         return mpark::get<ExprRefVec<InnerViewType>>(range);
     }
 
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline ExprRefVec<InnerViewType>& getMembers() {
+        return getRange<InnerViewType>();
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline const ExprRefVec<InnerViewType>& getMembers() const {
+        return getRange<InnerViewType>();
+    }
+
     inline UInt rangeSize() const {
         return mpark::visit([](auto& range) { return range.size(); }, range);
     }

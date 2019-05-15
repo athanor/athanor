@@ -32,7 +32,7 @@ struct OpSetLit : public SetView {
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
     OpSetLit(AnyExprVec operands) : operands(std::move(operands)) {}
     OpSetLit(const OpSetLit&) = delete;
-    OpSetLit(OpSetLit&& other);
+    OpSetLit(OpSetLit&&) = delete;
     ~OpSetLit() { this->stopTriggeringOnChildren(); }
 
     void evaluateImpl() final;

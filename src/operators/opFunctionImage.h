@@ -32,7 +32,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType>,
         : functionOperand(std::move(functionOperand)),
           preImageOperand(std::move(preImageOperand)) {}
     OpFunctionImage(const OpFunctionImage<FunctionMemberViewType>&) = delete;
-    OpFunctionImage(OpFunctionImage<FunctionMemberViewType>&& other);
+    OpFunctionImage(OpFunctionImage<FunctionMemberViewType>&&) = delete;
     ~OpFunctionImage() { this->stopTriggeringOnChildren(); }
     void addTriggerImpl(
         const std::shared_ptr<FunctionMemberTriggerType>& trigger,

@@ -57,12 +57,6 @@ struct ExprTrigger
     }
 };  // namespace
 }  // namespace
-OpSequenceLit::OpSequenceLit(OpSequenceLit&& other)
-    : SequenceView(std::move(other)),
-      exprTriggers(std::move(other.exprTriggers)) {
-    setTriggerParent(this, exprTriggers);
-}
-
 void OpSequenceLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {
         mpark::visit(

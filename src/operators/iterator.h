@@ -48,7 +48,7 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
     inline ExprRef<View>& getValue() { return ref; }
 
     Iterator(const Iterator<View>&) = delete;
-    Iterator(Iterator<View>&& other);
+    Iterator(Iterator<View>&&) = delete;
     ~Iterator() { this->stopTriggeringOnChildren(); }
     void addTriggerImpl(const std::shared_ptr<TriggerType>& trigger,
                         bool includeMembers, Int memberIndex) final;

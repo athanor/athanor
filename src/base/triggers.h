@@ -179,26 +179,6 @@ void deleteTrigger(const std::shared_ptr<Trigger>& trigger) {
     trigger->active() = false;
 }
 
-template <typename Op, typename Trigger>
-void setTriggerParentImpl(Op* op, std::shared_ptr<Trigger>& trigger) {
-    if (trigger) {
-        trigger->op = op;
-    }
-}
-template <typename Op, typename Trigger>
-void setTriggerParentImpl(Op* op,
-                          std::vector<std::shared_ptr<Trigger>>& triggers) {
-    for (auto& trigger : triggers) {
-        trigger->op = op;
-    }
-}
-
-template <typename Op, typename... Triggers>
-void setTriggerParent(Op* op, Triggers&... triggers) {
-    int unpack[] = {0, (setTriggerParentImpl(op, triggers), 0)...};
-    static_cast<void>(unpack);
-}
-
 struct BoolTrigger : public virtual TriggerBase {
     void hasBecomeUndefined() { shouldNotBeCalledPanic; }
     void hasBecomeDefined() { shouldNotBeCalledPanic; }

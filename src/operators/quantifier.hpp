@@ -46,20 +46,6 @@ template <>
 struct ContainerTrigger<FunctionView>;
 
 template <typename ContainerType>
-Quantifier<ContainerType>::Quantifier(Quantifier<ContainerType>&& other)
-    : SequenceView(std::move(other)),
-      quantId(other.quantId),
-      container(std::move(other.container)),
-      expr(std::move(other.expr)),
-      unrolledIterVals(std::move(other.unrolledIterVals)),
-      containerTrigger(std::move(other.containerTrigger)),
-      containerDelayedTrigger(std::move(other.containerDelayedTrigger)),
-      exprTriggers(std::move(other.exprTriggers)) {
-    setTriggerParent(this, containerTrigger, containerDelayedTrigger,
-                     exprTriggers);
-}
-
-template <typename ContainerType>
 bool Quantifier<ContainerType>::triggering() {
     return static_cast<bool>(containerTrigger);
 }

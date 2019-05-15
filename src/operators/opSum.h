@@ -19,7 +19,7 @@ struct OpSum : public SimpleUnaryOperator<IntView, SequenceView, OpSum> {
                               OpSum>::SimpleUnaryOperator;
     bool evaluationComplete = false;
     PreviousValueCache<Int> cachedValues;
-    OpSum(OpSum&& other);
+    OpSum(OpSum&&) = delete;
     void reevaluateImpl(SequenceView& operandView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;

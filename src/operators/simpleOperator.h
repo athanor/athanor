@@ -94,14 +94,8 @@ struct SimpleBinaryOperator : public View,
     const auto& derived() const { return *static_cast<const Derived*>(this); }
     SimpleBinaryOperator(
         const SimpleBinaryOperator<View, OperandView, Derived>& other) = delete;
-    SimpleBinaryOperator(
-        SimpleBinaryOperator<View, OperandView, Derived>&& other)
-        : left(std::move(other.left)),
-          right(std::move(other.right)),
-          leftTrigger(std::move(other.leftTrigger)),
-          rightTrigger(std::move(other.rightTrigger)) {
-        setTriggerParent(&derived(), leftTrigger, rightTrigger);
-    }
+    SimpleBinaryOperator(SimpleBinaryOperator<View, OperandView, Derived>&&) =
+        delete;
     virtual ~SimpleBinaryOperator() { this->stopTriggeringOnChildren(); }
 
     void evaluateImpl() final;
@@ -132,11 +126,8 @@ struct SimpleUnaryOperator : public View,
     const auto& derived() const { return *static_cast<const Derived*>(this); }
     SimpleUnaryOperator(
         const SimpleUnaryOperator<View, OperandView, Derived>& other) = delete;
-    SimpleUnaryOperator(SimpleUnaryOperator<View, OperandView, Derived>&& other)
-        : operand(std::move(other.operand)),
-          operandTrigger(std::move(other.operandTrigger)) {
-        setTriggerParent(&derived(), operandTrigger);
-    }
+    SimpleUnaryOperator(SimpleUnaryOperator<View, OperandView, Derived>&&) =
+        delete;
     virtual ~SimpleUnaryOperator() { this->stopTriggeringOnChildren(); }
     void evaluateImpl() final;
     void reevaluate();

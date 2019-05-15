@@ -21,7 +21,7 @@ struct OpProd : public SimpleUnaryOperator<IntView, SequenceView, OpProd> {
     UInt numberZeros = 0;
     Int cachedValue;
     PreviousValueCache<Int> cachedValues;
-    OpProd(OpProd&& other);
+    OpProd(OpProd&&) = delete;
     void reevaluateImpl(SequenceView& operandView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;

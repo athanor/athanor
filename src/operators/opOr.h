@@ -18,7 +18,7 @@ struct OpOr : public SimpleUnaryOperator<BoolView, SequenceView, OpOr> {
     using SimpleUnaryOperator<BoolView, SequenceView,
                               OpOr>::SimpleUnaryOperator;
     FastIterableIntSet minViolationIndices = FastIterableIntSet(0, 0);
-    OpOr(OpOr&& other);
+    OpOr(OpOr&& other) = delete;
     void reevaluateImpl(SequenceView& operandView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;

@@ -45,25 +45,6 @@ void OpTogether<PartitionMemberViewType>::evaluateImpl() {
 }
 
 template <typename PartitionMemberViewType>
-OpTogether<PartitionMemberViewType>::OpTogether(
-    OpTogether<PartitionMemberViewType>&& other)
-    : BoolView(move(other)),
-      partitionOperand(move(other.partitionOperand)),
-      left(move(other.left)),
-      right(move(other.right)),
-      cachedLeftIndex(move(other.cachedLeftIndex)),
-      cachedRightIndex(move(other.cachedRightIndex)),
-      partitionOperandTrigger(move(other.partitionOperandTrigger)),
-      leftMemberTrigger(move(other.leftMemberTrigger)),
-      rightMemberTrigger(move(other.rightMemberTrigger)),
-      leftOperandTrigger(move(other.leftOperandTrigger)),
-      rightOperandTrigger(move(other.rightOperandTrigger)) {
-    setTriggerParent(this, partitionOperandTrigger, leftMemberTrigger,
-                     rightMemberTrigger, leftOperandTrigger,
-                     rightOperandTrigger);
-}
-
-template <typename PartitionMemberViewType>
 struct OpTogether<PartitionMemberViewType>::PartitionOperandTrigger
     : public PartitionTrigger {
     OpTogether<PartitionMemberViewType>* op;

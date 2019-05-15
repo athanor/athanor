@@ -51,16 +51,6 @@ void Iterator<View>::evaluateImpl() {
 }
 
 template <typename View>
-Iterator<View>::Iterator(Iterator<View>&& other)
-    : ExprInterface<View>(move(other)),
-      TriggerContainer<View>(move(other)),
-      id(move(other.id)),
-      ref(move(other.ref)),
-      refTrigger(move(other.refTrigger)) {
-    setTriggerParent(this, refTrigger);
-}
-
-template <typename View>
 void Iterator<View>::reattachRefTrigger() {
     if (refTrigger) {
         deleteTrigger(refTrigger);

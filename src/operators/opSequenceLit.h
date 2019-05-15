@@ -13,7 +13,7 @@ struct OpSequenceLit : public SequenceView {
 
     OpSequenceLit(AnyExprVec members) : SequenceView(std::move(members)) {}
     OpSequenceLit(const OpSequenceLit&) = delete;
-    OpSequenceLit(OpSequenceLit&& other);
+    OpSequenceLit(OpSequenceLit&&) = delete;
     ~OpSequenceLit() { this->stopTriggeringOnChildren(); }
     void evaluateImpl() final;
     void startTriggeringImpl() final;

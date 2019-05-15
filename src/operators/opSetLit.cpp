@@ -162,14 +162,6 @@ struct ExprTrigger
 };
 }  // namespace
 
-OpSetLit::OpSetLit(OpSetLit&& other)
-    : SetView(std::move(other)),
-      operands(move(other.operands)),
-      hashIndicesMap(move(other.hashIndicesMap)),
-      exprTriggers(move(other.exprTriggers)) {
-    setTriggerParent(this, exprTriggers);
-}
-
 void OpSetLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {
         mpark::visit(

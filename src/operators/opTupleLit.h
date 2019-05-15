@@ -15,7 +15,7 @@ struct OpTupleLit : public TupleView {
     OpTupleLit(std::vector<AnyExprRef> members)
         : TupleView(std::move(members)) {}
     OpTupleLit(const OpTupleLit&) = delete;
-    OpTupleLit(OpTupleLit&& other);
+    OpTupleLit(OpTupleLit&&) = delete;
     ~OpTupleLit() { this->stopTriggeringOnChildren(); }
     void evaluateImpl() final;
     void startTriggeringImpl() final;

@@ -10,10 +10,6 @@
 using namespace std;
 using OperandsSequenceTrigger = OperatorTrates<OpProd>::OperandsSequenceTrigger;
 
-OpProd::OpProd(OpProd&& other)
-    : SimpleUnaryOperator<IntView, SequenceView, OpProd>(std::move(other)),
-      evaluationComplete(std::move(other.evaluationComplete)),
-      cachedValues(move(other.cachedValues)) {}
 void OpProd::addSingleValue(Int exprValue) {
     if (exprValue == 0) {
         ++numberZeros;

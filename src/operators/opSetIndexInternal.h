@@ -19,7 +19,7 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
     OpSetIndexInternal(ExprRef<SetView> setOperand, UInt index)
         : setOperand(std::move(setOperand)), index(index) {}
     OpSetIndexInternal(const OpSetIndexInternal<SetMemberViewType>&) = delete;
-    OpSetIndexInternal(OpSetIndexInternal<SetMemberViewType>&& other);
+    OpSetIndexInternal(OpSetIndexInternal<SetMemberViewType>&&) = delete;
     ~OpSetIndexInternal() { this->stopTriggeringOnChildren(); }
     void addTriggerImpl(const std::shared_ptr<SetMemberTriggerType>& trigger,
                         bool includeMembers, Int memberIndex) final;

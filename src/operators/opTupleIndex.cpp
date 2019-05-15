@@ -73,19 +73,6 @@ void OpTupleIndex<TupleMemberViewType>::evaluateImpl() {
 }
 
 template <typename TupleMemberViewType>
-OpTupleIndex<TupleMemberViewType>::OpTupleIndex(
-    OpTupleIndex<TupleMemberViewType>&& other)
-    : ExprInterface<TupleMemberViewType>(move(other)),
-      TriggerContainer<TupleMemberViewType>(move(other)),
-      tupleOperand(move(other.tupleOperand)),
-      indexOperand(move(other.indexOperand)),
-      tupleOperandTrigger(move(other.tupleOperandTrigger)),
-      tupleMemberTrigger(move(other.tupleMemberTrigger)) {
-    setTriggerParent(this, tupleOperandTrigger, tupleMemberTrigger,
-                     memberTrigger);
-}
-
-template <typename TupleMemberViewType>
 bool OpTupleIndex<TupleMemberViewType>::eventForwardedAsDefinednessChange() {
     bool wasDefined = this->appearsDefined();
     reevaluate();

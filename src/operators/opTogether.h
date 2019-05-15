@@ -29,7 +29,7 @@ struct OpTogether : public BoolView {
           right(std::move(right)) {}
 
     OpTogether(const OpTogether<PartitionMemberViewType>&) = delete;
-    OpTogether(OpTogether<PartitionMemberViewType>&& other);
+    OpTogether(OpTogether<PartitionMemberViewType>&&) = delete;
     ~OpTogether() { this->stopTriggeringOnChildren(); }
 
     void evaluateImpl() final;

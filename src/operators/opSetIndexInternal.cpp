@@ -105,19 +105,6 @@ void OpSetIndexInternal<SetMemberViewType>::evaluateMappings() {
 }
 
 template <typename SetMemberViewType>
-OpSetIndexInternal<SetMemberViewType>::OpSetIndexInternal(
-    OpSetIndexInternal<SetMemberViewType>&& other)
-    : ExprInterface<SetMemberViewType>(move(other)),
-      triggers(move(other.triggers)),
-      setOperand(move(other.setOperand)),
-      index(move(other.index)),
-      setTrigger(move(other.setTrigger)),
-      parentSetMapping(move(other.parentSetMapping)),
-      setParentMapping(move(other.setParentMapping)) {
-    setTriggerParent(this, setTrigger);
-}
-
-template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::handleSetMemberValueChange(
     UInt memberIndex) {
     size_t index = setParentMapping[memberIndex];

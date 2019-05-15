@@ -10,10 +10,6 @@
 using namespace std;
 using OperandsSequenceTrigger = OperatorTrates<OpSum>::OperandsSequenceTrigger;
 
-OpSum::OpSum(OpSum&& other)
-    : SimpleUnaryOperator<IntView, SequenceView, OpSum>(std::move(other)),
-      evaluationComplete(std::move(other.evaluationComplete)),
-      cachedValues(move(other.cachedValues)) {}
 void OpSum::addSingleValue(Int exprValue) { value += exprValue; }
 void OpSum::removeSingleValue(Int exprValue) { value -= exprValue; }
 

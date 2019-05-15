@@ -10,7 +10,8 @@ struct EnumRange : public SequenceView {
     EnumRange(std::shared_ptr<EnumDomain> domain) : domain(std::move(domain)) {
         this->members.emplace<ExprRefVec<EnumView>>();
     }
-
+    EnumRange(EnumRange&&) = delete;
+    EnumRange(const EnumRange&) = delete;
     void evaluateImpl() final;
     void startTriggeringImpl() final;
     void stopTriggering() final;

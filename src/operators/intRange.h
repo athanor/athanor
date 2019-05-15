@@ -22,7 +22,8 @@ struct IntRange : public SimpleBinaryOperator<SequenceView, IntView, IntRange> {
               std::move(left), std::move(right)) {
         this->members.emplace<ExprRefVec<IntView>>();
     }
-
+    IntRange(IntRange&&) = delete;
+    IntRange(const IntRange&) = delete;
     void reevaluateImpl(IntView& leftView, IntView& rightView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;

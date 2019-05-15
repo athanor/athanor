@@ -105,22 +105,6 @@ void OpSequenceIndex<SequenceMemberViewType>::evaluateImpl() {
 }
 
 template <typename SequenceMemberViewType>
-OpSequenceIndex<SequenceMemberViewType>::OpSequenceIndex(
-    OpSequenceIndex<SequenceMemberViewType>&& other)
-    : ExprInterface<SequenceMemberViewType>(move(other)),
-      TriggerContainer<SequenceMemberViewType>(move(other)),
-      sequenceOperand(move(other.sequenceOperand)),
-      indexOperand(move(other.indexOperand)),
-      cachedIndex(move(other.cachedIndex)),
-      locallyDefined(move(other.locallyDefined)),
-      sequenceOperandTrigger(move(other.sequenceOperandTrigger)),
-      sequenceMemberTrigger(move(other.sequenceMemberTrigger)),
-      indexTrigger(move(other.indexTrigger)) {
-    setTriggerParent(this, sequenceOperandTrigger, sequenceMemberTrigger,
-                     indexTrigger, memberTrigger);
-}
-
-template <typename SequenceMemberViewType>
 bool OpSequenceIndex<
     SequenceMemberViewType>::eventForwardedAsDefinednessChange() {
     bool wasDefined = this->appearsDefined();

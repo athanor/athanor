@@ -69,17 +69,6 @@ void OpCatchUndef<ExprViewType>::evaluateImpl() {
 }
 
 template <typename ExprViewType>
-OpCatchUndef<ExprViewType>::OpCatchUndef(OpCatchUndef<ExprViewType>&& other)
-    : ExprInterface<ExprViewType>(move(other)),
-      TriggerContainer<ExprViewType>(move(other)),
-      expr(move(other.expr)),
-      replacement(move(other.replacement)),
-      exprDefined(move(other.exprDefined)),
-      exprTrigger(move(other.exprTrigger)) {
-    setTriggerParent(this, exprTrigger);
-}
-
-template <typename ExprViewType>
 struct OpCatchUndef<ExprViewType>::ExprTrigger
     : public ForwardingTrigger<
           typename AssociatedTriggerType<ExprViewType>::type,

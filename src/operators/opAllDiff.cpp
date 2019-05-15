@@ -9,11 +9,6 @@ using namespace std;
 using OperandsSequenceTrigger =
     OperatorTrates<OpAllDiff>::OperandsSequenceTrigger;
 
-OpAllDiff::OpAllDiff(OpAllDiff&& other)
-    : SimpleUnaryOperator<BoolView, SequenceView, OpAllDiff>(move(other)),
-      hashIndicesMap(move(other.hashIndicesMap)),
-      indicesHashMap(move(other.indicesHashMap)),
-      violatingOperands(move(other.violatingOperands)) {}
 class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
     : public SequenceTrigger {
    public:

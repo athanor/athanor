@@ -53,11 +53,6 @@ struct ExprTrigger
 };
 
 }  // namespace
-OpTupleLit::OpTupleLit(OpTupleLit&& other)
-    : TupleView(std::move(other)), exprTriggers(std::move(other.exprTriggers)) {
-    setTriggerParent(this, exprTriggers);
-}
-
 void OpTupleLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {
         for (size_t i = 0; i < members.size(); i++) {

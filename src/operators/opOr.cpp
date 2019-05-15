@@ -8,9 +8,6 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 using OperandsSequenceTrigger = OperatorTrates<OpOr>::OperandsSequenceTrigger;
-OpOr::OpOr(OpOr&& other)
-    : SimpleUnaryOperator<BoolView, SequenceView, OpOr>(move(other)),
-      minViolationIndices(move(other.minViolationIndices)) {}
 UInt findNewMinViolation(OpOr& op, UInt minViolation);
 void OpOr::reevaluateImpl(SequenceView& operandView) {
     minViolationIndices.clear();

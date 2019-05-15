@@ -31,7 +31,7 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType>,
         }
     }
     OpTupleIndex(const OpTupleIndex<TupleMemberViewType>&) = delete;
-    OpTupleIndex(OpTupleIndex<TupleMemberViewType>&& other);
+    OpTupleIndex(OpTupleIndex<TupleMemberViewType>&&) = delete;
     ~OpTupleIndex() { this->stopTriggeringOnChildren(); }
     void addTriggerImpl(const std::shared_ptr<TupleMemberTriggerType>& trigger,
                         bool includeMembers, Int memberIndex) final;

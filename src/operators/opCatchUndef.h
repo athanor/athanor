@@ -19,7 +19,7 @@ struct OpCatchUndef : public ExprInterface<ExprViewType>,
     OpCatchUndef(ExprRef<ExprViewType> expr, ExprRef<ExprViewType> replacement)
         : expr(std::move(expr)), replacement(std::move(replacement)) {}
     OpCatchUndef(const OpCatchUndef<ExprViewType>&) = delete;
-    OpCatchUndef(OpCatchUndef<ExprViewType>&& other);
+    OpCatchUndef(OpCatchUndef<ExprViewType>&&) = delete;
     ~OpCatchUndef() { this->stopTriggeringOnChildren(); }
     bool allowForwardingOfTrigger();
     void setAppearsDefined(bool set);

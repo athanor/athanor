@@ -18,7 +18,7 @@ struct OpIn : public BoolView {
     OpIn(AnyExprRef expr, ExprRef<SetView> setOperand)
         : expr(std::move(expr)), setOperand(std::move(setOperand)) {}
     OpIn(const OpIn&) = delete;
-    OpIn(OpIn&& other);
+    OpIn(OpIn&&) = delete;
     ~OpIn() { this->stopTriggeringOnChildren(); }
     void reevaluate();
     void evaluateImpl() final;

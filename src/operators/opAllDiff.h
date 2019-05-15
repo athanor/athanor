@@ -25,7 +25,8 @@ struct OpAllDiff
     std::vector<HashType> indicesHashMap;
     FastIterableIntSet violatingOperands;
 
-    OpAllDiff(OpAllDiff&& other);
+    OpAllDiff(OpAllDiff&&) = delete;
+    OpAllDiff(const OpAllDiff&) = delete;
     size_t addHash(HashType hash, size_t memberIndex) {
         auto& indices = hashIndicesMap[hash];
         if (indices.size() == 1) {

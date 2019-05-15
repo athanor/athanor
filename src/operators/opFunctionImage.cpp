@@ -139,22 +139,6 @@ void OpFunctionImage<FunctionMemberViewType>::evaluateImpl() {
 }
 
 template <typename FunctionMemberViewType>
-OpFunctionImage<FunctionMemberViewType>::OpFunctionImage(
-    OpFunctionImage<FunctionMemberViewType>&& other)
-    : ExprInterface<FunctionMemberViewType>(move(other)),
-      TriggerContainer<FunctionMemberViewType>(move(other)),
-      functionOperand(move(other.functionOperand)),
-      preImageOperand(move(other.preImageOperand)),
-      cachedIndex(move(other.cachedIndex)),
-      locallyDefined(move(other.locallyDefined)),
-      functionOperandTrigger(move(other.functionOperandTrigger)),
-      functionMemberTrigger(move(other.functionMemberTrigger)),
-      preImageTrigger(move(other.preImageTrigger)) {
-    setTriggerParent(this, functionOperandTrigger, functionMemberTrigger,
-                     preImageTrigger, memberTrigger);
-}
-
-template <typename FunctionMemberViewType>
 bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
     bool recalculateIndex) {
     bool wasDefined = this->appearsDefined();

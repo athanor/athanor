@@ -9,10 +9,6 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 
-OpAnd::OpAnd(OpAnd&& other)
-    : SimpleUnaryOperator<BoolView, SequenceView, OpAnd>(move(other)),
-      cachedViolations(move(other.cachedViolations)),
-      violatingOperands(move(other.violatingOperands)) {}
 using OperandsSequenceTrigger = OperatorTrates<OpAnd>::OperandsSequenceTrigger;
 class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
    public:

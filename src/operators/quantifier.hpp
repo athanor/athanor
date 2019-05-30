@@ -88,7 +88,7 @@ Quantifier<ContainerType>::unrollCondition(UInt index, ExprRef<View> newView,
         conditionToCopy, newView, iterRef, oldValueNeedsReplacing);
     // find where the associated expr should be unrolled.
     UInt exprIndex;
-    if (newMember->view().get().violation == 0) {
+    if (newMember->view()->violation == 0) {
         // this condition is true, so  the expr should be unrolled after the
         // previous expr with a true condition. if there is no previous one than
         // the previous expr index will have value UNASSIGNED_EXPR_INDEX which
@@ -513,7 +513,7 @@ void Quantifier<ContainerType>::debugSanityCheckImpl() const {
         for (size_t i = 0; i < unrolledConditions.size(); i++) {
             unrolledConditions[i].condition->debugSanityCheck();
             sanityEqualsCheck(
-                unrolledConditions[i].condition->view().get().violation == 0,
+                unrolledConditions[i].condition->view()->violation == 0,
                 unrolledConditions[i].cachedValue);
             if (unrolledConditions[i].cachedValue) {
                 ++numberTrueConditions;

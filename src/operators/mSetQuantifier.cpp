@@ -93,8 +93,7 @@ struct InitialUnroller<MSetView> {
                     .template emplace<QueuedUnrollValueVec<View>>();
                 for (size_t i = 0; i < membersImpl.size(); i++) {
                     auto& member = membersImpl[i];
-                    quantifier.template unroll<View>(
-                        {false, i, member});
+                    quantifier.template unroll<View>({false, i, member});
                 }
             },
             containerView.members);

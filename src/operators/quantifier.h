@@ -64,7 +64,7 @@ struct Quantifier : public SequenceView {
         std::shared_ptr<ExprTriggerBase> trigger;
         UnrolledCondition(ExprRef<BoolView> condition, UInt exprIndex)
             : condition(std::move(condition)),
-              cachedValue(this->condition->view().get().violation == 0),
+              cachedValue(this->condition->view()->violation == 0),
               exprIndex(exprIndex) {
             debug_code(assert(this->condition->isEvaluated()));
         }
@@ -119,7 +119,9 @@ struct Quantifier : public SequenceView {
     bool triggering();
 
     UInt numberUnrolled() const {
-        //if quantifier has conditions, number unrolled is the number of conditions unrolled.  Otherwise it is the number of actual exprs unrolled.
+        // if quantifier has conditions, number unrolled is the number of
+        // conditions unrolled.  Otherwise it is the number of actual exprs
+        // unrolled.
         return unrolledIterVals.size();
     }
 

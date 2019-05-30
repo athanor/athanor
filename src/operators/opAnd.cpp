@@ -126,7 +126,7 @@ void OpAnd::updateVarViolationsImpl(const ViolationContext& vioContext,
     bool negated = boolVioContextTest && boolVioContextTest->negated;
     if (negated) {
         if (violation == 0) {
-            for (auto& operand : operand->view().get().getMembers<BoolView>()) {
+            for (auto& operand : operand->view()->getMembers<BoolView>()) {
                 operand->updateVarViolations(vioContext, vioContainer);
             }
         }

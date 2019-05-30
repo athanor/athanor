@@ -69,8 +69,8 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger,
     void trigger() final {
         mpark::visit(
             [&](auto& vToUnroll) {
-
-                UInt minIndex = numeric_limits<UInt>().max();;
+                UInt minIndex = numeric_limits<UInt>().max();
+                ;
                 for (auto& queuedValue : vToUnroll) {
                     auto tupleFirstMember = make<IntValue>();
                     tupleFirstMember->value = queuedValue.index + 1;

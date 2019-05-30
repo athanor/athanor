@@ -75,7 +75,7 @@ struct ConditionChangeTrigger
         auto& unrolledConditions = op->unrolledConditions;
         bool oldValue = unrolledConditions[index].cachedValue;
         unrolledConditions[index].cachedValue =
-            unrolledConditions[index].condition->view().get().violation == 0;
+            unrolledConditions[index].condition->view()->violation == 0;
         bool newValue = op->unrolledConditions[index].cachedValue;
         if (oldValue == newValue) {
             return;
@@ -95,7 +95,7 @@ struct ConditionChangeTrigger
             [&](auto& vToUnroll) {
                 typedef viewType(vToUnroll) View;
                 auto& members =
-                    op->container->view().get().template getMembers<View>();
+                    op->container->view()->template getMembers<View>();
                 debug_code(assert(index < members.size()));
                 auto& elementToUnroll = members[index];
 

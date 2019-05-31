@@ -733,23 +733,42 @@ pair<AnyDomainRef, AnyExprRef> parseOpAllDiff(json& operandExpr,
                 cerr << operandExpr << endl;
             })));
 }
+
+static pair<std::shared_ptr<IntDomain>, ExprRef<IntView>> parseDomainSize(
+    const AnyDomainRef& domain) {
+    return mpark::visit(
+        [&](auto& domain) {
+            UInt domainSize = getDomainSize(*domain);
+            if (domainSize > numeric_limits<Int>().max()) {
+                domainSize = numeric_limits<Int>().max();
+            }
+            auto val = make<IntValue>();
+            val->value = domainSize;
+            return make_pair(fakeIntDomain, val.asExpr());
+        },
+        domain);
+}
+
 pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
                                               ParsedModel& parsedModel) {
+    // if we know for sure it is a domain parse it as such
     if (operandExpr.count("Domain")) {
         auto domain = parseDomain(operandExpr["Domain"], parsedModel);
-        return mpark::visit(
-            [&](auto& domain) {
-                UInt domainSize = getDomainSize(*domain);
-                if (domainSize > numeric_limits<Int>().max()) {
-                    domainSize = numeric_limits<Int>().max();
-                }
-                auto val = make<IntValue>();
-                val->value = domainSize;
-                return make_pair(fakeIntDomain, val.asExpr());
-            },
-            domain);
+        return parseDomainSize(domain);
     }
-    AnyExprRef operand = parseExpr(operandExpr, parsedModel).second;
+    // now check, if expr parse as op two bars over expr, if domain, just parse
+    // it and get the size.
+    auto expr = tryParseExpr(operandExpr, parsedModel);
+    if (!expr) {
+        auto domain = tryParseDomain(operandExpr, parsedModel);
+        if (domain) {
+            return parseDomainSize(*domain);
+        } else {
+            cerr << "Error parsing OpTwoBars, expected domain or expression.\n";
+            abort();
+        }
+    }
+    auto& operand = expr->second;
     return mpark::visit(
         overloaded(
             [&](ExprRef<SetView>& set)

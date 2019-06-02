@@ -756,17 +756,14 @@ pair<AnyDomainRef, AnyExprRef> parseOpTwoBars(json& operandExpr,
         auto domain = parseDomain(operandExpr["Domain"], parsedModel);
         return parseDomainSize(domain);
     }
-    // now check, if expr parse as op two bars over expr, if domain, just parse
-    // it and get the size.
+    auto domain = tryParseDomain(operandExpr, parsedModel);
+    if (domain) {
+        return parseDomainSize(*domain);
+    }
     auto expr = tryParseExpr(operandExpr, parsedModel);
     if (!expr) {
-        auto domain = tryParseDomain(operandExpr, parsedModel);
-        if (domain) {
-            return parseDomainSize(*domain);
-        } else {
-            cerr << "Error parsing OpTwoBars, expected domain or expression.\n";
-            abort();
-        }
+        cerr << "Error parsing OpTwoBars, expected domain or expression.\n";
+        abort();
     }
     auto& operand = expr->second;
     return mpark::visit(

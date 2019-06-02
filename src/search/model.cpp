@@ -26,8 +26,7 @@ void ModelBuilder::createNeighbourhoods() {
         }
     }
     if (model.neighbourhoods.empty()) {
-        cerr << "Could not create any neighbourhoods\n";
-        throw EndOfSearchException();
+        cout << "Could not create any neighbourhoods\n";
     }
 }
 

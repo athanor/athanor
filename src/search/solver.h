@@ -176,6 +176,9 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
     state.stats.initialSolution(state.model);
     state.updateVarViolations();
     try {
+        if (state.model.neighbourhoods.empty()) {
+            throw EndOfSearchException();
+        }
         searchStrategy->run(state, true);
     } catch (EndOfSearchException&) {
     }

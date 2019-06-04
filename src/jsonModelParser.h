@@ -1,6 +1,7 @@
 #ifndef SRC_JSONMODELPARSER_H_
 #define SRC_JSONMODELPARSER_H_
 #include <iostream>
+#include <json.hpp>
 #include <memory>
 #include <unordered_map>
 #include "base/base.h"
@@ -12,7 +13,6 @@ struct ParsedModel {
     HashMap<std::string, AnyDomainRef> domainLettings;
     ParsedModel();
 };
-typedef std::vector<std::reference_wrapper<std::istream>> ISRefVec;
-ParsedModel parseModelFromJson(ISRefVec v);
+ParsedModel parseModelFromJson(std::vector<nlohmann::json>& jsons);
 
 #endif /* SRC_JSONMODELPARSER_H_ */

@@ -1752,12 +1752,10 @@ void parseJson(json& j, ParsedModel& parsedModel) {
     }
 }
 
-ParsedModel parseModelFromJson(ISRefVec streams) {
+ParsedModel parseModelFromJson(vector<json>& jsons) {
     ParsedModel parsedModel;
-    for (auto& is : streams) {
-        json j;
-        is >> j;
-        parseJson(j, parsedModel);
+    for (auto& json : jsons) {
+        parseJson(json, parsedModel);
     }
     return parsedModel;
 }

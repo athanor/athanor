@@ -11,22 +11,40 @@
 #include "search/neighbourhoodSelectionStrategies.h"
 #include "search/searchStrategies.h"
 #include "search/solver.h"
+#include "utils/getExecPath.h"
 #include "utils/hashUtils.h"
+#include "utils/runCommand.h"
 
 using namespace std;
 using namespace AutoArgParse;
 
 ArgParser argParser;
+
+std::string makeMessageOnFiles(const bool essenceOrParam) {
+    const char* ext = (essenceOrParam) ? ".essence" : ".param";
+    const char* description =
+        (essenceOrParam) ? "essence" : "essence parameter";
+    return toString(
+        "If an ", description, " file is given (denoted by the file extension ",
+        ext,
+        "), the tool conjure will be used to translate the file into a JSON "
+        "representation before parsing.  Otherwise, the file will be "
+        "treated as a JSON file and parsed directly.  When searching for "
+        "conjure, first the directory containing the athanor executable will "
+        "be searched and if not found, the path environment variable will be "
+        "checked.");
+}
+
 auto& specFlag = argParser.add<ComplexFlag>(
     "--spec", Policy::MANDATORY, "Precedes essence specification file.");
-auto& specArg = specFlag.add<Arg<ifstream>>(
+auto& specArg = specFlag.add<Arg<string>>(
     "path_to_file", Policy::MANDATORY,
-    "JSON representation of an essence file.",
-    [](const string& path) -> ifstream {
+    string("path to an essence specification.  ") + makeMessageOnFiles(true),
+    [](const string& path) -> string {
         ifstream file;
         file.open(path);
         if (file.good()) {
-            return file;
+            return path;
         } else {
             throw ErrorMessage("Error opening file: " + path);
         }
@@ -34,14 +52,14 @@ auto& specArg = specFlag.add<Arg<ifstream>>(
 
 auto& paramFlag = argParser.add<ComplexFlag>("--param", Policy::OPTIONAL,
                                              "Precedes parameter file.");
-auto& paramArg = paramFlag.add<Arg<ifstream>>(
+auto& paramArg = paramFlag.add<Arg<string>>(
     "path_to_file", Policy::MANDATORY,
-    "JSON representation of an essence parameter file.",
-    [](const string& path) -> ifstream {
+    string("path to a parameter file.  ") + makeMessageOnFiles(false),
+    [](const string& path) -> string {
         ifstream file;
         file.open(path);
         if (file.good()) {
-            return file;
+            return path;
         } else {
             throw ErrorMessage("Error opening file: " + path);
         }
@@ -356,8 +374,53 @@ void printFinalStats(const State& state) {
     std::cout << "Total real time: " << times.second << std::endl;
 }
 
+std::string findConjure() {
+    string localConjure = getDirectoryContainingExecutable() + "/conjure";
+    if (runCommand(localConjure).first == 0) {
+        return localConjure;
+    } else if (runCommand("conjure").first == 0) {
+        return "conjure";
+    } else {
+        cerr << "Error: conjure not found next to athanor executable directory "
+                "nor found in path.\n";
+        exit(1);
+    }
+}
+
+bool endsWith(const std::string& fullString, const std::string& ending) {
+    if (fullString.length() >= ending.length()) {
+        return (0 == fullString.compare(fullString.length() - ending.length(),
+                                        ending.length(), ending));
+    } else {
+        return false;
+    }
+}
+
+nlohmann::json parseJson(const string& file, bool useConjure,
+                         const string& conjurePath) {
+    if (useConjure) {
+        std::cout << "Using conjure to translate file " << file << std::endl;
+        auto result =
+            runCommand(conjurePath, "pretty", file, "--output-format", "json");
+        if (result.first == 0) {
+             return nlohmann::json::parse(
+                find(result.second.begin(), result.second.end(), '{'),
+                result.second.end());
+        } else {
+            cerr << "Error translating essence: " + result.second << endl;
+            exit(1);
+        }
+    } else {
+        ifstream is(file);
+        nlohmann::json json;
+        is >> json;
+        return json;
+    }
+}
+
 int main(const int argc, const char** argv) {
     cout << "ATHANOR\n";
+
     if (GIT_REVISION != string("GITDIR-NOTFOUND")) {
         cout << "Git revision: " << GIT_REVISION << endl << endl;
     }
@@ -376,16 +439,30 @@ int main(const int argc, const char** argv) {
         exit(1);
     }
 
-    setSignalsAndHandlers();
     try {
-        ParsedModel parsedModel =
-            (paramArg) ? parseModelFromJson({paramArg.get(), specArg.get()})
-                       : parseModelFromJson({specArg.get()});
+        // parse files
+        string conjurePath;
+        if (endsWith(specArg.get(), ".essence") ||
+            endsWith(paramArg.get(), ".param")) {
+            conjurePath = findConjure();
+        }
+        vector<nlohmann::json> jsons;
+        jsons.emplace_back(parseJson(
+            specArg.get(), endsWith(specArg.get(), ".essence"), conjurePath));
+        if (paramArg) {
+            jsons.insert(
+                jsons.begin(),
+                parseJson(paramArg.get(), endsWith(paramArg.get(), ".param"),
+                          conjurePath));
+        }
+        ParsedModel parsedModel = parseModelFromJson(jsons);
         State state(parsedModel.builder->build());
         u_int32_t seed = (seedArg) ? seedArg.get() : random_device()();
         globalRandomGenerator.seed(seed);
         cout << "Using seed: " << seed << endl;
         state.disableVarViolations = disableVioBiasFlag;
+        setSignalsAndHandlers();
+
         runSearch(state);
         printFinalStats(state);
     } catch (nlohmann::detail::exception& e) {

@@ -397,13 +397,21 @@ bool endsWith(const std::string& fullString, const std::string& ending) {
 }
 
 nlohmann::json parseJson(const string& file, bool useConjure,
-                         const string& conjurePath) {
+                         const string& conjurePath, bool specFile) {
     if (useConjure) {
+        // first typecheck
+        pair<int, string> result;
+        if (specFile &&
+            (result = runCommand(conjurePath, "type-check", file)).first != 0) {
+            cerr << "Error, spec did not type check.\n" << result.second;
+            exit(1);
+        }
+
         std::cout << "Using conjure to translate file " << file << std::endl;
-        auto result =
+        result =
             runCommand(conjurePath, "pretty", file, "--output-format", "json");
         if (result.first == 0) {
-             return nlohmann::json::parse(
+            return nlohmann::json::parse(
                 find(result.second.begin(), result.second.end(), '{'),
                 result.second.end());
         } else {
@@ -416,6 +424,24 @@ nlohmann::json parseJson(const string& file, bool useConjure,
         is >> json;
         return json;
     }
+}
+
+static vector<nlohmann::json> getInputs() {
+    string conjurePath;
+    if (endsWith(specArg.get(), ".essence") ||
+        endsWith(paramArg.get(), ".param")) {
+        conjurePath = findConjure();
+    }
+    vector<nlohmann::json> jsons;
+    jsons.emplace_back(parseJson(
+                                 specArg.get(), endsWith(specArg.get(), ".essence"), conjurePath,true));
+    if (paramArg) {
+        jsons.insert(
+                     jsons.begin(),
+                     parseJson(paramArg.get(), endsWith(paramArg.get(), ".param"),
+                               conjurePath, false));
+    }
+    return jsons;
 }
 
 int main(const int argc, const char** argv) {
@@ -441,20 +467,7 @@ int main(const int argc, const char** argv) {
 
     try {
         // parse files
-        string conjurePath;
-        if (endsWith(specArg.get(), ".essence") ||
-            endsWith(paramArg.get(), ".param")) {
-            conjurePath = findConjure();
-        }
-        vector<nlohmann::json> jsons;
-        jsons.emplace_back(parseJson(
-            specArg.get(), endsWith(specArg.get(), ".essence"), conjurePath));
-        if (paramArg) {
-            jsons.insert(
-                jsons.begin(),
-                parseJson(paramArg.get(), endsWith(paramArg.get(), ".param"),
-                          conjurePath));
-        }
+        vector<nlohmann::json> jsons = getInputs();
         ParsedModel parsedModel = parseModelFromJson(jsons);
         State state(parsedModel.builder->build());
         u_int32_t seed = (seedArg) ? seedArg.get() : random_device()();

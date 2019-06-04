@@ -1,0 +1,31 @@
+
+Just some notes for me on releases
+
+Create folder release_vMYVERSION_mac
+
+Compile Mac executable and add to folder.
+
+Add in Conjure Mac executable.
+
+Add in manualBuildAthanorInput.sh
+
+Add readme.md file.
+
+Create folder release_vMYVERSION_linux
+
+Compile linux executable and add to folder.
+
+Add in Conjure linux executable.
+
+Add in manualBuildAthanorInput.sh
+
+Add readme.md file.
+
+Zip each folder 
+tar -zcvf release_vMYVERSION_mac.tar.gz release_vMYVERSION_mac
+tar -zcvf release_vMYVERSION_linux.tar.gz release_vMYVERSION_linux
+
+Create tag git tag -a vMYVERSION
+push git push public vMYVERSION
+
+Github draft new release

@@ -9,6 +9,7 @@
 #include "base/typeDecls.h"
 #include "optional.hpp"
 #include "utils/OptionalRef.h"
+#include "utils/filename.h"
 #include "utils/flagSet.h"
 #include "utils/hashUtils.h"
 
@@ -36,9 +37,9 @@ struct SanityCheckException {
     }
 };
 
-#define sanityCheck(check, message)                              \
-    if (!(check)) {                                              \
-        throw SanityCheckException(message, __FILE__, __LINE__); \
+#define sanityCheck(check, message)                                  \
+    if (!(check)) {                                                  \
+        throw SanityCheckException(message, __FILENAME__, __LINE__); \
     }
 
 #define sanityEqualsCheck(val1, val2)                              \

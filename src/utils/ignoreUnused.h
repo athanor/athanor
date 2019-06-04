@@ -1,6 +1,7 @@
 
 #ifndef SRC_UTILS_IGNOREUNUSED_H_
 #define SRC_UTILS_IGNOREUNUSED_H_
+#include "utils/filename.h"
 template <typename... Types>
 void ignoreUnused(Types&&...) {}
 
@@ -10,10 +11,10 @@ void ignoreUnused(Types&&...) {}
     assert(false);                                                \
     abort();
 
-#define shouldNotBeCalledPanic                                                \
-    std::cerr << "This function should never be called.\n"                    \
-              << __func__ << "\nFile: " << __FILE__ << "\nLine: " << __LINE__ \
-              << "\n";                                                        \
+#define shouldNotBeCalledPanic                             \
+    std::cerr << "This function should never be called.\n" \
+              << __func__ << "\nFile: " << __FILENAME__    \
+              << "\nLine: " << __LINE__ << "\n";           \
     abort();
 
 #endif /* SRC_UTILS_IGNOREUNUSED_H_ */

@@ -399,6 +399,8 @@ bool endsWith(const std::string& fullString, const std::string& ending) {
 nlohmann::json parseJson(const string& file, bool useConjure,
                          const string& conjurePath, bool specFile) {
     if (useConjure) {
+        std::cout << "Using conjure to translate "
+                  << (specFile ? "essence" : "param") << " file\n";
         // first typecheck
         pair<int, string> result;
         if (specFile &&
@@ -407,7 +409,6 @@ nlohmann::json parseJson(const string& file, bool useConjure,
             exit(1);
         }
 
-        std::cout << "Using conjure to translate file " << file << std::endl;
         result =
             runCommand(conjurePath, "pretty", file, "--output-format", "json");
         if (result.first == 0) {
@@ -428,19 +429,24 @@ nlohmann::json parseJson(const string& file, bool useConjure,
 
 static vector<nlohmann::json> getInputs() {
     string conjurePath;
+    std::clock_t startReadTime = std::clock();
     if (endsWith(specArg.get(), ".essence") ||
         endsWith(paramArg.get(), ".param")) {
         conjurePath = findConjure();
     }
     vector<nlohmann::json> jsons;
     jsons.emplace_back(parseJson(
-                                 specArg.get(), endsWith(specArg.get(), ".essence"), conjurePath,true));
+        specArg.get(), endsWith(specArg.get(), ".essence"), conjurePath, true));
     if (paramArg) {
         jsons.insert(
-                     jsons.begin(),
-                     parseJson(paramArg.get(), endsWith(paramArg.get(), ".param"),
-                               conjurePath, false));
+            jsons.begin(),
+            parseJson(paramArg.get(), endsWith(paramArg.get(), ".param"),
+                      conjurePath, false));
     }
+    std::clock_t endReadTime = std::clock();
+    std::cout << "Read time: "
+              << ((double)(endReadTime - startReadTime) / CLOCKS_PER_SEC)
+              << std::endl;
     return jsons;
 }
 

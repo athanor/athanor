@@ -49,7 +49,9 @@ void ModelBuilder::addConstraints() {
             [&](auto& expr) {
                 typedef viewType(expr) View;
                 typedef typename AssociatedValueType<View>::type Value;
-                typedef typename AssociatedDomain<Value>::type Domain;
+                typedef typename AssociatedDomain<Value>::type Domain;if (is_same<Domain,BoolDomain>::value) {
+                    return;
+                }
                 auto& domain = mpark::get<shared_ptr<Domain>>(
                     model.variables[varIndex].first);
                 addConstraint(OpMaker<OpInDomain<View>>::make(domain, expr));

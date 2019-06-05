@@ -22,7 +22,7 @@ ostream& OpEnumEq::dumpState(ostream& os) const {
     left->dumpState(os);
     os << "\nright: ";
     right->dumpState(os);
-    return os;
+    return os << ")";
 }
 
 string OpEnumEq::getOpName() const { return "OpEnumEq"; }

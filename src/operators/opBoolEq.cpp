@@ -39,7 +39,7 @@ ostream& OpBoolEq::dumpState(ostream& os) const {
     left->dumpState(os);
     os << "\nright: ";
     right->dumpState(os);
-    return os;
+    return os << ")";
 }
 
 string OpBoolEq::getOpName() const { return "OpBoolEq"; }

@@ -50,7 +50,7 @@ for instance in instances/*.essence ; do
     then markFailed "outputDir" "validate solutions failed"
         continue
     fi
-markDone "$outputDir"    
+markPassed "$outputDir"    
 done
 
 if (( failedInstances > 0 )); then

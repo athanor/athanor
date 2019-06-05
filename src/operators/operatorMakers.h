@@ -257,4 +257,12 @@ struct OpMaker<OpInDomain<IntView>> {
                                   ExprRef<IntView> o);
 };
 
+template <>
+struct OpMaker<OpInDomain<EnumView>> {
+    static ExprRef<BoolView> make(std::shared_ptr<EnumDomain>,
+                                  ExprRef<EnumView> o) {
+        return OpMaker<OpIsDefined<EnumView>>::make(o);
+    }
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

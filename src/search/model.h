@@ -8,6 +8,7 @@
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/opAnd.h"
 #include "operators/opBoolEq.h"
+#include "operators/opEnumEq.h"
 #include "operators/opIntEq.h"
 #include "operators/opSequenceLit.h"
 #include "operators/operatorMakers.h"
@@ -95,8 +96,8 @@ class ModelBuilder {
     }
 
     template <typename Op, typename Value>
-    bool checkOpEq(BoolView* eqExprTester) {
-        Op* op = dynamic_cast<Op*>(eqExprTester);
+    bool checkOpEq(ExprRef<BoolView>& constraint) {
+        auto op = getAs<Op>(constraint);
         if (op) {
             ValRef<Value> definedVar = getIfNonConstValue(op->left);
             if (definedVar && valBase(definedVar).container != &definedPool) {
@@ -113,9 +114,9 @@ class ModelBuilder {
     }
 
     inline bool constraintHandledByDefine(ExprRef<BoolView>& constraint) {
-        BoolView* eqExprTester = &(constraint->view().get());
-        return checkOpEq<OpIntEq, IntValue>(eqExprTester) ||
-               checkOpEq<OpBoolEq, BoolValue>(eqExprTester);
+        return checkOpEq<OpIntEq, IntValue>(constraint) ||
+               checkOpEq<OpBoolEq, BoolValue>(constraint) ||
+               checkOpEq<OpEnumEq, EnumValue>(constraint);
     }
 
     template <typename Value,

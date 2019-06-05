@@ -928,6 +928,12 @@ pair<AnyDomainRef, AnyExprRef> parseOpEq(json& operandsExpr,
                     return make_pair(fakeBoolDomain,
                                      OpMaker<OpIntEq>::make(left, right));
                 },
+
+                [&](ExprRef<BoolView>& left, auto &&)
+                    -> pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> {
+                    return make_pair(fakeBoolDomain,
+                                     OpMaker<OpBoolEq>::make(left, right));
+                },
                 [&](ExprRef<EnumView>& left, auto &&)
                     -> pair<shared_ptr<BoolDomain>, ExprRef<BoolView>> {
                     return make_pair(fakeBoolDomain,

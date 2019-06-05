@@ -11,6 +11,12 @@ struct OpMaker<OpIntEq> {
     static ExprRef<BoolView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
 
+struct OpBoolEq;
+template <>
+struct OpMaker<OpBoolEq> {
+    static ExprRef<BoolView> make(ExprRef<BoolView> l, ExprRef<BoolView> r);
+};
+
 struct OpEnumEq;
 template <>
 struct OpMaker<OpEnumEq> {
@@ -233,6 +239,9 @@ template <typename view>
 struct OpInDomain;
 template <>
 struct OpInDomain<IntView>;
+template <>
+struct OpInDomain<BoolView>;
+
 template <typename View>
 struct OpMaker<OpInDomain<View>> {
     typedef typename AssociatedValueType<View>::type Value;

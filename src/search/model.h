@@ -7,6 +7,7 @@
 #include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
 #include "operators/opAnd.h"
+#include "operators/opBoolEq.h"
 #include "operators/opIntEq.h"
 #include "operators/opSequenceLit.h"
 #include "operators/operatorMakers.h"
@@ -93,22 +94,28 @@ class ModelBuilder {
         }
     }
 
-    inline bool constraintHandledByDefine(ExprRef<BoolView>& constraint) {
-        BoolView* eqExprTester = &(constraint->view().get());
-        OpIntEq* opIntEq = dynamic_cast<OpIntEq*>(eqExprTester);
-        if (opIntEq != NULL) {
-            ValRef<IntValue> definedVar = getIfNonConstValue(opIntEq->left);
+    template <typename Op, typename Value>
+    bool checkOpEq(BoolView* eqExprTester) {
+        Op* op = dynamic_cast<Op*>(eqExprTester);
+        if (op) {
+            ValRef<Value> definedVar = getIfNonConstValue(op->left);
             if (definedVar && valBase(definedVar).container != &definedPool) {
-                define(definedVar, opIntEq->right);
+                define(definedVar, op->right);
                 return true;
             }
-            definedVar = getIfNonConstValue(opIntEq->right);
+            definedVar = getIfNonConstValue(op->right);
             if (definedVar && valBase(definedVar).container != &definedPool) {
-                define(definedVar, opIntEq->left);
+                define(definedVar, op->left);
                 return true;
             }
         }
         return false;
+    }
+
+    inline bool constraintHandledByDefine(ExprRef<BoolView>& constraint) {
+        BoolView* eqExprTester = &(constraint->view().get());
+        return checkOpEq<OpIntEq, IntValue>(eqExprTester) ||
+               checkOpEq<OpBoolEq, BoolValue>(eqExprTester);
     }
 
     template <typename Value,

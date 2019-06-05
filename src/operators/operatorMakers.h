@@ -239,8 +239,6 @@ template <typename view>
 struct OpInDomain;
 template <>
 struct OpInDomain<IntView>;
-template <>
-struct OpInDomain<BoolView>;
 
 template <typename View>
 struct OpMaker<OpInDomain<View>> {
@@ -265,4 +263,9 @@ struct OpMaker<OpInDomain<EnumView>> {
     }
 };
 
+template <>
+struct OpMaker<OpInDomain<BoolView>> {
+    static ExprRef<BoolView> make(std::shared_ptr<BoolDomain>,
+                                  ExprRef<BoolView> o);
+};
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

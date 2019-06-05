@@ -6,7 +6,7 @@
 
 using namespace std;
 
-void OpInDomain<BoolView>::reevaluateImpl(BoolView&) {}
+void OpInDomain<BoolView>::reevaluateImpl(BoolView&) { violation = 0; }
 
 void OpInDomain<BoolView>::updateVarViolationsImpl(const ViolationContext&,
                                                    ViolationContainer&) {}

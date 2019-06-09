@@ -20,7 +20,7 @@ using namespace AutoArgParse;
 
 ArgParser argParser;
 
-std::string makeMessageOnFiles(const bool essenceOrParam) {
+string makeMessageOnFiles(const bool essenceOrParam) {
     const char* ext = (essenceOrParam) ? ".essence" : ".param";
     const char* description =
         (essenceOrParam) ? "essence" : "essence parameter";
@@ -357,24 +357,24 @@ void setSignalsAndHandlers() {
 }
 
 void printFinalStats(const State& state) {
-    std::cout << "\n\n";
+    cout << "\n\n";
     if (saveNeighbourhoodStatsArg) {
         state.stats.printNeighbourhoodStats(saveNeighbourhoodStatsArg.get());
     } else {
         state.stats.printNeighbourhoodStats(cout);
     }
-    std::cout << "\n\n";
+    cout << "\n\n";
     cout << state.stats << "\nTrigger event count " << triggerEventCount
          << "\n";
 
     auto times = state.stats.getTime();
-    std::cout << "total real time actually spent in neighbourhoods: "
-              << state.totalTimeInNeighbourhoods << std::endl;
-    std::cout << "Total CPU time: " << times.first << std::endl;
-    std::cout << "Total real time: " << times.second << std::endl;
+    cout << "total real time actually spent in neighbourhoods: "
+         << state.totalTimeInNeighbourhoods << endl;
+    cout << "Total CPU time: " << times.first << endl;
+    cout << "Total real time: " << times.second << endl;
 }
 
-std::string findConjure() {
+string findConjure() {
     string localConjure = getDirectoryContainingExecutable() + "/conjure";
     if (runCommand(localConjure).first == 0) {
         return localConjure;
@@ -387,7 +387,7 @@ std::string findConjure() {
     }
 }
 
-bool endsWith(const std::string& fullString, const std::string& ending) {
+bool endsWith(const string& fullString, const string& ending) {
     if (fullString.length() >= ending.length()) {
         return (0 == fullString.compare(fullString.length() - ending.length(),
                                         ending.length(), ending));
@@ -399,8 +399,8 @@ bool endsWith(const std::string& fullString, const std::string& ending) {
 nlohmann::json parseJson(const string& file, bool useConjure,
                          const string& conjurePath, bool specFile) {
     if (useConjure) {
-        std::cout << "Using conjure to translate "
-                  << (specFile ? "essence" : "param") << " file\n";
+        cout << "Using conjure to translate "
+             << (specFile ? "essence" : "param") << " file\n";
         // first typecheck
         pair<int, string> result;
         if (specFile &&
@@ -429,7 +429,8 @@ nlohmann::json parseJson(const string& file, bool useConjure,
 
 static vector<nlohmann::json> getInputs() {
     string conjurePath;
-    std::clock_t startReadTime = std::clock();
+    chrono::high_resolution_clock::time_point startTime =
+        chrono::high_resolution_clock::now();
     if (endsWith(specArg.get(), ".essence") ||
         endsWith(paramArg.get(), ".param")) {
         conjurePath = findConjure();
@@ -443,10 +444,10 @@ static vector<nlohmann::json> getInputs() {
             parseJson(paramArg.get(), endsWith(paramArg.get(), ".param"),
                       conjurePath, false));
     }
-    std::clock_t endReadTime = std::clock();
-    std::cout << "Read time: "
-              << ((double)(endReadTime - startReadTime) / CLOCKS_PER_SEC)
-              << std::endl;
+    chrono::high_resolution_clock::time_point endTime =
+        chrono::high_resolution_clock::now();
+    cout << "Read time (real): "
+         << chrono::duration<double>(endTime - startTime).count() << "s\n";
     return jsons;
 }
 

@@ -16,9 +16,9 @@ void ModelBuilder::createNeighbourhoods() {
             model.neighbourhoods.size() - previousNumberNeighbourhoods, i);
         model.varNeighbourhoodMapping.emplace_back(
             model.neighbourhoods.size() - previousNumberNeighbourhoods);
-        std::iota(model.varNeighbourhoodMapping.back().begin(),
-                  model.varNeighbourhoodMapping.back().end(),
-                  previousNumberNeighbourhoods);
+        iota(model.varNeighbourhoodMapping.back().begin(),
+             model.varNeighbourhoodMapping.back().end(),
+             previousNumberNeighbourhoods);
         for (auto iter =
                  model.neighbourhoods.begin() + previousNumberNeighbourhoods;
              iter != model.neighbourhoods.end(); ++iter) {
@@ -49,7 +49,8 @@ void ModelBuilder::addConstraints() {
             [&](auto& expr) {
                 typedef viewType(expr) View;
                 typedef typename AssociatedValueType<View>::type Value;
-                typedef typename AssociatedDomain<Value>::type Domain;if (is_same<Domain,BoolDomain>::value) {
+                typedef typename AssociatedDomain<Value>::type Domain;
+                if (is_same<Domain, BoolDomain>::value) {
                     return;
                 }
                 auto& domain = mpark::get<shared_ptr<Domain>>(
@@ -58,12 +59,12 @@ void ModelBuilder::addConstraints() {
             },
             expr);
     }
-    model.csp = std::make_shared<OpAnd>(
-        std::make_shared<OpSequenceLit>(move(constraints)));
+    model.csp =
+        make_shared<OpAnd>(make_shared<OpSequenceLit>(move(constraints)));
 }
 
 Model ModelBuilder::build() {
-    std::clock_t startBuildTime = std::clock();
+    clock_t startBuildTime = clock();
     addConstraints();
     createNeighbourhoods();
     substituteVarsToBeDefined();
@@ -79,11 +80,10 @@ Model ModelBuilder::build() {
             objective->optimise(PathExtension::begin(objective));
         },
         model.objective);
-    std::clock_t endBuildTime = std::clock();
-    std::cout << "Model build time: "
-              << ((double)(endBuildTime - startBuildTime) / CLOCKS_PER_SEC)
-              << std::endl;
-    return std::move(model);
+    clock_t endBuildTime = clock();
+    cout << "Model build time (CPU): "
+         << ((double)(endBuildTime - startBuildTime) / CLOCKS_PER_SEC) << "s\n";
+    return move(model);
 }
 
 void ModelBuilder::substituteVarsToBeDefined() {
@@ -113,28 +113,28 @@ FindAndReplaceFunction ModelBuilder::makeFindReplaceFunc(AnyValRef& var,
             typedef typename AssociatedViewType<valType(var)>::type ViewType;
             auto& exprImpl = mpark::get<ExprRef<ViewType>>(expr);
             return [this, var,
-                    exprImpl](AnyExprRef ref) -> std::pair<bool, AnyExprRef> {
+                    exprImpl](AnyExprRef ref) -> pair<bool, AnyExprRef> {
                 auto exprRefTest = mpark::get_if<ExprRef<ViewType>>(&ref);
                 if (exprRefTest) {
                     auto valRefTest = this->getIfNonConstValue(*exprRefTest);
                     if (valRefTest && (valBase(valRefTest) == valBase(var))) {
-                        return std::make_pair(true, exprImpl);
+                        return make_pair(true, exprImpl);
                     }
                 }
-                return std::make_pair(false, ref);
+                return make_pair(false, ref);
             };
         },
         var);
 }
 
 size_t randomSize(size_t minSize, size_t maxSize) {
-    return globalRandom<size_t>(minSize, std::min(maxSize, minSize + 1000));
+    return globalRandom<size_t>(minSize, min(maxSize, minSize + 1000));
 }
 
 void Model::printVariables() const {
     for (size_t i = 0; i < variables.size(); ++i) {
         auto& v = variables[i];
-        std::cout << "letting " << variableNames[i] << " be ";
+        cout << "letting " << variableNames[i] << " be ";
         mpark::visit(
             [&](auto& domain) {
                 typedef
@@ -148,10 +148,10 @@ void Model::printVariables() const {
                     expr = mpark::get<ExprRef<View>>(
                         definingExpressions.at(valBase(v.second).id));
                 }
-                prettyPrint(std::cout, *domain, expr->getViewIfDefined());
+                prettyPrint(cout, *domain, expr->getViewIfDefined());
             },
             v.first);
-        std::cout << std::endl;
+        cout << endl;
     }
 }
 

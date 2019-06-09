@@ -412,6 +412,7 @@ void handleEnumDeclaration(json& enumDeclExpr, ParsedModel& parsedModel) {
     for (size_t i = 0; i < enumDomain->valueNames.size(); i++) {
         auto val = make<EnumValue>();
         val->value = i;
+        val->setConstant(true);
         const string& name = enumDomain->valueNames[i];
         bool inserted = parsedModel.namedExprs
                             .emplace(name, make_pair(enumDomain, val.asExpr()))

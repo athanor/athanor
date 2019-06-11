@@ -30,9 +30,11 @@ string makeMessageOnFiles(const bool essenceOrParam) {
         "), the tool conjure will be used to translate the file into a JSON "
         "representation before parsing.  Otherwise, the file will be "
         "treated as a JSON file and parsed directly.  When searching for "
-        "conjure, first the directory containing the athanor executable will "
-        "be searched and if not found, the path environment variable will be "
-        "checked.");
+        "conjure, athanor will first check the flag --conjurePath (see "
+        "--conjurePath for details).  If this flag is not set, athanor will "
+        "check if conjure can be found in the same directory as the athanor "
+        "executable. If not found, the path environment variable will be "
+        "used.");
 }
 
 auto& specFlag = argParser.add<ComplexFlag>(
@@ -64,6 +66,17 @@ auto& paramArg = paramFlag.add<Arg<string>>(
             throw ErrorMessage("Error opening file: " + path);
         }
     });
+auto& conjurePathArg =
+    argParser
+        .add<ComplexFlag>(
+            "--conjurePath", Policy::OPTIONAL,
+            "Specify a path to the conjure executable.  Conjure is used to "
+            "translate essence files into a JSON representation.  If this flag "
+            "is not set, athanor will first look for conjure in the executable "
+            "directory and then in the path environment.  However, if "
+            "--conjurePath does not point to conjure, an error will be "
+            "reported and athanor will exit.")
+        .add<Arg<string>>("path_to_executable", Policy::MANDATORY, "");
 
 mt19937 globalRandomGenerator;
 auto& randomSeedFlag = argParser.add<ComplexFlag>(
@@ -375,6 +388,17 @@ void printFinalStats(const State& state) {
 }
 
 string findConjure() {
+    if (conjurePathArg) {
+        if (runCommand(conjurePathArg.get()).first == 0) {
+            return conjurePathArg.get();
+        } else {
+            cerr << toString("Error: the path specified by --conjurePath ('",
+                             conjurePathArg.get(),
+                             "') does not point to an executable.");
+            exit(1);
+        }
+    }
+
     string localConjure = getDirectoryContainingExecutable() + "/conjure";
     if (runCommand(localConjure).first == 0) {
         return localConjure;

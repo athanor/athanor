@@ -19,8 +19,6 @@ struct InitialUnroller<FunctionView> {
         mpark::visit(
             [&](auto& membersImpl) {
                 typedef viewType(membersImpl) View;
-                quantifier.valuesToUnroll
-                    .template emplace<QueuedUnrollValueVec<View>>();
                 for (size_t i = 0; i < membersImpl.size(); i++) {
                     mpark::visit(
                         [&](auto& fromDomain) {
@@ -42,8 +40,7 @@ struct InitialUnroller<FunctionView> {
 };
 
 template <>
-struct ContainerTrigger<FunctionView> : public FunctionTrigger,
-                                        public DelayedTrigger {
+struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     Quantifier<FunctionView>* op;
 
     ContainerTrigger(Quantifier<FunctionView>* op) : op(op) {}
@@ -107,7 +104,13 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger,
         op->containerTrigger = trigger;
     }
 
-    void trigger() { shouldNotBeCalledPanic; }
+    template <typename View>
+    void containerSpecificUnroll(QueuedUnrollValue<View>) {
+        cerr << "Sorry, quantifying over functions with conditions in the "
+                "quantifier is not yet supported.  Conditions can still be "
+                "added to quantifiers over other structures.\n";
+        abort();
+    }
 };
 
 template <>

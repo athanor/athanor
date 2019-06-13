@@ -12,29 +12,16 @@ inline static u_int64_t nextQuantId() {
 
 template <typename Container>
 struct ContainerTrigger;
+
 template <typename View, EnableIfView<View> = 0>
 struct QueuedUnrollValue {
     bool directUnrollExpr = false;  // if true, when unrolling unrollExpr() will
-                                    // be called, not unroll()
-    UInt index;                     // index of where to unroll this value
-    ExprRef<View> value;            // value to unroll
+    // be called, not unroll()
+    UInt index;           // index of where to unroll this value
+    ExprRef<View> value;  // value to unroll
     QueuedUnrollValue(bool directUnrollExpr, UInt index, ExprRef<View> value)
         : directUnrollExpr(directUnrollExpr), index(index), value(value) {}
 };
-
-template <typename View>
-using QueuedUnrollValueVec = std::vector<QueuedUnrollValue<View>>;
-
-template <typename Val>
-using QueuedUnrollValueVecMaker =
-    QueuedUnrollValueVec<typename AssociatedViewType<Val>::type>;
-
-template <typename T>
-struct ViewType<QueuedUnrollValueVec<T>> {
-    typedef T type;
-};
-
-typedef Variantised<QueuedUnrollValueVecMaker> AnyQueuedUnrollValueVec;
 
 template <typename ContainerType>
 struct Quantifier : public SequenceView {
@@ -77,9 +64,7 @@ struct Quantifier : public SequenceView {
     std::vector<UnrolledCondition> unrolledConditions;
     bool containerDefined = true;
     std::vector<AnyIterRef> unrolledIterVals;
-    AnyQueuedUnrollValueVec valuesToUnroll;
     std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
-    std::shared_ptr<ContainerTrigger<ContainerType>> containerDelayedTrigger;
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
 
     Quantifier(ExprRef<ContainerType> container, const int id = nextQuantId())
@@ -113,7 +98,7 @@ struct Quantifier : public SequenceView {
 
     template <typename View>
     void setContainerInnerType() {
-        valuesToUnroll.emplace<QueuedUnrollValueVec<View>>();
+        //
     }
 
     bool triggering();

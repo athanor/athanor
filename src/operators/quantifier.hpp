@@ -5,6 +5,7 @@
 #include "operators/quantifierTriggers.h"
 #include "triggers/allTriggers.h"
 extern bool runSanityChecks;
+
 template <typename ContainerType>
 struct InitialUnroller;
 
@@ -52,16 +53,12 @@ bool Quantifier<ContainerType>::triggering() {
 template <typename View1, typename View2>
 ExprRef<View1> deepCopyExprAndAssignNewValue(ExprRef<View1> exprToCopy,
                                              ExprRef<View2> newValue,
-                                             IterRef<View2> iterRef,
-                                             bool oldValueNeedsReplacing) {
+                                             IterRef<View2> iterRef) {
     ExprRef<View1> newMember =
         exprToCopy->deepCopyForUnroll(exprToCopy, iterRef);
-    iterRef->changeValue(oldValueNeedsReplacing, newValue, [&]() {
-        if (!oldValueNeedsReplacing) {
-            newMember->evaluate();
-        }
-        newMember->startTriggering();
-    });
+    iterRef->changeValue(newValue);
+    newMember->evaluate();
+    newMember->startTriggering();
     if (runSanityChecks) {
         newMember->debugSanityCheck();
     }
@@ -75,17 +72,7 @@ Quantifier<ContainerType>::unrollCondition(UInt index, ExprRef<View> newView,
                                            IterRef<View> iterRef) {
     debug_log("unrolling condition on value " << newView << " at index "
                                               << index);
-    // choose which condition to copy from.
-    // If no previous unrolled condition, copy from condition template and
-    // evaluate from scratch. Otherwise, copy from previously unrolled
-    // condition, don't evaluate, just trigger the change in value to the new
-    // iterRef.
-    auto conditionToCopy = (unrolledConditions.empty())
-                               ? condition
-                               : unrolledConditions.back().condition;
-    bool oldValueNeedsReplacing = !unrolledConditions.empty();
-    auto newMember = deepCopyExprAndAssignNewValue(
-        conditionToCopy, newView, iterRef, oldValueNeedsReplacing);
+    auto newMember = deepCopyExprAndAssignNewValue(condition, newView, iterRef);
     // find where the associated expr should be unrolled.
     UInt exprIndex;
     if (newMember->view()->violation == 0) {
@@ -124,12 +111,8 @@ void Quantifier<ContainerType>::unrollExpr(UInt index, ExprRef<View> newView,
             // evaluate from scratch. Otherwise, copy from previously unrolled
             // expr, don't evaluate, just trigger the change in value to the new
             // iterRef.
-            auto exprToCopy = (members.empty())
-                                  ? mpark::get<ExprRef<viewType(members)>>(expr)
-                                  : members.back();
-            bool oldValueNeedsReplacing = !members.empty();
             auto newMember = deepCopyExprAndAssignNewValue(
-                exprToCopy, newView, iterRef, oldValueNeedsReplacing);
+                mpark::get<ExprRef<viewType(members)>>(expr), newView, iterRef);
             if (containerDefined) {
                 this->addMemberAndNotify(index, newMember);
             } else {
@@ -312,8 +295,6 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopyForUnrollImpl(
     const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
     auto newQuantifier = std::make_shared<Quantifier<ContainerType>>(
         container->deepCopyForUnroll(container, iterator), quantId);
-    newQuantifier->valuesToUnroll = valuesToUnroll;
-
     mpark::visit(
         [&](const auto& expr) {
             newQuantifier->setExpression(
@@ -395,10 +376,6 @@ void Quantifier<ContainerType>::stopTriggeringOnChildren() {
     if (containerTrigger) {
         deleteTrigger(containerTrigger);
         containerTrigger = nullptr;
-    }
-    if (containerDelayedTrigger) {
-        deleteTrigger(containerDelayedTrigger);
-        containerDelayedTrigger = nullptr;
     }
     if (!exprTriggers.empty()) {
         while (!exprTriggers.empty()) {

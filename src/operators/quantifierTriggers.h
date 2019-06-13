@@ -92,22 +92,15 @@ struct ConditionChangeTrigger
                       unrolledConditions.end(),
                       [&](auto& cond) { ++cond.exprIndex; });
         mpark::visit(
-            [&](auto& vToUnroll) {
-                typedef viewType(vToUnroll) View;
-                auto& members =
-                    op->container->view()->template getMembers<View>();
+            [&](auto& members) {
+                typedef viewType(members) View;
                 debug_code(assert(index < members.size()));
                 auto& elementToUnroll = members[index];
-
-                vToUnroll.emplace_back(
-                    true, unrolledConditions[index].exprIndex, elementToUnroll);
-                if (!op->containerDelayedTrigger) {
-                    op->containerDelayedTrigger =
-                        std::make_shared<ContainerTrigger<ContainerType>>(op);
-                    addDelayedTrigger(op->containerDelayedTrigger);
-                }
+                op->containerTrigger->template containerSpecificUnroll<View>(
+                    {true, unrolledConditions[index].exprIndex,
+                     elementToUnroll});
             },
-            op->valuesToUnroll);
+            op->container->view()->getAnyMembers());
     }
     void handleConditionBecomingFalse() {
         auto& unrolledConditions = op->unrolledConditions;

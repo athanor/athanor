@@ -2,7 +2,7 @@
 #include "types/mSet.h"
 using namespace std;
 template <>
-struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
+struct ContainerTrigger<MSetView> : public MSetTrigger {
     Quantifier<MSetView>* op;
 
     ContainerTrigger(Quantifier<MSetView>* op) : op(op) {}
@@ -13,19 +13,19 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
         }
         op->roll(op->numberUnrolled() - 1);
     }
+
+    template <typename View>
+    inline void containerSpecificUnroll(QueuedUnrollValue<View> val) {
+        op->unroll(val);
+    }
     void valueAdded(const AnyExprRef& member) final {
         mpark::visit(
-            [&](auto& vToUnroll) {
-                typedef viewType(vToUnroll) View;
-                vToUnroll.emplace_back(false, op->numberUnrolled(),
-                                       mpark::get<ExprRef<View>>(member));
-                if (!op->containerDelayedTrigger) {
-                    op->containerDelayedTrigger =
-                        make_shared<ContainerTrigger<MSetView>>(op);
-                    addDelayedTrigger(op->containerDelayedTrigger);
-                }
+            [&](auto& expr) {
+                typedef viewType(expr) View;
+                containerSpecificUnroll<View>(
+                    {false, op->numberUnrolled(), expr});
             },
-            op->valuesToUnroll);
+            member);
     }
 
     void memberValueChanged(UInt) final{};
@@ -47,18 +47,6 @@ struct ContainerTrigger<MSetView> : public MSetTrigger, public DelayedTrigger {
                 }
             },
             (*containerView).members);
-    }
-    void trigger() final {
-        mpark::visit(
-            [&](auto& vToUnroll) {
-                for (auto& value : vToUnroll) {
-                    op->unroll(value);
-                }
-                vToUnroll.clear();
-            },
-            op->valuesToUnroll);
-        deleteTrigger(op->containerDelayedTrigger);
-        op->containerDelayedTrigger = nullptr;
     }
     void reattachTrigger() final {
         deleteTrigger(op->containerTrigger);
@@ -89,8 +77,6 @@ struct InitialUnroller<MSetView> {
         mpark::visit(
             [&](auto& membersImpl) {
                 typedef viewType(membersImpl) View;
-                quantifier.valuesToUnroll
-                    .template emplace<QueuedUnrollValueVec<View>>();
                 for (size_t i = 0; i < membersImpl.size(); i++) {
                     auto& member = membersImpl[i];
                     quantifier.template unroll<View>({false, i, member});

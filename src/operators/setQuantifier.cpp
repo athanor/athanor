@@ -3,7 +3,7 @@
 using namespace std;
 
 template <>
-struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
+struct ContainerTrigger<SetView> : public SetTrigger {
     Quantifier<SetView>* op;
 
     ContainerTrigger(Quantifier<SetView>* op) : op(op) {}
@@ -14,32 +14,19 @@ struct ContainerTrigger<SetView> : public SetTrigger, public DelayedTrigger {
         }
         op->roll(op->numberUnrolled() - 1);
     }
-    void trigger() final {
-        mpark::visit(
-            [&](auto& vToUnroll) {
-                for (auto& queuedValue : vToUnroll) {
-                    op->unroll(queuedValue);
-                }
-                vToUnroll.clear();
-            },
-            op->valuesToUnroll);
-        deleteTrigger(op->containerDelayedTrigger);
-        op->containerDelayedTrigger = nullptr;
-    }
 
+    template <typename View>
+    inline void containerSpecificUnroll(QueuedUnrollValue<View> val) {
+        op->unroll(val);
+    }
     void valueAdded(const AnyExprRef& member) final {
         mpark::visit(
-            [&](auto& vToUnroll) {
-                typedef viewType(vToUnroll) View;
-                vToUnroll.emplace_back(false, op->numberUnrolled(),
-                                       mpark::get<ExprRef<View>>(member));
-                if (!op->containerDelayedTrigger) {
-                    op->containerDelayedTrigger =
-                        make_shared<ContainerTrigger<SetView>>(op);
-                    addDelayedTrigger(op->containerDelayedTrigger);
-                }
+            [&](auto& expr) {
+                typedef viewType(expr) View;
+                containerSpecificUnroll<View>(
+                    {false, op->numberUnrolled(), expr});
             },
-            op->valuesToUnroll);
+            member);
     }
 
     void memberValueChanged(UInt, HashType) final{};
@@ -89,12 +76,9 @@ struct InitialUnroller<SetView> {
     template <typename Quant>
     static void initialUnroll(Quant& quantifier, SetView& containerView) {
         mpark::visit(
-            [&](auto& membersImpl) {
-                typedef viewType(membersImpl) View;
-                quantifier.valuesToUnroll
-                    .template emplace<QueuedUnrollValueVec<View>>();
-                for (size_t i = 0; i < membersImpl.size(); i++) {
-                    auto& member = membersImpl[i];
+            [&](auto& containerMembers) {
+                for (size_t i = 0; i < containerMembers.size(); i++) {
+                    auto& member = containerMembers[i];
                     quantifier.template unroll<viewType(member)>(
                         {false, i, member});
                 }

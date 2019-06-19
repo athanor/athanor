@@ -6,6 +6,7 @@
 struct BoolDomain {};
 
 struct BoolValue : public BoolView, ValBase {
+    inline bool domainContainsValue(const BoolView&) { return true; }
     void evaluateImpl() final;
     void startTriggeringImpl() final;
     void stopTriggering() final;

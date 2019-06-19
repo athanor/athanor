@@ -303,7 +303,7 @@ pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimise(
     changeMade |= optResult.first;
     container = optResult.second;
     if (condition) {
-        auto optResult = condition->optimise(path.extend(condition));
+        auto optResult = condition->optimise(path.extend(condition, true));
         changeMade |= optResult.first;
         condition = optResult.second;
     }

@@ -1,6 +1,7 @@
 #ifndef SRC_OPERATORS_definedVARHELPER_H_
 #define SRC_OPERATORS_definedVARHELPER_H_
 #include "base/base.h"
+#include "operators/opAnd.h"
 
 // lock structure, used to prevent circular walks when expressions forward
 // values to variables that are defined off them.
@@ -22,9 +23,7 @@ class DefinesLock {
     // returns whether or not try() will return true, but unlike try() the state
     // does not get changed. i.e. softTry() can be queried more than once per
     // triggering round.
-    inline bool softTry() {
-        return localStamp < globalStamp;
-    }
+    inline bool softTry() { return localStamp < globalStamp; }
 
     // disable this lock so that try() always returns false
     void disable() { localStamp = std::numeric_limits<u_int64_t>().max(); }
@@ -69,10 +68,10 @@ inline DefinedDirection getDefinedDirection(View& leftView, View& rightView,
     auto* rightVal = dynamic_cast<Value*>(&rightView);
     bool canPropagateRight = leftChanged && rightVal &&
                              !rightVal->isConstant() &&
-                             rightVal->domainContainsValue(leftView.value);
+                             rightVal->domainContainsValue(leftView);
     auto* leftVal = dynamic_cast<Value*>(&leftView);
     bool canPropagateLeft = rightChanged && leftVal && !leftVal->isConstant() &&
-                            leftVal->domainContainsValue(rightView.value);
+                            leftVal->domainContainsValue(rightView);
     if (!canPropagateRight && !canPropagateLeft) {
         return DefinedDirection::NONE;
     }
@@ -103,30 +102,28 @@ struct DefinedVarTrigger {
         active() = false;
         op->definedVarTrigger = NULL;
 
-        debug_code(op->dumpState(std::cout) << std::endl);
-        debug_log("triggering: direction is " << definedDirection);
         op->definesLock.tryLock();
-        auto& from = (definedDirection == DefinedDirection::RIGHT) ? op->left
-                                                                   : op->right;
-        auto& to = (definedDirection == DefinedDirection::RIGHT) ? op->right
-                                                                 : op->left;
-        debug_log("from=" << from << ", to=" << to);
-        auto fromOption = from->getViewIfDefined();
-        auto toOption = to->getViewIfDefined();
+        auto leftOption = op->left->getViewIfDefined();
+        auto rightOption = op->right->getViewIfDefined();
+        auto& fromOption = (definedDirection == DefinedDirection::RIGHT) ? leftOption
+        : rightOption;
+        auto& toOption = (definedDirection == DefinedDirection::RIGHT) ? rightOption
+        : leftOption;
+
         typedef BaseType<decltype(*fromOption)> View;
         typedef typename AssociatedValueType<View>::type Value;
         if (!fromOption || !toOption) {
-            debug_log("undefined");
             // if operands have become undefined
             op->setUndefinedAndTrigger();
         } else if (!dynamic_cast<Value*>(&toOption.get())
-                        ->domainContainsValue(fromOption->value)) {
-            debug_log("not in domain, updating value");
+                        ->domainContainsValue(*fromOption)) {
             // cannot propagate in this direction as value is not in domain.
             // Tell Op to reevaluate itself.
             op->updateValue(*op->left->view(), *op->right->view());
         } else {
             toOption->matchValueOf(*fromOption);
+            //must call updateValue to the operator as if the value was already matched, the op might not know this and may not have updated
+            op->updateValue(*leftOption,*rightOption);
         }
     }
 };
@@ -155,47 +152,36 @@ template <typename Op, typename View>
 inline void handledByForwardingValueChange(Op& op, View& leftView,
                                            View& rightView, bool leftChanged,
                                            bool rightChanged) {
-    debug_log("checking");
-    debug_code(op.dumpState(std::cout) << std::endl);
-    auto definedDir = getDefinedDirection(leftView, rightView,
-                                          leftChanged, rightChanged);
-    debug_log("direction is " << definedDir);
+    auto definedDir =
+        getDefinedDirection(leftView, rightView, leftChanged, rightChanged);
     if (definedDir == DefinedDirection::NONE) {
-        debug_log("updating value");
         op.updateValue(leftView, rightView);
         return;
     }
     if (op.definedVarTrigger) {
-        debug_log("already queued this op for propagating");
         // We already queued this op for propagating
         if (op.definedVarTrigger->definedDirection == DefinedDirection::BOTH) {
             // the direction of this propagation was previously unknown. now a
             // direction might beenbe known, update it.
-            debug_log("changed the direction from both to " << definedDir);
             op.definedVarTrigger->definedDirection = definedDir;
         }
         return;
     }
 
     if (leftChanged && rightChanged) {
-        debug_log("both sides changed, queueing to delayed");
         // when both sides are marked as being changed, the op is either just
         // become defined or is being evaluated for the first time. Add it to
         // the delayed queue for propagation but tell the op (by returning
         // false) that it must still update its value.
 
         op.definedVarTrigger = addDefinedVarTrigger(&op, definedDir, true);
-        debug_log("but also updating value");
         op.updateValue(leftView, rightView);
     } else {
-        debug_log("only one side changed");
         // only one side changed, queue it only if it is not locked, the locks
         // should stop circular infinite walks.
         if (op.definesLock.softTry()) {
-            debug_log("soft lock");
             op.definedVarTrigger = addDefinedVarTrigger(&op, definedDir, false);
         } else {
-            debug_log("did not get lock, updating value");
             op.updateValue(leftView, rightView);
             ;
         }
@@ -203,4 +189,23 @@ inline void handledByForwardingValueChange(Op& op, View& leftView,
 }
 
 void handleDefinedVarTriggers();
+
+// check if path up to root consists of only OpAnd and sequence view operators
+// and that the current expression is not under a quantifier condition,
+inline bool isSuitableForDefiningVars(const PathExtension& path) {
+    PathExtension* current = path.parent;
+    bool success = !path.isCondition;
+    while (current && success) {
+        mpark::visit(
+            [&](auto& expr) {
+                if (!getAs<OpAnd>(expr) &&
+                    !std::is_same<SequenceView, viewType(expr)>::value) {
+                    success = false;
+                }
+                current = current->parent;
+            },
+            current->expr);
+    }
+    return success;
+}
 #endif /* SRC_OPERATORS_definedVARHELPER_H_ */

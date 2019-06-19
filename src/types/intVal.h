@@ -73,9 +73,9 @@ struct IntDomain {
 struct IntValue : public IntView, ValBase {
     const IntDomain* domain = NULL;
 
-    inline bool domainContainsValue(Int value) {
+    inline bool domainContainsValue(const IntView& view) {
         debug_code(assert(domain));
-        return domain->containsValue(value);
+        return domain->containsValue(view.value);
     }
 
     void evaluateImpl() final;

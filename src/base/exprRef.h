@@ -333,20 +333,21 @@ OptionalRef<Op> getAs(ExprRef<View>&& expr);
 struct PathExtension {
     PathExtension* parent;
     AnyExprRef expr;
+    bool isCondition;
 
    private:
     template <typename T>
-    PathExtension(PathExtension* parent, T& expr)
-        : parent(parent), expr(expr) {}
+    PathExtension(PathExtension* parent, T& expr, bool isCondition)
+        : parent(parent), expr(expr), isCondition(isCondition) {}
 
    public:
     template <typename T>
-    PathExtension extend(T& expr) {
-        return PathExtension(this, expr);
+    PathExtension extend(T& expr, bool markAsCondition = false) {
+        return PathExtension(this, expr, isCondition || markAsCondition);
     }
     template <typename T>
     static PathExtension begin(T& expr) {
-        return PathExtension(NULL, expr);
+        return PathExtension(NULL, expr, false);
     }
 };
 

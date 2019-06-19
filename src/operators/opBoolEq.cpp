@@ -1,8 +1,14 @@
 #include "operators/opBoolEq.h"
 #include "operators/simpleOperator.hpp"
+#include "types/boolVal.h"
 using namespace std;
-void OpBoolEq::reevaluateImpl(BoolView& leftView, BoolView& rightView, bool,
-                              bool) {
+void OpBoolEq::reevaluateImpl(BoolView& leftView, BoolView& rightView,
+                              bool leftChanged, bool rightChanged) {
+    handledByForwardingValueChange(*this, leftView, rightView, leftChanged,
+                                   rightChanged);
+}
+
+void OpBoolEq::updateValue(BoolView& leftView, BoolView& rightView) {
     UInt leftVio = leftView.violation;
     UInt rightVio = rightView.violation;
     if (leftVio > rightVio) {
@@ -14,7 +20,6 @@ void OpBoolEq::reevaluateImpl(BoolView& leftView, BoolView& rightView, bool,
         violation = (rightVio == 0) ? 1 : 0;
     }
 }
-
 void OpBoolEq::updateVarViolationsImpl(const ViolationContext&,
                                        ViolationContainer& vioContainer) {
     if (violation == 0) {
@@ -34,6 +39,16 @@ void OpBoolEq::updateVarViolationsImpl(const ViolationContext&,
 }
 
 void OpBoolEq::copy(OpBoolEq& newOp) const { newOp.violation = violation; }
+
+bool OpBoolEq::optimiseImpl(const PathExtension& path) {
+    if (isSuitableForDefiningVars(path)) {
+        definesLock.reset();
+        return true;
+    } else {
+        definesLock.disable();
+        return false;
+    }
+}
 
 ostream& OpBoolEq::dumpState(ostream& os) const {
     os << "OpBoolEq: violation=" << violation << "\nleft: ";

@@ -21,6 +21,13 @@ struct EnumView : public ExprInterface<EnumView>,
         }
         return false;
     }
+    void matchValueOf(EnumView& other) {
+        changeValue([&]() {
+            value = other.value;
+            return true;
+        });
+    }
+
     void standardSanityChecksForThisType() const;
 };
 

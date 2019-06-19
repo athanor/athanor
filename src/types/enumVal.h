@@ -16,6 +16,7 @@ struct EnumDomain {
 };
 
 struct EnumValue : public EnumView, ValBase {
+    inline bool domainContainsValue(const EnumView&) { return true; }
     void evaluateImpl() final;
     void startTriggeringImpl() final;
     void stopTriggering() final;

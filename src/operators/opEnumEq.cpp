@@ -1,8 +1,14 @@
 #include "operators/opEnumEq.h"
 #include "operators/simpleOperator.hpp"
+#include "types/enumVal.h"
 using namespace std;
-void OpEnumEq::reevaluateImpl(EnumView& leftView, EnumView& rightView, bool,
-                              bool) {
+void OpEnumEq::reevaluateImpl(EnumView& leftView, EnumView& rightView,
+                              bool leftChanged, bool rightChanged) {
+    handledByForwardingValueChange(*this, leftView, rightView, leftChanged,
+                                   rightChanged);
+}
+
+void OpEnumEq::updateValue(EnumView& leftView, EnumView& rightView) {
     violation = (leftView.value == rightView.value) ? 0 : 1;
 }
 
@@ -17,6 +23,15 @@ void OpEnumEq::updateVarViolationsImpl(const ViolationContext&,
 }
 
 void OpEnumEq::copy(OpEnumEq& newOp) const { newOp.violation = violation; }
+bool OpEnumEq::optimiseImpl(const PathExtension& path) {
+    if (isSuitableForDefiningVars(path)) {
+        definesLock.reset();
+        return true;
+    } else {
+        definesLock.disable();
+        return false;
+    }
+}
 
 ostream& OpEnumEq::dumpState(ostream& os) const {
     os << "OpEnumEq: violation=" << violation << "\nleft: ";

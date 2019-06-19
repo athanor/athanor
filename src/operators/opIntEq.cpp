@@ -49,28 +49,13 @@ void OpIntEq::updateVarViolationsImpl(const ViolationContext&,
 void OpIntEq::copy(OpIntEq& newOp) const { newOp.violation = violation; }
 
 bool OpIntEq::optimiseImpl(const PathExtension& path) {
-    // if path up to root consists of only OpAnd and sequence view operators,
-    // allow this OpIntEq to forward changes from one side to the other, i.e.
-    // enable functional definedness.
-    PathExtension* current = path.parent;
-    bool success = true;
-    while (current && success) {
-        mpark::visit(
-            [&](auto& expr) {
-                if (!getAs<OpAnd>(expr) &&
-                    !is_same<SequenceView, viewType(expr)>::value) {
-                    success = false;
-                }
-                current = current->parent;
-            },
-            current->expr);
-    }
-    if (success) {
+    if (isSuitableForDefiningVars(path)) {
         definesLock.reset();
+        return true;
     } else {
         definesLock.disable();
+        return false;
     }
-    return success;
 }
 
 ostream& OpIntEq::dumpState(ostream& os) const {

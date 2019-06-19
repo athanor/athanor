@@ -2,6 +2,7 @@
 #ifndef SRC_OPERATORS_OPENUMEQ_H_
 #define SRC_OPERATORS_OPENUMEQ_H_
 
+#include "operators/definedVarHelper.h"
 #include "operators/simpleOperator.h"
 #include "operators/simpleTrigger.h"
 #include "types/bool.h"
@@ -16,13 +17,17 @@ struct OperatorTrates<OpEnumEq> {
 struct OpEnumEq : public SimpleBinaryOperator<BoolView, EnumView, OpEnumEq> {
     using SimpleBinaryOperator<BoolView, EnumView,
                                OpEnumEq>::SimpleBinaryOperator;
+    DefinesLock definesLock;
+    DefinedVarTrigger<OpEnumEq>* definedVarTrigger = NULL;
 
     void reevaluateImpl(EnumView& leftView, EnumView& rightView, bool, bool);
+    void updateValue(EnumView& leftView, EnumView& rightView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;
     void copy(OpEnumEq& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
+    bool optimiseImpl(const PathExtension& path);
 };
 #endif /* SRC_OPERATORS_OPENUMEQ_H_ */

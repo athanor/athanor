@@ -17,6 +17,13 @@ struct BoolView : public ExprInterface<BoolView>,
         }
         return false;
     }
+    void matchValueOf(BoolView& other) {
+        changeValue([&]() {
+            violation = other.violation;
+            return true;
+        });
+    }
+
     void standardSanityChecksForThisType() const;
 };
 

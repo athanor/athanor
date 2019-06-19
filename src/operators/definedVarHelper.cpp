@@ -19,17 +19,14 @@ auto& active(AnyDefinedVarTrigger& t) {
 }
 
 void handleDefinedVarTriggers() {
-    auto triggerHandler = overloaded(
-        [&](DefinedVarTrigger<OpIntEq>& trigger) {
-            if (trigger.active()) {
-                trigger.trigger();
-            }
-        },
-        [&](auto&) { todoImpl(); });
+    auto triggerHandler = [&](auto& trigger) {
+        if (trigger.active()) {
+            trigger.trigger();
+        }
+    };
     while (!delayedDefinedVarTriggerQueue.empty() ||
            !definedVarTriggerQueue.empty()) {
         while (!definedVarTriggerQueue.empty()) {
-            debug_log("Pulling from definedTriggerQueue");
             mpark::visit(triggerHandler, definedVarTriggerQueue.front());
             definedVarTriggerQueue.pop_front();
         }
@@ -40,10 +37,9 @@ void handleDefinedVarTriggers() {
         }
         if (!delayedDefinedVarTriggerQueue.empty()) {
             auto iter = findNextTrigger(delayedDefinedVarTriggerQueue);
-            debug_log("Pulling from delayedDefinedTriggerQueue");
             mpark::visit(triggerHandler, *iter);
             active(*iter) = false;
-                    }
+        }
     }
 }
 

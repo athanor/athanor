@@ -20,5 +20,6 @@ struct OpToInt : public SimpleUnaryOperator<IntView, BoolView, OpToInt> {
     std::ostream& dumpState(std::ostream& os) const final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
+    inline ExprRef<BoolView> getCondition() { return operand; }
 };
 #endif /* SRC_OPERATORS_OPTOINT_H_ */

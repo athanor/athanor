@@ -22,5 +22,6 @@ struct OpImplies : public SimpleBinaryOperator<BoolView, BoolView, OpImplies> {
     std::ostream& dumpState(std::ostream& os) const final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
+    inline ExprRef<BoolView> getCondition() { return left; }
 };
 #endif /* SRC_OPERATORS_OPIMPLIES_H_ */

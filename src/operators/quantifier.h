@@ -129,7 +129,7 @@ struct Quantifier : public SequenceView {
     template <typename View>
     void startTriggeringOnExpr(UInt index, ExprRef<View>& expr);
 
-    void startTriggeringOnCondition(UInt index);
+    void startTriggeringOnCondition(UInt index, bool fixUpOtherIndices);
 
     void stopTriggeringOnExpr(UInt oldIndex);
     void stopTriggeringOnCondition(UInt oldIndex, UnrolledCondition& condition);

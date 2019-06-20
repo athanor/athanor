@@ -58,7 +58,6 @@ ExprRef<View1> deepCopyExprAndAssignNewValue(ExprRef<View1> exprToCopy,
         exprToCopy->deepCopyForUnroll(exprToCopy, iterRef);
     iterRef->changeValue(newValue);
     newMember->evaluate();
-    newMember->startTriggering();
     if (runSanityChecks) {
         newMember->debugSanityCheck();
     }
@@ -94,7 +93,10 @@ Quantifier<ContainerType>::unrollCondition(UInt index, ExprRef<View> newView,
     }
     unrolledConditions.insert(unrolledConditions.begin() + index,
                               UnrolledCondition(newMember, exprIndex));
-    this->startTriggeringOnCondition(index);
+    if (triggering()) {
+        unrolledConditions[index].condition->startTriggering();
+        this->startTriggeringOnCondition(index,true);
+    }
     return unrolledConditions[index];
 }
 
@@ -113,12 +115,15 @@ void Quantifier<ContainerType>::unrollExpr(UInt index, ExprRef<View> newView,
             // iterRef.
             auto newMember = deepCopyExprAndAssignNewValue(
                 mpark::get<ExprRef<viewType(members)>>(expr), newView, iterRef);
-            if (containerDefined) {
+            if (containerDefined && triggering()) {
                 this->addMemberAndNotify(index, newMember);
             } else {
                 this->addMember(index, newMember);
             }
-            this->startTriggeringOnExpr(index, newMember);
+            if (triggering()) {
+                this->startTriggeringOnExpr(index, newMember);
+                newMember->startTriggering();
+            }
         },
         members);
 }
@@ -152,12 +157,18 @@ inline void normalExprSwap(Quantifier<ContainerType>& quant, UInt index1,
                            UInt index2) {
     mpark::visit(
         [&](auto& members) {
-            quant.template swapAndNotify<viewType(members)>(index1, index2);
+            if (quant.triggering()) {
+                quant.template swapAndNotify<viewType(members)>(index1, index2);
+                std::swap(quant.exprTriggers[index1],
+                          quant.exprTriggers[index2]);
+                quant.exprTriggers[index1]->index = index1;
+                quant.exprTriggers[index2]->index = index2;
+
+            } else {
+                quant.template swapPositions<viewType(members)>(index1, index2);
+            }
         },
         quant.members);
-    std::swap(quant.exprTriggers[index1], quant.exprTriggers[index2]);
-    quant.exprTriggers[index1]->index = index1;
-    quant.exprTriggers[index2]->index = index2;
 }
 
 /** function handles the case when two unrolled conditions have been swapped,
@@ -169,15 +180,24 @@ inline void swappedTrueConditionRight(Quantifier<ContainerType>& quant,
     mpark::visit(
         [&](auto& members) {
             typedef viewType(members) View;
-            auto removedMember = quant.template removeMemberAndNotify<View>(
-                quant.unrolledConditions[index1].exprIndex);
-            quant.addMemberAndNotify(quant.unrolledConditions[index2].exprIndex,
-                                     removedMember);
+            if (quant.triggering()) {
+                auto removedMember = quant.template removeMemberAndNotify<View>(
+                    quant.unrolledConditions[index1].exprIndex);
+                quant.addMemberAndNotify(
+                    quant.unrolledConditions[index2].exprIndex, removedMember);
+            } else {
+                auto removedMember = quant.template removeMember<View>(
+                    quant.unrolledConditions[index1].exprIndex);
+                quant.addMember(quant.unrolledConditions[index2].exprIndex,
+                                removedMember);
+            }
         },
         quant.members);
-    for (size_t i = quant.unrolledConditions[index1].exprIndex;
-         i <= quant.unrolledConditions[index2].exprIndex; i++) {
-        quant.exprTriggers[i]->index = i;
+    if (quant.triggering()) {
+        for (size_t i = quant.unrolledConditions[index1].exprIndex;
+             i <= quant.unrolledConditions[index2].exprIndex; i++) {
+            quant.exprTriggers[i]->index = i;
+        }
     }
     std::for_each(quant.unrolledConditions.begin() + index1,
                   quant.unrolledConditions.begin() + index2,
@@ -194,15 +214,25 @@ inline void swappedTrueConditionLeft(Quantifier<ContainerType>& quant,
     mpark::visit(
         [&](auto& members) {
             typedef viewType(members) View;
-            auto removedMember = quant.template removeMemberAndNotify<View>(
-                quant.unrolledConditions[index2].exprIndex);
-            quant.addMemberAndNotify(
-                quant.unrolledConditions[index1].exprIndex + 1, removedMember);
+            if (quant.triggering()) {
+                auto removedMember = quant.template removeMemberAndNotify<View>(
+                    quant.unrolledConditions[index2].exprIndex);
+                quant.addMemberAndNotify(
+                    quant.unrolledConditions[index1].exprIndex + 1,
+                    removedMember);
+            } else {
+                auto removedMember = quant.template removeMember<View>(
+                    quant.unrolledConditions[index2].exprIndex);
+                quant.addMember(quant.unrolledConditions[index1].exprIndex + 1,
+                                removedMember);
+            }
         },
         quant.members);
-    for (size_t i = quant.unrolledConditions[index1].exprIndex + 1;
-         i <= quant.unrolledConditions[index2].exprIndex; i++) {
-        quant.exprTriggers[i]->index = i;
+    if (quant.triggering()) {
+        for (size_t i = quant.unrolledConditions[index1].exprIndex + 1;
+             i <= quant.unrolledConditions[index2].exprIndex; i++) {
+            quant.exprTriggers[i]->index = i;
+        }
     }
     std::for_each(quant.unrolledConditions.begin() + index1,
                   quant.unrolledConditions.begin() + index2,
@@ -227,12 +257,15 @@ void Quantifier<ContainerType>::notifyContainerMembersSwapped(UInt index1,
     bool rightConditionTrue = unrolledConditions[index2].cachedValue;
     std::swap(unrolledConditions[index1].condition,
               unrolledConditions[index2].condition);
-    std::swap(unrolledConditions[index1].trigger,
-              unrolledConditions[index2].trigger);
+    if (triggering()) {
+        std::swap(unrolledConditions[index1].trigger,
+                  unrolledConditions[index2].trigger);
+
+        unrolledConditions[index1].trigger->index = index1;
+        unrolledConditions[index2].trigger->index = index2;
+    }
     std::swap(unrolledConditions[index1].cachedValue,
               unrolledConditions[index2].cachedValue);
-    unrolledConditions[index1].trigger->index = index1;
-    unrolledConditions[index2].trigger->index = index2;
     if (leftConditionTrue && rightConditionTrue) {
         normalExprSwap(*this, unrolledConditions[index1].exprIndex,
                        unrolledConditions[index2].exprIndex);
@@ -267,7 +300,7 @@ void Quantifier<ContainerType>::rollExpr(UInt index) {
     debug_log("Rolling  expr index " << index);
     mpark::visit(
         [&](auto& members) {
-            if (containerDefined) {
+            if (containerDefined && triggering()) {
                 this->template removeMemberAndNotify<viewType(members)>(index);
             } else {
                 this->template removeMember<viewType(members)>(index);
@@ -286,7 +319,9 @@ Quantifier<ContainerType>::rollCondition(UInt index) {
     debug_code(assert(index < unrolledConditions.size()));
     auto condition = std::move(unrolledConditions[index]);
     unrolledConditions.erase(unrolledConditions.begin() + index);
-    stopTriggeringOnCondition(index, condition);
+    if (triggering()) {
+        stopTriggeringOnCondition(index, condition);
+    }
     return condition;
 }
 
@@ -322,14 +357,17 @@ void Quantifier<ContainerType>::startTriggeringOnExpr(UInt index,
 }
 
 template <typename ContainerType>
-void Quantifier<ContainerType>::startTriggeringOnCondition(UInt index) {
+void Quantifier<ContainerType>::startTriggeringOnCondition(UInt index, bool fixUpOtherIndices) {
     auto trigger =
         std::make_shared<ConditionChangeTrigger<ContainerType>>(this, index);
     unrolledConditions[index].trigger = trigger;
+    unrolledConditions[index].condition->addTrigger(trigger);
+    if (!fixUpOtherIndices) {
+        return;
+    }
     for (size_t i = index + 1; i < unrolledConditions.size(); i++) {
         unrolledConditions[i].trigger->index = i;
     }
-    unrolledConditions[index].condition->addTrigger(trigger);
 }
 
 template <typename ContainerType>
@@ -352,15 +390,13 @@ void Quantifier<ContainerType>::stopTriggeringOnCondition(
 
 template <typename ContainerType>
 void Quantifier<ContainerType>::startTriggeringImpl() {
-    if (!containerTrigger) {
-        containerTrigger =
-            std::make_shared<ContainerTrigger<ContainerType>>(this);
-        container->addTrigger(containerTrigger);
-        container->startTriggering();
-    }
-    if (!exprTriggers.empty()) {
+    if (containerTrigger) {
         return;
     }
+    containerTrigger = std::make_shared<ContainerTrigger<ContainerType>>(this);
+    container->addTrigger(containerTrigger);
+    container->startTriggering();
+
     mpark::visit(
         [&](auto& members) {
             for (size_t i = 0; i < members.size(); i++) {
@@ -369,6 +405,11 @@ void Quantifier<ContainerType>::startTriggeringImpl() {
             }
         },
         members);
+    if (condition) {
+        for (size_t i = 0; i < unrolledConditions.size(); i++) {
+            this->startTriggeringOnCondition(i,false);
+        }
+    }
 }
 
 template <typename ContainerType>

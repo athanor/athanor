@@ -408,6 +408,7 @@ void Quantifier<ContainerType>::startTriggeringImpl() {
     if (condition) {
         for (size_t i = 0; i < unrolledConditions.size(); i++) {
             this->startTriggeringOnCondition(i,false);
+            unrolledConditions[i].condition->startTriggering();
         }
     }
 }

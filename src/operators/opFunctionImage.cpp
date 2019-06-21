@@ -471,6 +471,7 @@ void OpFunctionImage<FunctionMemberViewType>::debugSanityCheckImpl() const {
     if (!index) {
         sanityCheck(!this->appearsDefined(),
                     "Image out of bounds, operator should be undefined.");
+        return;
     }
     sanityCheck(this->appearsDefined(), "operator should be defined.");
     sanityEqualsCheck((Int)(*index), cachedIndex);

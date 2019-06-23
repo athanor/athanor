@@ -105,11 +105,28 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     }
 
     template <typename View>
-    void containerSpecificUnroll(QueuedUnrollValue<View>) {
-        cerr << "Sorry, quantifying over functions with conditions in the "
-                "quantifier is not yet supported.  Conditions can still be "
-                "added to quantifiers over other structures.\n";
-        abort();
+    void containerSpecificUnroll(QueuedUnrollValue<View> queuedValue) {
+        auto& containerView = op->container->view().get();
+        mpark::visit(
+            [&](auto& fromDomain) {
+                typedef typename BaseType<decltype(fromDomain)>::element_type
+                    Domain;
+                auto tupleFirstMember =
+                    containerView.template indexToDomain<Domain>(
+                        queuedValue.index);
+                auto unrolledExpr = OpMaker<OpTupleLit>::make(
+                    {tupleFirstMember, queuedValue.value});
+                unrolledExpr->evaluate();
+                op->template unroll<TupleView>({queuedValue.directUnrollExpr,
+                                                queuedValue.index,
+                                                unrolledExpr});
+            },
+            containerView.fromDomain);
+        for (size_t i = queuedValue.index + 1; i < op->unrolledIterVals.size();
+             i++) {
+            correctUnrolledTupleIndex(i);
+            ;
+        }
     }
 };
 
@@ -122,6 +139,42 @@ struct ContainerSanityChecker<FunctionView> {
                               quant.unrolledConditions.size());
         } else {
             sanityEqualsCheck(container.rangeSize(), quant.numberElements());
+        }
+
+        sanityEqualsCheck(container.rangeSize(), quant.unrolledIterVals.size());
+        for (size_t i = 0; i < quant.unrolledIterVals.size(); i++) {
+            auto* iterPtr = mpark::get_if<IterRef<TupleView>>(
+                &(quant.unrolledIterVals[i].asVariant()));
+            sanityCheck(iterPtr, "Expected tuple type here.");
+            auto view = (*iterPtr)->ref->view();
+            sanityCheck(view, "view() should not return undefined here.");
+            sanityEqualsCheck(2, view->members.size());
+            mpark::visit(
+                [&](const auto& fromDomain) {
+                    typedef
+                        typename BaseType<decltype(fromDomain)>::element_type
+                            Domain;
+                    typedef typename AssociatedValueType<Domain>::type Value;
+                    typedef typename AssociatedViewType<Value>::type View;
+                    auto tupleFirstMember =
+                        container.template indexToDomain<Domain>(i);
+                    auto* exprPtr =
+                        mpark::get_if<ExprRef<View>>(&(view->members[0]));
+                    sanityCheck(
+                        exprPtr,
+                        "Expected first element of unrolled tuple to be " +
+                            TypeAsString<Value>::value);
+                    auto memberView = (*exprPtr)->getViewIfDefined();
+                    sanityCheck(
+                        memberView,
+                        "First member of unrolled tuple should be defined.");
+                    sanityCheck(getValueHash(*memberView) ==
+                                    getValueHash(*tupleFirstMember->view()),
+                                toString("First member of tuple should be ",
+                                         tupleFirstMember->view(),
+                                         " but was actually ", memberView));
+                },
+                container.fromDomain);
         }
     }
 };

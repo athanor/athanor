@@ -95,7 +95,7 @@ Quantifier<ContainerType>::unrollCondition(UInt index, ExprRef<View> newView,
                               UnrolledCondition(newMember, exprIndex));
     if (triggering()) {
         unrolledConditions[index].condition->startTriggering();
-        this->startTriggeringOnCondition(index,true);
+        this->startTriggeringOnCondition(index, true);
     }
     return unrolledConditions[index];
 }
@@ -357,7 +357,8 @@ void Quantifier<ContainerType>::startTriggeringOnExpr(UInt index,
 }
 
 template <typename ContainerType>
-void Quantifier<ContainerType>::startTriggeringOnCondition(UInt index, bool fixUpOtherIndices) {
+void Quantifier<ContainerType>::startTriggeringOnCondition(
+    UInt index, bool fixUpOtherIndices) {
     auto trigger =
         std::make_shared<ConditionChangeTrigger<ContainerType>>(this, index);
     unrolledConditions[index].trigger = trigger;
@@ -407,7 +408,7 @@ void Quantifier<ContainerType>::startTriggeringImpl() {
         members);
     if (condition) {
         for (size_t i = 0; i < unrolledConditions.size(); i++) {
-            this->startTriggeringOnCondition(i,false);
+            this->startTriggeringOnCondition(i, false);
             unrolledConditions[i].condition->startTriggering();
         }
     }
@@ -456,12 +457,15 @@ void Quantifier<ContainerType>::evaluateImpl() {
         InitialUnroller<ContainerType>::initialUnroll(*this, *view);
     }
 }
+
 template <typename ContainerType>
 std::ostream& Quantifier<ContainerType>::dumpState(std::ostream& os) const {
     mpark::visit(
         [&](auto& members) {
             os << "quantifier(container=";
             container->dumpState(os) << ",\n";
+            os << "unrolledIterVals=" << unrolledIterVals << ",\n";
+            os << "unrolledConditions=" << unrolledConditions << ",\n";
             os << "unrolledExprs=[";
             bool first = true;
             for (auto& unrolledExpr : members) {

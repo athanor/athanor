@@ -55,6 +55,12 @@ struct Quantifier : public SequenceView {
               exprIndex(exprIndex) {
             debug_code(assert(this->condition->isEvaluated()));
         }
+        friend inline std::ostream& operator<<(std::ostream& os,
+                                               const UnrolledCondition& cond) {
+            os << "condition(cachedValue=" << cond.cachedValue
+               << ",exprIndex=" << cond.exprIndex << ",condition=";
+            return cond.condition->dumpState(os) << ")";
+        }
     };
 
     const int quantId;

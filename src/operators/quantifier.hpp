@@ -194,6 +194,14 @@ inline void swappedTrueConditionRight(Quantifier<ContainerType>& quant,
         },
         quant.members);
     if (quant.triggering()) {
+        auto removeIter = quant.exprTriggers.begin() +
+                          quant.unrolledConditions[index1].exprIndex;
+        auto removedTrigger = std::move(*removeIter);
+        quant.exprTriggers.erase(removeIter);
+        quant.exprTriggers.insert(
+            quant.exprTriggers.begin() +
+                quant.unrolledConditions[index2].exprIndex,
+            removedTrigger);
         for (size_t i = quant.unrolledConditions[index1].exprIndex;
              i <= quant.unrolledConditions[index2].exprIndex; i++) {
             quant.exprTriggers[i]->index = i;
@@ -229,6 +237,15 @@ inline void swappedTrueConditionLeft(Quantifier<ContainerType>& quant,
         },
         quant.members);
     if (quant.triggering()) {
+        auto removeIter = quant.exprTriggers.begin() +
+                          quant.unrolledConditions[index2].exprIndex;
+
+        auto removedTrigger = std::move(*removeIter);
+        quant.exprTriggers.erase(removeIter);
+        quant.exprTriggers.insert(
+            quant.exprTriggers.begin() +
+                quant.unrolledConditions[index1].exprIndex + 1,
+            removedTrigger);
         for (size_t i = quant.unrolledConditions[index1].exprIndex + 1;
              i <= quant.unrolledConditions[index2].exprIndex; i++) {
             quant.exprTriggers[i]->index = i;

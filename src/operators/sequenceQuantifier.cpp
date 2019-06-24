@@ -45,7 +45,7 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
         mpark::visit(
             [&](auto& member) {
                 containerSpecificUnroll<viewType(member)>(
-                    {false, index, member});
+                    index, {false, index, member});
             },
             member);
     }
@@ -71,16 +71,17 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
     }
 
     template <typename View>
-    void containerSpecificUnroll(QueuedUnrollValue<View> queuedValue) {
+    void containerSpecificUnroll(UInt memberIndex,
+                                 QueuedUnrollValue<View> queuedValue) {
         auto tupleFirstMember = make<IntValue>();
-        tupleFirstMember->value = queuedValue.index + 1;
+        tupleFirstMember->value = memberIndex + 1;
         auto unrolledExpr = OpMaker<OpTupleLit>::make(
             {tupleFirstMember.asExpr(), queuedValue.value});
         unrolledExpr->evaluate();
         op->template unroll<TupleView>(
             {queuedValue.directUnrollExpr, queuedValue.index, unrolledExpr});
-        if (queuedValue.index + 1 < op->unrolledIterVals.size()) {
-            correctUnrolledTupleIndices(queuedValue.index + 1);
+        if (memberIndex + 1 < op->unrolledIterVals.size()) {
+            correctUnrolledTupleIndices(memberIndex);
         }
     }
 

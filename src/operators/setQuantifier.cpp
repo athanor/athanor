@@ -16,7 +16,7 @@ struct ContainerTrigger<SetView> : public SetTrigger {
     }
 
     template <typename View>
-    inline void containerSpecificUnroll(QueuedUnrollValue<View> val) {
+    inline void containerSpecificUnroll(UInt, QueuedUnrollValue<View> val) {
         op->unroll(val);
     }
     void valueAdded(const AnyExprRef& member) final {
@@ -24,7 +24,7 @@ struct ContainerTrigger<SetView> : public SetTrigger {
             [&](auto& expr) {
                 typedef viewType(expr) View;
                 containerSpecificUnroll<View>(
-                    {false, op->numberUnrolled(), expr});
+                    op->numberUnrolled(), {false, op->numberUnrolled(), expr});
             },
             member);
     }

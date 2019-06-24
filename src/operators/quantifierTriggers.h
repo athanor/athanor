@@ -97,8 +97,8 @@ struct ConditionChangeTrigger
                 debug_code(assert(index < members.size()));
                 auto& elementToUnroll = members[index];
                 op->containerTrigger->template containerSpecificUnroll<View>(
-                    {true, unrolledConditions[index].exprIndex,
-                     elementToUnroll});
+                    index, {true, unrolledConditions[index].exprIndex,
+                            elementToUnroll});
             },
             op->container->view()->getAnyMembers());
     }

@@ -105,15 +105,15 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     }
 
     template <typename View>
-    void containerSpecificUnroll(QueuedUnrollValue<View> queuedValue) {
+    void containerSpecificUnroll(UInt memberIndex,
+                                 QueuedUnrollValue<View> queuedValue) {
         auto& containerView = op->container->view().get();
         mpark::visit(
             [&](auto& fromDomain) {
                 typedef typename BaseType<decltype(fromDomain)>::element_type
                     Domain;
                 auto tupleFirstMember =
-                    containerView.template indexToDomain<Domain>(
-                        queuedValue.index);
+                    containerView.template indexToDomain<Domain>(memberIndex);
                 auto unrolledExpr = OpMaker<OpTupleLit>::make(
                     {tupleFirstMember, queuedValue.value});
                 unrolledExpr->evaluate();
@@ -122,8 +122,7 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
                                                 unrolledExpr});
             },
             containerView.fromDomain);
-        for (size_t i = queuedValue.index + 1; i < op->unrolledIterVals.size();
-             i++) {
+        for (size_t i = memberIndex + 1; i < op->unrolledIterVals.size(); i++) {
             correctUnrolledTupleIndex(i);
             ;
         }

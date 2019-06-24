@@ -550,6 +550,7 @@ void setTimeout(int numberSeconds, bool virtualTimer) {
 }
 
 volatile bool sigIntActivated = false, sigAlarmActivated = false;
+static const int DELAYED_FORCED_EXIT_TIME = 10;
 void forceExit() {
     cout << "\n\nFORCE EXIT\n";
     abort();
@@ -559,12 +560,12 @@ void sigIntHandler(int) {
         forceExit();
     }
     sigIntActivated = true;
-    setTimeout(5, false);
+    setTimeout(DELAYED_FORCED_EXIT_TIME, false);
 }
 void sigAlarmHandler(int) {
     if (sigIntActivated || sigAlarmActivated) {
         forceExit();
     }
     sigAlarmActivated = true;
-    setTimeout(5, false);
+    setTimeout(DELAYED_FORCED_EXIT_TIME, false);
 }

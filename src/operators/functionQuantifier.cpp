@@ -107,21 +107,30 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     template <typename View>
     void containerSpecificUnroll(UInt memberIndex,
                                  QueuedUnrollValue<View> queuedValue) {
-        auto& containerView = op->container->view().get();
-        mpark::visit(
-            [&](auto& fromDomain) {
-                typedef typename BaseType<decltype(fromDomain)>::element_type
-                    Domain;
-                auto tupleFirstMember =
-                    containerView.template indexToDomain<Domain>(memberIndex);
-                auto unrolledExpr = OpMaker<OpTupleLit>::make(
-                    {tupleFirstMember, queuedValue.value});
-                unrolledExpr->evaluate();
-                op->template unroll<TupleView>({queuedValue.directUnrollExpr,
-                                                queuedValue.index,
-                                                unrolledExpr});
-            },
-            containerView.fromDomain);
+        // this is a bit hacky, if queuedValue.directUnrollExpr is true, we do
+        // not create a new tuple to hold to the new value, we assume that we
+        // have already been given the tuple.
+        if (!queuedValue.directUnrollExpr) {
+            auto& containerView = op->container->view().get();
+            mpark::visit(
+                [&](auto& fromDomain) {
+                    typedef
+                        typename BaseType<decltype(fromDomain)>::element_type
+                            Domain;
+                    auto tupleFirstMember =
+                        containerView.template indexToDomain<Domain>(
+                            memberIndex);
+                    auto unrolledExpr = OpMaker<OpTupleLit>::make(
+                        {tupleFirstMember, queuedValue.value});
+                    unrolledExpr->evaluate();
+                    op->template unroll<TupleView>(
+                        {queuedValue.directUnrollExpr, queuedValue.index,
+                         unrolledExpr});
+                },
+                containerView.fromDomain);
+        } else {
+            op->unroll(queuedValue);
+        }
         for (size_t i = memberIndex + 1; i < op->unrolledIterVals.size(); i++) {
             correctUnrolledTupleIndex(i);
             ;

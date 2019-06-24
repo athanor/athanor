@@ -73,13 +73,21 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
     template <typename View>
     void containerSpecificUnroll(UInt memberIndex,
                                  QueuedUnrollValue<View> queuedValue) {
-        auto tupleFirstMember = make<IntValue>();
-        tupleFirstMember->value = memberIndex + 1;
-        auto unrolledExpr = OpMaker<OpTupleLit>::make(
-            {tupleFirstMember.asExpr(), queuedValue.value});
-        unrolledExpr->evaluate();
-        op->template unroll<TupleView>(
-            {queuedValue.directUnrollExpr, queuedValue.index, unrolledExpr});
+        // this is a bit hacky, if queuedValue.directUnrollExpr is true, we do
+        // not create a new tuple to hold to the new value, we assume that we
+        // have already been given the tuple.
+        if (!queuedValue.directUnrollExpr) {
+            auto tupleFirstMember = make<IntValue>();
+            tupleFirstMember->value = memberIndex + 1;
+            auto unrolledExpr = OpMaker<OpTupleLit>::make(
+                {tupleFirstMember.asExpr(), queuedValue.value});
+            unrolledExpr->evaluate();
+            op->template unroll<TupleView>({queuedValue.directUnrollExpr,
+                                            queuedValue.index, unrolledExpr});
+
+        } else {
+            op->template unroll(queuedValue);
+        }
         if (memberIndex + 1 < op->unrolledIterVals.size()) {
             correctUnrolledTupleIndices(memberIndex);
         }

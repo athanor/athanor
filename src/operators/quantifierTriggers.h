@@ -87,20 +87,19 @@ struct ConditionChangeTrigger
     }
 
     void handleConditionBecomingTrue() {
+        debug_code(assert(index < op->unrolledIterVals.size()));
         auto& unrolledConditions = op->unrolledConditions;
         std::for_each(unrolledConditions.begin() + index,
                       unrolledConditions.end(),
                       [&](auto& cond) { ++cond.exprIndex; });
         mpark::visit(
-            [&](auto& members) {
-                typedef viewType(members) View;
-                debug_code(assert(index < members.size()));
-                auto& elementToUnroll = members[index];
+            [&](auto& unrolledIterVal) {
+                typedef viewType(unrolledIterVal->getValue()) View;
                 op->containerTrigger->template containerSpecificUnroll<View>(
                     index, {true, unrolledConditions[index].exprIndex,
-                            elementToUnroll});
+                            unrolledIterVal->getValue()});
             },
-            op->container->view()->getAnyMembers());
+            op->unrolledIterVals[index]);
     }
     void handleConditionBecomingFalse() {
         auto& unrolledConditions = op->unrolledConditions;

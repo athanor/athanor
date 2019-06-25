@@ -46,7 +46,12 @@ void OpIntEq::updateVarViolationsImpl(const ViolationContext&,
     }
 }
 
-void OpIntEq::copy(OpIntEq& newOp) const { newOp.violation = violation; }
+void OpIntEq::copy(OpIntEq& newOp) const {
+    newOp.violation = violation;
+    if (definesLock.isDisabled()) {
+        newOp.definesLock.disable();
+    }
+}
 
 bool OpIntEq::optimiseImpl(const PathExtension& path) {
     if (isSuitableForDefiningVars(path)) {

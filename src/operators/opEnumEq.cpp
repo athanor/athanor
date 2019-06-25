@@ -22,7 +22,12 @@ void OpEnumEq::updateVarViolationsImpl(const ViolationContext&,
     }
 }
 
-void OpEnumEq::copy(OpEnumEq& newOp) const { newOp.violation = violation; }
+void OpEnumEq::copy(OpEnumEq& newOp) const {
+    newOp.violation = violation;
+    if (definesLock.isDisabled()) {
+        newOp.definesLock.disable();
+    }
+}
 bool OpEnumEq::optimiseImpl(const PathExtension& path) {
     if (isSuitableForDefiningVars(path)) {
         definesLock.reset();

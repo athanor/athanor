@@ -92,7 +92,7 @@ SimpleBinaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
     auto rightOptResult = right->optimise(path.extend(right));
     changeMade |= rightOptResult.first;
     right = rightOptResult.second;
-    changeMade = derived().optimiseImpl(path);
+    changeMade |= derived().optimiseImpl(path);
     return std::make_pair(changeMade, mpark::get<ExprRef<View>>(path.expr));
 }
 
@@ -183,7 +183,7 @@ SimpleUnaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
     auto optResult = operand->optimise(path.extend(operand));
     changeMade |= optResult.first;
     operand = optResult.second;
-    changeMade = derived().optimiseImpl(path);
+    changeMade |= derived().optimiseImpl(path);
     return std::make_pair(changeMade, mpark::get<ExprRef<View>>(path.expr));
 }
 template <typename View, typename OperandView, typename Derived>

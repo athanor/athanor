@@ -26,12 +26,16 @@ class DefinesLock {
     inline bool softTry() { return localStamp < globalStamp; }
 
     // disable this lock so that try() always returns false
-    void disable() { localStamp = std::numeric_limits<u_int64_t>().max(); }
+    inline void disable() {
+        localStamp = std::numeric_limits<u_int64_t>().max();
+    }
 
+    inline bool isDisabled() const {
+        return localStamp == std::numeric_limits<u_int64_t>().max();
+    }
     // reset this lock, allow try() to return true again
     void reset() { localStamp = 0; }
 
-   public:
     // unlock all locks signalling the next round of triggering.  Those who
     // called tryLock() will be  able to call tryLock() again.  Those with
     // disabled locks will still not be able to call tryLock() until reset() has
@@ -161,8 +165,8 @@ inline void handledByForwardingValueChange(Op& op, View& leftView,
         op.updateValue(leftView, rightView);
         return;
     }
-//    std::cout << "hit: " << definedDir << ", ";
-//    op.dumpState(std::cout) << std::endl;
+    //    std::cout << "hit: " << definedDir << ", ";
+    //    op.dumpState(std::cout) << std::endl;
     if (op.definedVarTrigger) {
         // We already queued this op for propagating
         if (op.definedVarTrigger->definedDirection == DefinedDirection::BOTH) {

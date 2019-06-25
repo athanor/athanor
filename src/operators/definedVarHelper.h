@@ -34,7 +34,11 @@ class DefinesLock {
         return localStamp == std::numeric_limits<u_int64_t>().max();
     }
     // reset this lock, allow try() to return true again
-    void reset() { localStamp = 0; }
+    bool reset() {
+        u_int64_t copy = localStamp;
+        localStamp = 0;
+        return copy != 0;
+    }
 
     // unlock all locks signalling the next round of triggering.  Those who
     // called tryLock() will be  able to call tryLock() again.  Those with
@@ -159,7 +163,7 @@ template <typename Op, typename View>
 inline void handledByForwardingValueChange(Op& op, View& leftView,
                                            View& rightView, bool leftChanged,
                                            bool rightChanged) {
-    //check unnecessary for correctness, but allows quicker fail
+    // check unnecessary for correctness, but allows quicker fail
     if (!op.definedVarTrigger && !op.definesLock.softTry()) {
         op.updateValue(leftView, rightView);
         return;

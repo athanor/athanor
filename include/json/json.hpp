@@ -6721,7 +6721,7 @@ scan_number_done:
     /////////////////////
 
     /// reset token_buffer; current character is beginning of token
-    void reset() noexcept
+    bool reset() noexcept
     {
         token_buffer.clear();
         token_string.clear();

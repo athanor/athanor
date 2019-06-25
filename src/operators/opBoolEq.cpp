@@ -47,8 +47,7 @@ void OpBoolEq::copy(OpBoolEq& newOp) const {
 
 bool OpBoolEq::optimiseImpl(const PathExtension& path) {
     if (isSuitableForDefiningVars(path)) {
-        definesLock.reset();
-        return true;
+        return definesLock.reset();
     } else {
         definesLock.disable();
         return false;

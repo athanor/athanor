@@ -55,8 +55,7 @@ void OpIntEq::copy(OpIntEq& newOp) const {
 
 bool OpIntEq::optimiseImpl(const PathExtension& path) {
     if (isSuitableForDefiningVars(path)) {
-        definesLock.reset();
-        return true;
+        return definesLock.reset();
     } else {
         definesLock.disable();
         return false;

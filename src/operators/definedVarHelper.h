@@ -105,10 +105,12 @@ struct DefinedVarTrigger {
         op->definesLock.tryLock();
         auto leftOption = op->left->getViewIfDefined();
         auto rightOption = op->right->getViewIfDefined();
-        auto& fromOption = (definedDirection == DefinedDirection::RIGHT) ? leftOption
-        : rightOption;
-        auto& toOption = (definedDirection == DefinedDirection::RIGHT) ? rightOption
-        : leftOption;
+        auto& fromOption = (definedDirection == DefinedDirection::RIGHT)
+                               ? leftOption
+                               : rightOption;
+        auto& toOption = (definedDirection == DefinedDirection::RIGHT)
+                             ? rightOption
+                             : leftOption;
 
         typedef BaseType<decltype(*fromOption)> View;
         typedef typename AssociatedValueType<View>::type Value;
@@ -122,8 +124,9 @@ struct DefinedVarTrigger {
             op->updateValue(*op->left->view(), *op->right->view());
         } else {
             toOption->matchValueOf(*fromOption);
-            //must call updateValue to the operator as if the value was already matched, the op might not know this and may not have updated
-            op->updateValue(*leftOption,*rightOption);
+            // must call updateValue to the operator as if the value was already
+            // matched, the op might not know this and may not have updated
+            op->updateValue(*leftOption, *rightOption);
         }
     }
 };
@@ -154,10 +157,12 @@ inline void handledByForwardingValueChange(Op& op, View& leftView,
                                            bool rightChanged) {
     auto definedDir =
         getDefinedDirection(leftView, rightView, leftChanged, rightChanged);
-    if (definedDir == DefinedDirection::NONE) {
+    if (!op.definesLock.softTry() || definedDir == DefinedDirection::NONE) {
         op.updateValue(leftView, rightView);
         return;
     }
+//    std::cout << "hit: " << definedDir << ", ";
+//    op.dumpState(std::cout) << std::endl;
     if (op.definedVarTrigger) {
         // We already queued this op for propagating
         if (op.definedVarTrigger->definedDirection == DefinedDirection::BOTH) {
@@ -171,20 +176,13 @@ inline void handledByForwardingValueChange(Op& op, View& leftView,
     if (leftChanged && rightChanged) {
         // when both sides are marked as being changed, the op is either just
         // become defined or is being evaluated for the first time. Add it to
-        // the delayed queue for propagation but tell the op (by returning
-        // false) that it must still update its value.
-
+        // the delayed queue for propagation but still update the value of the
+        // op.
         op.definedVarTrigger = addDefinedVarTrigger(&op, definedDir, true);
         op.updateValue(leftView, rightView);
     } else {
-        // only one side changed, queue it only if it is not locked, the locks
-        // should stop circular infinite walks.
-        if (op.definesLock.softTry()) {
-            op.definedVarTrigger = addDefinedVarTrigger(&op, definedDir, false);
-        } else {
-            op.updateValue(leftView, rightView);
-            ;
-        }
+        // only one side changed, queue a trigger.
+        op.definedVarTrigger = addDefinedVarTrigger(&op, definedDir, false);
     }
 }
 

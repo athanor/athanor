@@ -159,14 +159,18 @@ template <typename Op, typename View>
 inline void handledByForwardingValueChange(Op& op, View& leftView,
                                            View& rightView, bool leftChanged,
                                            bool rightChanged) {
-    auto definedDir =
-        getDefinedDirection(leftView, rightView, leftChanged, rightChanged);
-    if (!op.definesLock.softTry() || definedDir == DefinedDirection::NONE) {
+    //check unnecessary for correctness, but allows quicker fail
+    if (!op.definedVarTrigger && !op.definesLock.softTry()) {
         op.updateValue(leftView, rightView);
         return;
     }
-    //    std::cout << "hit: " << definedDir << ", ";
-    //    op.dumpState(std::cout) << std::endl;
+
+    auto definedDir =
+        getDefinedDirection(leftView, rightView, leftChanged, rightChanged);
+    if (definedDir == DefinedDirection::NONE) {
+        op.updateValue(leftView, rightView);
+        return;
+    }
     if (op.definedVarTrigger) {
         // We already queued this op for propagating
         if (op.definedVarTrigger->definedDirection == DefinedDirection::BOTH) {

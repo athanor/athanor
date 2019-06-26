@@ -1,4 +1,5 @@
 #include "operators/opEnumEq.h"
+#include "operators/definedVarHelper.hpp"
 #include "operators/simpleOperator.hpp"
 #include "types/enumVal.h"
 using namespace std;

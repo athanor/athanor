@@ -1,5 +1,5 @@
 #include "operators/opIntEq.h"
-#include "operators/definedVarHelper.h"
+#include "operators/definedVarHelper.hpp"
 #include "operators/opAnd.h"
 #include "operators/simpleOperator.hpp"
 #include "types/intVal.h"

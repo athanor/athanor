@@ -1,0 +1,5 @@
+
+letting n be 8
+find s : sequence (size n) of int(-1,1)
+such that s(1) = -1
+such that forAll i : int(0..n-1) .  s(((i+1)%n)+1) = -s(i+1)

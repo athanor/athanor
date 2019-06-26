@@ -1,3 +1,2 @@
 find a,b,c : bool
-minimising 1
 such that a = b /\ c

@@ -97,6 +97,7 @@ extern ValBase constantPool;
 struct ValBase {
     UInt id = 0;
     ValBase* container = &constantPool;
+    virtual ~ValBase() {}
     inline bool operator==(const ValBase& other) const {
         return id == other.id && container == other.container;
     }

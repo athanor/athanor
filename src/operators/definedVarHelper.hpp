@@ -1,8 +1,12 @@
 #ifndef SRC_OPERATORS_definedVARHELPER_HPP_
 #define SRC_OPERATORS_definedVARHELPER_HPP_
 #include "base/base.h"
-#include "operators/opAnd.h"
 #include "operators/definedVarHelper.h"
+#include "operators/opAnd.h"
+
+void handleDefinedVarTriggers();
+bool isInContainerSupportingDefinedVars(const ValBase* container);
+void updateParentContainer(const ValBase* container);
 
 enum class DefinedDirection { NONE, LEFT, RIGHT, BOTH };
 
@@ -154,8 +158,6 @@ inline void handledByForwardingValueChange(Op& op, View& leftView,
         op.definedVarTrigger = addDefinedVarTrigger(&op, definedDir, false);
     }
 }
-
-void handleDefinedVarTriggers();
 
 // check if path up to root consists of only OpAnd and sequence view operators
 // and that the current expression is not under a quantifier condition,

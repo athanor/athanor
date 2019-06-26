@@ -79,12 +79,12 @@ buildForAllTypes(specialised, )
     inline pair<bool, ViolationContainer&> registerViolations(
         const ValBase* val, const UInt violation,
         ViolationContainer& vioContainer) {
-    if (val->container == &constantPool) {
-        return pair<bool, ViolationContainer&>(false, vioContainer);
-    }
-    if (val->container == NULL) {
+    if (val->container == &variablePool) {
         vioContainer.addViolation(val->id, violation);
         return pair<bool, ViolationContainer&>(true, vioContainer);
+
+    } else if (!val->container || isPoolMarker(val->container)) {
+        return pair<bool, ViolationContainer&>(false, vioContainer);
     } else {
         auto boolVioDescPair =
             registerViolations(val->container, violation, vioContainer);

@@ -16,7 +16,7 @@
 #include "search/violationContainer.h"
 #include "types/allVals.h"
 
-extern ValBase definedPool;
+extern ValBase inlinedPool;
 class ModelBuilder;
 
 struct Model {
@@ -74,7 +74,7 @@ class ModelBuilder {
         auto& val = model.variables.back().second.emplace<ValRef<ValueType>>(
             constructValueFromDomain(*domainImpl));
         valBase(*val).id = model.variables.size() - 1;
-        valBase(*val).container = NULL;
+        valBase(*val).container = &variablePool;
         model.variableNames.emplace_back(std::move(name));
         return val;
     }
@@ -100,12 +100,12 @@ class ModelBuilder {
         auto op = getAs<Op>(constraint);
         if (op) {
             ValRef<Value> definedVar = getIfNonConstValue(op->left);
-            if (definedVar && valBase(definedVar).container != &definedPool) {
+            if (definedVar && valBase(definedVar).container != &inlinedPool) {
                 define(definedVar, op->right);
                 return true;
             }
             definedVar = getIfNonConstValue(op->right);
-            if (definedVar && valBase(definedVar).container != &definedPool) {
+            if (definedVar && valBase(definedVar).container != &inlinedPool) {
                 define(definedVar, op->left);
                 return true;
             }
@@ -122,7 +122,7 @@ class ModelBuilder {
     template <typename Value,
               typename View = typename AssociatedViewType<Value>::type>
     void define(ValRef<Value>& val, ExprRef<View>& expr) {
-        valBase(*val).container = &definedPool;
+        valBase(*val).container = &inlinedPool;
         varsToBeDefined.emplace_back(val);
         model.definingExpressions.emplace(valBase(val).id, expr);
     }

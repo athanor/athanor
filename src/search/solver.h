@@ -128,7 +128,7 @@ void dumpVarViolations(const ViolationContainer& vioContainer) {
 }
 inline void assignRandomValueToVariables(State& state) {
     for (auto& var : state.model.variables) {
-        if (valBase(var.second).container == &definedPool) {
+        if (valBase(var.second).container == &inlinedPool) {
             continue;
         }
         assignRandomValueInDomain(var.first, var.second, state.stats);

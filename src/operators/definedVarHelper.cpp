@@ -100,8 +100,10 @@ bool supportsDefinedElements(const TupleValue&) { return true; }
 // functions for updating the containers when their element has been changed
 // because of the element being defined on  an expression which changed.
 bool isInContainerSupportingDefinedVars(ValBase* container) {
-    if (!container) {
+    if (container == &variablePool) {
         return true;
+    } else if (!container || isPoolMarker(container)) {
+        return false;
     }
     bool isSupported = true;
     visitDerivedType(
@@ -116,7 +118,7 @@ void notifyType(const ValBase* base, SequenceValue& val);
 void notifyType(const ValBase* base, TupleValue& val);
 
 void updateParentContainer(ValBase* container) {
-    if (!container) {
+    if (!container || isPoolMarker(container)) {
         return;
     }
     visitDerivedType([&](auto& val) { notifyType(container, val); },

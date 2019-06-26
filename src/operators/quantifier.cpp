@@ -118,7 +118,7 @@ template <typename Quant>
 bool tryPromotingSubExpressionsToConditions(Quant& quant,
                                             ExprRef<IntView>& expr,
                                             PathExtension& path) {
-        if (path.parent == NULL || !isOpSum(path.parent->expr)) {
+    if (path.parent == NULL || !isOpSum(path.parent->expr)) {
         return false;
     }
     auto opProdTest = getAs<OpProd>(expr);

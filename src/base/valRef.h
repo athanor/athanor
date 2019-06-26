@@ -93,7 +93,11 @@ assumeAsValue(ExprRef<ViewType>& viewPtr);
 
 struct ValBase;
 extern ValBase constantPool;
-
+extern ValBase variablePool;
+extern ValBase inlinedPool;
+// checks if v is one of the global pools like inlinedPool or variablePool for
+// example.
+bool isPoolMarker(const ValBase* v);
 struct ValBase {
     UInt id = 0;
     ValBase* container = &constantPool;

@@ -4,7 +4,7 @@
 using namespace std;
 void ModelBuilder::createNeighbourhoods() {
     for (size_t i = 0; i < model.variables.size(); ++i) {
-        if (valBase(model.variables[i].second).container == &definedPool) {
+        if (valBase(model.variables[i].second).container == &inlinedPool) {
             model.varNeighbourhoodMapping.emplace_back();
             continue;
         }
@@ -142,7 +142,7 @@ void Model::printVariables() const {
                 typedef typename AssociatedValueType<Domain>::type Value;
                 typedef typename AssociatedViewType<Value>::type View;
                 ExprRef<View> expr(nullptr);
-                if (valBase(v.second).container != &definedPool) {
+                if (valBase(v.second).container != &inlinedPool) {
                     expr = mpark::get<ValRef<Value>>(v.second).asExpr();
                 } else {
                     expr = mpark::get<ExprRef<View>>(

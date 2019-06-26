@@ -3,7 +3,13 @@
 using namespace std;
 
 ValBase constantPool;
-ValBase definedPool;
+ValBase inlinedPool;
+ValBase variablePool;
+// checks if v is one of the global pools like inlinedPool or variablePool for
+// example.
+bool isPoolMarker(const ValBase* v) {
+    return v == &variablePool || v == &inlinedPool || v == &constantPool;
+}
 
 void normalise(AnyValRef& v) {
     mpark::visit([](auto& vImpl) { normalise(*vImpl); }, v);

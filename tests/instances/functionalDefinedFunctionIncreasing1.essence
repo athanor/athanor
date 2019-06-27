@@ -1,0 +1,5 @@
+$testing:numberIterations=0
+letting n be 100
+find f : function (total) int(1..n) --> int(1..n)
+such that forAll i : int(1..n-1) . f(i+1) = f(i) + 1
+such that f(1) = 1

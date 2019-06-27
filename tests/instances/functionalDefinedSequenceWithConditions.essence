@@ -1,0 +1,5 @@
+$testing:numberIterations=0
+letting n be 100
+find s : sequence (size n) of int(1..n)
+such that  forAll (i,j) in s, i % 2 = 0 . j = i
+such that  forAll (i,j) in s, i % 2 = 1 . i = j

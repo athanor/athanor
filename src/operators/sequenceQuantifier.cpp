@@ -44,8 +44,7 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
     void valueAdded(UInt index, const AnyExprRef& member) final {
         mpark::visit(
             [&](auto& member) {
-                containerSpecificUnroll<viewType(member)>(
-                    index, {false, index, member});
+                handleUnroll<viewType(member)>(index, member);
             },
             member);
     }
@@ -71,23 +70,14 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
     }
 
     template <typename View>
-    void containerSpecificUnroll(UInt memberIndex,
-                                 QueuedUnrollValue<View> queuedValue) {
-        // this is a bit hacky, if queuedValue.directUnrollExpr is true, we do
-        // not create a new tuple to hold to the new value, we assume that we
-        // have already been given the tuple.
-        if (!queuedValue.directUnrollExpr) {
-            auto tupleFirstMember = make<IntValue>();
-            tupleFirstMember->value = memberIndex + 1;
-            auto unrolledExpr = OpMaker<OpTupleLit>::make(
-                {tupleFirstMember.asExpr(), queuedValue.value});
-            unrolledExpr->evaluate();
-            op->template unroll<TupleView>({queuedValue.directUnrollExpr,
-                                            queuedValue.index, unrolledExpr});
+    void handleUnroll(UInt memberIndex, ExprRef<View> member) {
+        auto tupleFirstMember = make<IntValue>();
+        tupleFirstMember->value = memberIndex + 1;
+        auto unrolledExpr =
+            OpMaker<OpTupleLit>::make({tupleFirstMember.asExpr(), member});
+        unrolledExpr->evaluate();
+        op->template unroll<TupleView>({false, memberIndex, unrolledExpr});
 
-        } else {
-            op->template unroll(queuedValue);
-        }
         if (memberIndex + 1 < op->unrolledIterVals.size()) {
             correctUnrolledTupleIndices(memberIndex);
         }

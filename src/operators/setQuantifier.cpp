@@ -15,16 +15,11 @@ struct ContainerTrigger<SetView> : public SetTrigger {
         op->roll(op->numberUnrolled() - 1);
     }
 
-    template <typename View>
-    inline void containerSpecificUnroll(UInt, QueuedUnrollValue<View> val) {
-        op->unroll(val);
-    }
     void valueAdded(const AnyExprRef& member) final {
         mpark::visit(
             [&](auto& expr) {
                 typedef viewType(expr) View;
-                containerSpecificUnroll<View>(
-                    op->numberUnrolled(), {false, op->numberUnrolled(), expr});
+                op->unroll<View>({false, op->numberUnrolled(), expr});
             },
             member);
     }

@@ -95,9 +95,9 @@ struct ConditionChangeTrigger
         mpark::visit(
             [&](auto& unrolledIterVal) {
                 typedef viewType(unrolledIterVal->getValue()) View;
-                op->containerTrigger->template containerSpecificUnroll<View>(
-                    index, {true, unrolledConditions[index].exprIndex,
-                            unrolledIterVal->getValue()});
+                op->template unroll<View>({true,
+                                           unrolledConditions[index].exprIndex,
+                                           unrolledIterVal->getValue()});
             },
             op->unrolledIterVals[index]);
     }

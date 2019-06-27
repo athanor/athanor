@@ -1,0 +1,5 @@
+find s : set (size 3) of (int(1..5), set (minSize 2)   of int(1..10))
+such that
+forAll (i,j) in s. i = 1
+such that allDiff([j | (_,i) <- s, j <- i])
+such that 10 = sum (_,j) in s . |j|

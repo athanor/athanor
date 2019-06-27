@@ -40,6 +40,7 @@ class TriggerQueue {
 
        private:
         TriggerQueue<T>& queue;
+        bool firstAccess;
 
        public:
         std::deque<std::shared_ptr<T>>& triggers;
@@ -47,14 +48,15 @@ class TriggerQueue {
        private:
         QueueAccess(TriggerQueue<T>& queue)
             : queue(queue), triggers(queue.triggers) {
-            debug_code(assert(!queue.currentlyProcessing));
+            firstAccess = !queue.currentlyProcessing;
             queue.currentlyProcessing = true;
         }
 
        public:
         ~QueueAccess() {
-            debug_code(assert(queue.currentlyProcessing));
-            queue.currentlyProcessing = false;
+            if (firstAccess) {
+                queue.currentlyProcessing = false;
+            }
         }
     };
 

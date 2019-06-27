@@ -312,6 +312,37 @@ inline ValRef<Value> getIfConstValue(ExprRef<View>& expr) {
     }
 }
 
+pair<shared_ptr<TupleDomain>, ExprRef<TupleView>> parseOpRecordLit(
+    json& tupleExpr, ParsedModel& parsedModel) {
+    bool constant = true;
+    vector<tuple<string, AnyDomainRef, AnyExprRef>> fields;
+    for (auto& memberExpr : tupleExpr) {
+        auto member = parseExpr(memberExpr[1], parsedModel);
+        fields.emplace_back(memberExpr[0]["Name"], member.first, member.second);
+        mpark::visit([&](auto& member) { constant &= member->isConstant(); },
+                     member.second);
+    }
+    sort(fields.begin(), fields.end(),
+         [](auto& a, auto& b) { return get<0>(a) < get<0>(b); });
+    vector<AnyDomainRef> innerDomains;
+    vector<string> recordIndexNameMap;
+    HashMap<string, size_t> recordNameIndexMap;
+    vector<AnyExprRef> tupleMembers;
+    for (auto& field : fields) {
+        innerDomains.emplace_back(move(get<1>(field)));
+        recordIndexNameMap.emplace_back(get<0>(field));
+        recordNameIndexMap[get<0>(field)] = recordIndexNameMap.size() - 1;
+        tupleMembers.emplace_back(move(get<2>(field)));
+    }
+    auto domain = make_shared<TupleDomain>(move(innerDomains));
+    domain->isRecord = true;
+    domain->recordIndexNameMap = move(recordIndexNameMap);
+    domain->recordNameIndexMap = move(recordNameIndexMap);
+    auto tuple = OpMaker<OpTupleLit>::make(move(tupleMembers));
+    tuple->setConstant(constant);
+    return make_pair(domain, tuple);
+}
+
 pair<shared_ptr<TupleDomain>, ExprRef<TupleView>> parseOpTupleLit(
     json& tupleExpr, ParsedModel& parsedModel) {
     bool constant = true;
@@ -548,39 +579,39 @@ shared_ptr<FunctionDomain> parseDomainFunction(json& functionDomainExpr,
         parseDomain(functionDomainExpr[3], parsedModel));
 }
 
-shared_ptr<TupleDomain> parseDomainTupleHelper(json& tupleDomainExpr,
-                                               ParsedModel& parsedModel,
-                                               bool asRecord) {
+shared_ptr<TupleDomain> parseDomainTuple(json& tupleDomainExpr,
+                                         ParsedModel& parsedModel) {
+    vector<AnyDomainRef> innerDomains;
+    for (auto& innerDomainExpr : tupleDomainExpr) {
+        innerDomains.emplace_back(parseDomain(innerDomainExpr, parsedModel));
+    }
+    return make_shared<TupleDomain>(move(innerDomains));
+}
+
+shared_ptr<TupleDomain> parseDomainRecord(json& tupleDomainExpr,
+                                          ParsedModel& parsedModel) {
+    vector<pair<string, AnyDomainRef>> fields;
+    for (auto& innerDomainExpr : tupleDomainExpr) {
+        fields.emplace_back(innerDomainExpr[0]["Name"],
+                            parseDomain(innerDomainExpr[1], parsedModel));
+    }
+    sort(fields.begin(), fields.end(),
+         [](auto& a, auto& b) { return a.first < b.first; });
     vector<AnyDomainRef> innerDomains;
     vector<string> recordIndexNameMap;
     HashMap<string, size_t> recordNameIndexMap;
-    for (auto& innerDomainExpr : tupleDomainExpr) {
-        if (asRecord) {
-            recordIndexNameMap.emplace_back(string(innerDomainExpr[0]["Name"]));
-            recordNameIndexMap[recordIndexNameMap.back()] =
-                recordIndexNameMap.size() - 1;
-            innerDomains.emplace_back(
-                parseDomain(innerDomainExpr[1], parsedModel));
-        } else {
-            innerDomains.emplace_back(
-                parseDomain(innerDomainExpr, parsedModel));
-        }
+    for (auto& field : fields) {
+        innerDomains.emplace_back(move(field.second));
+        recordIndexNameMap.emplace_back(field.first);
+        recordNameIndexMap[field.first] = recordIndexNameMap.size() - 1;
     }
-
     auto domain = make_shared<TupleDomain>(move(innerDomains));
-    domain->isRecord = asRecord;
+    domain->isRecord = true;
     domain->recordIndexNameMap = move(recordIndexNameMap);
     domain->recordNameIndexMap = move(recordNameIndexMap);
     return domain;
 }
-shared_ptr<TupleDomain> parseDomainTuple(json& tupleDomainExpr,
-                                         ParsedModel& parsedModel) {
-    return parseDomainTupleHelper(tupleDomainExpr, parsedModel, false);
-}
-shared_ptr<TupleDomain> parseDomainRecord(json& tupleDomainExpr,
-                                          ParsedModel& parsedModel) {
-    return parseDomainTupleHelper(tupleDomainExpr, parsedModel, true);
-}
+
 AnyDomainRef parseDomainReference(json& domainReference,
                                   ParsedModel& parsedModel) {
     string referenceName = domainReference[0]["Name"];
@@ -870,6 +901,30 @@ pair<AnyDomainRef, AnyExprRef> parseOpTupleIndex(
         tupleDomain->inners[index]);
 }
 
+pair<AnyDomainRef, AnyExprRef> parseOpRecordIndex(
+    shared_ptr<TupleDomain>& tupleDomain, ExprRef<TupleView>& tuple,
+    json& indexExpr, ParsedModel&) {
+    string errorMessage = "within record index expression.";
+    string indexName = indexExpr["Reference"][0]["Name"];
+    if (!tupleDomain->recordNameIndexMap.count(indexName)) {
+        cerr << "Error: could not index this record by the name " << indexName
+             << endl;
+        abort();
+    }
+    size_t index = tupleDomain->recordNameIndexMap[indexName];
+    return mpark::visit(
+        [&](auto& innerDomain) -> pair<AnyDomainRef, AnyExprRef> {
+            typedef typename BaseType<decltype(innerDomain)>::element_type
+                InnerDomainType;
+            typedef typename AssociatedViewType<
+                typename AssociatedValueType<InnerDomainType>::type>::type View;
+            return make_pair(
+                innerDomain,
+                ExprRef<View>(OpMaker<OpTupleIndex<View>>::make(tuple, index)));
+        },
+        tupleDomain->inners[index]);
+}
+
 pair<AnyDomainRef, AnyExprRef> parseOpRelationProj(json& operandsExpr,
                                                    ParsedModel& parsedModel) {
     auto leftOperand = parseExpr(operandsExpr[0], parsedModel);
@@ -913,8 +968,13 @@ pair<AnyDomainRef, AnyExprRef> parseOpIndexing(json& operandsExpr,
             [&](ExprRef<TupleView>& tuple) -> pair<AnyDomainRef, AnyExprRef> {
                 auto& tupleDomain =
                     mpark::get<shared_ptr<TupleDomain>>(leftOperand.first);
-                return parseOpTupleIndex(tupleDomain, tuple, operandsExpr[1],
-                                         parsedModel);
+                if (tupleDomain->isRecord) {
+                    return parseOpRecordIndex(tupleDomain, tuple,
+                                              operandsExpr[1], parsedModel);
+                } else {
+                    return parseOpTupleIndex(tupleDomain, tuple,
+                                             operandsExpr[1], parsedModel);
+                }
             },
             [&](auto&& operand) -> pair<AnyDomainRef, AnyExprRef> {
                 cerr << "Error, not yet handling op "
@@ -1606,6 +1666,7 @@ optional<pair<AnyDomainRef, AnyExprRef>> tryParseExpr(
              {"AbsLitMatrix", parseOpSequenceLit},
              {"AbsLitFunction", parseConstantFunction},
              {"AbsLitTuple", parseOpTupleLit},
+             {"AbsLitRecord", parseOpRecordLit},
              {"Reference", parseValueReference},
              {"Comprehension", parseComprehension},
              {"MkOpEq", parseOpEq},

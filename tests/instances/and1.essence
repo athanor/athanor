@@ -1,3 +1,4 @@
+
+$testing:numberIterations=100
 find a,b,c : bool
 such that a = b /\ c
-$testing:numberIterations=10

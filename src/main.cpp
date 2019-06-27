@@ -199,8 +199,8 @@ auto& realTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
 
 auto& realTimeLimitArg =
     realTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
-
-u_int64_t iterationLimit;
+bool hasIterationLimit = false;
+u_int64_t iterationLimit = 0;
 auto& iterationLimitFlag = argParser.add<ComplexFlag>(
     "--iterationLimit", Policy::OPTIONAL,
     "Specify the maximum number of iterations to spend in search.");
@@ -209,6 +209,7 @@ auto& iterationLimitArg = iterationLimitFlag.add<Arg<u_int64_t>>(
     "number_iterations", Policy::MANDATORY, "0 = no limit", [](string& arg) {
         try {
             iterationLimit = stol(arg);
+            hasIterationLimit = true;
             return iterationLimit;
         } catch (invalid_argument&) {
             throw ErrorMessage("Expected integer >= 0.");

@@ -11,6 +11,7 @@
 void dumpVarViolations(const ViolationContainer& vioContainer);
 extern volatile bool sigIntActivated;
 extern volatile bool sigAlarmActivated;
+extern bool hasIterationLimit;
 extern u_int64_t iterationLimit;
 extern bool runSanityChecks;
 inline bool alwaysTrue(const AnyValVec&) { return true; }
@@ -88,7 +89,7 @@ class State {
             std::cout << "timeout\n";
             throw EndOfSearchException();
         }
-        if (iterationLimit != 0 && stats.numberIterations >= iterationLimit) {
+        if (hasIterationLimit && stats.numberIterations >= iterationLimit) {
             std::cout << "iteration limit reached\n";
             throw EndOfSearchException();
         }

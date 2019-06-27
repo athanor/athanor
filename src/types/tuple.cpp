@@ -91,17 +91,22 @@ void deepCopy<TupleValue>(const TupleValue& src, TupleValue& target) {
 
 template <>
 ostream& prettyPrint<TupleDomain>(ostream& os, const TupleDomain& d) {
-    os << "tuple(";
+    os << ((d.isRecord) ? "record {" : "tuple (");
     bool first = true;
-    for (auto& innerDomain : d.inners) {
+    for (size_t i = 0; i < d.inners.size(); i++) {
+        auto& innerDomain = d.inners[i];
         if (first) {
             first = false;
         } else {
             os << ",";
         }
+        if (d.isRecord) {
+            os << d.recordIndexNameMap[i] << " : ";
+        }
+
         prettyPrint(os, innerDomain);
     }
-    os << ")";
+    os << ((d.isRecord) ? "}" : ")");
     return os;
 }
 

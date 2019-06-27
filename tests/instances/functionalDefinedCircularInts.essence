@@ -1,3 +1,4 @@
+$testing:numberIterations=1
 
 letting n be 8
 find s : sequence (size n) of int(-1,1)

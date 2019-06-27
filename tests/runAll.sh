@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-numberIterations=10000
+
 
 pushd $(dirname "$0") > /dev/null
 trap "popd > /dev/null" EXIT
@@ -29,29 +29,49 @@ function markPassed() {
 }
 seed=$RANDOM
 
+function checkExitStatus() {
+    if [ "$exitStatus" -ne 0 ]
+    then markFailed "$outputDir" "Solver had non 0 exit code.  Could be sanity check error."
+        return 1
+    fi
+    return 0
+}
+
+function validateSolutions() {
+    solsDir="$outputDir/sols"
+    mkdir -p "$solsDir"
+    if ! cat "$outputDir/solver-output.txt" | ../scripts/validateSolutions.py "$solsDir" conjure "$instance" &> "$outputDir/validator-output.txt"
+        then if grep 'No solutions found' "$outputDir/validator-output.txt"  > /dev/null && grep -E '^\$testing:no-solutions' "$instance" > /dev/null
+            then return 0
+            fi
+            markFailed "outputDir" "validate solutions failed"
+        return 1
+    fi
+    return 0
+}
+
+function runPostChecks() {
+    postCheck=$(dirname "$instance")/$(basename "$instance" .essence)-post-check.sh
+    if [ -e "$postCheck" ]
+    then if ! "$postCheck"  "$outputDir/solver-output.txt" &> "$outputDir/post-check.txt"
+            then markFailed "outputDir" "post check failed."
+                return 1
+        fi
+    fi
+    return 0
+}
+
 for instance in instances/*.essence ; do
     ((numberInstances += 1))
     echo "Running test $instance with seed $seed"
     outputDir="output/$(basename "$instance" .essence)-$seed"
     mkdir -p "$outputDir"
+    numberIterations=$(grep -E '^\$testing:numberIterations=' "$instance" | grep -Eo '[0-9]+')
     "$solver" --sanityCheck --randomSeed $seed --iterationLimit $numberIterations --spec $instance &> "$outputDir/solver-output.txt"
-    if [ $? -ne 0 ]
-    then markFailed "$outputDir" "Solver had non 0 exit code.  Could be sanity check error."
-        continue
-    fi
-    solsDir="$outputDir/sols"
-    mkdir -p "$solsDir"
-    if ! cat "$outputDir/solver-output.txt" | ../scripts/validateSolutions.py "$solsDir" conjure $instance &> "$outputDir/validator-output.txt"
-    then markFailed "outputDir" "validate solutions failed"
-        continue
-    fi
-    postCheck=$(dirname "$instance")/$(basename "$instance" .essence)-post-check.sh
-    if [ -e "$postCheck" ]
-    then if ! "$postCheck"  "$outputDir/solver-output.txt" &> "$outputDir/post-check.txt"
-            then markFailed "outputDir" "post check failed."
-            continue
-        fi
-    fi
+    exitStatus=$?
+    checkExitStatus &&
+    validateSolutions &&
+    runPostChecks &&
     markPassed "$outputDir"    
 done
 

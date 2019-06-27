@@ -136,9 +136,84 @@ void tupleLiftSingleGen(const TupleDomain& domain, int numberValsRequired,
     }
 }
 
+template <typename InnerDomainPtrType>
+void tupleLiftSingleTwoVarsGenImpl(const TupleDomain& domain,
+                                   const InnerDomainPtrType&,
+                                   int numberValsRequired, size_t indexToChange,
+                                   std::vector<Neighbourhood>& neighbourhoods) {
+    std::vector<Neighbourhood> innerDomainNeighbourhoods;
+    generateNeighbourhoods(2, domain.inners[indexToChange],
+                           innerDomainNeighbourhoods);
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    for (auto& innerNh : innerDomainNeighbourhoods) {
+        if (innerNh.numberValsRequired != 2) {
+            continue;
+        }
+        neighbourhoods.emplace_back(
+            toString("tupleLiftSingleTwoVars_index", indexToChange, "_",
+                     innerNh.name),
+            numberValsRequired,
+            [indexToChange, innerNhApply{std::move(innerNh.apply)}](
+                NeighbourhoodParams& params) {
+                auto& val1 = *(params.getVals<TupleValue>()[0]);
+                auto& val2 = *(params.getVals<TupleValue>()[1]);
+                debug_code(assert(indexToChange < val1.members.size()));
+                auto& vioContainerAtThisLevel = emptyViolations;
+                ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
+                    return val1.tryMemberChange<InnerValueType>(
+                        indexToChange, [&]() {
+                            return val2.tryMemberChange<InnerValueType>(
+                                indexToChange, [&]() {
+                                    return params.parentCheck(params.vals);
+                                });
+                        });
+                };
+                bool requiresRevert = false;
+                AcceptanceCallBack changeAccepted = [&]() {
+                    requiresRevert = !params.changeAccepted();
+                    return !requiresRevert;
+                };
+                AnyValVec changingMembers;
+                auto& changingMembersImpl =
+                    changingMembers.emplace<ValRefVec<InnerValueType>>();
+                changingMembersImpl.emplace_back(
+                    val1.member<InnerValueType>(indexToChange));
+                changingMembersImpl.emplace_back(
+                    val2.member<InnerValueType>(indexToChange));
+                NeighbourhoodParams innerNhParams(
+                    changeAccepted, parentCheck, params.parentCheckTryLimit,
+                    changingMembers, params.stats, vioContainerAtThisLevel);
+                innerNhApply(innerNhParams);
+                if (requiresRevert) {
+                    val1.tryMemberChange<InnerValueType>(indexToChange,
+                                                        [&]() { return true; });
+                    val2.tryMemberChange<InnerValueType>(indexToChange,
+                                                        [&]() { return true; });
+                }
+            });
+    }
+}
+
+void tupleLiftSingleTwoVarsGen(const TupleDomain& domain,
+                               int numberValsRequired,
+                               std::vector<Neighbourhood>& neighbourhoods) {
+    for (size_t i = 0; i < domain.inners.size(); i++) {
+        mpark::visit(
+            [&](const auto& innerDomainPtr) {
+                tupleLiftSingleTwoVarsGenImpl(domain, innerDomainPtr,
+                                              numberValsRequired, i,
+                                              neighbourhoods);
+            },
+            domain.inners[i]);
+    }
+}
+
 const NeighbourhoodVec<TupleDomain> NeighbourhoodGenList<TupleDomain>::value = {
-    {1, tupleAssignRandomGen},  //
-    {1, tupleLiftSingleGen}};
+    {1, tupleAssignRandomGen},      //
+    {1, tupleLiftSingleGen},        //
+    {2, tupleLiftSingleTwoVarsGen}  //
+};
 
 const NeighbourhoodVec<TupleDomain>
     NeighbourhoodGenList<TupleDomain>::mergeNeighbourhoods = {};

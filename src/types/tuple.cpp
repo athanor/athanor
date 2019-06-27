@@ -37,11 +37,16 @@ ostream& prettyPrint<TupleView>(ostream& os, const TupleView& v) {
 template <>
 ostream& prettyPrint<TupleView>(ostream& os, const TupleDomain& domain,
                                 const TupleView& v) {
-    os << "tuple(";
+    os << ((domain.isRecord) ? "record {" : "tuple (");
     for (size_t i = 0; i < v.members.size(); i++) {
         if (i != 0) {
             os << ",";
         }
+        if (domain.isRecord) {
+            debug_code(assert(i < domain.recordIndexNameMap.size()));
+            os << domain.recordIndexNameMap[i] << " = ";
+        }
+
         mpark::visit(
             [&](auto& member) {
                 typedef
@@ -53,7 +58,7 @@ ostream& prettyPrint<TupleView>(ostream& os, const TupleDomain& domain,
             },
             v.members[i]);
     }
-    os << ")";
+    os << ((domain.isRecord) ? "}" : ")");
     return os;
 }
 

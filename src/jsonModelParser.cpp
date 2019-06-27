@@ -548,15 +548,39 @@ shared_ptr<FunctionDomain> parseDomainFunction(json& functionDomainExpr,
         parseDomain(functionDomainExpr[3], parsedModel));
 }
 
+shared_ptr<TupleDomain> parseDomainTupleHelper(json& tupleDomainExpr,
+                                               ParsedModel& parsedModel,
+                                               bool asRecord) {
+    vector<AnyDomainRef> innerDomains;
+    vector<string> recordIndexNameMap;
+    HashMap<string, size_t> recordNameIndexMap;
+    for (auto& innerDomainExpr : tupleDomainExpr) {
+        if (asRecord) {
+            recordIndexNameMap.emplace_back(string(innerDomainExpr[0]["Name"]));
+            recordNameIndexMap[recordIndexNameMap.back()] =
+                recordIndexNameMap.size() - 1;
+            innerDomains.emplace_back(
+                parseDomain(innerDomainExpr[1], parsedModel));
+        } else {
+            innerDomains.emplace_back(
+                parseDomain(innerDomainExpr, parsedModel));
+        }
+    }
+
+    auto domain = make_shared<TupleDomain>(move(innerDomains));
+    domain->isRecord = asRecord;
+    domain->recordIndexNameMap = move(recordIndexNameMap);
+    domain->recordNameIndexMap = move(recordNameIndexMap);
+    return domain;
+}
 shared_ptr<TupleDomain> parseDomainTuple(json& tupleDomainExpr,
                                          ParsedModel& parsedModel) {
-    vector<AnyDomainRef> innerDomains;
-    for (auto& innerDomainExpr : tupleDomainExpr) {
-        innerDomains.emplace_back(parseDomain(innerDomainExpr, parsedModel));
-    }
-    return make_shared<TupleDomain>(move(innerDomains));
+    return parseDomainTupleHelper(tupleDomainExpr, parsedModel, false);
 }
-
+shared_ptr<TupleDomain> parseDomainRecord(json& tupleDomainExpr,
+                                          ParsedModel& parsedModel) {
+    return parseDomainTupleHelper(tupleDomainExpr, parsedModel, true);
+}
 AnyDomainRef parseDomainReference(json& domainReference,
                                   ParsedModel& parsedModel) {
     string referenceName = domainReference[0]["Name"];
@@ -581,6 +605,7 @@ optional<AnyDomainRef> tryParseDomain(json& domainExpr,
          {"DomainMSet", parseDomainMSet},
          {"DomainSequence", parseDomainSequence},
          {"DomainTuple", parseDomainTuple},
+         {"DomainRecord", parseDomainRecord},
          {"DomainFunction", parseDomainFunction},
          {"DomainPartition", parseDomainPartition},
          {"DomainReference", parseDomainReference}},

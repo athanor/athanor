@@ -9,6 +9,9 @@
 
 struct TupleDomain {
     std::vector<AnyDomainRef> inners;
+    bool isRecord = false;
+    std::vector<std::string> recordIndexNameMap;
+    HashMap<std::string, size_t> recordNameIndexMap;
     template <typename... DomainTypes>
     TupleDomain(DomainTypes&&... inners)
         : inners({makeAnyDomainRef(std::forward<DomainTypes>(inners))...}) {}

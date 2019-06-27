@@ -1,0 +1,5 @@
+$testing:numberIterations=100000
+letting n be 100
+find s : function (total) int(1..n) --> int(1..n)
+such that  forAll (i,j) in s, i % 2 = 0 . j = i
+such that  forAll (i,j) in s, i % 2 = 1 . j > i /\ j < i + 2

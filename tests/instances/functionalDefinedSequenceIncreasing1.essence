@@ -1,0 +1,5 @@
+$testing:numberIterations=0
+letting n be 100
+find s : sequence (size n) of int(1..n)
+such that forAll i : int(1..n-1) . s(i+1) = s(i) + 1
+such that s(1) = 1

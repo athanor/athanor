@@ -1,6 +1,7 @@
 #ifndef SRC_TRIGGERS_ALLTRIGGERS_H_
 #define SRC_TRIGGERS_ALLTRIGGERS_H_
 #include "triggers/boolTrigger.h"
+#include "triggers/emptyTrigger.h"
 #include "triggers/enumTrigger.h"
 #include "triggers/functionTrigger.h"
 #include "triggers/intTrigger.h"

@@ -186,10 +186,10 @@ void tupleLiftSingleTwoVarsGenImpl(const TupleDomain& domain,
                     changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
-                    val1.tryMemberChange<InnerValueType>(indexToChange,
-                                                        [&]() { return true; });
-                    val2.tryMemberChange<InnerValueType>(indexToChange,
-                                                        [&]() { return true; });
+                    val1.tryMemberChange<InnerValueType>(
+                        indexToChange, [&]() { return true; });
+                    val2.tryMemberChange<InnerValueType>(
+                        indexToChange, [&]() { return true; });
                 }
             });
     }

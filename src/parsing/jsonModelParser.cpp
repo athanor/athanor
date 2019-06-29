@@ -53,6 +53,7 @@ typedef function<pair<AnyDomainRef, AnyExprRef>(json&, ParsedModel&)>
     ParseDomainGeneratorFunction;
 typedef function<AnyDomainRef(json&, ParsedModel&)> ParseDomainFunction;
 
+bool hasEmptyDomain(const AnyDomainRef& domain);
 template <typename RetType, typename Constraint, typename Func>
 ExprRef<RetType> expect(Constraint&& constraint, Func&& func);
 template <typename Function,

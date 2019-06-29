@@ -1,5 +1,5 @@
-#ifndef SRC_JSONMODELPARSER_H_
-#define SRC_JSONMODELPARSER_H_
+#ifndef SRC_PARSING_JSONMODELPARSER_H_
+#define SRC_PARSING_JSONMODELPARSER_H_
 #include <iostream>
 #include <json.hpp>
 #include <memory>
@@ -15,4 +15,4 @@ struct ParsedModel {
 };
 ParsedModel parseModelFromJson(std::vector<nlohmann::json>& jsons);
 
-#endif /* SRC_JSONMODELPARSER_H_ */
+#endif /* SRC_PARSING_JSONMODELPARSER_H_ */

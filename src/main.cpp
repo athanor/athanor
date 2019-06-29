@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include "common/common.h"
 #include "gitRevision.h"
-#include "jsonModelParser.h"
+#include "parsing/jsonModelParser.h"
 #include "search/neighbourhoodSelectionStrategies.h"
 #include "search/searchStrategies.h"
 #include "search/solver.h"

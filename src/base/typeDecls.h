@@ -45,10 +45,18 @@ struct TypeAsString;
     struct AssociatedDomain<name##Value> {                               \
         typedef name##Domain type;                                       \
     };                                                                   \
+    template <>                                                          \
+    struct AssociatedDomain<name##View> {                                \
+        typedef name##Domain type;                                       \
+    };                                                                   \
                                                                          \
     template <>                                                          \
     struct AssociatedValueType<name##Domain> {                           \
         typedef name##Value type;                                        \
+    };                                                                   \
+    template <>                                                          \
+    struct AssociatedViewType<name##Domain> {                            \
+        typedef name##View type;                                         \
     };                                                                   \
     template <>                                                          \
     struct AssociatedViewType<name##Value> {                             \

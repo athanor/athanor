@@ -21,13 +21,16 @@ bool hasEmptyDomain(const AnyDomainRef& domain) {
 }
 template <typename Domain>
 void removeEmptyType(Domain& domain,
-                     typename AssociatedValueType<Domain>::type& val);
-void removeEmptyType(const AnyDomainRef& domain, AnyValRef& val) {
+                     typename AssociatedViewType<Domain>::type& val);
+void removeEmptyType(const AnyDomainRef& domain, AnyExprRef val) {
     mpark::visit(
         [&](const auto& domain) {
             typedef typename BaseType<decltype(domain)>::element_type Domain;
-            typedef typename AssociatedValueType<Domain>::type Value;
-            removeEmptyType(*domain, *mpark::get<ValRef<Value>>(val));
+            typedef typename AssociatedViewType<Domain>::type View;
+            auto view = mpark::get<ExprRef<View>>(val)->view();
+            if (view) {
+                removeEmptyType(*domain, *view);
+            }
         },
         domain);
 }
@@ -35,14 +38,12 @@ void removeEmptyType(const AnyDomainRef& domain, AnyExprVec& vals) {
     mpark::visit(
         [&](const auto& domain) {
             typedef typename BaseType<decltype(domain)>::element_type Domain;
-            typedef typename AssociatedValueType<Domain>::type Value;
-            typedef typename AssociatedViewType<Value>::type View;
+            typedef typename AssociatedViewType<Domain>::type View;
             if (mpark::get_if<ExprRefVec<EmptyView>>(&vals)) {
                 vals.emplace<ExprRefVec<View>>();
             } else {
                 for (auto& expr : mpark::get<ExprRefVec<View>>(vals)) {
-                    auto val = assumeAsValue(expr);
-                    removeEmptyType(*domain, *val);
+                    removeEmptyType(domain, expr);
                 }
             }
         },
@@ -51,8 +52,7 @@ void removeEmptyType(const AnyDomainRef& domain, AnyExprVec& vals) {
 
 template <typename Domain>
 void removeEmptyType(Domain& domain,
-                     typename AssociatedValueType<Domain>::type& val) {
-    typedef typename AssociatedValueType<Domain>::type Value;
+                     typename AssociatedViewType<Domain>::type& val) {
     // putting unneeded auto type to prevent instantiation untill type matches
     auto overload =
         overloaded([](EmptyDomain&, auto&&) { shouldNotBeCalledPanic; },
@@ -60,8 +60,7 @@ void removeEmptyType(Domain& domain,
                    [](EnumDomain&, auto&) {},
                    [&](TupleDomain& domain, auto& val) {
                        for (size_t i = 0; i < domain.inners.size(); i++) {
-                           AnyValRef v(val.template member<Value>(i));
-                           removeEmptyType(domain.inners[i], v);
+                           removeEmptyType(domain.inners[i], val.members[i]);
                        }
                    },
                    [&](FunctionDomain& domain, auto& val) {

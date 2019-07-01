@@ -6,6 +6,8 @@
 #include "operators/previousValueCache.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
+#include "types/boolVal.h"
+#include "types/sequenceVal.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 
@@ -184,10 +186,20 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpAnd> {
-    static ExprRef<BoolView> make(ExprRef<SequenceView>);
+    static ExprRef<BoolView> make(
+        ExprRef<SequenceView>,
+        const shared_ptr<SequenceDomain>& operandDomain = nullptr);
 };
 
-ExprRef<BoolView> OpMaker<OpAnd>::make(ExprRef<SequenceView> o) {
+ExprRef<BoolView> OpMaker<OpAnd>::make(
+    ExprRef<SequenceView> o, const shared_ptr<SequenceDomain>& operandDomain) {
+    if (operandDomain &&
+        mpark::get_if<shared_ptr<EmptyDomain>>(&operandDomain->inner)) {
+        auto val = ::make<BoolValue>();
+        val->violation = 0;
+        val->setConstant(true);
+        return val.asExpr();
+    }
     return make_shared<OpAnd>(move(o));
 }
 

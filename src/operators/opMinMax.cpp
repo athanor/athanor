@@ -4,6 +4,7 @@
 #include "operators/flatten.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
+#include "types/sequenceVal.h"
 #include "utils/ignoreUnused.h"
 
 using namespace std;
@@ -321,11 +322,24 @@ struct OpMaker;
 
 template <bool minMode>
 struct OpMaker<OpMinMax<minMode>> {
-    static ExprRef<IntView> make(ExprRef<SequenceView>);
+    static ExprRef<IntView> make(
+        ExprRef<SequenceView>,
+        const shared_ptr<SequenceDomain>& operandDomain = nullptr);
 };
 
 template <bool minMode>
-ExprRef<IntView> OpMaker<OpMinMax<minMode>>::make(ExprRef<SequenceView> o) {
+ExprRef<IntView> OpMaker<OpMinMax<minMode>>::make(
+    ExprRef<SequenceView> o, const shared_ptr<SequenceDomain>& operandDomain) {
+    if (operandDomain &&
+        mpark::get_if<shared_ptr<EmptyDomain>>(&operandDomain->inner)) {
+        // construct empty sequence of type int
+        auto emptySequence = ::make<SequenceValue>();
+        emptySequence->members.emplace<ExprRefVec<IntView>>();
+        emptySequence->setConstant(true);
+        auto op = make_shared<OpMinMax<minMode>>(emptySequence.asExpr());
+        op->setConstant(true);
+        return op;
+    }
     return make_shared<OpMinMax<minMode>>(move(o));
 }
 

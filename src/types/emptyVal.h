@@ -4,7 +4,9 @@
 #include "common/common.h"
 #include "types/empty.h"
 
-struct EmptyDomain {};
+struct EmptyDomain {
+    void merge(const EmptyDomain&) { shouldNotBeCalledPanic; }
+};
 
 struct EmptyValue : public EmptyView, public ValBase {
     void evaluateImpl() final;

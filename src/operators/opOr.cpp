@@ -5,6 +5,8 @@
 #include "operators/flatten.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
+#include "types/boolVal.h"
+#include "types/sequenceVal.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 using OperandsSequenceTrigger = OperatorTrates<OpOr>::OperandsSequenceTrigger;
@@ -233,9 +235,20 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpOr> {
-    static ExprRef<BoolView> make(ExprRef<SequenceView>);
+    static ExprRef<BoolView> make(
+        ExprRef<SequenceView>,
+        const shared_ptr<SequenceDomain>& operandDomain = nullptr);
 };
 
-ExprRef<BoolView> OpMaker<OpOr>::make(ExprRef<SequenceView> o) {
+ExprRef<BoolView> OpMaker<OpOr>::make(
+    ExprRef<SequenceView> o, const shared_ptr<SequenceDomain>& operandDomain) {
+    if (operandDomain &&
+        mpark::get_if<shared_ptr<EmptyDomain>>(&operandDomain->inner)) {
+        auto val = ::make<BoolValue>();
+        val->violation = LARGE_VIOLATION;
+        val->setConstant(true);
+        return val.asExpr();
+    }
+
     return make_shared<OpOr>(move(o));
 }

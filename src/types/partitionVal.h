@@ -32,6 +32,9 @@ struct PartitionDomain {
             abort();
         }
     }
+    void merge(
+        PartitionDomain&) { /*do nothing for now, not much supported here */
+    }
 };
 
 struct PartitionValue : public PartitionView, public ValBase {
@@ -43,6 +46,7 @@ struct PartitionValue : public PartitionView, public ValBase {
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
+    AnyExprVec& getChildenOperands() final;
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline bool addMember(UInt part, const ValRef<InnerValueType>& member) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;

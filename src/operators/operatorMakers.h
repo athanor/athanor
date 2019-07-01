@@ -44,17 +44,23 @@ struct OpMaker<OpNot> {
 struct OpAnd;
 template <>
 struct OpMaker<OpAnd> {
-    static ExprRef<BoolView> make(ExprRef<SequenceView>);
+    static ExprRef<BoolView> make(
+        ExprRef<SequenceView>,
+        const std::shared_ptr<SequenceDomain>& operandDomain = nullptr);
 };
 struct OpOr;
 template <>
 struct OpMaker<OpOr> {
-    static ExprRef<BoolView> make(ExprRef<SequenceView>);
+    static ExprRef<BoolView> make(
+        ExprRef<SequenceView>,
+        const std::shared_ptr<SequenceDomain>& operandDomain = nullptr);
 };
 struct OpProd;
 template <>
 struct OpMaker<OpProd> {
-    static ExprRef<IntView> make(ExprRef<SequenceView>);
+    static ExprRef<IntView> make(
+        ExprRef<SequenceView>,
+        const std::shared_ptr<SequenceDomain>& operandDomain = nullptr);
 };
 struct OpSequenceLit;
 template <>
@@ -88,7 +94,9 @@ struct OpMaker<OpSubsetEq> {
 struct OpSum;
 template <>
 struct OpMaker<OpSum> {
-    static ExprRef<IntView> make(ExprRef<SequenceView>);
+    static ExprRef<IntView> make(
+        ExprRef<SequenceView>,
+        const std::shared_ptr<SequenceDomain>& operandDomain = nullptr);
 };
 template <typename View>
 struct OpSequenceIndex;
@@ -132,7 +140,9 @@ typedef OpMinMax<false> OpMax;
 
 template <bool minMode>
 struct OpMaker<OpMinMax<minMode>> {
-    static ExprRef<IntView> make(ExprRef<SequenceView>);
+    static ExprRef<IntView> make(
+        ExprRef<SequenceView>,
+        const std::shared_ptr<SequenceDomain>& operandDomain = nullptr);
 };
 struct IntRange;
 template <>

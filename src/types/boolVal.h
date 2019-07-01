@@ -3,7 +3,9 @@
 #include <utility>
 #include <vector>
 #include "types/bool.h"
-struct BoolDomain {};
+struct BoolDomain {
+    void merge(BoolDomain&) {}
+};
 
 struct BoolValue : public BoolView, ValBase {
     inline bool domainContainsValue(const BoolView&) { return true; }

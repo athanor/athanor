@@ -61,5 +61,6 @@ template <typename AnyDomainRefType,
 decltype(auto) makeAnyDomainRef(AnyDomainRefType&& d) {
     return std::forward<AnyDomainRefType>(d);
 }
+void mergeDomains(AnyDomainRef& dest, AnyDomainRef& src);
 
 #endif /* SRC_BASE_DOMAINREF_H_ */

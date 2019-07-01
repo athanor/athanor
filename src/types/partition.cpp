@@ -264,3 +264,5 @@ template <>
 UInt getSize<PartitionValue>(const PartitionValue&) {
     return 0;
 }
+
+AnyExprVec& PartitionValue::getChildenOperands() { return members; }

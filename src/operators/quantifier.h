@@ -102,11 +102,6 @@ struct Quantifier : public SequenceView {
         return std::make_shared<Iterator<T>>(quantId, nullptr);
     }
 
-    template <typename View>
-    void setContainerInnerType() {
-        //
-    }
-
     bool triggering();
 
     UInt numberUnrolled() const {

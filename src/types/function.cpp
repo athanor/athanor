@@ -484,3 +484,5 @@ void FunctionValue::debugSanityCheckImpl() const {
         },
         range);
 }
+
+AnyExprVec& FunctionValue::getChildenOperands() { return range; }

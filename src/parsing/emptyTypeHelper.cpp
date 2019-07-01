@@ -19,22 +19,31 @@ bool hasEmptyDomain(const AnyDomainRef& domain) {
         [](auto& domain) { return hasEmptyDomain(domain->inner); });
     return mpark::visit(overload, domain);
 }
+static const char* DOMAIN_MISS_MATCH_MESSAGE =
+    "Found a miss match in domain and value type.\n";
+
 template <typename Domain>
-void removeEmptyType(Domain& domain,
-                     typename AssociatedViewType<Domain>::type& val);
-void removeEmptyType(const AnyDomainRef& domain, AnyExprRef val) {
+void tryRemoveEmptyType(Domain& domain,
+                        typename AssociatedViewType<Domain>::type& val);
+void tryRemoveEmptyType(const AnyDomainRef& domain, AnyExprRef val) {
     mpark::visit(
         [&](const auto& domain) {
             typedef typename BaseType<decltype(domain)>::element_type Domain;
             typedef typename AssociatedViewType<Domain>::type View;
-            auto view = mpark::get<ExprRef<View>>(val)->view();
+            auto* exprPtr = mpark::get_if<ExprRef<View>>(&val);
+            if (!exprPtr) {
+                cerr << DOMAIN_MISS_MATCH_MESSAGE;
+                shouldNotBeCalledPanic;
+            }
+            auto view = (*exprPtr)->view();
             if (view) {
-                removeEmptyType(*domain, *view);
+                tryRemoveEmptyType(*domain, *view);
             }
         },
         domain);
 }
-void removeEmptyType(const AnyDomainRef& domain, AnyExprVec& vals) {
+
+void tryRemoveEmptyType(const AnyDomainRef& domain, AnyExprVec& vals) {
     mpark::visit(
         [&](const auto& domain) {
             typedef typename BaseType<decltype(domain)>::element_type Domain;
@@ -42,8 +51,13 @@ void removeEmptyType(const AnyDomainRef& domain, AnyExprVec& vals) {
             if (mpark::get_if<ExprRefVec<EmptyView>>(&vals)) {
                 vals.emplace<ExprRefVec<View>>();
             } else {
-                for (auto& expr : mpark::get<ExprRefVec<View>>(vals)) {
-                    removeEmptyType(domain, expr);
+                auto* valsPtr = mpark::get_if<ExprRefVec<View>>(&vals);
+                if (!valsPtr) {
+                    cerr << DOMAIN_MISS_MATCH_MESSAGE;
+                    shouldNotBeCalledPanic;
+                }
+                for (auto& expr : *valsPtr) {
+                    tryRemoveEmptyType(domain, expr);
                 }
             }
         },
@@ -51,23 +65,23 @@ void removeEmptyType(const AnyDomainRef& domain, AnyExprVec& vals) {
 }
 
 template <typename Domain>
-void removeEmptyType(Domain& domain,
-                     typename AssociatedViewType<Domain>::type& val) {
+void tryRemoveEmptyType(Domain& domain,
+                        typename AssociatedViewType<Domain>::type& val) {
     // putting unneeded auto type to prevent instantiation untill type matches
-    auto overload =
-        overloaded([](EmptyDomain&, auto&&) { shouldNotBeCalledPanic; },
-                   [](BoolDomain&, auto&&) {}, [](IntDomain&, auto&&) {},
-                   [](EnumDomain&, auto&) {},
-                   [&](TupleDomain& domain, auto& val) {
-                       for (size_t i = 0; i < domain.inners.size(); i++) {
-                           removeEmptyType(domain.inners[i], val.members[i]);
-                       }
-                   },
-                   [&](FunctionDomain& domain, auto& val) {
-                       removeEmptyType(domain.to, val.range);
-                   },
-                   [&](auto& domain, auto& val) {
-                       removeEmptyType(domain.inner, val.members);
-                   });
+    auto overload = overloaded(
+        [](EmptyDomain&, auto&&) { shouldNotBeCalledPanic; },
+        [](BoolDomain&, auto&&) {}, [](IntDomain&, auto&&) {},
+        [](EnumDomain&, auto&) {},
+        [&](TupleDomain& domain, auto& val) {
+            for (size_t i = 0; i < domain.inners.size(); i++) {
+                tryRemoveEmptyType(domain.inners[i], val.members[i]);
+            }
+        },
+        [&](FunctionDomain& domain, auto& val) {
+            tryRemoveEmptyType(domain.to, val.range);
+        },
+        [&](auto& domain, auto& val) {
+            tryRemoveEmptyType(domain.inner, val.getChildenOperands());
+        });
     overload(domain, val);
 }

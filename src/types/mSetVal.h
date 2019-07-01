@@ -19,6 +19,11 @@ struct MSetDomain {
         checkMaxSize();
     }
 
+    void merge(MSetDomain& other) {
+        sizeAttr.merge(other.sizeAttr);
+        mergeDomains(inner, other.inner);
+    }
+
    private:
     void checkMaxSize() {
         if (sizeAttr.sizeType == SizeAttr::SizeAttrType::NO_SIZE ||
@@ -39,6 +44,7 @@ struct MSetValue : public MSetView, public ValBase {
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
+    AnyExprVec& getChildenOperands() final;
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline void addMember(const ValRef<InnerValueType>& member) {
         MSetView::addMember(member.asExpr());

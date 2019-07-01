@@ -149,7 +149,7 @@ struct MSetView : public ExprInterface<MSetView>,
         notifyMemberChanged(index);
         return newHash;
     }
-    inline AnyExprVec& getAnyMembers() { return members; }
+    virtual inline AnyExprVec& getChildenOperands() { shouldNotBeCalledPanic; }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
         return mpark::get<ExprRefVec<InnerViewType>>(members);

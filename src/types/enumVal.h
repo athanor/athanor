@@ -13,6 +13,7 @@ struct EnumDomain {
     EnumDomain(std::string domainName, std::vector<std::string> valueNames)
         : domainName(std::move(domainName)),
           valueNames(std::move(valueNames)) {}
+    void merge(const EnumDomain&) {}
 };
 
 struct EnumValue : public EnumView, ValBase {

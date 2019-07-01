@@ -456,3 +456,5 @@ struct OpMaker<OpSetLit> {
 ExprRef<SetView> OpMaker<OpSetLit>::make(AnyExprVec o) {
     return make_shared<OpSetLit>(move(o));
 }
+
+AnyExprVec& OpSetLit::getChildenOperands() { return operands; }

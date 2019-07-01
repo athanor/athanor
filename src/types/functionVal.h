@@ -25,6 +25,10 @@ struct FunctionDomain {
           to(makeAnyDomainRef(std::forward<ToDomainType>(to))) {
         checkSupported();
     }
+    void merge(FunctionDomain& other) {
+        mergeDomains(from, other.from);
+        mergeDomains(to, other.to);
+    }
 
    private:
     void checkSupported() {
@@ -47,7 +51,7 @@ struct FunctionValue : public FunctionView, public ValBase {
             getRange<
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
-
+    AnyExprVec& getChildenOperands() final;
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline void assignImage(UInt index, const ValRef<InnerValueType>& member) {
         FunctionView::assignImage(index, member.asExpr());

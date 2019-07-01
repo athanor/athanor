@@ -2,6 +2,7 @@
 #ifndef SRC_TYPES_SIZEATTR_H_
 #define SRC_TYPES_SIZEATTR_H_
 #include "base/intSize.h"
+
 struct SizeAttr {
     enum class SizeAttrType {
         NO_SIZE,
@@ -10,6 +11,7 @@ struct SizeAttr {
         MAX_SIZE,
         SIZE_RANGE
     };
+
     SizeAttrType sizeType;
     size_t minSize, maxSize;
 
@@ -18,6 +20,26 @@ struct SizeAttr {
         : sizeType(type), minSize(minSize), maxSize(maxSize) {}
 
    public:
+    inline void merge(const SizeAttr& other) {
+        minSize = std::min(minSize, other.minSize);
+        maxSize = std::max(maxSize, other.maxSize);
+        if (minSize == maxSize) {
+            sizeType = SizeAttrType::EXACT_SIZE;
+            return;
+        }
+        bool smallest = (minSize == std::numeric_limits<UInt>().min());
+        bool largest = (maxSize == std::numeric_limits<UInt>().max());
+        if (smallest && largest) {
+            sizeType = SizeAttrType::NO_SIZE;
+        } else if (smallest && !largest) {
+            sizeType = SizeAttrType::MAX_SIZE;
+        } else if (!smallest && largest) {
+            sizeType = SizeAttrType::MIN_SIZE;
+        } else {
+            sizeType = SizeAttrType::SIZE_RANGE;
+        }
+    }
+
     friend inline SizeAttr noSize() {
         return SizeAttr(SizeAttrType::NO_SIZE, 0,
                         std::numeric_limits<UInt>::max());

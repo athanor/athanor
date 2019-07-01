@@ -9,6 +9,9 @@
 #include "utils/ignoreUnused.h"
 #include "utils/simpleCache.h"
 
+static const char* NO_FUNCTION_UNDEFINED_MEMBERS =
+    "Not yet handling functions with undefined members.\n";
+
 struct Dimension {
     // dimensions are like int domain bounds, lower and upper inclusive
     Int lower;
@@ -171,7 +174,7 @@ struct FunctionView : public ExprInterface<FunctionView>,
     inline const ExprRefVec<InnerViewType>& getRange() const {
         return mpark::get<ExprRefVec<InnerViewType>>(range);
     }
-    inline AnyExprVec& getAnyMembers() { return range; }
+    virtual inline AnyExprVec& getChildenOperands() { shouldNotBeCalledPanic; }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
         return getRange<InnerViewType>();

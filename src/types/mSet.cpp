@@ -256,3 +256,5 @@ template <>
 UInt getSize<MSetValue>(const MSetValue& v) {
     return v.numberElements();
 }
+
+AnyExprVec& MSetValue::getChildenOperands() { return members; }

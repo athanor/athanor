@@ -6,6 +6,8 @@
 #include "operators/previousValueCache.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
+#include "types/intVal.h"
+#include "types/sequenceVal.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
 using OperandsSequenceTrigger = OperatorTrates<OpProd>::OperandsSequenceTrigger;
@@ -279,9 +281,19 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpProd> {
-    static ExprRef<IntView> make(ExprRef<SequenceView>);
+    static ExprRef<IntView> make(
+        ExprRef<SequenceView>,
+        const shared_ptr<SequenceDomain>& operandDomain = nullptr);
 };
 
-ExprRef<IntView> OpMaker<OpProd>::make(ExprRef<SequenceView> o) {
+ExprRef<IntView> OpMaker<OpProd>::make(
+    ExprRef<SequenceView> o, const shared_ptr<SequenceDomain>& operandDomain) {
+    if (operandDomain &&
+        mpark::get_if<shared_ptr<EmptyDomain>>(&operandDomain->inner)) {
+        auto val = ::make<IntValue>();
+        val->value = 1;
+        val->setConstant(true);
+        return val.asExpr();
+    }
     return make_shared<OpProd>(move(o));
 }

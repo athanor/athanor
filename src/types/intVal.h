@@ -9,15 +9,37 @@
 
 inline auto intBound(Int a, Int b) { return std::make_pair(a, b); }
 struct IntDomain {
-    const std::vector<std::pair<Int, Int>> bounds;
-    const UInt domainSize;
+    std::vector<std::pair<Int, Int>> bounds;
+    UInt domainSize;
     IntDomain(std::vector<std::pair<Int, Int>> bounds)
-        : bounds(std::move(bounds)),
+        : bounds(normaliseBounds(std::move(bounds))),
           domainSize(std::accumulate(
               this->bounds.begin(), this->bounds.end(), 0,
               [](UInt total, auto& range) {
                   return total + (range.second - range.first) + 1;
               })) {}
+    // sort and unify overlaps
+    static std::vector<std::pair<Int, Int>> normaliseBounds(
+        std::vector<std::pair<Int, Int>> bounds) {
+        std::sort(bounds.begin(), bounds.end());
+        std::remove_if(bounds.begin(), bounds.end(),
+                       [](auto& b) { return b.second < b.first; });
+        for (size_t i = 0; i < bounds.size() - 1; i++) {
+            // merge if overlap or forms contiguous domain
+            auto& bound = bounds[i];
+            auto& nextBound = bounds[i + 1];
+            if (bound.second >= nextBound.first - 1) {
+                bound.second = std::max(bound.second, nextBound.second);
+                bounds.erase(bounds.begin() + i + 1);
+            }
+        }
+        return bounds;
+    }
+
+    void merge(const IntDomain& other) {
+        bounds.insert(bounds.end(), other.bounds.begin(), other.bounds.end());
+        bounds = normaliseBounds(std::move(bounds));
+    }
     // structs for possible return values of findContainingBound function below
     struct FoundBound {
         size_t index;

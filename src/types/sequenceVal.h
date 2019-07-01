@@ -20,6 +20,12 @@ struct SequenceDomain {
         checkMaxSize();
     }
 
+    void merge(SequenceDomain& other) {
+        sizeAttr.merge(other.sizeAttr);
+        mergeDomains(inner, other.inner);
+        injective &= other.injective;
+    }
+
    private:
     void checkMaxSize() {
         if (sizeAttr.sizeType == SizeAttr::SizeAttrType::NO_SIZE ||
@@ -45,6 +51,7 @@ struct SequenceValue : public SequenceView, public ValBase {
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
+    AnyExprVec& getChildenOperands() final;
     template <typename InnerValueType>
     bool containsMember(const ValRef<InnerValueType>& val) {
         debug_code(assert(injective));

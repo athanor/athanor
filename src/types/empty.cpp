@@ -27,8 +27,9 @@ void deepCopy<EmptyValue>(const EmptyValue&, EmptyValue&) {
 }
 
 template <>
-ostream& prettyPrint<EmptyDomain>(ostream&, const EmptyDomain&) {
-    shouldNotBeCalledPanic;
+ostream& prettyPrint<EmptyDomain>(ostream& os, const EmptyDomain&) {
+    os << "empty";
+    return os;
 }
 
 void matchInnerType(const EmptyValue&, EmptyValue&) { shouldNotBeCalledPanic; }

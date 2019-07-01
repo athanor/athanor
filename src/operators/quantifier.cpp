@@ -1,5 +1,4 @@
 #include "operators/quantifier.h"
-
 #include <vector>
 #include "operators/intRange.h"
 #include "operators/opAnd.h"
@@ -13,48 +12,11 @@
 #include "operators/opToInt.h"
 #include "operators/opTupleIndex.h"
 #include "operators/opTupleLit.h"
+#include "operators/operatorMakers.h"
 #include "operators/quantifier.h"
 #include "triggers/allTriggers.h"
 #include "types/allTypes.h"
 #include "types/intVal.h"
-
-template <typename Op>
-struct OpMaker;
-template <>
-struct OpMaker<OpTupleLit> {
-    static ExprRef<TupleView> make(std::vector<AnyExprRef> members);
-};
-template <bool minMode>
-struct OpMinMax;
-typedef OpMinMax<true> OpMin;
-typedef OpMinMax<false> OpMax;
-
-template <bool minMode>
-struct OpMaker<OpMinMax<minMode>> {
-    static ExprRef<IntView> make(ExprRef<SequenceView>);
-};
-
-struct OpAnd;
-template <>
-struct OpMaker<OpAnd> {
-    static ExprRef<BoolView> make(ExprRef<SequenceView>);
-};
-
-struct OpSequenceLit;
-template <>
-struct OpMaker<OpSequenceLit> {
-    static ExprRef<SequenceView> make(AnyExprVec members);
-};
-struct OpSum;
-template <>
-struct OpMaker<OpSum> {
-    static ExprRef<IntView> make(ExprRef<SequenceView>);
-};
-struct OpMinus;
-template <>
-struct OpMaker<OpMinus> {
-    static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
-};
 
 using namespace std;
 bool isOpSum(const AnyExprRef& expr) {

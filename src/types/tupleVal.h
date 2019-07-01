@@ -17,6 +17,13 @@ struct TupleDomain {
         : inners({makeAnyDomainRef(std::forward<DomainTypes>(inners))...}) {}
 
     TupleDomain(std::vector<AnyDomainRef> inners) : inners(std::move(inners)) {}
+
+    void merge(TupleDomain& other) {
+        assert(inners.size() == other.inners.size());
+        for (size_t i = 0; i < inners.size(); i++) {
+            mergeDomains(inners[i], other.inners[i]);
+        }
+    }
 };
 
 struct TupleValue : public TupleView, public ValBase {

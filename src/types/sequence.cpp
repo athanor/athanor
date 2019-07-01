@@ -402,3 +402,4 @@ template <>
 UInt getSize<SequenceValue>(const SequenceValue& v) {
     return v.numberElements();
 }
+AnyExprVec& SequenceValue::getChildenOperands() { return members; }

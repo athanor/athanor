@@ -19,6 +19,10 @@ struct SetDomain {
           inner(makeAnyDomainRef(std::forward<DomainType>(inner))) {
         trimMaxSize();
     }
+    void merge(SetDomain& other) {
+        sizeAttr.merge(other.sizeAttr);
+        mergeDomains(inner, other.inner);
+    }
 
    private:
     inline void trimMaxSize() {
@@ -45,6 +49,7 @@ struct SetValue : public SetView, public ValBase {
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
+    AnyExprVec& getChildenOperands() final;
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline bool addMember(const ValRef<InnerValueType>& member) {
         if (SetView::addMember(member.asExpr())) {

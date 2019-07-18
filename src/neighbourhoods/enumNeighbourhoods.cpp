@@ -6,7 +6,7 @@
 
 auto getRandomValueInDomain(const EnumDomain& d, StatsContainer& stats) {
     ++stats.minorNodeCount;
-    return globalRandom<UInt>(0, d.valueNames.size());
+    return globalRandom<UInt>(0, d.valueNames.size() - 1);
 }
 
 template <>

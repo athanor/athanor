@@ -40,7 +40,11 @@ function checkExitStatus() {
 function validateSolutions() {
     solsDir="$outputDir/sols"
     mkdir -p "$solsDir"
-    if ! cat "$outputDir/solver-output.txt" | ../scripts/validateSolutions.py "$solsDir" conjure "$instance" &> "$outputDir/validator-output.txt"
+    if [ "$withParam" -eq 1 ]
+    then validateCommand=(../scripts/validateSolutions.py "$solsDir" conjure "$instance" "$param")
+    else validateCommand=(../scripts/validateSolutions.py "$solsDir" conjure "$instance")
+    fi
+    if ! cat "$outputDir/solver-output.txt" | "${validateCommand[@]}" &> "$outputDir/validator-output.txt"
         then if grep 'No solutions found' "$outputDir/validator-output.txt"  > /dev/null && grep -E '^\$testing:no-solutions' "$instance" > /dev/null
             then return 0
             fi
@@ -51,7 +55,11 @@ function validateSolutions() {
 }
 
 function runPostChecks() {
-    postCheck=$(dirname "$instance")/$(basename "$instance" .essence)-post-check.sh
+    if [ "$withParam" -eq 1 ] ; then
+        postCheck=$(dirname "$param")/$(basename "$param" .param)-post-check.sh
+    else
+        postCheck=$(dirname "$instance")/$(basename "$instance" .essence)-post-check.sh
+    fi
     if [ -e "$postCheck" ]
     then if ! "$postCheck"  "$outputDir/solver-output.txt" &> "$outputDir/post-check.txt"
             then markFailed "outputDir" "post check failed."
@@ -62,17 +70,30 @@ function runPostChecks() {
 }
 
 for instance in instances/*.essence ; do
-    ((numberInstances += 1))
-    echo "Running test $instance with seed $seed"
-    outputDir="output/$(basename "$instance" .essence)-$seed"
-    mkdir -p "$outputDir"
-    numberIterations=$(grep -E '^\$testing:numberIterations=' "$instance" | grep -Eo '[0-9]+')
-    "$solver" --sanityCheck --randomSeed $seed --iterationLimit $numberIterations --spec $instance &> "$outputDir/solver-output.txt"
-    exitStatus=$?
-    checkExitStatus &&
-    validateSolutions &&
-    runPostChecks &&
-    markPassed "$outputDir"    
+    for param in instances/$(basename "$instance" .essence)*.param ; do
+        ((numberInstances += 1))
+        if [[ "$param" == "instances/$(basename "$instance" .essence)*.param" ]] ; then
+            withParam=0
+            echo "Running test $instance with seed $seed"
+            outputDir="output/$(basename "$instance" .essence)-$seed"
+            mkdir -p "$outputDir"
+            numberIterations=$(grep -E '^\$testing:numberIterations=' "$instance" | grep -Eo '[0-9]+')
+            "$solver" --sanityCheck --randomSeed $seed --iterationLimit $numberIterations --spec "$instance" &> "$outputDir/solver-output.txt"
+        else
+            withParam=1
+            echo "Running test $instance with param $param with seed $seed"
+            outputDir="output/$(basename "$instance" .essence)-$(basename "$param" .param)-$seed"
+            mkdir -p "$outputDir"
+            numberIterations=$(grep -E '^\$testing:numberIterations=' "$param" | grep -Eo '[0-9]+')
+            "$solver" --sanityCheck --randomSeed $seed --iterationLimit $numberIterations --spec "$instance" --param "$param" &> "$outputDir/solver-output.txt"
+            
+        fi
+        exitStatus=$?
+        checkExitStatus &&
+        validateSolutions &&
+        runPostChecks &&
+        markPassed "$outputDir"    
+    done
 done
 
 if (( failedInstances > 0 )); then

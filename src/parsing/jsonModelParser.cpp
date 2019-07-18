@@ -285,7 +285,7 @@ ParseResult parseSequenceFoldingOp(json& operandExpr,
         cerr << *sequenceDomain << endl;
         exit(1);
     }
-    auto domain = (is_same<BoolView, ExpectedInnerDomain>::value)
+    auto domain = (is_same<BoolView, SequenceInnerViewType>::value)
                       ? AnyDomainRef(fakeBoolDomain)
                       : AnyDomainRef(fakeIntDomain);
     return ParseResult(domain, op, false);

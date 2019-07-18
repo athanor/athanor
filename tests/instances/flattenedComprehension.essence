@@ -1,3 +1,4 @@
+$testing:numberIterations=100000
 find s : set (size 3) of (int(1..5), set (minSize 2)   of int(1..10))
 such that
 forAll (i,j) in s. i = 1

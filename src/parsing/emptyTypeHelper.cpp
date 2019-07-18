@@ -69,8 +69,8 @@ void tryRemoveEmptyType(Domain& domain,
                         typename AssociatedViewType<Domain>::type& val) {
     // putting unneeded auto type to prevent instantiation untill type matches
     auto overload = overloaded(
-        [](EmptyDomain&, auto&&) { shouldNotBeCalledPanic; },
-        [](BoolDomain&, auto&&) {}, [](IntDomain&, auto&&) {},
+        [](EmptyDomain&, auto&) { shouldNotBeCalledPanic; },
+        [](BoolDomain&, auto&) {}, [](IntDomain&, auto&) {},
         [](EnumDomain&, auto&) {},
         [&](TupleDomain& domain, auto& val) {
             for (size_t i = 0; i < domain.inners.size(); i++) {

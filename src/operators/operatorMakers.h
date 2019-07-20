@@ -67,6 +67,13 @@ template <>
 struct OpMaker<OpSequenceLit> {
     static ExprRef<SequenceView> make(AnyExprVec members);
 };
+
+struct OpMSetLit;
+template <>
+struct OpMaker<OpMSetLit> {
+    static ExprRef<MSetView> make(AnyExprVec members);
+};
+
 template <typename OperandView>
 struct OpNotEq;
 template <typename OperandView>

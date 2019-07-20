@@ -17,3 +17,13 @@ shared_ptr<MSetDomain> parseDomainMSet(json& mSetDomainExpr,
     return make_shared<MSetDomain>(sizeAttr,
                                    parseDomain(mSetDomainExpr[2], parsedModel));
 }
+
+ParseResult parseOpMSetLit(json& mSetExpr, ParsedModel& parsedModel) {
+    auto result = parseAllAsSameType(mSetExpr, parsedModel);
+    size_t numberElements = result.numberElements();
+    auto mSet = OpMaker<OpMSetLit>::make(move(result.exprs));
+    mSet->setConstant(result.allConstant);
+    auto domain =
+        make_shared<MSetDomain>(exactSize(numberElements), result.domain);
+    return ParseResult(domain, mSet, result.hasEmptyType);
+}

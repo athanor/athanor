@@ -1,9 +1,9 @@
 
 #ifndef SRC_UTILS_RUNCOMMAND_H_
 #define SRC_UTILS_RUNCOMMAND_H_
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #include <array>
 #include <cstdio>

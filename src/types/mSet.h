@@ -19,6 +19,9 @@ struct MSetView : public ExprInterface<MSetView>,
     AnyExprVec members;
     SimpleCache<HashType> cachedHashTotal;
 
+    MSetView() {}
+    MSetView(AnyExprVec members) : members(std::move(members)) {}
+
    private:
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void addMember(const ExprRef<InnerViewType>& member) {

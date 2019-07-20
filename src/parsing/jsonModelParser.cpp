@@ -18,7 +18,7 @@ using namespace lib;
 using namespace nlohmann;
 namespace {
 auto fakeBoolDomain = make_shared<BoolDomain>();
-    auto fakeIntDomain = make_shared<IntDomain>(vector<pair<Int, Int>>({{0, 0}}));
+auto fakeIntDomain = make_shared<IntDomain>(vector<pair<Int, Int>>({{0, 0}}));
 }  // namespace
 
 ParsedModel::ParsedModel() : builder(make_unique<ModelBuilder>()) {}
@@ -63,6 +63,7 @@ ParseResult parseOpMinus(json& minusExpr, ParsedModel& parsedModel);
 ParseResult parseOpPower(json& powerExpr, ParsedModel& parsedModel);
 ParseResult parseOpNegate(json& modExpr, ParsedModel& parsedModel);
 ParseResult parseOpMatrixLit(json&, ParsedModel&);
+ParseResult parseOpMSetLit(json&, ParsedModel&);
 ParseResult parseOpIn(json& inExpr, ParsedModel& parsedModel);
 ParseResult parseOpNot(json&, ParsedModel&);
 ParseResult parseOpSubsetEq(json& subsetExpr, ParsedModel& parsedModel);
@@ -307,6 +308,7 @@ optional<ParseResult> tryParseExpr(json& essenceExpr,
              {"ConstantBool", parseConstantBool},
              {"AbsLitSet", parseOpSetLit},
              {"AbsLitMatrix", parseOpMatrixLit},
+            {"AbsLitMSet", parseOpMSetLit},
              {"AbsLitFunction", parseOpFunctionLit},
              {"AbsLitTuple", parseOpTupleLit},
              {"AbsLitRecord", parseOpRecordLit},

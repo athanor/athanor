@@ -1,0 +1,4 @@
+$testing:numberIterations=1000
+find s : set of int(1..20)
+such that forAll i in s . i % 2 = 0
+maximising |s|

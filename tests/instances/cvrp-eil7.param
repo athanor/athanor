@@ -1,5 +1,5 @@
 
-$testing:numberIterations = 20000
+$testing:numberIterations=20000
 letting numberLocations be  6
 letting costs be function (
 (0,0) --> 0,

@@ -1,3 +1,5 @@
+
+$testing:numberIterations=1000
 find a,b,c,d,e : int(1..5)
 such that
 forAll i in mset(a,b,c,d,e) . i in {1,2,3,4,5}

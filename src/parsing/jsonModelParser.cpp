@@ -62,7 +62,7 @@ ParseResult parseOpDiv(json& modExpr, ParsedModel& parsedModel);
 ParseResult parseOpMinus(json& minusExpr, ParsedModel& parsedModel);
 ParseResult parseOpPower(json& powerExpr, ParsedModel& parsedModel);
 ParseResult parseOpNegate(json& modExpr, ParsedModel& parsedModel);
-ParseResult parseOpMatrixLit(json&, ParsedModel&);
+ParseResult parseOpSequenceLit(json&, ParsedModel&);
 ParseResult parseOpMSetLit(json&, ParsedModel&);
 ParseResult parseOpIn(json& inExpr, ParsedModel& parsedModel);
 ParseResult parseOpNot(json&, ParsedModel&);
@@ -167,7 +167,7 @@ ParseResult parseOpRelationProj(json& operandsExpr, ParsedModel& parsedModel) {
                     mpark::get<shared_ptr<SequenceDomain>>(leftOperand.domain)
                         ->inner;
                 return parseOpSequenceIndex(
-                    innerDomain, sequence, operandsExpr[1],
+                    innerDomain, sequence, operandsExpr[1][0],
                     leftOperand.hasEmptyType, parsedModel);
             },
             [&](ExprRef<FunctionView>& function) -> ParseResult {
@@ -206,6 +206,14 @@ ParseResult parseOpIndexing(json& operandsExpr, ParsedModel& parsedModel) {
                     return parseOpTupleIndex(tupleDomain, tuple,
                                              operandsExpr[1], parsedModel);
                 }
+            },
+            [&](ExprRef<SequenceView>& sequence) -> ParseResult {
+                auto& innerDomain =
+                    mpark::get<shared_ptr<SequenceDomain>>(leftOperand.domain)
+                        ->inner;
+                return parseOpSequenceIndex(
+                    innerDomain, sequence, operandsExpr[1],
+                    leftOperand.hasEmptyType, parsedModel);
             },
             [&](auto&& operand) -> ParseResult {
                 cerr << "Error, not yet handling op "
@@ -307,7 +315,9 @@ optional<ParseResult> tryParseExpr(json& essenceExpr,
             {{"ConstantInt", parseConstantInt},
              {"ConstantBool", parseConstantBool},
              {"AbsLitSet", parseOpSetLit},
-             {"AbsLitMatrix", parseOpMatrixLit},
+             {"AbsLitSequence", parseOpSequenceLit},
+             {"AbsLitMatrix",
+              [](auto& j, auto& pm) { return parseOpSequenceLit(j[1], pm); }},
              {"AbsLitMSet", parseOpMSetLit},
              {"AbsLitFunction", parseOpFunctionLit},
              {"AbsLitTuple", parseOpTupleLit},

@@ -27,7 +27,7 @@ ParseResult parseOpSequenceIndex(AnyDomainRef& innerDomain,
                                  json& indexExpr, bool hasEmptyType,
                                  ParsedModel& parsedModel) {
     auto index =
-        expect<IntView>(parseExpr(indexExpr[0], parsedModel).expr, [](auto&&) {
+        expect<IntView>(parseExpr(indexExpr, parsedModel).expr, [](auto&&) {
             cerr << "Sequence must be indexed by an int "
                     "expression.\n";
         });
@@ -45,8 +45,7 @@ ParseResult parseOpSequenceIndex(AnyDomainRef& innerDomain,
 }
 
 // currently designed for matrices
-ParseResult parseOpMatrixLit(json& expr, ParsedModel& parsedModel) {
-    auto sequenceExpr = expr[1];
+ParseResult parseOpSequenceLit(json& sequenceExpr, ParsedModel& parsedModel) {
     auto result = parseAllAsSameType(sequenceExpr, parsedModel);
     size_t numberElements = result.numberElements();
     auto sequence = OpMaker<OpSequenceLit>::make(move(result.exprs));

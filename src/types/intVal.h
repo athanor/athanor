@@ -13,11 +13,16 @@ struct IntDomain {
     UInt domainSize;
     IntDomain(std::vector<std::pair<Int, Int>> bounds)
         : bounds(normaliseBounds(std::move(bounds))),
-          domainSize(std::accumulate(
-              this->bounds.begin(), this->bounds.end(), 0,
-              [](UInt total, auto& range) {
-                  return total + (range.second - range.first) + 1;
-              })) {}
+          domainSize(calculateDomainSize(this->bounds)) {}
+
+    static inline UInt calculateDomainSize(
+        const std::vector<std::pair<Int, Int>>& bounds) {
+        return std::accumulate(
+            bounds.begin(), bounds.end(), 0, [](UInt total, auto& range) {
+                return total + (range.second - range.first) + 1;
+            });
+    }
+
     // sort and unify overlaps
     static std::vector<std::pair<Int, Int>> normaliseBounds(
         std::vector<std::pair<Int, Int>> bounds) {
@@ -39,6 +44,7 @@ struct IntDomain {
     void merge(const IntDomain& other) {
         bounds.insert(bounds.end(), other.bounds.begin(), other.bounds.end());
         bounds = normaliseBounds(std::move(bounds));
+        domainSize = calculateDomainSize(bounds);
     }
     // structs for possible return values of findContainingBound function below
     struct FoundBound {

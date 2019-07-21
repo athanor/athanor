@@ -34,9 +34,7 @@ struct ExprTrigger
         : ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>(
               op->getMembers<View>()[index]),
           ExprTriggerBase(op, index) {}
-    void adapterValueChanged() {
-        this->op->notifyMemberChanged(this->index);
-    }
+    void adapterValueChanged() { this->op->notifyMemberChanged(this->index); }
 
     void reattachTrigger() final {
         deleteTrigger(static_pointer_cast<ExprTrigger<TriggerType>>(

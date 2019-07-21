@@ -1,18 +1,42 @@
 #!/usr/bin/env bash
+#to skip sanity check which is slow!, pass arg skipSanityCheck 
+#to use release build pass useReleaseBuild
+sanityCheckFlag="--sanityCheck"
+useReleaseBuild=0
+
+for flag in $@ ; do
+    if [[ "$flag" == "skipSanityCheck" ]] ; then
+        sanityCheckFlag=""
+    elif [[ "$flag" == "useReleaseBuild" ]] ; then
+        useReleaseBuild=1
+    fi
+done
+
 
 
 pushd $(dirname "$0") > /dev/null
 trap "popd > /dev/null" EXIT
 
 echo "Compiling..."
-make -C .. athanorDebugMode -j8
+if [[ "$useReleaseBuild" -eq 0 ]] ; then
+    make -C .. athanorDebugMode -j8
+else
+    make -C .. -j8
+fi
 if [ "$?" -ne 0 ]
 then echo "Compiling failed. Exiting tests." 1>&2
     exit 1
 fi
 
 #Remember where this src folder is
-solver="$PWD/../build/debug/athanor"
+if [ "$useReleaseBuild" -eq 0 ] ; then
+    solver="$PWD/../build/debug/athanor"
+    disableDebugLogFlag="--disableDebugLog"
+else
+    solver="$PWD/../build/release/athanor"
+    disableDebugLogFlag=""
+fi
+
 
 failedInstances=0
 numberInstances=0
@@ -78,14 +102,14 @@ for instance in instances/*.essence ; do
             outputDir="output/$(basename "$instance" .essence)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$instance" | grep -Eo '[0-9]+')
-            "$solver" --disableDebugLog --sanityCheck --randomSeed $seed --iterationLimit $numberIterations --spec "$instance" &> "$outputDir/solver-output.txt"
+            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations --spec "$instance" &> "$outputDir/solver-output.txt"
         else
             withParam=1
             echo "Running test $instance with param $param with seed $seed"
             outputDir="output/$(basename "$instance" .essence)-$(basename "$param" .param)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$param" | grep -Eo '[0-9]+')
-            "$solver" --disableDebugLog --sanityCheck --randomSeed $seed --iterationLimit $numberIterations --spec "$instance" --param "$param" &> "$outputDir/solver-output.txt"
+            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations --spec "$instance" --param "$param" &> "$outputDir/solver-output.txt"
             
         fi
         exitStatus=$?

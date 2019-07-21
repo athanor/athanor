@@ -1,19 +1,19 @@
 all: athanor
 
-athanor: build/Makefile
-	@$(MAKE) -C build
+athanor: build/release/Makefile
+	@$(MAKE) -C build/release
 
 athanorDebugMode: build/debug/Makefile
 	@$(MAKE) -C build/debug
 
 
 
-build/Makefile:
+build/release/Makefile:
 	@echo "Fetching libs from github..."
 	git submodule init
 	git submodule update
-	mkdir -p build
-	cd build ;  cmake ..
+	mkdir -p build/release
+	cd build/release ;  cmake ../..
 
 
 build/debug/Makefile:

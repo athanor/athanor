@@ -74,6 +74,8 @@ For parallel build, `make -jn` replacing n with number of cores.
 
 *Note*, you can specify the compiler to use by writing `export CXX=PUT_COMPILER_COMMAND_HERE`.  For example `export CXX=clang++`.
 
+The binary `athanor` will be placed in `<pwd>/build/release/athanor`
+    
 ### Manual install:
 ```
 git clone https://github.com/__ATHANOR__/__ATHANOR__
@@ -88,9 +90,9 @@ git submodule update
 Then make a build directory and build __ATHANOR__ there
 
 ```
-mkdir build
-cd build
-cmake ..
+mkdir -p build/release
+cd build/release
+cmake ../..
 make
 ```
 For parallel build, `make -jn` replacing n with number of cores.

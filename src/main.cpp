@@ -96,6 +96,11 @@ auto& sanityCheckFlag = argParser.add<ComplexFlag>(
 auto& verboseErrorFlag = sanityCheckFlag.add<Flag>(
     "--verbose", Policy::OPTIONAL, "Verbose printing at point of error.",
     [](auto&) { verboseSanityError = true; });
+bool repeatSanityCheckOfConst = false;
+auto& repeatSanityCheckFlag = sanityCheckFlag.add<Flag>(
+    "--repeatCheckOfConst", Policy::OPTIONAL,
+    "repeat the checks of expressions that are constant.",
+    [](auto&) { repeatSanityCheckOfConst = true; });
 
 debug_code(bool debugLogAllowed = true;
            auto& disableDebugLoggingFlag = argParser.add<Flag>(

@@ -18,7 +18,8 @@ using std::experimental::make_optional;
 using std::experimental::nullopt;
 using std::experimental::optional;
 }  // namespace lib
-
+extern bool sanityCheckRepeatMode;
+extern bool repeatSanityCheckOfConst;
 extern bool verboseSanityError;
 struct SanityCheckException {
     const std::string errorMessage;
@@ -71,7 +72,6 @@ struct AnyIterRef;
 struct PathExtension;
 struct ViolationContext;
 
-extern bool sanityCheckRepeatMode;
 template <typename View>
 struct ExprInterface;
 template <typename View>
@@ -212,6 +212,8 @@ struct ExprInterface : public Undefinable<View> {
         if (!sanityCheckedOnce) {
             sanityCheckedOnce = true;
             sanityCheckRepeat = sanityCheckRepeatMode;
+        } else if (!repeatSanityCheckOfConst && this->isConstant()) {
+            return;
         } else if (sanityCheckRepeat != sanityCheckRepeatMode) {
             sanityCheckRepeat = sanityCheckRepeatMode;
         } else {

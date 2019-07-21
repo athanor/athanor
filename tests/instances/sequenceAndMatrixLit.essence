@@ -1,0 +1,7 @@
+$testing:numberIterations=0
+letting a be sequence (1,2,3,4,5)
+letting b be [1,2,3,4,5]
+find s,t : sequence (size 5) of int(1..5)
+such that 
+forAll i : int(1..5) .
+    s(i) = a(i) /\ t(i) = b[i]

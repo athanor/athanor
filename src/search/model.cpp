@@ -163,6 +163,7 @@ void Model::debugSanityCheck() const {
         mpark::visit([&](auto& expr) { expr->debugSanityCheck(); },
                      indexExprPair.second);
     }
+    sanityCheckRepeatMode = !sanityCheckRepeatMode;
 }
 
 Objective Model::getObjective() const {

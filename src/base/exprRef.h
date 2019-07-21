@@ -70,6 +70,8 @@ typedef std::function<std::pair<bool, AnyExprRef>(AnyExprRef)>
 struct AnyIterRef;
 struct PathExtension;
 struct ViolationContext;
+
+extern bool sanityCheckRepeatMode;
 template <typename View>
 struct ExprInterface;
 template <typename View>
@@ -101,7 +103,11 @@ struct ExprInterface : public Undefinable<View> {
     struct EvaluatedFlag;
     struct IsConstantFlag;
     struct AppearsDefinedFlag;
-    FlagSet<EvaluatedFlag, IsConstantFlag, AppearsDefinedFlag> flags;
+    struct SanityCheckedOnceFlag;
+    struct SanityCheckRepeatFlag;
+    FlagSet<EvaluatedFlag, IsConstantFlag, AppearsDefinedFlag,
+            SanityCheckedOnceFlag, SanityCheckRepeatFlag>
+        flags;
 
    public:
     using Undefinable<View>::appearsDefined;
@@ -197,6 +203,20 @@ struct ExprInterface : public Undefinable<View> {
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
     virtual std::pair<bool, ExprRef<View>> optimise(PathExtension path) = 0;
     inline void debugSanityCheck() const {
+        auto sanityCheckedOnce =
+            const_cast<ExprInterface<View>&>(*this)
+                .flags.template get<SanityCheckedOnceFlag>();
+        auto sanityCheckRepeat =
+            const_cast<ExprInterface<View>&>(*this)
+                .flags.template get<SanityCheckRepeatFlag>();
+        if (!sanityCheckedOnce) {
+            sanityCheckedOnce = true;
+            sanityCheckRepeat = sanityCheckRepeatMode;
+        } else if (sanityCheckRepeat != sanityCheckRepeatMode) {
+            sanityCheckRepeat = sanityCheckRepeatMode;
+        } else {
+            return;
+        }
         try {
             debugSanityCheckImpl();
         } catch (SanityCheckException& e) {

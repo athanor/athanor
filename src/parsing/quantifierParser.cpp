@@ -163,15 +163,13 @@ void handleAsPowerSet(json& generatorExpr,
 template <typename ContainerDomainType, typename Quantifier>
 void parseGenerator(json& generatorParent,
                     shared_ptr<ContainerDomainType>& containerDomain,
-                    Quantifier& quantifier, bool containerHasEmptyType,
+                    const AnyDomainRef& innerDomain, Quantifier& quantifier,
+                    bool containerHasEmptyType,
                     vector<string>& variablesAddedToScope,
                     ParsedModel& parsedModel) {
     json& generatorExpr = (generatorParent.count("GenInExpr"))
                               ? generatorParent["GenInExpr"]
                               : generatorParent["GenDomainNoRepr"];
-    const AnyDomainRef& innerDomain = overloaded(
-        [&](const FunctionDomain& dom) { return dom.to; },
-        [&](const auto& dom) { return dom.inner; })(*containerDomain);
     mpark::visit(
         [&](const auto& innerDomain) {
             typedef typename BaseType<decltype(innerDomain)>::element_type
@@ -309,8 +307,8 @@ ParseResult buildQuant(json& comprExpr, ExprRef<ContainerReturnType>& container,
     auto quantifier = make_shared<Quantifier<ContainerReturnType>>(container);
     vector<string> variablesAddedToScope;
     parseGenerator(comprExpr[1][generatorIndex]["Generator"], domain,
-                   quantifier, containerHasEmptyType, variablesAddedToScope,
-                   parsedModel);
+                   innerDomain, quantifier, containerHasEmptyType,
+                   variablesAddedToScope, parsedModel);
     addConditionsToQuantifier(comprExpr, quantifier, generatorIndex,
                               parsedModel);
 

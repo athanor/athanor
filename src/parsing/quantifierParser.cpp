@@ -297,8 +297,15 @@ optional<ParseResult> parseComprehensionImpl(json& comprExpr,
 template <typename ContainerReturnType, typename ContainerDomainType>
 ParseResult buildQuant(json& comprExpr, ExprRef<ContainerReturnType>& container,
                        shared_ptr<ContainerDomainType>& domain,
+                       const AnyDomainRef& innerDomain,
                        bool containerHasEmptyType, size_t generatorIndex,
                        ParsedModel& parsedModel) {
+    if (mpark::get_if<shared_ptr<EmptyDomain>>(&innerDomain)) {
+        auto val = make<SequenceValue>();
+        val->members.emplace<ExprRefVec<EmptyView>>();
+        return ParseResult(fakeSequenceDomain(make_shared<EmptyDomain>()),
+                           val.asExpr(), true);
+    }
     auto quantifier = make_shared<Quantifier<ContainerReturnType>>(container);
     vector<string> variablesAddedToScope;
     parseGenerator(comprExpr[1][generatorIndex]["Generator"], domain,
@@ -356,28 +363,28 @@ optional<ParseResult> parseComprehensionImpl(json& comprExpr,
         [&](ExprRef<SetView>& set) {
             auto& domain =
                 mpark::get<shared_ptr<SetDomain>>(quantifyingOver.domain);
-            return buildQuant(comprExpr, set, domain,
+            return buildQuant(comprExpr, set, domain, domain->inner,
                               quantifyingOver.hasEmptyType, generatorIndex,
                               parsedModel);
         },
         [&](ExprRef<MSetView>& mSet) {
             auto& domain =
                 mpark::get<shared_ptr<MSetDomain>>(quantifyingOver.domain);
-            return buildQuant(comprExpr, mSet, domain,
+            return buildQuant(comprExpr, mSet, domain, domain->inner,
                               quantifyingOver.hasEmptyType, generatorIndex,
                               parsedModel);
         },
         [&](ExprRef<SequenceView>& sequence) {
             auto& domain =
                 mpark::get<shared_ptr<SequenceDomain>>(quantifyingOver.domain);
-            return buildQuant(comprExpr, sequence, domain,
+            return buildQuant(comprExpr, sequence, domain, domain->inner,
                               quantifyingOver.hasEmptyType, generatorIndex,
                               parsedModel);
         },
         [&](ExprRef<FunctionView>& function) {
             auto& domain =
                 mpark::get<shared_ptr<FunctionDomain>>(quantifyingOver.domain);
-            return buildQuant(comprExpr, function, domain,
+            return buildQuant(comprExpr, function, domain, domain->to,
                               quantifyingOver.hasEmptyType, generatorIndex,
                               parsedModel);
         },

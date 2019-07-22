@@ -9,6 +9,9 @@ for flag in $@ ; do
         sanityCheckFlag=""
     elif [[ "$flag" == "useReleaseBuild" ]] ; then
         useReleaseBuild=1
+    else 
+        echo "bad argument, see test docs." 1>&2
+        exit 1
     fi
 done
 
@@ -102,14 +105,14 @@ for instance in instances/*.essence ; do
             outputDir="output/$(basename "$instance" .essence)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$instance" | grep -Eo '[0-9]+')
-            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations --spec "$instance" &> "$outputDir/solver-output.txt"
+            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations --solutionLimit 50 --spec "$instance" &> "$outputDir/solver-output.txt"
         else
             withParam=1
             echo "Running test $instance with param $param with seed $seed"
             outputDir="output/$(basename "$instance" .essence)-$(basename "$param" .param)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$param" | grep -Eo '[0-9]+')
-            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations --spec "$instance" --param "$param" &> "$outputDir/solver-output.txt"
+            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations --solutionLimit 50 --spec "$instance" --param "$param" &> "$outputDir/solver-output.txt"
             
         fi
         exitStatus=$?

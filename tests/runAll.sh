@@ -3,7 +3,7 @@
 #to use release build pass useReleaseBuild
 sanityCheckFlag="--sanityCheck"
 useReleaseBuild=0
-
+numberHeadTailSolutions=15
 for flag in $@ ; do
     if [[ "$flag" == "skipSanityCheck" ]] ; then
         sanityCheckFlag=""
@@ -68,8 +68,8 @@ function validateSolutions() {
     solsDir="$outputDir/sols"
     mkdir -p "$solsDir"
     if [ "$withParam" -eq 1 ]
-    then validateCommand=(../scripts/validateSolutions.py "$solsDir" conjure "$instance" "$param")
-    else validateCommand=(../scripts/validateSolutions.py "$solsDir" conjure "$instance")
+    then validateCommand=(../scripts/validateSolutions.py $numberHeadTailSolutions "$solsDir" conjure "$instance" "$param")
+    else validateCommand=(../scripts/validateSolutions.py $numberHeadTailSolutions "$solsDir" conjure "$instance")
     fi
     if ! cat "$outputDir/solver-output.txt" | "${validateCommand[@]}" &> "$outputDir/validator-output.txt"
         then if grep 'No solutions found' "$outputDir/validator-output.txt"  > /dev/null && grep -E '^\$testing:no-solutions' "$instance" > /dev/null
@@ -105,14 +105,14 @@ for instance in instances/*.essence ; do
             outputDir="output/$(basename "$instance" .essence)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$instance" | grep -Eo '[0-9]+')
-            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations --solutionLimit 50 --spec "$instance" &> "$outputDir/solver-output.txt"
+            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations  --spec "$instance" &> "$outputDir/solver-output.txt"
         else
             withParam=1
             echo "Running test $instance with param $param with seed $seed"
             outputDir="output/$(basename "$instance" .essence)-$(basename "$param" .param)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$param" | grep -Eo '[0-9]+')
-            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations --solutionLimit 50 --spec "$instance" --param "$param" &> "$outputDir/solver-output.txt"
+            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations  --spec "$instance" --param "$param" &> "$outputDir/solver-output.txt"
             
         fi
         exitStatus=$?

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+from itertools import chain
 import fileinput
 import os
 import subprocess
@@ -55,6 +56,7 @@ def validateSolution(solutionFilename):
 
 
 def startReading():
+    global numberHeadTailSolutions
     print("Waiting for solutions\n")
     numberSolutions = 0
     file = sys.stdin
@@ -62,16 +64,35 @@ def startReading():
         if "solution start" in line:
             numberSolutions += 1
             solutionFilename = readSolution(file,numberSolutions)
-            validateSolution(solutionFilename)
+            if numberHeadTailSolutions <= 0:
+                validateSolution(solutionFilename)
+    
     if numberSolutions == 0:
         print("***No solutions found.", file=sys.stderr)
         sys.exit(1)
-    else:
-        print("Success, all solutions valid.\nNumber solutions found: " + str(numberSolutions))
-
-
     
+    
+    if numberHeadTailSolutions > 0:
+        n=numberHeadTailSolutions
+        solutionRange = (range(1,numberSolutions+1) if numberSolutions <= n
+            else chain(range(1,int(n/2)+1), 
+                range((numberSolutions+1)-int(n/2),numberSolutions+1)))
+        for solutionNumber in solutionRange:
+            solutionFilename = solutionDir + "/solution" + str(solutionNumber) + ".solution";
+            validateSolution(solutionFilename)
+    
+    print("Success, all solutions valid.\nNumber solutions found: " + str(numberSolutions))
+
+
+
+
 if __name__ == "__main__":
+    try:
+        numberHeadTailSolutions=int(sys.argv[1])
+        del sys.argv[1]
+    except ValueError:
+        numberHeadTailSolutions=0
+        
     try:
         solutionDir = sys.argv[1]
         pathToConjure = sys.argv[2]
@@ -81,6 +102,9 @@ if __name__ == "__main__":
         else:
             paramFile = None
     except IndexError:
-        error("usage:\n" + sys.argv[0] + " solution_dest_directory conjure_exec_command essence_file [essence_param_file]")
+        error("""usage:\n" + sys.argv[0] + " [num_head_tail_sols] solution_dest_directory conjure_exec_command essence_file [essence_param_file]
+num_head_tail_sols is should be a number, if not specified each and every solution is verified before reading the next.  If num_head_tail_sols is specified as an int > 0, all solutions are first read, and then the first and last n/2 are vverified where n is num_head_tail_sols.
+""")
+
     verifyPaths()
     startReading()

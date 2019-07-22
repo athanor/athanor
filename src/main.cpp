@@ -213,7 +213,7 @@ auto& iterationLimitFlag = argParser.add<ComplexFlag>(
 auto& iterationLimitArg = iterationLimitFlag.add<Arg<u_int64_t>>(
     "number_iterations", Policy::MANDATORY, "",
     chain(Converter<u_int64_t>(), [](u_int64_t value) {
-    hasIterationLimit = true;
+        hasIterationLimit = true;
         iterationLimit = value;
         return value;
     }));
@@ -232,7 +232,7 @@ auto& solutionLimitArg = solutionLimitFlag.add<Arg<u_int64_t>>(
         if (value < 1) {
             throw ErrorMessage("Value must be greater than 0.");
         }
-    hasSolutionLimit = true;
+        hasSolutionLimit = true;
         solutionLimit = value;
         return value;
     }));
@@ -248,14 +248,12 @@ auto& noPrintSolutionsFlag = argParser.add<Flag>(
     [](auto&) { noPrintSolutions = true; });
 
 extern bool quietMode;
-bool quietMode = false;
-auto& quietModeFlag = argParser.add<Flag>(
-    "--quietMode", Policy::OPTIONAL,
-    "Do not print stats information every time an improvement to the objective "
-    "or violation is made.  If enabled, during search, the output consists "
-    "solely of feasible solutions.  Note that stats are still printed once at "
-    "the end of search.",
-    [](auto&) { quietMode = true; });
+bool quietMode = true;
+auto& verboseModeFlag = argParser.add<Flag>(
+    "--progressStats", Policy::OPTIONAL,
+    "print stats information every time an improvement to the objective "
+    "or violation is made.",
+    [](auto&) { quietMode = false; });
 
 ofstream outFileChecker(const string& path) {
     ofstream os(path);

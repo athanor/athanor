@@ -120,7 +120,7 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
     if ((bestViolation != 0 &&
          lastViolation == 0) ||  // first feasible solution
         (bestViolation == 0 && lastViolation == 0 &&
-                         objImproved)  // better feasible solution
+         objImproved)  // better feasible solution
     ) {
         ++numberBetterFeasibleSolutionsFound;
     }

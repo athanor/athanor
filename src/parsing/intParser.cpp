@@ -180,6 +180,11 @@ ParseResult parseOpTwoBars(json& operandExpr, ParsedModel& parsedModel) {
                 op->setConstant(set->isConstant());
                 return ParseResult(fakeIntDomain, op, false);
             },
+            [&](ExprRef<MSetView>& mSet) -> ParseResult {
+                auto op = OpMaker<OpMSetSize>::make(mSet);
+                op->setConstant(mSet->isConstant());
+                return ParseResult(fakeIntDomain, op, false);
+            },
             [&](ExprRef<SequenceView>& sequence) -> ParseResult {
                 auto op = OpMaker<OpSequenceSize>::make(sequence);
                 op->setConstant(sequence->isConstant());

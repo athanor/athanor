@@ -86,6 +86,12 @@ template <>
 struct OpMaker<OpSetSize> {
     static ExprRef<IntView> make(ExprRef<SetView> o);
 };
+struct OpMSetSize;
+template <>
+struct OpMaker<OpMSetSize> {
+    static ExprRef<IntView> make(ExprRef<MSetView> o);
+};
+
 struct OpSequenceSize;
 template <>
 struct OpMaker<OpSequenceSize> {

@@ -84,6 +84,7 @@ struct StatsContainer {
     u_int64_t minorNodeCount = 0;
     u_int64_t vioMinorNodeCount = 0;
     u_int64_t vioTriggerEventCount = 0;
+    u_int64_t numberBetterFeasibleSolutionsFound = 0;
     std::chrono::high_resolution_clock::time_point startTime =
         std::chrono::high_resolution_clock::now();
     std::clock_t startCpuTime = std::clock();

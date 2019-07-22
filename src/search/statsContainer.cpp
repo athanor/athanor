@@ -111,28 +111,46 @@ void StatsContainer::reportResult(bool solutionAccepted,
 void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
                                           Model& model) {
     // following is a bit messy for printing purposes
+
+    // track number of better feasible solutions.
+    // check for the most recent violation being 0 and that either this is the
+    // first feasible solution, or that this feasible solution has a better
+    // objective.
+
+    if ((bestViolation != 0 &&
+         lastViolation == 0) ||  // first feasible solution
+        (bestViolation == 0 && lastViolation == 0 &&
+                         objImproved)  // better feasible solution
+    ) {
+        ++numberBetterFeasibleSolutionsFound;
+    }
+
+    // If there has been any improvement, store the time.
+    if ((bestViolation != 0 && vioImproved) ||
+        (bestViolation == 0 && lastViolation == 0 && objImproved)) {
+        tie(cpuTimeTillBestSolution, realTimeTillBestSolution) = getTime();
+    }
+
+    // track best violation
     if (vioImproved) {
         bestViolation = lastViolation;
     }
+
+    // track best objective
+    // either the best violation is at 0, in which case the most recent
+    // violation must be 0 and the objective has improved, or the best violation
+    // is still not 0, in which case, an improvement to the violation is an
+    // improvement to the objective.
     if ((bestViolation == 0 && lastViolation == 0 && objImproved) ||
         (bestViolation != 0 && vioImproved)) {
         bestObjective = lastObjective;
-    }
-    if (vioImproved || (lastViolation == 0 && objImproved)) {
-        tie(cpuTimeTillBestSolution, realTimeTillBestSolution) = getTime();
-        if (!quietMode) {
-            cout << "\nNew solution:\n";
-            cout << "Violation = " << lastViolation << endl;
-            if (model.optimiseMode != OptimiseMode::NONE) {
-                cout << "objective = " << lastObjective << endl;
-            }
-        }
     }
 
     if (vioImproved || (lastViolation == 0 && objImproved)) {
         printCurrentState(model);
     }
 }
+
 void StatsContainer::printCurrentState(Model& model) {
     if (!quietMode) {
         cout << (*this) << "\nTrigger event count " << triggerEventCount
@@ -161,6 +179,8 @@ ostream& operator<<(ostream& os, const StatsContainer& stats) {
     os << "CPU time till best solution: " << stats.cpuTimeTillBestSolution
        << endl;
     os << "Real time till best solution: " << stats.realTimeTillBestSolution
+       << endl;
+    os << "Number solutions: " << stats.numberBetterFeasibleSolutionsFound
        << endl;
     os << "Number iterations: " << stats.numberIterations << endl;
     os << "Minor node count: " << stats.minorNodeCount;

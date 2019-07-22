@@ -211,15 +211,31 @@ auto& iterationLimitFlag = argParser.add<ComplexFlag>(
     "Specify the maximum number of iterations to spend in search.");
 
 auto& iterationLimitArg = iterationLimitFlag.add<Arg<u_int64_t>>(
-    "number_iterations", Policy::MANDATORY, "0 = no limit", [](string& arg) {
-        try {
-            iterationLimit = stol(arg);
-            hasIterationLimit = true;
-            return iterationLimit;
-        } catch (invalid_argument&) {
-            throw ErrorMessage("Expected integer >= 0.");
+    "number_iterations", Policy::MANDATORY, "",
+    chain(Converter<u_int64_t>(), [](u_int64_t value) {
+    hasIterationLimit = true;
+        iterationLimit = value;
+        return value;
+    }));
+
+bool hasSolutionLimit = false;
+u_int64_t solutionLimit = 0;
+auto& solutionLimitFlag = argParser.add<ComplexFlag>(
+    "--solutionLimit", Policy::OPTIONAL,
+    "Exit search if the specified number of solutions has been found.  Note, "
+    "this only applies to optimisation problems.  Only solutions that improve "
+    "on the objective are counted.");
+
+auto& solutionLimitArg = solutionLimitFlag.add<Arg<u_int64_t>>(
+    "number_iterations", Policy::MANDATORY, "Value greater 0",
+    chain(Converter<u_int64_t>(), [](u_int64_t value) {
+        if (value < 1) {
+            throw ErrorMessage("Value must be greater than 0.");
         }
-    });
+    hasSolutionLimit = true;
+        solutionLimit = value;
+        return value;
+    }));
 
 auto& disableVioBiasFlag = argParser.add<Flag>(
     "--disableVioBias", Policy::OPTIONAL,

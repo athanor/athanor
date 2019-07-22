@@ -13,6 +13,9 @@ extern volatile bool sigIntActivated;
 extern volatile bool sigAlarmActivated;
 extern bool hasIterationLimit;
 extern u_int64_t iterationLimit;
+extern bool hasSolutionLimit;
+extern u_int64_t solutionLimit;
+
 extern bool runSanityChecks;
 inline bool alwaysTrue(const AnyValVec&) { return true; }
 
@@ -93,6 +96,13 @@ class State {
             std::cout << "iteration limit reached\n";
             throw EndOfSearchException();
         }
+
+        if (hasSolutionLimit &&
+            stats.numberBetterFeasibleSolutionsFound >= solutionLimit) {
+            std::cout << "solution limit reached\n";
+            throw EndOfSearchException();
+        }
+
         if (model.optimiseMode == OptimiseMode::NONE &&
             stats.bestViolation == 0) {
             throw EndOfSearchException();

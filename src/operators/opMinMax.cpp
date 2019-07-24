@@ -326,6 +326,13 @@ struct OpMaker<OpMinMax<minMode>> {
         ExprRef<SequenceView>,
         const shared_ptr<SequenceDomain>& operandDomain = nullptr);
 };
+template <typename View>
+struct OpUndefined;
+template <typename View>
+struct OpMaker<OpUndefined<View>> {
+    static ExprRef<View> make();
+};
+
 
 template <bool minMode>
 ExprRef<IntView> OpMaker<OpMinMax<minMode>>::make(
@@ -333,12 +340,7 @@ ExprRef<IntView> OpMaker<OpMinMax<minMode>>::make(
     if (operandDomain &&
         mpark::get_if<shared_ptr<EmptyDomain>>(&operandDomain->inner)) {
         // construct empty sequence of type int
-        auto emptySequence = ::make<SequenceValue>();
-        emptySequence->members.emplace<ExprRefVec<IntView>>();
-        emptySequence->setConstant(true);
-        auto op = make_shared<OpMinMax<minMode>>(emptySequence.asExpr());
-        op->setConstant(true);
-        return op;
+        return OpMaker<OpUndefined<IntView>>::make();
     }
     return make_shared<OpMinMax<minMode>>(move(o));
 }

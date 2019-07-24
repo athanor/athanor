@@ -119,6 +119,13 @@ struct OpMaker<OpSequenceIndex<View>> {
                               ExprRef<IntView> index);
 };
 template <typename View>
+struct OpUndefined;
+template <typename View>
+struct OpMaker<OpUndefined<View>> {
+    static ExprRef<View> make();
+};
+
+template <typename View>
 struct OpTupleIndex;
 
 template <typename View>

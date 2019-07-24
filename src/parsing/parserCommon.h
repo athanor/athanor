@@ -43,18 +43,19 @@ lib::optional<ReturnType> stringMatch(
 template <typename RetType, typename Constraint, typename Func>
 ExprRef<RetType> expect(Constraint&& constraint, Func&& func) {
     return mpark::visit(
-        overloaded(
-            [&](ExprRef<RetType>& constraint) -> ExprRef<RetType> {
-                return std::move(constraint);
-            },
-            [&](auto&& constraint) -> ExprRef<RetType> {
-                func(constraint);
-                std::cerr << "\nType found was instead "
-                          << TypeAsString<typename AssociatedValueType<viewType(
-                                 constraint)>::type>::value
-                          << std::endl;
-                abort();
-            }),
+        overloaded([&](ExprRef<RetType>& constraint)
+                       -> ExprRef<RetType> { return constraint; },
+                   [&](auto&& constraint) -> ExprRef<RetType> {
+                       typedef viewType(constraint) View;
+                       typedef typename AssociatedValueType<View>::type Value;
+                       if (std::is_same<EmptyView, View>::value) {
+                           return OpMaker<OpUndefined<RetType>>::make();
+                       }
+                       func(constraint);
+                       std::cerr << "\nType found was instead "
+                                 << TypeAsString<Value>::value << std::endl;
+                       abort();
+                   }),
         constraint);
 }
 Int parseExprAsInt(AnyExprRef expr, const std::string& errorMessage);

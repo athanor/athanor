@@ -1,0 +1,5 @@
+
+$testing:numberIterations=10000
+find s : set (size 5) of function (total) int(1..5) --> int(1..5)
+such that
+forAll i in s . forAll (_,j) in i . j % 2 = 0

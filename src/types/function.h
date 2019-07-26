@@ -76,6 +76,7 @@ struct FunctionView : public ExprInterface<FunctionView>,
     AnyDomainRef fromDomain;
     DimensionVec dimensions;
     AnyExprVec range;
+    SimpleCache<HashType> cachedHashTotal;
 
     lib::optional<UInt> domainToIndex(const IntView& intV);
     lib::optional<UInt> domainToIndex(const EnumView& tupleV);
@@ -129,40 +130,118 @@ struct FunctionView : public ExprInterface<FunctionView>,
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline HashType calcMemberHash(UInt index,
+                                   const ExprRef<InnerViewType>& expr) const {
+        HashType input[2];
+        input[0] = HashType(index);
+        input[1] = getValueHash(
+            expr->view().checkedGet(NO_FUNCTION_UNDEFINED_MEMBERS));
+        return mix(((char*)input), sizeof(input));
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void assignImage(size_t index,
                             const ExprRef<InnerViewType>& member) {
         auto& range = getRange<InnerViewType>();
         debug_code(assert(index < range.size()));
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            value -= this->calcMemberHash(index, range[index]);
+        });
         range[index] = member;
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            value += this->calcMemberHash(index, range[index]);
+        });
     }
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline lib::optional<HashType> notifyPossibleImageChange(UInt index) {
+        debug_code(assert(index < rangeSize()));
+        debug_code(standardSanityChecksForThisType());
 
-    inline void notifyPossibleImageChange(UInt index) {
-        ignoreUnused(index);
-        debug_code(assertValidState());
-        // later fill in this function for injective functions
+        if (!cachedHashTotal.isValid()) {
+            return lib::nullopt;
+        }
+        return calcMemberHash(index, getRange<InnerViewType>()[index]);
+    }
+    inline void checkNotUsingCachedHash() {
+        if (cachedHashTotal.isValid()) {
+            std::cerr
+                << "Error: constraint changing a member of a function without "
+                   "passing a previous member hash.  Means no support for "
+                   "getting total hash of this function.  Suspected "
+                   "reason is that one of the constraints has not been "
+                   "updated to support this.\n";
+            abort();
+        }
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void imageChanged(UInt index) {
-        ignoreUnused(index);
-    }
-
-    inline void notifyPossibleImagesChange(const std::vector<UInt>& indices) {
-        ignoreUnused(indices);
-        debug_code(assertValidState());
-        // later fill in this function for injective functions
+    inline lib::optional<HashType> imageChanged(
+        UInt index, lib::optional<HashType> previousMemberHash = lib::nullopt) {
+        if (!previousMemberHash) {
+            checkNotUsingCachedHash();
+        }
+        lib::optional<HashType> newHashOption;
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            newHashOption = this->calcMemberHash<InnerViewType>(
+                index, getRange<InnerViewType>()[index]);
+            value -= *previousMemberHash;
+            value += *newHashOption;
+        });
+        return newHashOption;
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void imagesChanged(const std::vector<UInt>& indices) {
-        ignoreUnused(indices);
+    HashType calcCombinedMembersHash(const std::vector<UInt>& indices) {
+        HashType newHash(0);
+        auto& range = getRange<InnerViewType>();
+        for (UInt index : indices) {
+            debug_code(assert(index < range.size()));
+            newHash += calcMemberHash(index, range[index]);
+        }
+        return newHash;
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline lib::optional<HashType> notifyPossibleImagesChange(
+        const std::vector<UInt>& indices) {
+        debug_code(standardSanityChecksForThisType());
+        if (!cachedHashTotal.isValid()) {
+            return lib::nullopt;
+        }
+        return calcCombinedMembersHash<InnerViewType>(indices);
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline lib::optional<HashType> imagesChanged(
+        const std::vector<UInt>& indices,
+        lib::optional<HashType> previousMembersCombinedHash) {
+        if (!previousMembersCombinedHash) {
+            checkNotUsingCachedHash();
+        }
+        lib::optional<HashType> newHashOption;
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            newHashOption = calcCombinedMembersHash<InnerViewType>(indices);
+            value -= *previousMembersCombinedHash;
+            value += *newHashOption;
+        });
+        return newHashOption;
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void swapImages(UInt index1, UInt index2) {
         auto& range = getRange<InnerViewType>();
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            value -= this->calcMemberHash(index1, range[index1]);
+            value -= this->calcMemberHash(index2, range[index2]);
+        });
+
         std::swap(range[index1], range[index2]);
-        debug_code(assertValidState());
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            value += this->calcMemberHash(index1, range[index1]);
+            value += this->calcMemberHash(index2, range[index2]);
+        });
+
+        debug_code(standardSanityChecksForThisType());
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -189,8 +268,15 @@ struct FunctionView : public ExprInterface<FunctionView>,
         return mpark::visit([](auto& range) { return range.size(); }, range);
     }
 
-    void assertValidState();
     void standardSanityChecksForThisType() const;
+    void silentClear() {
+        mpark::visit(
+            [&](auto& membersImpl) {
+                cachedHashTotal.invalidate();
+                membersImpl.clear();
+            },
+            range);
+    }
 };
 
 #endif /* SRC_TYPES_FUNCTION_H_ */

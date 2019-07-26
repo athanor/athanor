@@ -76,7 +76,7 @@ struct FunctionValue : public FunctionView, public ValBase {
             valBase(*assumeAsValue(range[index1])).id = index1;
             valBase(*assumeAsValue(range[index2])).id = index2;
             FunctionView::notifyImagesSwapped(index1, index2);
-            debug_code(assertValidVarBases());
+            debug_code(debugSanityCheck());
             return true;
         } else {
             FunctionView::swapImages<InnerViewType>(index1, index2);
@@ -86,30 +86,48 @@ struct FunctionValue : public FunctionView, public ValBase {
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline bool tryImageChange(UInt index, Func&& func) {
+    inline bool tryImageChange(UInt index,
+                               lib::optional<HashType> previousMemberHash,
+                               Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        FunctionView::imageChanged<InnerViewType>(index);
+        auto newMemberHash = FunctionView::imageChanged<InnerViewType>(
+            index, previousMemberHash);
         if (func()) {
             FunctionView::notifyImageChanged(index);
             return true;
         } else {
-            FunctionView::imageChanged<InnerViewType>(index);
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                debug_code(assert(previousMemberHash && newMemberHash));
+                value -= *previousMemberHash;
+                value += *newMemberHash;
+            });
             return false;
         }
     }
+
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline bool tryImagesChange(const std::vector<UInt>& indices, Func&& func) {
+    inline bool tryImagesChange(
+        const std::vector<UInt>& indices,
+        lib::optional<HashType> previousMembersCombinedHash, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        FunctionView::imagesChanged<InnerViewType>(indices);
+        auto newMembersCombinedHash =
+            FunctionView::imagesChanged<InnerViewType>(
+                indices, previousMembersCombinedHash);
         if (func()) {
             FunctionView::notifyImagesChanged(indices);
             return true;
         } else {
-            FunctionView::imagesChanged<InnerViewType>(indices);
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                debug_code(assert(previousMembersCombinedHash &&
+                                  newMembersCombinedHash));
+                value -= *previousMembersCombinedHash;
+                value += *newMembersCombinedHash;
+            });
             return false;
         }
     }
+
     template <typename Func>
     bool tryAssignNewValue(FunctionValue& newvalue, Func&& func) {
         // fake putting in the value first untill func()verifies that it is
@@ -138,8 +156,6 @@ struct FunctionValue : public FunctionView, public ValBase {
     std::pair<bool, ExprRef<FunctionView>> optimise(PathExtension) final;
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;
-
-    void assertValidVarBases();
 };
 
 #endif /* SRC_TYPES_FUNCTIONVAL_H_ */

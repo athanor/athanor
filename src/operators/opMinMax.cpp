@@ -333,7 +333,6 @@ struct OpMaker<OpUndefined<View>> {
     static ExprRef<View> make();
 };
 
-
 template <bool minMode>
 ExprRef<IntView> OpMaker<OpMinMax<minMode>>::make(
     ExprRef<SequenceView> o, const shared_ptr<SequenceDomain>& operandDomain) {

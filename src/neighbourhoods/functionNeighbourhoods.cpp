@@ -40,6 +40,8 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
                                const InnerDomainPtrType&,
                                int numberValsRequired,
                                std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename AssociatedViewType<
+        typename InnerDomainPtrType::element_type>::type InnerViewType;
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(1, domain.to, innerDomainNeighbourhoods);
     typedef typename AssociatedValueType<
@@ -58,17 +60,20 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
                     params.vioContainer.childViolations(val.id);
                 UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
                     val.rangeSize() - 1);
-                val.notifyPossibleImageChange(indexToChange);
+                auto previousMemberHash =
+                    val.notifyPossibleImageChange<InnerViewType>(indexToChange);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
                     return val.tryImageChange<InnerValueType>(
-                        indexToChange,
+                        indexToChange, previousMemberHash,
                         [&]() { return params.parentCheck(params.vals); });
                 };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
                     if (requiresRevert) {
-                        val.notifyPossibleImageChange(indexToChange);
+                        previousMemberHash =
+                            val.notifyPossibleImageChange<InnerViewType>(
+                                indexToChange);
                     }
                     return !requiresRevert;
                 };
@@ -84,6 +89,7 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryImageChange<InnerValueType>(indexToChange,
+                                                       previousMemberHash,
                                                        [&]() { return true; });
                 }
             });
@@ -109,6 +115,7 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
     generateNeighbourhoods(0, domain.to, innerDomainNeighbourhoods);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
         if (innerNh.numberValsRequired < 2) {
             continue;
@@ -130,17 +137,21 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
                     vioContainerAtThisLevel.selectRandomVars(
                         val.rangeSize() - 1, innerNhNumberValsRequired);
                 debug_log(indicesToChange);
-                val.notifyPossibleImagesChange(indicesToChange);
+                auto previousMembersCombinedHash =
+                    val.notifyPossibleImagesChange<InnerViewType>(
+                        indicesToChange);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
                     return val.tryImagesChange<InnerValueType>(
-                        indicesToChange,
+                        indicesToChange, previousMembersCombinedHash,
                         [&]() { return params.parentCheck(params.vals); });
                 };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
                     if (requiresRevert) {
-                        val.notifyPossibleImagesChange(indicesToChange);
+                        previousMembersCombinedHash =
+                            val.notifyPossibleImagesChange<InnerViewType>(
+                                indicesToChange);
                     }
                     return !requiresRevert;
                 };
@@ -156,8 +167,9 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
                     changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
-                    val.tryImagesChange<InnerValueType>(indicesToChange,
-                                                        [&]() { return true; });
+                    val.tryImagesChange<InnerValueType>(
+                        indicesToChange, previousMembersCombinedHash,
+                        [&]() { return true; });
                 }
             });
     }
@@ -263,7 +275,7 @@ struct FunctionUnifyImages
         bool success;
         UInt index1, index2;
         Int valueBackup;
-
+        lib::optional<HashType> previousMemberHash;
         do {
             ++params.stats.minorNodeCount;
             ++params.stats.minorNodeCount;
@@ -282,18 +294,20 @@ struct FunctionUnifyImages
             }
             auto& view1 = val.getRange<IntView>()[index1]->view().get();
             auto& view2 = val.getRange<IntView>()[index2]->view().get();
-            val.notifyPossibleImageChange(index2);
+            previousMemberHash =
+                val.notifyPossibleImageChange<InnerViewType>(index2);
             valueBackup = view2.value;
-            success = val.tryImageChange<IntValue>(index2, [&]() {
-                return view2.changeValue([&]() {
-                    view2.value = view1.value;
-                    if (params.parentCheck(params.vals)) {
-                        return true;
-                    } else {
-                        view2.value = valueBackup;
-                        return false;
-                    }
-                });
+            success = view2.changeValue([&]() {
+                view2.value = view1.value;
+                bool allowed = val.tryImageChange<IntValue>(
+                    index2, previousMemberHash,
+                    [&]() { return params.parentCheck(params.vals); });
+                if (allowed) {
+                    return true;
+                } else {
+                    view2.value = valueBackup;
+                    return false;
+                }
             });
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
@@ -305,13 +319,13 @@ struct FunctionUnifyImages
                                                       << index2);
         if (!params.changeAccepted()) {
             debug_neighbourhood_action("Change rejected");
-            val.notifyPossibleImageChange(index2);
+            previousMemberHash =
+                val.notifyPossibleImageChange<InnerViewType>(index2);
             auto& view2 = val.getRange<IntView>()[index2]->view().get();
-            val.tryImageChange<IntValue>(index2, [&]() {
-                return view2.changeValue([&]() {
-                    view2.value = valueBackup;
-                    return true;
-                });
+            view2.changeValue([&]() -> bool {
+                view2.value = valueBackup;
+                return val.tryImageChange<IntValue>(index2, previousMemberHash,
+                                                    [&]() { return true; });
             });
         }
     }
@@ -349,7 +363,7 @@ struct FunctionSplitImages
         bool success;
         UInt index1, index2;
         Int valueBackup;
-
+        lib::optional<HashType> previousMemberHash;
         do {
             ++params.stats.minorNodeCount;
             index1 =
@@ -368,20 +382,20 @@ struct FunctionSplitImages
             auto& view1 = val.getRange<IntView>()[index1]->view().get();
             static_cast<void>(view1);
             auto value2 = val.member<IntValue>(index2);
-            val.notifyPossibleImageChange(index2);
+            previousMemberHash =
+                val.notifyPossibleImageChange<InnerViewType>(index2);
             valueBackup = value2->value;
-            success = val.tryImageChange<IntValue>(index2, [&]() {
-                return value2->changeValue([&]() {
-                    assignRandomValueInDomain(innerDomain, *value2,
-                                              params.stats);
-                    if (value2->value != valueBackup &&
-                        params.parentCheck(params.vals)) {
-                        return true;
-                    } else {
-                        value2->value = valueBackup;
-                        return false;
-                    }
-                });
+            success = value2->changeValue([&]() {
+                assignRandomValueInDomain(innerDomain, *value2, params.stats);
+                bool allowed = value2->value != valueBackup &&
+                               val.tryImageChange<IntValue>(
+                                   index2, previousMemberHash, [&]() {
+                                       return params.parentCheck(params.vals);
+                                   });
+                if (!allowed) {
+                    value2->value = valueBackup;
+                }
+                return allowed;
             });
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
@@ -393,13 +407,13 @@ struct FunctionSplitImages
                                                     << index2);
         if (!params.changeAccepted()) {
             debug_neighbourhood_action("Change rejected");
-            val.notifyPossibleImageChange(index2);
+            previousMemberHash =
+                val.notifyPossibleImageChange<InnerViewType>(index2);
             auto& view2 = val.getRange<IntView>()[index2]->view().get();
-            val.tryImageChange<IntValue>(index2, [&]() {
-                return view2.changeValue([&]() {
-                    view2.value = valueBackup;
-                    return true;
-                });
+            view2.changeValue([&]() {
+                view2.value = valueBackup;
+                return val.tryImageChange<IntValue>(index2, previousMemberHash,
+                                                    [&]() { return true; });
             });
         }
     }

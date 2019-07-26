@@ -90,5 +90,5 @@ ExprRef<View> OpMaker<OpUndefined<View>>::make() {
     template struct OpUndefined<name##View>; \
     template struct OpMaker<OpUndefined<name##View>>;
 
- buildForAllTypes(opUndefinedInstantiators, );
+buildForAllTypes(opUndefinedInstantiators, );
 #undef opUndefinedInstantiators

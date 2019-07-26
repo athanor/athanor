@@ -9,6 +9,7 @@
 #include "types/intVal.h"
 #include "types/tupleVal.h"
 #include "utils/ignoreUnused.h"
+#include "utils/safePow.h"
 using namespace std;
 struct NoSupportException {};
 Dimension intDomainToDimension(IntDomain& dom) {
@@ -238,7 +239,17 @@ void functionIndexToDomain<TupleDomain>(const TupleDomain& domain,
 
 template <>
 HashType getValueHash<FunctionView>(const FunctionView& val) {
-    todoImpl(val);
+    return val.cachedHashTotal.getOrSet([&]() {
+        return mpark::visit(
+            [&](const auto& range) {
+                HashType total(0);
+                for (size_t i = 0; i < range.size(); ++i) {
+                    total += val.calcMemberHash(i, range[i]);
+                }
+                return total;
+            },
+            val.range);
+    });
 }
 
 template <>
@@ -303,7 +314,14 @@ template <typename InnerViewType>
 void deepCopyImpl(const FunctionValue&,
                   const ExprRefVec<InnerViewType>& srcMemnersImpl,
                   FunctionValue& target) {
-    todoImpl(srcMemnersImpl, target);
+    target.cachedHashTotal.invalidate();
+    // to be optimised later
+    target.silentClear();
+    for (size_t i = 0; i < srcMemnersImpl.size(); i++) {
+        target.assignImage(i, deepCopy(*assumeAsValue(srcMemnersImpl[i])));
+    }
+    debug_code(target.debugSanityCheck());
+    target.notifyEntireValueChanged();
 }
 
 template <>
@@ -344,7 +362,12 @@ void matchInnerType(const FunctionDomain& domain, FunctionValue& target) {
 
 template <>
 UInt getDomainSize<FunctionDomain>(const FunctionDomain& domain) {
-    todoImpl(domain);
+    auto crossProd = safePow<UInt>(getDomainSize(domain.to),
+                                   getDomainSize(domain.from), MAX_DOMAIN_SIZE);
+    if (!crossProd) {
+        return MAX_DOMAIN_SIZE;
+    }
+    return *crossProd;
 }
 
 void evaluateImpl(FunctionValue&) {}
@@ -420,58 +443,20 @@ bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
         u.range);
 }
 
-void FunctionView::assertValidState() {
-    // no state to validate currently
-}
-
-void FunctionValue::assertValidVarBases() {
+void FunctionView::standardSanityChecksForThisType() const {
     mpark::visit(
-        [&](auto& valMembersImpl) {
-            if (valMembersImpl.empty()) {
-                return;
-            }
-            bool success = true;
-            for (size_t i = 0; i < valMembersImpl.size(); i++) {
-                const ValBase& base =
-                    valBase(*assumeAsValue(valMembersImpl[i]));
-                if (base.container != this) {
-                    success = false;
-                    cerr << "member " << i
-                         << "'s container does not point to this function."
-                         << endl;
-                } else if (base.id != i) {
-                    success = false;
-                    cerr << "function member " << i << "has id " << base.id
-                         << " but it should be " << i << endl;
+        [&](auto& range) {
+            cachedHashTotal.applyIfValid([&](const auto& value) {
+                HashType checkCachedHashTotal;
+                for (size_t i = 0; i < range.size(); i++) {
+                    checkCachedHashTotal +=
+                        calcMemberHash<viewType(range)>(i, range[i]);
                 }
-            }
-            if (!success) {
-                cerr << "Members: " << valMembersImpl << endl;
-                this->printVarBases();
-                assert(false);
-            }
+                sanityEqualsCheck(checkCachedHashTotal, value);
+            });
         },
-        range);
+        this->range);
 }
-
-void FunctionValue::printVarBases() {
-    mpark::visit(
-        [&](auto& valMembersImpl) {
-            cout << "parent is constant: " << (this->container == &constantPool)
-                 << endl;
-            for (auto& member : valMembersImpl) {
-                cout << "val id: " << valBase(*assumeAsValue(member)).id
-                     << endl;
-                cout << "is constant: "
-                     << (valBase(*assumeAsValue(member)).container ==
-                         &constantPool)
-                     << endl;
-            }
-        },
-        range);
-}
-
-void FunctionView::standardSanityChecksForThisType() const {}
 
 void FunctionValue::debugSanityCheckImpl() const {
     mpark::visit(

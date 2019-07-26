@@ -2,6 +2,7 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
+#include "types/boolVal.h"
 #include "types/functionVal.h"
 #include "types/intVal.h"
 #include "utils/random.h"
@@ -241,6 +242,8 @@ struct FunctionImagesSwap
         }
     }
 };
+Int& valueOf(IntView& v) { return v.value; }
+UInt& valueOf(BoolView& v) { return v.violation; }
 
 template <typename InnerDomain>
 struct FunctionUnifyImages
@@ -249,6 +252,7 @@ struct FunctionUnifyImages
     typedef InnerDomain InnerDomainType;
     typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
     typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    typedef BaseType<decltype(valueOf(declval<InnerViewType&>()))> ValueType;
     const FunctionDomain& domain;
     const InnerDomain& innerDomain;
     const UInt innerDomainSize;
@@ -274,7 +278,7 @@ struct FunctionUnifyImages
 
         bool success;
         UInt index1, index2;
-        Int valueBackup;
+        ValueType valueBackup;
         lib::optional<HashType> previousMemberHash;
         do {
             ++params.stats.minorNodeCount;
@@ -284,8 +288,8 @@ struct FunctionUnifyImages
             index2 = globalRandom<UInt>(0, val.rangeSize() - 1);
             index2 = (index1 + index2) % val.rangeSize();
 
-            if (val.getRange<IntView>()[index1]->view()->value ==
-                val.getRange<IntView>()[index2]->view()->value) {
+            if (valueOf(*val.member<InnerValueType>(index1)) ==
+                valueOf(*val.member<InnerValueType>(index2))) {
                 continue;
             }
             // randomly swap indices
@@ -338,6 +342,7 @@ struct FunctionSplitImages
     typedef InnerDomain InnerDomainType;
     typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
     typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    typedef BaseType<decltype(valueOf(declval<InnerViewType&>()))> ValueType;
     const FunctionDomain& domain;
     const InnerDomain& innerDomain;
     const UInt innerDomainSize;
@@ -362,7 +367,7 @@ struct FunctionSplitImages
 
         bool success;
         UInt index1, index2;
-        Int valueBackup;
+        ValueType valueBackup;
         lib::optional<HashType> previousMemberHash;
         do {
             ++params.stats.minorNodeCount;
@@ -371,8 +376,8 @@ struct FunctionSplitImages
             index2 = globalRandom<UInt>(0, val.rangeSize() - 1);
             index2 = (index1 + index2) % val.rangeSize();
 
-            if (val.getRange<IntView>()[index1]->view()->value !=
-                val.getRange<IntView>()[index2]->view()->value) {
+            if (valueOf(*val.member<InnerValueType>(index1)) !=
+                valueOf(*val.member<InnerValueType>(index2))) {
                 continue;
             }
             // randomly swap indices
@@ -381,19 +386,19 @@ struct FunctionSplitImages
             }
             auto& view1 = val.getRange<IntView>()[index1]->view().get();
             static_cast<void>(view1);
-            auto value2 = val.member<IntValue>(index2);
+            auto value2 = val.member<InnerValueType>(index2);
             previousMemberHash =
                 val.notifyPossibleImageChange<InnerViewType>(index2);
-            valueBackup = value2->value;
+            valueBackup = valueOf(*value2);
             success = value2->changeValue([&]() {
                 assignRandomValueInDomain(innerDomain, *value2, params.stats);
-                bool allowed = value2->value != valueBackup &&
-                               val.tryImageChange<IntValue>(
+                bool allowed = valueOf(*value2) != valueBackup &&
+                               val.tryImageChange<InnerValueType>(
                                    index2, previousMemberHash, [&]() {
                                        return params.parentCheck(params.vals);
                                    });
                 if (!allowed) {
-                    value2->value = valueBackup;
+                    valueOf(*value2) = valueBackup;
                 }
                 return allowed;
             });
@@ -412,8 +417,8 @@ struct FunctionSplitImages
             auto& view2 = val.getRange<IntView>()[index2]->view().get();
             view2.changeValue([&]() {
                 view2.value = valueBackup;
-                return val.tryImageChange<IntValue>(index2, previousMemberHash,
-                                                    [&]() { return true; });
+                return val.tryImageChange<InnerValueType>(
+                    index2, previousMemberHash, [&]() { return true; });
             });
         }
     }
@@ -465,6 +470,90 @@ struct FunctionAssignRandom
         }
     }
 };
+template <typename InnerDomain>
+struct FunctionCrossover
+    : public NeighbourhoodFunc<FunctionDomain, 2,
+                               FunctionCrossover<InnerDomain>> {
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    const FunctionDomain& domain;
+    const InnerDomain& innerDomain;
+    const UInt innerDomainSize;
+    FunctionCrossover(const FunctionDomain& domain)
+        : domain(domain),
+          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
+          innerDomainSize(getDomainSize(innerDomain)) {}
+    static string getName() { return "FunctionCrossover"; }
+    static bool matches(const FunctionDomain&) { return true; }
+
+    template <typename InnerValueType, typename Func>
+    static bool performCrossOver(FunctionValue& fromVal, FunctionValue& toVal,
+                                 UInt indexToCrossOver,
+                                 ValRef<InnerValueType> member1,
+                                 ValRef<InnerValueType> member2,
+                                 Func&& parentCheck) {
+        auto fromValPreviousMemberHash =
+            fromVal.notifyPossibleImageChange<InnerViewType>(indexToCrossOver);
+        auto toValPreviousMemberHash =
+            toVal.notifyPossibleImageChange<InnerViewType>(indexToCrossOver);
+        swapValAssignments(*member1, *member2);
+        bool success = fromVal.tryImageChange<InnerValueType>(
+            indexToCrossOver, fromValPreviousMemberHash, [&]() {
+                return toVal.tryImageChange<InnerValueType>(
+                    indexToCrossOver, toValPreviousMemberHash, [&]() {
+                        if (parentCheck()) {
+                            return true;
+                        } else {
+                            swapValAssignments(*member1, *member2);
+                            return false;
+                        }
+                    });
+            });
+        return success;
+    }
+
+    void apply(NeighbourhoodParams& params, FunctionValue& fromVal,
+               FunctionValue& toVal) {
+        if (fromVal.rangeSize() == 0 || toVal.rangeSize() == 0) {
+            ++params.stats.minorNodeCount;
+            return;
+        }
+        int numberTries = 0;
+        const int tryLimit = params.parentCheckTryLimit;
+        debug_neighbourhood_action("Looking for values to cross over");
+        bool success = false;
+        UInt indexToCrossOver;
+        const UInt maxCrossOverIndex =
+            min(fromVal.rangeSize(), toVal.rangeSize()) - 1;
+        ValRef<InnerValueType> member1 = nullptr, member2 = nullptr;
+        do {
+            ++params.stats.minorNodeCount;
+            indexToCrossOver = globalRandom<UInt>(0, maxCrossOverIndex);
+            member1 = fromVal.member<InnerValueType>(indexToCrossOver);
+            member2 = toVal.member<InnerValueType>(indexToCrossOver);
+            success = performCrossOver(
+                fromVal, toVal, indexToCrossOver, member1, member2,
+                [&]() { return params.parentCheck(params.vals); });
+        } while (!success && ++numberTries < tryLimit);
+
+        if (!success) {
+            debug_neighbourhood_action(
+                "Couldn't find values to cross over, number tries="
+                << tryLimit);
+            return;
+        }
+
+        debug_neighbourhood_action(
+            "CrossOverd values: "
+            << toVal.getRange<InnerViewType>()[indexToCrossOver] << " and "
+            << fromVal.getRange<InnerViewType>()[indexToCrossOver]);
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            performCrossOver(fromVal, toVal, indexToCrossOver, member1, member2,
+                             [&]() { return true; });
+        }
+    }
+};
 
 template <>
 const AnyDomainRef getInner<FunctionDomain>(const FunctionDomain& domain) {
@@ -476,6 +565,10 @@ const NeighbourhoodVec<FunctionDomain>
         {1, functionLiftSingleGen},                                     //
         {1, functionLiftMultipleGen},                                   //
         {1, generateForAllTypes<FunctionDomain, FunctionImagesSwap>},   //
+        {2, generateForAllTypes<FunctionDomain, FunctionCrossover>},    //
         {1, generate<FunctionDomain, FunctionUnifyImages<IntDomain>>},  //
-        {1, generate<FunctionDomain, FunctionSplitImages<IntDomain>>},  //
+
+        {1, generate<FunctionDomain, FunctionUnifyImages<BoolDomain>>},  //
+        {1, generate<FunctionDomain, FunctionSplitImages<IntDomain>>},   //
+        {1, generate<FunctionDomain, FunctionSplitImages<BoolDomain>>},  //
 };

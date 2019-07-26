@@ -264,13 +264,14 @@ ofstream outFileChecker(const string& path) {
     }
 }
 
-auto& saveNeighbourhoodStatsArg =
-    argParser
-        .add<ComplexFlag>(
-            "--saveNhStats", Policy::OPTIONAL,
-            "Print neighbourhood stats into a file instead of stdout.\n")
-        .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY, "",
-                            outFileChecker);
+auto& showNhStatsFlag = argParser.add<ComplexFlag>(
+    "--showNhStats", Policy::OPTIONAL, "Print neighbourhood stats to stdout.");
+
+auto& showNhStatsArg = showNhStatsFlag.add<Arg<ofstream>>(
+    "path_to_file", Policy::OPTIONAL,
+    "If specified, write the neighbourhood stats into a file instead of "
+    "stdout.",
+    outFileChecker);
 
 auto& saveUcbArg =
     argParser
@@ -390,11 +391,12 @@ void setSignalsAndHandlers() {
 }
 
 void printFinalStats(const State& state) {
-    cout << "\n\n";
-    if (saveNeighbourhoodStatsArg) {
-        state.stats.printNeighbourhoodStats(saveNeighbourhoodStatsArg.get());
-    } else {
-        state.stats.printNeighbourhoodStats(cout);
+    if (showNhStatsFlag) {
+        if (showNhStatsArg) {
+            state.stats.printNeighbourhoodStats(showNhStatsArg.get());
+        } else {
+            state.stats.printNeighbourhoodStats(cout << "\n\n");
+        }
     }
     cout << "\n\n";
     cout << state.stats << "\nTrigger event count " << triggerEventCount

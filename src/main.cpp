@@ -30,8 +30,8 @@ string makeMessageOnFiles(const bool essenceOrParam) {
         "), the tool conjure will be used to translate the file into a JSON "
         "representation before parsing.  Otherwise, the file will be "
         "treated as a JSON file and parsed directly.  When searching for "
-        "conjure, athanor will first check the flag --conjurePath (see "
-        "--conjurePath for details).  If this flag is not set, athanor will "
+        "conjure, athanor will first check the flag --conjure-path (see "
+        "--conjure-path for details).  If this flag is not set, athanor will "
         "check if conjure can be found in the same directory as the athanor "
         "executable. If not found, the path environment variable will be "
         "used.");
@@ -69,25 +69,25 @@ auto& paramArg = paramFlag.add<Arg<string>>(
 auto& conjurePathArg =
     argParser
         .add<ComplexFlag>(
-            "--conjurePath", Policy::OPTIONAL,
+            "--conjure-path", Policy::OPTIONAL,
             "Specify a path to the conjure executable.  Conjure is used to "
             "translate essence files into a JSON representation.  If this flag "
             "is not set, athanor will first look for conjure in the executable "
             "directory and then in the path environment.  However, if "
-            "--conjurePath does not point to conjure, an error will be "
+            "--conjure-path does not point to conjure, an error will be "
             "reported and athanor will exit.")
-        .add<Arg<string>>("path_to_executable", Policy::MANDATORY, "");
+        .add<Arg<string>>("path_to_conjure_executable", Policy::MANDATORY, "");
 
 mt19937 globalRandomGenerator;
 auto& randomSeedFlag = argParser.add<ComplexFlag>(
-    "--randomSeed", Policy::OPTIONAL, "Specify a random seed.");
+    "--random-seed", Policy::OPTIONAL, "Specify a random seed.");
 auto& seedArg =
     randomSeedFlag.add<Arg<int>>("integer_seed", Policy::MANDATORY,
                                  "Integer seed to use for random generator.");
 bool runSanityChecks = false;
 bool verboseSanityError = false;
 auto& sanityCheckFlag = argParser.add<ComplexFlag>(
-    "--sanityCheck", Policy::OPTIONAL,
+    "--sanity-check", Policy::OPTIONAL,
     "Activate sanity check mode, this is a debugging feature,.  After each "
     "move, the state is scanned for errors caused by bad triggering.  Note, "
     "errors caused by hash collisions are not tested for in this mode.",
@@ -98,13 +98,13 @@ auto& verboseErrorFlag = sanityCheckFlag.add<Flag>(
     [](auto&) { verboseSanityError = true; });
 bool repeatSanityCheckOfConst = false;
 auto& repeatSanityCheckFlag = sanityCheckFlag.add<Flag>(
-    "--repeatCheckOfConst", Policy::OPTIONAL,
+    "--repeat-check-of-const", Policy::OPTIONAL,
     "repeat the checks of expressions that are constant.",
     [](auto&) { repeatSanityCheckOfConst = true; });
 
 debug_code(bool debugLogAllowed = true;
            auto& disableDebugLoggingFlag = argParser.add<Flag>(
-               "--disableDebugLog", Policy::OPTIONAL,
+               "--disable-debug-log", Policy::OPTIONAL,
                "Included only for debug builds, can be used to silence logging "
                "but keeping assertions switched on.",
                [](auto&) { debugLogAllowed = false; }););
@@ -194,20 +194,20 @@ auto& interactiveFlag = selectionStratGroup.add<Flag>(
 
 auto& exclusiveTimeLimitGroup = argParser.makeExclusiveGroup(Policy::OPTIONAL);
 auto& cpuTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
-    "--cpuTimeLimit", "Specify the CPU time limit in seconds.");
+    "--cpu-time-limit", "Specify the CPU time limit in seconds.");
 
 auto& cpuTimeLimitArg =
     cpuTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
 
 auto& realTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
-    "--realTimeLimit", "Specify the CPU time limit in seconds.");
+    "--real-time-limit", "Specify the CPU time limit in seconds.");
 
 auto& realTimeLimitArg =
     realTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
 bool hasIterationLimit = false;
 u_int64_t iterationLimit = 0;
 auto& iterationLimitFlag = argParser.add<ComplexFlag>(
-    "--iterationLimit", Policy::OPTIONAL,
+    "--iteration-limit", Policy::OPTIONAL,
     "Specify the maximum number of iterations to spend in search.");
 
 auto& iterationLimitArg = iterationLimitFlag.add<Arg<u_int64_t>>(
@@ -221,13 +221,13 @@ auto& iterationLimitArg = iterationLimitFlag.add<Arg<u_int64_t>>(
 bool hasSolutionLimit = false;
 u_int64_t solutionLimit = 0;
 auto& solutionLimitFlag = argParser.add<ComplexFlag>(
-    "--solutionLimit", Policy::OPTIONAL,
+    "--solution-limit", Policy::OPTIONAL,
     "Exit search if the specified number of solutions has been found.  Note, "
     "this only applies to optimisation problems.  Only solutions that improve "
     "on the objective are counted.");
 
 auto& solutionLimitArg = solutionLimitFlag.add<Arg<u_int64_t>>(
-    "number_iterations", Policy::MANDATORY, "Value greater 0",
+    "number_solutions", Policy::MANDATORY, "Value greater 0",
     chain(Converter<u_int64_t>(), [](u_int64_t value) {
         if (value < 1) {
             throw ErrorMessage("Value must be greater than 0.");
@@ -238,19 +238,19 @@ auto& solutionLimitArg = solutionLimitFlag.add<Arg<u_int64_t>>(
     }));
 
 auto& disableVioBiasFlag = argParser.add<Flag>(
-    "--disableVioBias", Policy::OPTIONAL,
+    "--disable-vio-bias", Policy::OPTIONAL,
     "Disable the search from biasing towards violating variables.");
 extern bool noPrintSolutions;
 bool noPrintSolutions = false;
 auto& noPrintSolutionsFlag = argParser.add<Flag>(
-    "--noPrintSolutions", Policy::OPTIONAL,
+    "--no-print-solutions", Policy::OPTIONAL,
     "Do not print solutions, useful for timing experiements.",
     [](auto&) { noPrintSolutions = true; });
 
 extern bool quietMode;
 bool quietMode = true;
 auto& verboseModeFlag = argParser.add<Flag>(
-    "--progressStats", Policy::OPTIONAL,
+    "--show-progress-stats", Policy::OPTIONAL,
     "print stats information every time an improvement to the objective "
     "or violation is made.",
     [](auto&) { quietMode = false; });
@@ -265,7 +265,8 @@ ofstream outFileChecker(const string& path) {
 }
 
 auto& showNhStatsFlag = argParser.add<ComplexFlag>(
-    "--showNhStats", Policy::OPTIONAL, "Print neighbourhood stats to stdout.");
+    "--show-nh-stats", Policy::OPTIONAL,
+    "Print stats specific to each neighbourhood in a CSV format to stdout.");
 
 auto& showNhStatsArg = showNhStatsFlag.add<Arg<ofstream>>(
     "path_to_file", Policy::OPTIONAL,
@@ -275,7 +276,7 @@ auto& showNhStatsArg = showNhStatsFlag.add<Arg<ofstream>>(
 
 auto& saveUcbArg =
     argParser
-        .add<ComplexFlag>("--saveUcbState", Policy::OPTIONAL,
+        .add<ComplexFlag>("--save-ucb-state", Policy::OPTIONAL,
                           "Save learned neighbourhood UCB info.\n")
         .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY,
                             "File to save results to.", outFileChecker);
@@ -414,7 +415,7 @@ string findConjure() {
         if (runCommand(conjurePathArg.get()).first == 0) {
             return conjurePathArg.get();
         } else {
-            cerr << toString("Error: the path specified by --conjurePath ('",
+            cerr << toString("Error: the path specified by --conjure-path ('",
                              conjurePathArg.get(),
                              "') does not point to an executable.");
             exit(1);

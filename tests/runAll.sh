@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #to skip sanity check which is slow!, pass arg skipSanityCheck 
 #to use release build pass useReleaseBuild
-sanityCheckFlag="--sanityCheck"
+sanityCheckFlag="--sanity-check"
 useReleaseBuild=0
 numberHeadTailSolutions=15
 for flag in $@ ; do
@@ -34,7 +34,7 @@ fi
 #Remember where this src folder is
 if [ "$useReleaseBuild" -eq 0 ] ; then
     solver="$PWD/../build/debug/athanor"
-    disableDebugLogFlag="--disableDebugLog"
+    disableDebugLogFlag="--disable-debug-log"
 else
     solver="$PWD/../build/release/athanor"
     disableDebugLogFlag=""
@@ -71,7 +71,7 @@ function validateSolutions() {
     then validateCommand=(../scripts/validateSolutions.py $numberHeadTailSolutions "$solsDir" conjure "$instance" "$param")
     else validateCommand=(../scripts/validateSolutions.py $numberHeadTailSolutions "$solsDir" conjure "$instance")
     fi
-    if ! cat "$outputDir/solver-output.txt" | "${validateCommand[@]}" &> "$outputDir/validator-output.txt"
+    if ! cat "$outputDir/solver-output.txt" | runCommand  "$outputDir/validator-output.txt" "${validateCommand[@]}" 
         then if grep 'No solutions found' "$outputDir/validator-output.txt"  > /dev/null && grep -E '^\$testing:no-solutions' "$instance" > /dev/null
             then return 0
             fi
@@ -96,6 +96,13 @@ function runPostChecks() {
     return 0
 }
 
+function runCommand() {
+    outputFile="$1"
+    shift
+    echo "pwd=$PWD" 2>&1 >> "$outputFile"
+    echo "command=$@" 2>&1 >> "$outputFile"
+    "$@" 2>&1 >> "$outputFile"
+}
 for instance in instances/*.essence ; do
     for param in instances/$(basename "$instance" .essence)*.param ; do
         ((numberInstances += 1))
@@ -105,15 +112,14 @@ for instance in instances/*.essence ; do
             outputDir="output/$(basename "$instance" .essence)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$instance" | grep -Eo '[0-9]+')
-            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations  --spec "$instance" &> "$outputDir/solver-output.txt"
+            runCommand "$outputDir/solver-output.txt" "$solver" $disableDebugLogFlag $sanityCheckFlag --random-seed $seed --iteration-limit $numberIterations  --spec "$instance" 
         else
             withParam=1
             echo "Running test $instance with param $param with seed $seed"
             outputDir="output/$(basename "$instance" .essence)-$(basename "$param" .param)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$param" | grep -Eo '[0-9]+')
-            "$solver" $disableDebugLogFlag $sanityCheckFlag --randomSeed $seed --iterationLimit $numberIterations  --spec "$instance" --param "$param" &> "$outputDir/solver-output.txt"
-            
+            runCommand "$outputDir/solver-output.txt" "$solver" $disableDebugLogFlag $sanityCheckFlag --random-seed $seed --iteration-limit $numberIterations  --spec "$instance" --param "$param" 
         fi
         exitStatus=$?
         checkExitStatus &&

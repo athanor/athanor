@@ -6,6 +6,7 @@ Create folder release_vMYVERSION_mac
 Compile Mac executable and add to folder.
 
 Add in Conjure Mac executable.
+add licence file
 
 Add in manualBuildAthanorInput.sh
 

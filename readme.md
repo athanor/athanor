@@ -40,9 +40,9 @@ Conjure is a great automated constraint modelling tool that accepts __Essence__ 
 
 ## Obtaining __ATHANOR__
 
-* Obtain the latest __ATHANOR__ Mac or Linux releases [here](https://github.com/athanor/athanor/releases).  *Sorry*, releases coming very soon, for now please refer to [Building from source](#installation).
+* Obtain the latest __ATHANOR__ Mac or Linux releases [here](https://github.com/athanor/athanor/releases). 
 * Manual installation instructions [here](#installation).
-* __ATHANOR__ depends on [Conjure](https://github.com/conjure-cp/conjure) to parse __Essence__. A __Conjure__ executable will be bundled with the releases and __ATHANOR__ should be able to appropriately locate it.  
+* __ATHANOR__ depends on [Conjure](https://github.com/conjure-cp/conjure) to parse __Essence__. A __Conjure__ executable is bundled with the releases and __ATHANOR__ should be able to appropriately locate it.  
 
 ## Basic usage:
 * `./athanor --spec path_to_essence_spec [--param path_to_essence_param]`

@@ -36,7 +36,7 @@ Conjure is a great automated constraint modelling tool that accepts __Essence__ 
     1. Objective: an expression to minimise or maximise.  This may be an integer or a tuple of integers which is lex ordered.
 * The parameter file is just a set of constants specified using *lettings*.
 * _Getting started_, some example essence problems that work with __ATHANOR__ [coming soon].
-* Read __Essence__ documentation [here](https://conjure.readthedocs.io/en/latest/essence.html). __ATHANOR__ operates on a subset of __Essence__.  *Feature requests are very welcome!*  Supported types: `int, bool, tuple, set, multi-set, sequence, function (total), partition (regular, fixed number parts)`.
+* Read __Essence__ documentation [here](https://conjure.readthedocs.io/en/latest/essence.html). __ATHANOR__ operates on a subset of __Essence__.  *Feature requests are very welcome!*  Supported types: `int, bool, enum, tuple, set, multi-set, sequence, function (total) int --> *, function (total) tuple(int,int, ...) --> *, partition (regular, fixed number parts), record`.
 
 ## Obtaining __ATHANOR__
 

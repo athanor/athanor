@@ -7,8 +7,8 @@
 #include "types/intVal.h"
 #include "utils/random.h"
 using namespace std;
-Int getRandomValueInDomain(const IntDomain& domain, StatsContainer& stats) {
-    ++stats.minorNodeCount;
+Int getRandomValueInDomain(const IntDomain& domain);
+Int getRandomValueInDomain(const IntDomain& domain) {
     UInt randomDomainIndex =
         globalRandom<decltype(domain.domainSize)>(0, domain.domainSize - 1);
     for (auto& bound : domain.bounds) {
@@ -36,9 +36,8 @@ Int chooseBound(const pair<Int, Int>& bound1, const pair<Int, Int>& bound2,
     }
 }
 
-Int getRandomValueInDomain(const IntDomain& domain, Int minValue, Int maxValue,
-                           StatsContainer& stats) {
-    ++stats.minorNodeCount;
+Int getRandomValueInDomain(const IntDomain& domain, Int minValue,
+                           Int maxValue) {
     if (domain.bounds.empty()) {
         cerr << "Error: empty domain\n";
         throw EndOfSearchException();
@@ -74,7 +73,8 @@ void assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
         val.domain = &domain;
     }
     val.changeValue([&]() {
-        val.value = getRandomValueInDomain(domain, stats);
+        val.value = getRandomValueInDomain(domain);
+        ++stats.minorNodeCount;
         return true;
     });
 }
@@ -96,15 +96,16 @@ struct IntAssignRandom {
         bool success;
         size_t selectedOption;
         do {
+            ++params.stats.minorNodeCount;
             success = val.changeValue([&]() {
                 if (varViolation == 0 || selector.next() == 0) {
                     selectedOption = 0;
-                    val.value = getRandomValueInDomain(domain, params.stats);
+                    val.value = getRandomValueInDomain(domain);
                 } else {
                     selectedOption = 1;
-                    val.value = getRandomValueInDomain(
-                        domain, val.value - varViolation,
-                        val.value + varViolation, params.stats);
+                    val.value =
+                        getRandomValueInDomain(domain, val.value - varViolation,
+                                               val.value + varViolation);
                 }
                 if (params.parentCheck(params.vals)) {
                     return true;

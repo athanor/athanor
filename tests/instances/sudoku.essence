@@ -1,0 +1,28 @@
+
+letting   INDEX_RANGE be domain int(1..9)
+letting   VALUES be domain int(0..9)
+
+given     values : matrix indexed by [INDEX_RANGE,INDEX_RANGE] of VALUES
+
+find      field: function (total) tuple (INDEX_RANGE, INDEX_RANGE) --> INDEX_RANGE
+
+such that
+  $ all rows have to be different
+  forAll row : INDEX_RANGE .
+       allDiff([field((row,i)) | i : INDEX_RANGE]),
+
+  $ all columns have to be different
+  forAll col : INDEX_RANGE .
+       allDiff([field(tuple(i,col)) | i : INDEX_RANGE]),	 
+
+  $ all 3x3 blocks have to be different
+      forAll i,j : int(0..2) . 
+      allDiff([field((i*3+x,j*3+y)) | x,y : int(1..3)]),
+
+
+  $ we have to set some initial values
+  forAll row,col : INDEX_RANGE . 
+       (values[row,col] > 0) ->
+               (field((row,col)) = values[row,col])
+
+

@@ -5,6 +5,7 @@
 #include "types/boolVal.h"
 #include "types/functionVal.h"
 #include "types/intVal.h"
+#include "types/tupleVal.h"
 #include "utils/random.h"
 
 using namespace std;
@@ -242,6 +243,119 @@ struct FunctionImagesSwap
         }
     }
 };
+
+Int getRandomValueInDomain(const IntDomain& domain);
+// neighbourhood, when a functionmaps from tuple of int to something, treat as
+// coordinates and only swap along same row, column, etc.
+template <typename InnerDomain>
+struct FunctionImagesSwapAlongAxis
+    : public NeighbourhoodFunc<FunctionDomain, 1,
+                               FunctionImagesSwapAlongAxis<InnerDomain>> {
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    const FunctionDomain& domain;
+    const InnerDomain& innerDomain;
+    ValRef<TupleValue> preImage = make<TupleValue>();
+    shared_ptr<TupleDomain> preImageDomain;
+
+    FunctionImagesSwapAlongAxis(const FunctionDomain& domain)
+        : domain(domain),
+          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
+          preImageDomain(
+              mpark::get<shared_ptr<TupleDomain>>(this->domain.from)) {
+        for (auto& innerDomain : preImageDomain->inners) {
+            ignoreUnused(innerDomain);
+            auto intVal = make<IntValue>();
+            // just assign it to anything
+            intVal->value = 0;
+            preImage->members.emplace_back(intVal.asExpr());
+        }
+    }
+
+    static string getName() { return "FunctionImagesSwapAlongAxis"; }
+    static bool matches(const FunctionDomain& domain) {
+        auto tupleDomain = mpark::get_if<shared_ptr<TupleDomain>>(&domain.from);
+        if (!tupleDomain) {
+            return false;
+        }
+        if ((**tupleDomain).inners.size() < 2) {
+            return false;
+        }
+        for (auto& innerDomain : (**tupleDomain).inners) {
+            if (!mpark::get_if<shared_ptr<IntDomain>>(&innerDomain)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    void apply(NeighbourhoodParams& params, FunctionValue& val) {
+        int numberTries = 0;
+        const int tryLimit = params.parentCheckTryLimit;
+        debug_neighbourhood_action("Looking for indices to swap");
+        auto& vioContainerAtThisLevel =
+            params.vioContainer.childViolations(val.id);
+
+        bool success;
+        UInt index1, index2;
+        do {
+            success = false;
+            ++params.stats.minorNodeCount;
+            lib::optional<pair<UInt, UInt>> indicesToSwap =
+                getIndicesToSwap(val, vioContainerAtThisLevel);
+            if (!indicesToSwap) {
+                continue;
+            }
+            tie(index1, index2) = *indicesToSwap;
+            if (index2 < index1) {
+                swap(index1, index2);
+            }
+
+            success = val.trySwapImages<InnerValueType>(index1, index2, [&]() {
+                return params.parentCheck(params.vals);
+            });
+        } while (!success && ++numberTries < tryLimit);
+        if (!success) {
+            debug_neighbourhood_action(
+                "Couldn't find positions to swap, number tries=" << tryLimit);
+            return;
+        }
+        debug_neighbourhood_action("positions swapped: " << index1 << " and "
+                                                         << index2);
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            val.trySwapImages<InnerValueType>(index1, index2,
+                                              []() { return true; });
+        }
+    }
+
+    lib::optional<pair<UInt, UInt>> getIndicesToSwap(
+        FunctionValue& val, ViolationContainer& vioContainer) {
+        // first, choose an index, biasing towards violating members
+        UInt index1 = vioContainer.selectRandomVar(val.rangeSize() - 1);
+        // now we need the second index.  For this we need to first randomly
+        // choose the dimension we what to swap in. extract preImage that is
+        // this index
+        val.indexToDomain<TupleDomain>(index1, *preImage);
+        size_t dimToChange =
+            globalRandom<size_t>(0, preImage->members.size() - 1);
+        auto intVal = preImage->member<IntValue>(dimToChange);
+        auto& intDomain = mpark::get<shared_ptr<IntDomain>>(
+            preImageDomain->inners[dimToChange]);
+        if (getDomainSize(*intDomain) < 2) {
+            return lib::nullopt;
+        }
+        // find a different value
+        Int newValue;
+        do {
+            newValue = getRandomValueInDomain(*intDomain);
+        } while (newValue == intVal->value);
+        intVal->value = newValue;
+        auto index2 = val.domainToIndex(*preImage);
+        debug_code(assert(index2));
+        return make_pair(index1, *index2);
+    }
+};
+
 Int& valueOf(IntView& v) { return v.value; }
 UInt& valueOf(BoolView& v) { return v.violation; }
 
@@ -562,11 +676,13 @@ const AnyDomainRef getInner<FunctionDomain>(const FunctionDomain& domain) {
 
 const NeighbourhoodVec<FunctionDomain>
     NeighbourhoodGenList<FunctionDomain>::value = {
-        {1, functionLiftSingleGen},                                     //
-        {1, functionLiftMultipleGen},                                   //
-        {1, generateForAllTypes<FunctionDomain, FunctionImagesSwap>},   //
-        {2, generateForAllTypes<FunctionDomain, FunctionCrossover>},    //
-        {1, generate<FunctionDomain, FunctionUnifyImages<IntDomain>>},  //
+        {1, functionLiftSingleGen},                                    //
+        {1, functionLiftMultipleGen},                                  //
+        {1, generateForAllTypes<FunctionDomain, FunctionImagesSwap>},  //
+        {1,
+         generateForAllTypes<FunctionDomain, FunctionImagesSwapAlongAxis>},  //
+        {2, generateForAllTypes<FunctionDomain, FunctionCrossover>},         //
+        {1, generate<FunctionDomain, FunctionUnifyImages<IntDomain>>},       //
 
         {1, generate<FunctionDomain, FunctionUnifyImages<BoolDomain>>},  //
         {1, generate<FunctionDomain, FunctionSplitImages<IntDomain>>},   //

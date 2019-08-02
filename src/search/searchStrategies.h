@@ -93,6 +93,8 @@ class RandomWalk {
 
     RandomWalk(bool allowViolations) : allowViolations(allowViolations) {}
     void run(State& state, bool) {
+        UInt startViolation = state.model.getViolation();
+        UInt allowedViolationBackOff = numberMovesToTake;
         u_int64_t numberIterations = 0;
         while (numberIterations <= numberMovesToTake) {
             nhSelector->run(state, [&](const auto& result) {
@@ -100,7 +102,7 @@ class RandomWalk {
                     return false;
                 }
                 bool allowed =
-                    allowViolations || result.model.getViolation() == 0;
+                    result.model.getViolation() < startViolation + allowedViolationBackOff;
                 numberIterations += allowed;
                 return allowed;
             });

@@ -1,0 +1,10 @@
+
+$testing:numberIterations=0
+letting d1 be domain int(-3..0)
+letting d2 be domain int(3..5)
+letting d3 be domain int(-3..0)
+letting d4 be domain int(3..5)
+$making separate domain here because of domain merging bug
+
+find m : matrix indexed by [d1,d2] of int(-3..5)
+such that forAll i : d3 . forAll j : d4 .  m[i,j] = i + j

@@ -50,6 +50,8 @@ shared_ptr<SequenceDomain> parseDomainSequence(json& sequenceDomainExpr,
                                                ParsedModel& parsedModel);
 shared_ptr<FunctionDomain> parseDomainFunction(json& functionDomainExpr,
                                                ParsedModel& parsedModel);
+shared_ptr<SequenceDomain> parseDomainMatrix(json& matrixDomainExpr,
+                                             ParsedModel& parsedModel);
 shared_ptr<TupleDomain> parseDomainTuple(json& tupleDomainExpr,
                                          ParsedModel& parsedModel);
 shared_ptr<TupleDomain> parseDomainRecord(json& tupleDomainExpr,
@@ -72,7 +74,7 @@ ParseResult parseOpPowerSet(json& powerSetExpr, ParsedModel& parsedModel);
 ParseResult parseOpSequenceIndex(AnyDomainRef& innerDomain,
                                  ExprRef<SequenceView>& sequence,
                                  json& indexExpr, bool hasEmptyType,
-                                 ParsedModel& parsedModel);
+                                 Int indexOffset, ParsedModel& parsedModel);
 ParseResult parseOpFunctionImage(AnyDomainRef& innerDomain,
                                  ExprRef<FunctionView>& function,
                                  json& preImageExpr, bool hasEmptyType,
@@ -151,6 +153,7 @@ optional<AnyDomainRef> tryParseDomain(json& domainExpr,
          {"DomainSet", parseDomainSet},
          {"DomainMSet", parseDomainMSet},
          {"DomainSequence", parseDomainSequence},
+         {"DomainMatrix", parseDomainMatrix},
          {"DomainTuple", parseDomainTuple},
          {"DomainRecord", parseDomainRecord},
          {"DomainFunction", parseDomainFunction},
@@ -167,7 +170,7 @@ ParseResult parseOpRelationProj(json& operandsExpr, ParsedModel& parsedModel) {
                     mpark::get<shared_ptr<SequenceDomain>>(leftOperand.domain)
                         ->inner;
                 return parseOpSequenceIndex(
-                    innerDomain, sequence, operandsExpr[1][0],
+                    innerDomain, sequence, operandsExpr[1][0], 0,
                     leftOperand.hasEmptyType, parsedModel);
             },
             [&](ExprRef<FunctionView>& function) -> ParseResult {
@@ -192,28 +195,35 @@ ParseResult parseOpRelationProj(json& operandsExpr, ParsedModel& parsedModel) {
         leftOperand.expr);
 }
 
-ParseResult parseOpIndexing(json& operandsExpr, ParsedModel& parsedModel) {
-    auto leftOperand = parseExpr(operandsExpr[0], parsedModel);
-    return mpark::visit(
+ParseResult parseOpIndexingHelper(json& operandsExpr, ParsedModel& parsedModel,
+                                  ParseResult& leftOperand,
+                                  size_t currentIndex) {
+    auto indexedItem = mpark::visit(
         overloaded(
             [&](ExprRef<TupleView>& tuple) -> ParseResult {
                 auto& tupleDomain =
                     mpark::get<shared_ptr<TupleDomain>>(leftOperand.domain);
                 if (tupleDomain->isRecord) {
                     return parseOpRecordIndex(tupleDomain, tuple,
-                                              operandsExpr[1], parsedModel);
+                                              operandsExpr[currentIndex],
+                                              parsedModel);
                 } else {
                     return parseOpTupleIndex(tupleDomain, tuple,
-                                             operandsExpr[1], parsedModel);
+                                             operandsExpr[currentIndex],
+                                             parsedModel);
                 }
             },
             [&](ExprRef<SequenceView>& sequence) -> ParseResult {
-                auto& innerDomain =
-                    mpark::get<shared_ptr<SequenceDomain>>(leftOperand.domain)
-                        ->inner;
+                auto& sequenceDomain =
+                    mpark::get<shared_ptr<SequenceDomain>>(leftOperand.domain);
+                Int lower = 0;
+                if (sequenceDomain->isMatrixDomain()) {
+                    auto& bounds = sequenceDomain->indexingDomain->bounds;
+                    lower = (!bounds.empty()) ? bounds.front().first - 1 : 0;
+                }
                 return parseOpSequenceIndex(
-                    innerDomain, sequence, operandsExpr[1],
-                    leftOperand.hasEmptyType, parsedModel);
+                    sequenceDomain->inner, sequence, operandsExpr[currentIndex],
+                    leftOperand.hasEmptyType, lower, parsedModel);
             },
             [&](auto&& operand) -> ParseResult {
                 cerr << "Error, not yet handling op "
@@ -227,6 +237,17 @@ ParseResult parseOpIndexing(json& operandsExpr, ParsedModel& parsedModel) {
                 abort();
             }),
         leftOperand.expr);
+    if (currentIndex + 1 == operandsExpr.size()) {
+        return indexedItem;
+    } else {
+        return parseOpIndexingHelper(operandsExpr, parsedModel, indexedItem,
+                                     currentIndex + 1);
+    }
+}
+
+ParseResult parseOpIndexing(json& operandsExpr, ParsedModel& parsedModel) {
+    auto leftOperand = parseExpr(operandsExpr[0], parsedModel);
+    return parseOpIndexingHelper(operandsExpr, parsedModel, leftOperand, 1);
 }
 
 ParseResult parseOpCatchUndef(json& operandsExpr, ParsedModel& parsedModel) {

@@ -1,3 +1,4 @@
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -42,7 +43,7 @@ ostream& prettyPrint<SequenceView>(ostream& os, const SequenceView& v) {
 template <>
 ostream& prettyPrint<SequenceView>(ostream& os, const SequenceDomain& domain,
                                    const SequenceView& v) {
-    os << "sequence(";
+    os << ((domain.isMatrixDomain()) ? "[" : "sequence(");
     mpark::visit(
         [&](auto& membersImpl) {
             typedef
@@ -62,7 +63,11 @@ ostream& prettyPrint<SequenceView>(ostream& os, const SequenceDomain& domain,
             }
         },
         v.members);
-    os << ")";
+    if (domain.isMatrixDomain()) {
+        os << ";" << *domain.indexingDomain << "]";
+    } else {
+        os << ")";
+    }
     return os;
 }
 
@@ -93,10 +98,14 @@ void deepCopy<SequenceValue>(const SequenceValue& src, SequenceValue& target) {
 
 template <>
 ostream& prettyPrint<SequenceDomain>(ostream& os, const SequenceDomain& d) {
-    os << "sequence(";
-    os << d.sizeAttr << ",";
-    prettyPrint(os, d.inner);
-    os << ")";
+    if (d.isMatrixDomain()) {
+        os << "matrix indexed by [" << *d.indexingDomain << "] of " << d.inner;
+    } else {
+        os << "sequence(";
+        os << d.sizeAttr << ",";
+        prettyPrint(os, d.inner);
+        os << ")";
+    }
     return os;
 }
 

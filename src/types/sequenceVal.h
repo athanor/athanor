@@ -2,6 +2,7 @@
 #define SRC_TYPES_SEQUENCEVAL_H_
 #include <vector>
 #include "common/common.h"
+#include "types/intVal.h"
 #include "types/sequence.h"
 #include "types/sizeAttr.h"
 #include "utils/ignoreUnused.h"
@@ -11,6 +12,9 @@ struct SequenceDomain {
     SizeAttr sizeAttr;
     AnyDomainRef inner;
     bool injective;
+    std::shared_ptr<IntDomain>
+        indexingDomain;  // if not nullptr, this sequence domain represents a
+                         // matrix domain.
     template <typename DomainType>
     SequenceDomain(SizeAttr sizeAttr, DomainType&& inner,
                    bool injective = false)
@@ -20,10 +24,29 @@ struct SequenceDomain {
         checkMaxSize();
     }
 
+    template <typename DomainType>
+    static std::shared_ptr<SequenceDomain> makeMatrixDomain(
+        std::shared_ptr<IntDomain> indexingDomain, DomainType&& inner) {
+        if (indexingDomain->bounds.size() > 1) {
+            std::cerr
+                << "Error: currently no support for matrix domains with holes "
+                   "in the index.\n";
+            abort();
+        }
+        auto matrix = std::make_shared<SequenceDomain>(
+            exactSize(indexingDomain->domainSize),
+            std::forward<DomainType>(inner));
+        matrix->indexingDomain = indexingDomain;
+        return matrix;
+    }
     void merge(SequenceDomain& other) {
         sizeAttr.merge(other.sizeAttr);
         mergeDomains(inner, other.inner);
         injective &= other.injective;
+    }
+
+    inline bool isMatrixDomain() const {
+        return static_cast<bool>(indexingDomain);
     }
 
    private:

@@ -101,8 +101,8 @@ class RandomWalk {
                 if (!result.foundAssignment) {
                     return false;
                 }
-                bool allowed =
-                    result.model.getViolation() < startViolation + allowedViolationBackOff;
+                bool allowed = result.model.getViolation() <
+                               startViolation + allowedViolationBackOff;
                 numberIterations += allowed;
                 return allowed;
             });

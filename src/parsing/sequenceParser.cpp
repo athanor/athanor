@@ -23,42 +23,15 @@ shared_ptr<SequenceDomain> parseDomainSequence(json& sequenceDomainExpr,
     }
 }
 
-shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
-                                     ParsedModel& parsedModel);
-
-shared_ptr<SequenceDomain> parseDomainMatrix(json& matrixDomainExpr,
-                                             ParsedModel& parsedModel) {
-    auto indexingDomain = parseDomain(matrixDomainExpr[0], parsedModel);
-    auto indexingDomainIntTest =
-        mpark::get_if<shared_ptr<IntDomain>>(&indexingDomain);
-    if (!indexingDomainIntTest) {
-        cerr << "Error: matrices must be indexed by int domains.\n";
-        abort();
-    }
-    return SequenceDomain::makeMatrixDomain(
-        *indexingDomainIntTest, parseDomain(matrixDomainExpr[1], parsedModel));
-}
-
-ExprRef<IntView> makeIndexShift(ExprRef<IntView> index, Int indexOffset) {
-    auto shift = make<IntValue>();
-    shift->value = indexOffset;
-    shift->setConstant(true);
-    auto op = OpMaker<OpMinus>::make(index,shift.asExpr());
-    op->setConstant(index->isConstant());
-    return op;
-}
 ParseResult parseOpSequenceIndex(AnyDomainRef& innerDomain,
                                  ExprRef<SequenceView>& sequence,
                                  json& indexExpr, bool hasEmptyType,
-                                 Int indexOffset, ParsedModel& parsedModel) {
+                                 ParsedModel& parsedModel) {
     auto index =
         expect<IntView>(parseExpr(indexExpr, parsedModel).expr, [](auto&&) {
             cerr << "Sequence must be indexed by an int "
                     "expression.\n";
         });
-    if (indexOffset != 0) {
-        index = makeIndexShift(index, indexOffset);
-    }
     return mpark::visit(
         [&](auto& innerDomain) -> ParseResult {
             typedef typename BaseType<decltype(innerDomain)>::element_type

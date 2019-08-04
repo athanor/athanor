@@ -281,7 +281,7 @@ ostream& prettyPrint<FunctionView>(ostream& os, const FunctionView& v) {
 template <>
 ostream& prettyPrint<FunctionView>(ostream& os, const FunctionDomain& domain,
                                    const FunctionView& v) {
-    os << "function(";
+    os << ((domain.isMatrixDomain) ? "[" : "function(");
     mpark::visit(
         [&](auto& rangeImpl) {
             typedef
@@ -291,22 +291,30 @@ ostream& prettyPrint<FunctionView>(ostream& os, const FunctionDomain& domain,
 
             for (size_t i = 0; i < rangeImpl.size(); i++) {
                 if (i > 0) {
-                    os << ",\n";
+                    os << ",";
                 }
-                mpark::visit(
-                    [&](auto& fromDomain) {
-                        typedef typename BaseType<decltype(
-                            fromDomain)>::element_type Domain;
-                        auto from = v.indexToDomain<Domain>(i);
-                        prettyPrint(os, *fromDomain, from->view());
-                    },
-                    v.fromDomain);
-                os << " --> ";
+                if (!domain.isMatrixDomain) {
+                    mpark::visit(
+                        [&](auto& fromDomain) {
+                            typedef typename BaseType<decltype(
+                                fromDomain)>::element_type Domain;
+                            auto from = v.indexToDomain<Domain>(i);
+                            prettyPrint(os, *fromDomain, from->view());
+                        },
+                        v.fromDomain);
+
+                    os << " --> ";
+                }
                 prettyPrint(os, *toDomainPtr, rangeImpl[i]->view());
             }
         },
         v.range);
-    os << ")";
+    if (domain.isMatrixDomain) {
+        os << "; ";
+        prettyPrint(os, domain.from) << "]";
+    } else {
+        os << ")";
+    }
     return os;
 }
 
@@ -336,9 +344,15 @@ void deepCopy<FunctionValue>(const FunctionValue& src, FunctionValue& target) {
 
 template <>
 ostream& prettyPrint<FunctionDomain>(ostream& os, const FunctionDomain& d) {
-    os << "function(";
-    prettyPrint(os, d.from) << " --> ";
-    prettyPrint(os, d.to) << ")";
+    if (d.isMatrixDomain) {
+        os << "matrix indexed by [";
+        prettyPrint(os, d.from) << "] of ";
+        prettyPrint(os, d.to);
+    } else {
+        os << "function(";
+        prettyPrint(os, d.from) << " --> ";
+        prettyPrint(os, d.to) << ")";
+    }
     return os;
 }
 

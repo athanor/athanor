@@ -4,6 +4,7 @@
 #include "base/base.h"
 #include "common/common.h"
 #include "types/function.h"
+#include "types/intVal.h"
 #include "types/sizeAttr.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
@@ -15,7 +16,7 @@ struct FunctionDomain {
     PartialAttr partial;
     AnyDomainRef from;
     AnyDomainRef to;
-
+    bool isMatrixDomain;
     template <typename FromDomainType, typename ToDomainType>
     FunctionDomain(JectivityAttr jectivity, PartialAttr partial,
                    FromDomainType&& from, ToDomainType&& to)
@@ -25,6 +26,23 @@ struct FunctionDomain {
           to(makeAnyDomainRef(std::forward<ToDomainType>(to))) {
         checkSupported();
     }
+
+    template <typename DomainType>
+    static std::shared_ptr<FunctionDomain> makeMatrixDomain(
+        std::shared_ptr<IntDomain> indexingDomain, DomainType&& inner) {
+        if (indexingDomain->bounds.size() > 1) {
+            std::cerr
+                << "Error: currently no support for matrix domains with holes "
+                   "in the index.\n";
+            abort();
+        }
+        auto matrix = std::make_shared<FunctionDomain>(
+            JectivityAttr::NONE, PartialAttr::TOTAL, indexingDomain,
+            std::forward<DomainType>(inner));
+        matrix->isMatrixDomain = true;
+        return matrix;
+    }
+
     void merge(FunctionDomain& other) {
         mergeDomains(from, other.from);
         mergeDomains(to, other.to);

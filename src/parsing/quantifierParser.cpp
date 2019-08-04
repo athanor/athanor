@@ -53,7 +53,7 @@ void checkTuplePatternMatchSize(json& tupleMatchExpr,
 template <typename Domain,
           typename View = typename AssociatedViewType<
               typename AssociatedValueType<Domain>::type>::type>
-ExprRef<View> makeTupleIndexFromDomain(shared_ptr<Domain>&,
+ExprRef<View> makeTupleIndexFromDomain(const shared_ptr<Domain>&,
                                        ExprRef<TupleView>& expr, UInt index) {
     return OpMaker<OpTupleIndex<View>>::make(expr, index);
 }
@@ -469,6 +469,22 @@ ParseResult quantifyOverSet(shared_ptr<SetDomain>& domain,
         domain->inner);
 }
 
+ParseResult quantifyOverFunction(shared_ptr<FunctionDomain>& domain,
+                                 ExprRef<FunctionView>& expr,
+                                 bool hasEmptyType) {
+    auto quant = make_shared<Quantifier<FunctionView>>(expr);
+    return mpark::visit(
+        [&](auto& innerDomain) {
+            auto iter = ExprRef<TupleView>(quant->newIterRef<TupleView>());
+            auto image = makeTupleIndexFromDomain(innerDomain, iter, 1);
+            quant->setExpression(image);
+            return ParseResult(
+                fakeSequenceDomain(fakeTupleDomain({domain->from, domain->to})),
+                ExprRef<SequenceView>(quant), hasEmptyType);
+        },
+        domain->to);
+}
+
 ParseResult toSequence(ParseResult parsedExpr) {
     auto overload = overloaded(
         [&](shared_ptr<SequenceDomain>&) { return parsedExpr; },
@@ -477,6 +493,12 @@ ParseResult toSequence(ParseResult parsedExpr) {
                 domain, mpark::get<ExprRef<SetView>>(parsedExpr.expr),
                 parsedExpr.hasEmptyType);
         },
+        [&](shared_ptr<FunctionDomain>& domain) {
+            return quantifyOverFunction(
+                domain, mpark::get<ExprRef<FunctionView>>(parsedExpr.expr),
+                parsedExpr.hasEmptyType);
+        },
+
         [&](auto&) -> ParseResult { todoImpl(); });
     return mpark::visit(overload, parsedExpr.domain);
 }

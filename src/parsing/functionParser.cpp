@@ -86,7 +86,7 @@ ParseResult parseOpFunctionImage(AnyDomainRef& innerDomain,
                                  ExprRef<FunctionView>& function,
                                  json& preImageExpr, bool hasEmptyType,
                                  ParsedModel& parsedModel) {
-    auto preImage = parseExpr(preImageExpr[0], parsedModel).expr;
+    auto preImage = parseExpr(preImageExpr, parsedModel).expr;
     return mpark::visit(
         [&](auto& innerDomain, auto& preImage) {
             typedef typename BaseType<decltype(innerDomain)>::element_type
@@ -98,4 +98,20 @@ ParseResult parseOpFunctionImage(AnyDomainRef& innerDomain,
             return ParseResult(innerDomain, op, hasEmptyType);
         },
         innerDomain, preImage);
+}
+
+shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
+                                     ParsedModel& parsedModel);
+
+shared_ptr<FunctionDomain> parseDomainMatrix(json& matrixDomainExpr,
+                                             ParsedModel& parsedModel) {
+    auto indexingDomain = parseDomain(matrixDomainExpr[0], parsedModel);
+    auto indexingDomainIntTest =
+        mpark::get_if<shared_ptr<IntDomain>>(&indexingDomain);
+    if (!indexingDomainIntTest) {
+        cerr << "Error: matrices must be indexed by int domains.\n";
+        abort();
+    }
+    return FunctionDomain::makeMatrixDomain(
+        *indexingDomainIntTest, parseDomain(matrixDomainExpr[1], parsedModel));
 }

@@ -65,13 +65,9 @@ ParseResult parseOpSubsetEq(json& subsetExpr, ParsedModel& parsedModel) {
 }
 
 ParseResult parseOpAllDiff(json& operandExpr, ParsedModel& parsedModel) {
-    auto sequence = expect<SequenceView>(
-        parseExpr(operandExpr, parsedModel).expr, [&](auto&&) {
-            cerr << "OpAllDiff expects a sequence "
-                    "returning "
-                    "expression.\n";
-            cerr << operandExpr << endl;
-        });
+    ParseResult parsedOperandExpr =
+        toSequence(parseExpr(operandExpr, parsedModel));
+    auto sequence = mpark::get<ExprRef<SequenceView>>(parsedOperandExpr.expr);
     bool constant = sequence->isConstant();
     auto op = OpMaker<OpAllDiff>::make(sequence);
     op->setConstant(constant);

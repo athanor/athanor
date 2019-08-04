@@ -382,6 +382,7 @@ optional<ParseResult> tryParseExpr(json& essenceExpr,
 
 void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
     string lettingName = lettingArray[0]["Name"];
+    debug_log("Parsing letting " << lettingName);
     auto value = tryParseExpr(lettingArray[1], parsedModel);
     if (value) {
         parsedModel.namedExprs.emplace(lettingName, *value);
@@ -398,6 +399,7 @@ void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
 
 void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {
     string findName = findArray[1]["Name"];
+    debug_log("Parsing find " << findName);
     auto findDomain = parseDomain(findArray[2], parsedModel);
     mpark::visit(
         [&](auto& domainImpl) {
@@ -412,7 +414,9 @@ void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {
 }
 
 void parseExprs(json& suchThat, ParsedModel& parsedModel) {
+    debug_log("Parsing such that");
     for (auto& op : suchThat) {
+        debug_log("parsing op");
         ExprRef<BoolView> constraint =
             expect<BoolView>(parseExpr(op, parsedModel).expr, [&](auto&&) {
                 cerr << "Expected Bool returning constraint "

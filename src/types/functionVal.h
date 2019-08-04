@@ -16,7 +16,7 @@ struct FunctionDomain {
     PartialAttr partial;
     AnyDomainRef from;
     AnyDomainRef to;
-    bool isMatrixDomain;
+    bool isMatrixDomain = false;
     template <typename FromDomainType, typename ToDomainType>
     FunctionDomain(JectivityAttr jectivity, PartialAttr partial,
                    FromDomainType&& from, ToDomainType&& to)

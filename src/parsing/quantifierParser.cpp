@@ -432,7 +432,48 @@ ParseResult makeDomainGeneratorFromEnumDomain(
                        OpMaker<EnumRange>::make(domain), false);
 }
 
+ParseResult parseIntDomainAsIntRange(json& intDomainExpr,
+                                     ParsedModel& parsedModel) {
+    auto& rangesToParse =
+        (intDomainExpr[0].count("TagInt")) ? intDomainExpr[1] : intDomainExpr;
+    if (rangesToParse.size() != 1) {
+        cerr << "Cannot currently quantify over int domains with holes.\n";
+        abort();
+    }
+    auto& rangeExpr = rangesToParse[0];
+    lib::optional<ParseResult> from, to;
+    if (rangeExpr.count("RangeBounded")) {
+        from = parseExpr(rangeExpr["RangeBounded"][0], parsedModel);
+        to = parseExpr(rangeExpr["RangeBounded"][1], parsedModel);
+    } else if (rangeExpr.count("RangeSingle")) {
+        from = parseExpr(rangeExpr["RangeSingle"], parsedModel);
+        to = from;
+    } else {
+        cerr << "Unrecognised type of int range: " << rangeExpr << endl;
+        abort();
+    }
+    auto errorHandler = [&](auto&) {
+        cerr << "Expected int expressions , whilst parsing quantifier over int "
+                "domain.\n";
+    };
+    auto fromExpr = expect<IntView>(from->expr, errorHandler);
+    auto toExpr = expect<IntView>(to->expr, errorHandler);
+    auto op = OpMaker<IntRange>::make(fromExpr, toExpr);
+    op->setConstant(fromExpr->isConstant() && toExpr->isConstant());
+    return ParseResult(fakeSequenceDomain(fakeIntDomain), op, false);
+}
 ParseResult parseDomainGenerator(json& domainExpr, ParsedModel& parsedModel) {
+    /*hack here,
+     it is possible to have the unrolling of a domain which is dependent on a
+quantifier variable  which will not have been evaluated yet. For example `forAll
+i : domain1 . forAll j : int(1..i) .` idealy, we would just say parse domain.
+But parsing domains need to have all expressions inside be entirely evaluated.
+Here `i` will not be evaluated until search.
+So instead, if we see a "DomainInt" expression, we manually construct the
+IntRange constraint which will delaythe unrolling.*/
+    if (domainExpr.count("DomainInt")) {
+        return parseIntDomainAsIntRange(domainExpr["DomainInt"], parsedModel);
+    }
     auto domain = parseDomain(domainExpr, parsedModel);
     return mpark::visit(
         overloaded(

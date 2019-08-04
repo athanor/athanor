@@ -241,16 +241,22 @@ struct SequenceRelaxSub
     static string getName() { return "SequenceRelaxSub"; }
     static bool matches(const SequenceDomain&) { return true; }
 
-    template <typename InnerViewType>
-    static void insureSize(ExprRefVec<InnerViewType>& newValues,
-                           size_t subseqSize) {
+    template <typename InnerDomainType>
+    static void insureSize(
+        const InnerDomainType& innerDomain,
+        ExprRefVec<typename AssociatedViewType<InnerDomainType>::type>&
+            newValues,
+        size_t subseqSize) {
+        typedef
+            typename AssociatedViewType<InnerDomainType>::type InnerViewType;
         typedef
             typename AssociatedValueType<InnerViewType>::type InnerValueType;
         if (subseqSize < newValues.size()) {
             newValues.erase(newValues.begin() + subseqSize, newValues.end());
         }
         while (newValues.size() < subseqSize) {
-            newValues.emplace_back(make<InnerValueType>().asExpr());
+            auto newMember = constructValueFromDomain(innerDomain);
+            newValues.emplace_back(newMember.asExpr());
         }
     }
 
@@ -334,7 +340,7 @@ struct SequenceRelaxSub
             HashType previousSubseqHash =
                 val.notifyPossibleSubsequenceChange<InnerValueType>(
                     startIndex, endIndex, oldHashes);
-            insureSize(newValues, endIndex - startIndex);
+            insureSize(innerDomain, newValues, endIndex - startIndex);
 
             assignNewValues(innerDomain, val, oldHashes, newValues,
                             params.stats);

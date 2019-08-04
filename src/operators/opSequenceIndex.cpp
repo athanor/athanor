@@ -18,9 +18,9 @@ template <typename SequenceMemberViewType>
 OptionalRef<ExprRef<SequenceMemberViewType>>
 OpSequenceIndex<SequenceMemberViewType>::getMember() {
     debug_code(assert(indexOperand->appearsDefined()));
-    debug_code(assert(cachedIndex >= 0));
     auto view = sequenceOperand->view();
-    if (!view || cachedIndex >= (Int)(*view).numberElements()) {
+    if (!view || cachedIndex < 0 ||
+        cachedIndex >= (Int)(*view).numberElements()) {
         return EmptyOptional();
     }
 
@@ -32,15 +32,16 @@ template <typename SequenceMemberViewType>
 OptionalRef<const ExprRef<SequenceMemberViewType>>
 OpSequenceIndex<SequenceMemberViewType>::getMember() const {
     debug_code(assert(indexOperand->appearsDefined()));
-    debug_code(assert(cachedIndex >= 0));
     auto view = sequenceOperand->view();
-    if (!view || cachedIndex >= (Int)(*view).numberElements()) {
+    if (!view || cachedIndex < 0 ||
+        cachedIndex >= (Int)(*view).numberElements()) {
         return EmptyOptional();
     }
     const auto& member =
         (*view).getMembers<SequenceMemberViewType>()[cachedIndex];
     return member;
 }
+
 template <typename SequenceMemberViewType>
 OptionalRef<SequenceMemberViewType>
 OpSequenceIndex<SequenceMemberViewType>::view() {

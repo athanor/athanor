@@ -25,9 +25,9 @@ void mergeIfSameType(shared_ptr<T>&, shared_ptr<U>&) {
 }
 
 void mergeDomains(AnyDomainRef& dest, AnyDomainRef& src) {
-    auto overload =
-        overloaded([&](shared_ptr<EmptyDomain>&, auto& src) { dest = src; },
-                   [](auto& dest, auto& src) { mergeIfSameType(dest, src); });
+    auto overload = overloaded(
+        [&](shared_ptr<EmptyDomain>&, auto& src) { dest = src->deepCopy(src); },
+        [](auto& dest, auto& src) { mergeIfSameType(dest, src); });
     mpark::visit(overload, dest, src);
 }
 
@@ -38,7 +38,11 @@ MultiParseResult parseAllAsSameType(json& jsonArray, ParsedModel& parsedModel,
     result.exprs.emplace<ExprRefVec<EmptyView>>();
     for (size_t i = 0; i < jsonArray.size(); i++) {
         auto member = parseExpr(jsonMapper(jsonArray[i]), parsedModel);
-        mergeDomains(result.domain, member.domain);
+        if (i == 0) {
+            result.domain = deepCopyDomain(member.domain);
+        } else {
+            mergeDomains(result.domain, member.domain);
+        }
         mpark::visit(
             [&](auto& expr) {
                 auto& exprs =

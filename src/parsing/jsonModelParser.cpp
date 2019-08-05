@@ -75,7 +75,7 @@ ParseResult parseOpSequenceIndex(AnyDomainRef& innerDomain,
                                  ExprRef<SequenceView>& sequence,
                                  json& indexExpr, bool hasEmptyType,
                                  ParsedModel& parsedModel);
-ParseResult parseOpFunctionImage(AnyDomainRef& innerDomain,
+ParseResult parseOpFunctionImage(const FunctionDomain& domain,
                                  ExprRef<FunctionView>& function,
                                  json& preImageExpr, bool hasEmptyType,
                                  ParsedModel& parsedModel);
@@ -174,11 +174,10 @@ ParseResult parseOpRelationProj(json& operandsExpr, ParsedModel& parsedModel) {
                     leftOperand.hasEmptyType, parsedModel);
             },
             [&](ExprRef<FunctionView>& function) -> ParseResult {
-                auto& innerDomain =
-                    mpark::get<shared_ptr<FunctionDomain>>(leftOperand.domain)
-                        ->to;
+                auto& functionDomain =
+                    mpark::get<shared_ptr<FunctionDomain>>(leftOperand.domain);
                 return parseOpFunctionImage(
-                    innerDomain, function, operandsExpr[1][0],
+                    *functionDomain, function, operandsExpr[1][0],
                     leftOperand.hasEmptyType, parsedModel);
             },
             [&](auto&& operand) -> ParseResult {
@@ -224,7 +223,7 @@ ParseResult parseOpIndexingHelper(json& operandsExpr, ParsedModel& parsedModel,
                 auto& functionDomain =
                     mpark::get<shared_ptr<FunctionDomain>>(leftOperand.domain);
                 return parseOpFunctionImage(
-                    functionDomain->to, function, operandsExpr[currentIndex],
+                    *functionDomain, function, operandsExpr[currentIndex],
                     leftOperand.hasEmptyType, parsedModel);
             },
             [&](auto&& operand) -> ParseResult {

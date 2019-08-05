@@ -82,7 +82,7 @@ shared_ptr<FunctionDomain> parseDomainFunction(json& functionDomainExpr,
         parseDomain(functionDomainExpr[3], parsedModel));
 }
 
-ParseResult parseOpFunctionImage(AnyDomainRef& innerDomain,
+ParseResult parseOpFunctionImage(const FunctionDomain& domain,
                                  ExprRef<FunctionView>& function,
                                  json& preImageExpr, bool hasEmptyType,
                                  ParsedModel& parsedModel) {
@@ -92,12 +92,24 @@ ParseResult parseOpFunctionImage(AnyDomainRef& innerDomain,
             typedef typename BaseType<decltype(innerDomain)>::element_type
                 InnerDomainType;
             typedef typename AssociatedViewType<InnerDomainType>::type View;
+            typedef viewType(preImage) preImageViewType;
+            typedef typename AssociatedDomain<preImageViewType>::type
+                preImageDomain;
+            if (!mpark::get_if<shared_ptr<preImageDomain>>(&domain.from)) {
+                cerr << "Miss match in pre image domain and function domain "
+                        "when parsing OpFunctionImage.\nfunction:"
+                     << domain << "\npre image type: "
+                     << TypeAsString<typename AssociatedValueType<
+                            preImageDomain>::type>::value
+                     << endl;
+                abort();
+            }
             bool constant = function->isConstant() && preImage->isConstant();
             auto op = OpMaker<OpFunctionImage<View>>::make(function, preImage);
             op->setConstant(constant);
             return ParseResult(innerDomain, op, hasEmptyType);
         },
-        innerDomain, preImage);
+        domain.to, preImage);
 }
 
 shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,

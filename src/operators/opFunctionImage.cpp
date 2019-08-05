@@ -91,7 +91,7 @@ struct PreImageTrigger;
 template <typename FunctionMemberViewType>
 lib::optional<UInt> OpFunctionImage<FunctionMemberViewType>::calculateIndex()
     const {
-    auto functionView = functionOperand->view();
+    auto functionView = functionOperand->getViewIfDefined();
     if (!functionView) {
         return lib::nullopt;
     }

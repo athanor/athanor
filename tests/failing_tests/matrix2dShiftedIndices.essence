@@ -1,7 +1,0 @@
-
-$testing:numberIterations=0
-letting d1 be domain int(-3..0)
-letting d2 be domain int(3..5)
-
-find m : matrix indexed by [d1,d2] of int(-3..5)
-such that forAll i : d1 . forAll j : d2 .  m[i,j] = i + j

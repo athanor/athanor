@@ -1,4 +1,4 @@
-$testing:numberIterations=80000
+$testing:numberIterations=100000
 $Random instance generated in accordance to specification at
     $http://www.csplib.org/Problems/prob048/
 $Generated 20 devices in a 150*150 area with a max power of 200.0 and a exp constant of 3.6

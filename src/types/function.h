@@ -112,7 +112,7 @@ struct FunctionView : public ExprInterface<FunctionView>,
     }
 
     static DimensionVec makeDimensionVecFromDomain(const AnyDomainRef& domain);
-
+    void debugCheckDimensionVec();
     template <typename InnerViewType, typename DimVec,
               EnableIfView<InnerViewType> = 0>
     void resetDimensions(AnyDomainRef fromDom, DimVec&& dim) {
@@ -127,6 +127,8 @@ struct FunctionView : public ExprInterface<FunctionView>,
         }
         range.emplace<ExprRefVec<InnerViewType>>().assign(requiredSize,
                                                           nullptr);
+        debug_code(debugCheckDimensionVec());
+        ;
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

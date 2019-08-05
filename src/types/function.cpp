@@ -485,3 +485,14 @@ void FunctionValue::debugSanityCheckImpl() const {
 }
 
 AnyExprVec& FunctionValue::getChildenOperands() { return range; }
+
+void FunctionView::debugCheckDimensionVec() {
+    mpark::visit(
+        overloaded(
+            [&](shared_ptr<TupleDomain>& d) {
+                assert(d->inners.size() == dimensions.size());
+            },
+            [&](shared_ptr<IntDomain>&) { assert(dimensions.size() == 1); },
+            [](auto&) { shouldNotBeCalledPanic; }),
+        fromDomain);
+}

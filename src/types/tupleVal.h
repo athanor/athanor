@@ -12,11 +12,21 @@ struct TupleDomain {
     bool isRecord = false;
     std::vector<std::string> recordIndexNameMap;
     HashMap<std::string, size_t> recordNameIndexMap;
-    template <typename... DomainTypes>
-    TupleDomain(DomainTypes&&... inners)
-        : inners({makeAnyDomainRef(std::forward<DomainTypes>(inners))...}) {}
 
     TupleDomain(std::vector<AnyDomainRef> inners) : inners(std::move(inners)) {}
+
+
+
+    
+    inline std::shared_ptr<TupleDomain> deepCopy(
+        std::shared_ptr<TupleDomain>&) {
+        auto newDomain = std::make_shared<TupleDomain>(*this);
+        for (size_t i = 0; i < inners.size(); i++) {
+            newDomain->inners[i] = deepCopyDomain(inners[i]);
+            ;
+        }
+        return newDomain;
+    }
 
     void merge(TupleDomain& other) {
         assert(inners.size() == other.inners.size());

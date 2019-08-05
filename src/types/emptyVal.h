@@ -5,6 +5,11 @@
 #include "types/empty.h"
 
 struct EmptyDomain {
+    inline std::shared_ptr<EmptyDomain> deepCopy(
+        std::shared_ptr<EmptyDomain>&) {
+        return std::make_shared<EmptyDomain>();
+    }
+
     void merge(const EmptyDomain&) { shouldNotBeCalledPanic; }
 };
 

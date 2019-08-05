@@ -19,6 +19,12 @@ struct MSetDomain {
         checkMaxSize();
     }
 
+    inline std::shared_ptr<MSetDomain> deepCopy(std::shared_ptr<MSetDomain>&) {
+        auto newDomain = std::make_shared<MSetDomain>(*this);
+        newDomain->inner = deepCopyDomain(inner);
+        return newDomain;
+    }
+
     void merge(MSetDomain& other) {
         sizeAttr.merge(other.sizeAttr);
         mergeDomains(inner, other.inner);

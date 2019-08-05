@@ -62,5 +62,5 @@ decltype(auto) makeAnyDomainRef(AnyDomainRefType&& d) {
     return std::forward<AnyDomainRefType>(d);
 }
 void mergeDomains(AnyDomainRef& dest, AnyDomainRef& src);
-
+AnyDomainRef deepCopyDomain(AnyDomainRef other);
 #endif /* SRC_BASE_DOMAINREF_H_ */

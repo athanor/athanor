@@ -4,6 +4,9 @@
 #include <vector>
 #include "types/bool.h"
 struct BoolDomain {
+    inline std::shared_ptr<BoolDomain> deepCopy(std::shared_ptr<BoolDomain>&) {
+        return std::make_shared<BoolDomain>();
+    }
     void merge(BoolDomain&) {}
 };
 

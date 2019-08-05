@@ -15,6 +15,10 @@ struct IntDomain {
         : bounds(normaliseBounds(std::move(bounds))),
           domainSize(calculateDomainSize(this->bounds)) {}
 
+    inline std::shared_ptr<IntDomain> deepCopy(std::shared_ptr<IntDomain>&) {
+        return std::make_shared<IntDomain>(*this);
+    }
+
     static inline UInt calculateDomainSize(
         const std::vector<std::pair<Int, Int>>& bounds) {
         return std::accumulate(

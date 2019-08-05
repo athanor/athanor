@@ -85,3 +85,4 @@ void tryRemoveEmptyType(Domain& domain,
         });
     overload(domain, val);
 }
+

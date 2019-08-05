@@ -43,6 +43,14 @@ struct FunctionDomain {
         return matrix;
     }
 
+    inline std::shared_ptr<FunctionDomain> deepCopy(
+        std::shared_ptr<FunctionDomain>&) {
+        auto newDomain = std::make_shared<FunctionDomain>(*this);
+        newDomain->from = deepCopyDomain(from);
+        newDomain->to = deepCopyDomain(to);
+        return newDomain;
+    }
+
     void merge(FunctionDomain& other) {
         mergeDomains(from, other.from);
         mergeDomains(to, other.to);

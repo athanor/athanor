@@ -20,6 +20,13 @@ struct SequenceDomain {
         checkMaxSize();
     }
 
+    inline std::shared_ptr<SequenceDomain> deepCopy(
+        std::shared_ptr<SequenceDomain>&) {
+        auto newDomain = std::make_shared<SequenceDomain>(*this);
+        newDomain->inner = deepCopyDomain(inner);
+        return newDomain;
+    }
+
     void merge(SequenceDomain& other) {
         sizeAttr.merge(other.sizeAttr);
         mergeDomains(inner, other.inner);

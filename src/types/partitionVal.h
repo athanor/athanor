@@ -32,6 +32,14 @@ struct PartitionDomain {
             abort();
         }
     }
+
+    inline std::shared_ptr<PartitionDomain> deepCopy(
+        std::shared_ptr<PartitionDomain>&) {
+        auto newDomain = std::make_shared<PartitionDomain>(*this);
+        newDomain->inner = deepCopyDomain(inner);
+        return newDomain;
+    }
+
     void merge(
         PartitionDomain&) { /*do nothing for now, not much supported here */
     }

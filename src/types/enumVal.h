@@ -13,6 +13,10 @@ struct EnumDomain {
     EnumDomain(std::string domainName, std::vector<std::string> valueNames)
         : domainName(std::move(domainName)),
           valueNames(std::move(valueNames)) {}
+    inline std::shared_ptr<EnumDomain> deepCopy(
+        std::shared_ptr<EnumDomain>& self) {
+        return self;
+    }
     void merge(const EnumDomain&) {}
 };
 

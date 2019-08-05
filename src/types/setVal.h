@@ -19,6 +19,12 @@ struct SetDomain {
           inner(makeAnyDomainRef(std::forward<DomainType>(inner))) {
         trimMaxSize();
     }
+
+    inline std::shared_ptr<SetDomain> deepCopy(std::shared_ptr<SetDomain>&) {
+        auto newDomain = std::make_shared<SetDomain>(*this);
+        newDomain->inner = deepCopyDomain(inner);
+        return newDomain;
+    }
     void merge(SetDomain& other) {
         sizeAttr.merge(other.sizeAttr);
         mergeDomains(inner, other.inner);

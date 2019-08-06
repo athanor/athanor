@@ -211,7 +211,10 @@ struct SequenceView : public ExprInterface<SequenceView>,
         changeSubsequence<InnerViewType>(startIndex, endIndex);
         notifySubsequenceChanged(startIndex, endIndex);
     }
-    virtual inline AnyExprVec& getChildenOperands() { shouldNotBeCalledPanic; }
+    virtual inline AnyExprVec& getChildrenOperands() {
+        std::cerr << "\nError:\n" << getOpName() << std::endl;
+        shouldNotBeCalledPanic;
+    }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
         return mpark::get<ExprRefVec<InnerViewType>>(members);

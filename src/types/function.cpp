@@ -484,7 +484,7 @@ void FunctionValue::debugSanityCheckImpl() const {
         range);
 }
 
-AnyExprVec& FunctionValue::getChildenOperands() { return range; }
+AnyExprVec& FunctionValue::getChildrenOperands() { return range; }
 
 void FunctionView::debugCheckDimensionVec() {
     mpark::visit(

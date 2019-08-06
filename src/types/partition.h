@@ -21,7 +21,7 @@ struct PartitionView : public ExprInterface<PartitionView>,
     HashType cachedHashTotal = INITIAL_HASH;
 
     size_t numberParts() const { return partHashes.size(); }
-    virtual inline AnyExprVec& getChildenOperands() { shouldNotBeCalledPanic; }
+    virtual inline AnyExprVec& getChildrenOperands() { shouldNotBeCalledPanic; }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     HashType getMemberHash(UInt index) {
         return getValueHash(

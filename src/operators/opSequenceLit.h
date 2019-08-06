@@ -28,6 +28,7 @@ struct OpSequenceLit : public SequenceView {
     std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension path) final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
+    AnyExprVec& getChildrenOperands() final;
 };
 
 #endif /* SRC_OPERATORS_OPSEQUENCELIT_H_ */

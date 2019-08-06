@@ -54,7 +54,7 @@ struct PartitionValue : public PartitionView, public ValBase {
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
-    AnyExprVec& getChildenOperands() final;
+    AnyExprVec& getChildrenOperands() final;
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline bool addMember(UInt part, const ValRef<InnerValueType>& member) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;

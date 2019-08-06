@@ -182,6 +182,8 @@ void OpSequenceLit::debugSanityCheckImpl() const {
     this->standardSanityChecksForThisType();
 }
 
+AnyExprVec& OpSequenceLit::getChildrenOperands() { return members; }
+
 template <typename Op>
 struct OpMaker;
 

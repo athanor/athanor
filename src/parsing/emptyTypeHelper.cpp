@@ -81,7 +81,7 @@ void tryRemoveEmptyType(Domain& domain,
             tryRemoveEmptyType(domain.to, val.range);
         },
         [&](auto& domain, auto& val) {
-            tryRemoveEmptyType(domain.inner, val.getChildenOperands());
+            tryRemoveEmptyType(domain.inner, val.getChildrenOperands());
         });
     overload(domain, val);
 }

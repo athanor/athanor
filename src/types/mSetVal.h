@@ -50,7 +50,7 @@ struct MSetValue : public MSetView, public ValBase {
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
-    AnyExprVec& getChildenOperands() final;
+    AnyExprVec& getChildrenOperands() final;
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline void addMember(const ValRef<InnerValueType>& member) {
         MSetView::addMember(member.asExpr());

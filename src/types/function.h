@@ -255,7 +255,7 @@ struct FunctionView : public ExprInterface<FunctionView>,
     inline const ExprRefVec<InnerViewType>& getRange() const {
         return mpark::get<ExprRefVec<InnerViewType>>(range);
     }
-    virtual inline AnyExprVec& getChildenOperands() { shouldNotBeCalledPanic; }
+    virtual inline AnyExprVec& getChildrenOperands() { shouldNotBeCalledPanic; }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
         return getRange<InnerViewType>();

@@ -58,7 +58,7 @@ struct SequenceValue : public SequenceView, public ValBase {
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
 
-    AnyExprVec& getChildenOperands() final;
+    AnyExprVec& getChildrenOperands() final;
     template <typename InnerValueType>
     bool containsMember(const ValRef<InnerValueType>& val) {
         debug_code(assert(injective));

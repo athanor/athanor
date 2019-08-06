@@ -65,7 +65,7 @@ struct OpSetLit : public SetView {
     void addOperandValue(size_t index, bool insert = false);
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
-    AnyExprVec& getChildenOperands() final;
+    AnyExprVec& getChildrenOperands() final;
 };
 
 #endif /* SRC_OPERATORS_OPSETLIT_H_ */

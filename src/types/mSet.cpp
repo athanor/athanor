@@ -257,4 +257,4 @@ UInt getSize<MSetValue>(const MSetValue& v) {
     return v.numberElements();
 }
 
-AnyExprVec& MSetValue::getChildenOperands() { return members; }
+AnyExprVec& MSetValue::getChildrenOperands() { return members; }

@@ -77,7 +77,7 @@ struct FunctionValue : public FunctionView, public ValBase {
             getRange<
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
-    AnyExprVec& getChildenOperands() final;
+    AnyExprVec& getChildrenOperands() final;
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline void assignImage(UInt index, const ValRef<InnerValueType>& member) {
         FunctionView::assignImage(index, member.asExpr());

@@ -265,4 +265,4 @@ UInt getSize<PartitionValue>(const PartitionValue&) {
     return 0;
 }
 
-AnyExprVec& PartitionValue::getChildenOperands() { return members; }
+AnyExprVec& PartitionValue::getChildrenOperands() { return members; }

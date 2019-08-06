@@ -100,8 +100,8 @@ function runCommand() {
     outputFile="$1"
     shift
     echo "pwd=$PWD" 2>&1 >> "$outputFile"
-    echo "command=$@" 2>&1 >> "$outputFile"
-    "$@" 2>&1 >> "$outputFile"
+    echo "command=$@" >> "$outputFile"
+    "$@" >> "$outputFile" 2>&1
 }
 for instance in instances/*.essence ; do
     for param in instances/$(basename "$instance" .essence)*.param ; do

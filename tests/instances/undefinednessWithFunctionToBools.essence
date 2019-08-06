@@ -1,0 +1,6 @@
+$testing:numberIterations=5000
+$testing:no-solutions
+find a : int(1..6)
+such that a > 5
+find f : function (total) int(1..5) --> bool
+such that  f(a)

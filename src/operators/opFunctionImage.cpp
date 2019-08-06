@@ -21,7 +21,7 @@ void OpFunctionImage<FunctionMemberViewType>::addTriggerImpl(
 template <typename FunctionMemberViewType>
 OptionalRef<ExprRef<FunctionMemberViewType>>
 OpFunctionImage<FunctionMemberViewType>::getMember() {
-    if (!invoke(preImageOperand, appearsDefined())) {
+    if (!locallyDefined || !invoke(preImageOperand, appearsDefined())) {
         return EmptyOptional();
     }
     debug_code(assert(cachedIndex >= 0));
@@ -37,7 +37,7 @@ OpFunctionImage<FunctionMemberViewType>::getMember() {
 template <typename FunctionMemberViewType>
 OptionalRef<const ExprRef<FunctionMemberViewType>>
 OpFunctionImage<FunctionMemberViewType>::getMember() const {
-    if (!invoke(preImageOperand, appearsDefined())) {
+    if (!locallyDefined || !invoke(preImageOperand, appearsDefined())) {
         return EmptyOptional();
     }
     debug_code(assert(cachedIndex >= 0));

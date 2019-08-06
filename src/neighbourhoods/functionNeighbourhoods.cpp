@@ -439,7 +439,7 @@ struct FunctionUnifyImages
             debug_neighbourhood_action("Change rejected");
             previousMemberHash =
                 val.notifyPossibleImageChange<InnerViewType>(index2);
-            auto& view2 = val.getRange<IntView>()[index2]->view().get();
+            auto& view2 = val.getRange<InnerViewType>()[index2]->view().get();
             view2.changeValue([&]() -> bool {
                 valueOf(view2) = valueBackup;
                 return val.tryImageChange<IntValue>(index2, previousMemberHash,

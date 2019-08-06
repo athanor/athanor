@@ -156,10 +156,12 @@ bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
     } else if (!wasLocallyDefined && locallyDefined) {
         reattachFunctionMemberTrigger();
     }
-    if (!is_same<BoolView,FunctionMemberViewType>::value && wasDefined && !this->appearsDefined()) {
+    if (!is_same<BoolView, FunctionMemberViewType>::value && wasDefined &&
+        !this->appearsDefined()) {
         this->notifyValueUndefined();
         return true;
-    } else if (!is_same<BoolView,FunctionMemberViewType>::value && !wasDefined && this->appearsDefined()) {
+    } else if (!is_same<BoolView, FunctionMemberViewType>::value &&
+               !wasDefined && this->appearsDefined()) {
         this->notifyValueDefined();
         return true;
     } else if (is_same<BoolView, FunctionMemberViewType>::value &&
@@ -408,7 +410,8 @@ OpFunctionImage<FunctionMemberViewType>::deepCopyForUnrollImpl(
 template <typename FunctionMemberViewType>
 std::ostream& OpFunctionImage<FunctionMemberViewType>::dumpState(
     std::ostream& os) const {
-    os << "opFunctionImage(defined=" << this->appearsDefined() << ",locallyDefined=" << locallyDefined << ",value=";
+    os << "opFunctionImage(defined=" << this->appearsDefined()
+       << ",locallyDefined=" << locallyDefined << ",value=";
     prettyPrint(os, this->getViewIfDefined());
     os << ",\n";
 
@@ -464,9 +467,9 @@ void OpFunctionImage<FunctionMemberViewType>::debugSanityCheckImpl() const {
         !invoke(preImageOperand, appearsDefined())) {
         if (!is_same<BoolView, FunctionMemberViewType>::value) {
             sanityCheck(
-                        !this->appearsDefined(),
-                        "operator should be undefined as at least one operand is "
-                        "undefined.");
+                !this->appearsDefined(),
+                "operator should be undefined as at least one operand is "
+                "undefined.");
         }
         return;
     }
@@ -493,13 +496,13 @@ struct OpMaker<OpFunctionImage<View>> {
 
 template <typename View>
 ExprRef<View> OpMaker<OpFunctionImage<View>>::make(
-                                                   ExprRef<FunctionView> function, AnyExprRef preImage) {
+    ExprRef<FunctionView> function, AnyExprRef preImage) {
     return make_shared<OpFunctionImage<View>>(move(function), move(preImage));
 }
 
 #define opFunctionImageInstantiators(name)       \
-template struct OpFunctionImage<name##View>; \
-template struct OpMaker<OpFunctionImage<name##View>>;
+    template struct OpFunctionImage<name##View>; \
+    template struct OpMaker<OpFunctionImage<name##View>>;
 
 buildForAllTypes(opFunctionImageInstantiators, );
 #undef opFunctionImageInstantiators

@@ -410,20 +410,20 @@ struct FunctionUnifyImages
             if (globalRandom(0, 1)) {
                 swap(index1, index2);
             }
-            auto& view1 = val.getRange<IntView>()[index1]->view().get();
-            auto& view2 = val.getRange<IntView>()[index2]->view().get();
+            auto& view1 = val.getRange<InnerViewType>()[index1]->view().get();
+            auto& view2 = val.getRange<InnerViewType>()[index2]->view().get();
             previousMemberHash =
                 val.notifyPossibleImageChange<InnerViewType>(index2);
-            valueBackup = view2.value;
+            valueBackup = valueOf(view2);
             success = view2.changeValue([&]() {
-                view2.value = view1.value;
+                valueOf(view2) = valueOf(view1);
                 bool allowed = val.tryImageChange<IntValue>(
                     index2, previousMemberHash,
                     [&]() { return params.parentCheck(params.vals); });
                 if (allowed) {
                     return true;
                 } else {
-                    view2.value = valueBackup;
+                    valueOf(view2) = valueBackup;
                     return false;
                 }
             });
@@ -441,7 +441,7 @@ struct FunctionUnifyImages
                 val.notifyPossibleImageChange<InnerViewType>(index2);
             auto& view2 = val.getRange<IntView>()[index2]->view().get();
             view2.changeValue([&]() -> bool {
-                view2.value = valueBackup;
+                valueOf(view2) = valueBackup;
                 return val.tryImageChange<IntValue>(index2, previousMemberHash,
                                                     [&]() { return true; });
             });
@@ -498,7 +498,7 @@ struct FunctionSplitImages
             if (globalRandom(0, 1)) {
                 swap(index1, index2);
             }
-            auto& view1 = val.getRange<IntView>()[index1]->view().get();
+            auto& view1 = val.getRange<InnerViewType>()[index1]->view().get();
             static_cast<void>(view1);
             auto value2 = val.member<InnerValueType>(index2);
             previousMemberHash =
@@ -528,9 +528,9 @@ struct FunctionSplitImages
             debug_neighbourhood_action("Change rejected");
             previousMemberHash =
                 val.notifyPossibleImageChange<InnerViewType>(index2);
-            auto& view2 = val.getRange<IntView>()[index2]->view().get();
+            auto& view2 = val.getRange<InnerViewType>()[index2]->view().get();
             view2.changeValue([&]() {
-                view2.value = valueBackup;
+                valueOf(view2) = valueBackup;
                 return val.tryImageChange<InnerValueType>(
                     index2, previousMemberHash, [&]() { return true; });
             });

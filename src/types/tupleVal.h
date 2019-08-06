@@ -15,9 +15,6 @@ struct TupleDomain {
 
     TupleDomain(std::vector<AnyDomainRef> inners) : inners(std::move(inners)) {}
 
-
-
-    
     inline std::shared_ptr<TupleDomain> deepCopy(
         std::shared_ptr<TupleDomain>&) {
         auto newDomain = std::make_shared<TupleDomain>(*this);

@@ -10,16 +10,19 @@ void OpBoolEq::reevaluateImpl(BoolView& leftView, BoolView& rightView,
 }
 
 void OpBoolEq::updateValue(BoolView& leftView, BoolView& rightView) {
-    UInt leftVio = leftView.violation;
-    UInt rightVio = rightView.violation;
-    if (leftVio > rightVio) {
-        swap(leftVio, rightVio);
-    }
-    if (leftVio == 0) {
-        violation = rightVio;
-    } else {
-        violation = (rightVio == 0) ? 1 : 0;
-    }
+    changeValue([&]() {
+        UInt leftVio = leftView.violation;
+        UInt rightVio = rightView.violation;
+        if (leftVio > rightVio) {
+            swap(leftVio, rightVio);
+        }
+        if (leftVio == 0) {
+            violation = rightVio;
+        } else {
+            violation = (rightVio == 0) ? 1 : 0;
+        }
+        return true;
+    });
 }
 void OpBoolEq::updateVarViolationsImpl(const ViolationContext&,
                                        ViolationContainer& vioContainer) {

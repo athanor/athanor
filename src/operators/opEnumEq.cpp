@@ -10,7 +10,10 @@ void OpEnumEq::reevaluateImpl(EnumView& leftView, EnumView& rightView,
 }
 
 void OpEnumEq::updateValue(EnumView& leftView, EnumView& rightView) {
-    violation = (leftView.value == rightView.value) ? 0 : 1;
+    changeValue([&]() {
+        violation = (leftView.value == rightView.value) ? 0 : 1;
+        return true;
+    });
 }
 
 void OpEnumEq::updateVarViolationsImpl(const ViolationContext&,

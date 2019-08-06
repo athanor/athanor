@@ -263,9 +263,7 @@ struct PreImageTrigger
             ->addTrigger(trigger);
         op->preImageTrigger = trigger;
     }
-    void adapterHasBecomeDefined() {
-        op->eventForwardedAsDefinednessChange();
-    }
+    void adapterHasBecomeDefined() { op->eventForwardedAsDefinednessChange(); }
 
     void adapterHasBecomeUndefined() {
         op->eventForwardedAsDefinednessChange();

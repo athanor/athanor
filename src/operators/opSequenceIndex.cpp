@@ -407,12 +407,14 @@ void OpSequenceIndex<SequenceMemberViewType>::debugSanityCheckImpl() const {
     auto indexView = indexOperand->getViewIfDefined();
     auto sequenceView = sequenceOperand->view();
     if (!indexView || !sequenceView) {
-        sanityCheck((is_same<BoolView, SequenceMemberViewType>::value || !this->appearsDefined()), "operands are undefined, operator should be undefined.");
+        sanityCheck((is_same<BoolView, SequenceMemberViewType>::value ||
+                     !this->appearsDefined()),
+                    "operands are undefined, operator should be undefined.");
         return;
     } else if (indexView->value - 1 < 0 ||
                indexView->value - 1 >= (Int)sequenceView->numberElements()) {
         sanityCheck((is_same<BoolView, SequenceMemberViewType>::value ||
-                        !this->appearsDefined()),
+                     !this->appearsDefined()),
                     "index out of bounds, operator should be undefined.");
         return;
     } else {

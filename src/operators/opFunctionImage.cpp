@@ -97,7 +97,7 @@ lib::optional<UInt> OpFunctionImage<FunctionMemberViewType>::calculateIndex()
     }
     return mpark::visit(
         [&](auto& preImageOperand) -> lib::optional<UInt> {
-            auto view = preImageOperand->view();
+            auto view = preImageOperand->getViewIfDefined();
             if (!view) {
                 return lib::nullopt;
             }
@@ -112,22 +112,15 @@ bool OpFunctionImage<FunctionMemberViewType>::allowForwardingOfTrigger() {
 }
 
 template <typename FunctionMemberViewType>
-void OpFunctionImage<FunctionMemberViewType>::reevaluate(
-    bool recalculateCachedIndex) {
-    if (!invoke(preImageOperand, appearsDefined())) {
+void OpFunctionImage<FunctionMemberViewType>::reevaluate() {
+    auto index = calculateIndex();
+    if (!index) {
         locallyDefined = false;
-        this->setAppearsDefined(false);
-        return;
+    } else {
+        locallyDefined = true;
+        cachedIndex = *index;
     }
-    if (recalculateCachedIndex) {
-        auto index = calculateIndex();
-        if (!index) {
-            locallyDefined = false;
-        } else {
-            locallyDefined = true;
-            cachedIndex = *index;
-        }
-    }
+
     setAppearsDefined(locallyDefined && getMember().get()->appearsDefined());
 }
 
@@ -139,11 +132,11 @@ void OpFunctionImage<FunctionMemberViewType>::evaluateImpl() {
 }
 
 template <typename FunctionMemberViewType>
-bool OpFunctionImage<FunctionMemberViewType>::eventForwardedAsDefinednessChange(
-    bool recalculateIndex) {
+bool OpFunctionImage<
+    FunctionMemberViewType>::eventForwardedAsDefinednessChange() {
     bool wasDefined = this->appearsDefined();
     bool wasLocallyDefined = locallyDefined;
-    reevaluate(recalculateIndex);
+    reevaluate();
     if (!locallyDefined) {
         if (functionMemberTrigger) {
             deleteTrigger(functionMemberTrigger);
@@ -200,24 +193,24 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
         if ((Int)index1 != op->cachedIndex) {
             swap(index1, index2);
         }
-        if (!op->eventForwardedAsDefinednessChange(false)) {
+        if (!op->eventForwardedAsDefinednessChange()) {
             op->notifyEntireValueChanged();
             op->reattachFunctionMemberTrigger();
         }
     }
 
     void valueChanged() final {
-        if (!op->eventForwardedAsDefinednessChange(true)) {
+        if (!op->eventForwardedAsDefinednessChange()) {
             op->notifyEntireValueChanged();
             op->reattachFunctionMemberTrigger();
         }
     }
 
     inline void hasBecomeUndefined() {
-        op->eventForwardedAsDefinednessChange(false);
+        op->eventForwardedAsDefinednessChange();
     }
 
-    void hasBecomeDefined() { op->eventForwardedAsDefinednessChange(true); }
+    void hasBecomeDefined() { op->eventForwardedAsDefinednessChange(); }
 
     void reattachTrigger() final {
         deleteTrigger(op->functionOperandTrigger);
@@ -254,7 +247,7 @@ struct PreImageTrigger
         return mpark::get<ExprRef<PreImageType>>(op->preImageOperand);
     }
     void adapterValueChanged() {
-        if (!op->eventForwardedAsDefinednessChange(true)) {
+        if (!op->eventForwardedAsDefinednessChange()) {
             op->notifyEntireValueChanged();
             op->reattachFunctionMemberTrigger();
         }
@@ -271,11 +264,11 @@ struct PreImageTrigger
         op->preImageTrigger = trigger;
     }
     void adapterHasBecomeDefined() {
-        op->eventForwardedAsDefinednessChange(true);
+        op->eventForwardedAsDefinednessChange();
     }
 
     void adapterHasBecomeUndefined() {
-        op->eventForwardedAsDefinednessChange(false);
+        op->eventForwardedAsDefinednessChange();
     }
 };
 
@@ -341,7 +334,10 @@ void OpFunctionImage<FunctionMemberViewType>::reattachFunctionMemberTrigger() {
         make_shared<OpFunctionImage<FunctionMemberViewType>::MemberTrigger>(
             this);
     functionOperand->addTrigger(functionMemberTrigger, true, cachedIndex);
-    getMember().get()->addTrigger(memberTrigger);
+    auto member = getMember();
+    if (member) {
+        member.get()->addTrigger(memberTrigger);
+    }
 }
 
 template <typename FunctionMemberViewType>

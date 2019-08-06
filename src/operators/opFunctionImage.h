@@ -55,14 +55,14 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType>,
 
     OptionalRef<ExprRef<FunctionMemberViewType>> getMember();
     OptionalRef<const ExprRef<FunctionMemberViewType>> getMember() const;
-    void reevaluate(bool recalculateCachedIndex = true);
+    void reevaluate();
     bool allowForwardingOfTrigger();
     lib::optional<UInt> calculateIndex() const;
     std::pair<bool, ExprRef<FunctionMemberViewType>> optimise(
         PathExtension path) final;
 
     void reattachFunctionMemberTrigger();
-    bool eventForwardedAsDefinednessChange(bool recalculateIndex);
+    bool eventForwardedAsDefinednessChange();
     template <typename View = FunctionMemberViewType,
               typename std::enable_if<std::is_same<BoolView, View>::value,
                                       int>::type = 0>

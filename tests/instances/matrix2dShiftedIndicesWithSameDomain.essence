@@ -1,0 +1,8 @@
+$there used to be a problem with using the same domains in the indices and expressions as they were merged leading to the wrong matrix index.
+$this has been fixed in most contexts.
+
+$testing:numberIterations=0
+letting d1 be domain int(-3..0)
+letting d2 be domain int(3..5)
+find m : matrix indexed by [d1,d2] of int(-3..5)
+such that forAll i : d1 . forAll j : d2 .  m[i,j] = i + j

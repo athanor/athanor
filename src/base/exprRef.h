@@ -233,6 +233,7 @@ struct ExprInterface : public Undefinable<View> {
         }
     }
     virtual std::string getOpName() const = 0;
+    virtual inline bool isQuantifier() const { return false; }
 };
 
 struct ViolationContext {

@@ -204,7 +204,8 @@ void parseGenerator(json& generatorParent,
                 },
                 [&](shared_ptr<SequenceDomain>&) {
                     auto iterRef = quantifier->template newIterRef<TupleView>();
-                    if (generatorParent.count("GenDomainNoRepr")) {
+                    if (generatorParent.count("GenDomainNoRepr") ||
+                        quantifier->container->isQuantifier()) {
                         auto iter = OpMaker<OpTupleIndex<InnerViewType>>::make(
                             iterRef, 1);
                         addLocalVarsToScopeFromPatternMatch(

@@ -51,6 +51,10 @@ bool Quantifier<ContainerType>::triggering() {
     return static_cast<bool>(containerTrigger);
 }
 
+
+template <typename ContainerType>
+bool Quantifier<ContainerType>::isQuantifier() const { return true; }
+
 template <typename View1, typename View2>
 ExprRef<View1> deepCopyExprAndAssignNewValue(ExprRef<View1> exprToCopy,
                                              ExprRef<View2> newValue,

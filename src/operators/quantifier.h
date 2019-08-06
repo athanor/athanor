@@ -96,7 +96,7 @@ struct Quantifier : public SequenceView {
     ExprRef<SequenceView> deepCopyForUnrollImpl(
         const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-
+    bool isQuantifier() const final;
     template <typename T>
     inline IterRef<T> newIterRef() {
         return std::make_shared<Iterator<T>>(quantId, nullptr);

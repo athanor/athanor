@@ -12,7 +12,7 @@ __ATHANOR__ is a local search solver for constraint problems expressed in the __
 
 ## Performance:
 
-The information conveyed by the high level __Essence__ types allow for a more performant and more scalable local search.  These benefits are described in a paper being published in The 2019 proceedings of the International Joint Conference for Artificial Intelligence.  In this paper, we benchmark __ATHANOR__ against six state of the art local search constraint solvers.  A version can be viewed here [link coming soon].
+The information conveyed by the high level __Essence__ types allow for a more performant and more scalable local search.  These benefits are described in a [paper](https://www.ijcai.org/proceedings/2019/0148.pdf) published in the 2019 proceedings of the International Joint Conference for Artificial Intelligence.  In this paper, we benchmark __ATHANOR__ against six state of the art local search constraint solvers.
 
 In short:
 

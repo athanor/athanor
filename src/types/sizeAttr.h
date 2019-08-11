@@ -27,8 +27,8 @@ struct SizeAttr {
             sizeType = SizeAttrType::EXACT_SIZE;
             return;
         }
-        bool smallest = (minSize == std::numeric_limits<UInt>().min());
-        bool largest = (maxSize == std::numeric_limits<UInt>().max());
+        bool smallest = (minSize == std::numeric_limits<size_t>().min());
+        bool largest = (maxSize == std::numeric_limits<size_t>().max());
         if (smallest && largest) {
             sizeType = SizeAttrType::NO_SIZE;
         } else if (smallest && !largest) {
@@ -42,14 +42,14 @@ struct SizeAttr {
 
     friend inline SizeAttr noSize() {
         return SizeAttr(SizeAttrType::NO_SIZE, 0,
-                        std::numeric_limits<UInt>::max());
+                        std::numeric_limits<size_t>::max());
     }
     friend inline SizeAttr exactSize(size_t size) {
         return SizeAttr(SizeAttrType::EXACT_SIZE, size, size);
     }
     friend inline SizeAttr minSize(size_t minSize) {
         return SizeAttr(SizeAttrType::MIN_SIZE, minSize,
-                        std::numeric_limits<UInt>::max());
+                        std::numeric_limits<size_t>::max());
     }
     friend inline SizeAttr maxSize(size_t maxSize) {
         return SizeAttr(SizeAttrType::MAX_SIZE, 0, maxSize);

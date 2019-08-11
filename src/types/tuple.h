@@ -14,7 +14,7 @@ struct TupleView : public ExprInterface<TupleView>,
     std::vector<AnyExprRef> members;
 
     SimpleCache<HashType> cachedHashTotal;
-    u_int32_t numberUndefined = 0;
+    UInt32 numberUndefined = 0;
     TupleView() {}
     TupleView(std::vector<AnyExprRef> members) : members(members) {}
 

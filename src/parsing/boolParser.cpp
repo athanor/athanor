@@ -78,7 +78,7 @@ ParseResult parseOpEq(json& operandsExpr, ParsedModel& parsedModel) {
     AnyExprRef leftAnyExpr = parseExpr(operandsExpr[0], parsedModel).expr;
     AnyExprRef rightAnyExpr = parseExpr(operandsExpr[1], parsedModel).expr;
     return mpark::visit(
-        [&](auto& left) {
+        [&](auto& left) -> ParseResult {
             auto errorHandler = [&](auto&&) {
                 cerr << "Expected right operand to be of "
                         "same type as left, "

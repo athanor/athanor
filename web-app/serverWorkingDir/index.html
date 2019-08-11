@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="generator" content=
+  "HTML Tidy for HTML5 for Apple macOS version 5.6.0">
+  <meta charset="UTF-8">
+  <title>ATHANOR</title><!-- Bootstrap 4 stylesheet -->
+  <link rel="stylesheet" href=
+  "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+  integrity=
+  "sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+  crossorigin="anonymous"><!-- Bootstrap 4 js libraries -->
+
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+  integrity=
+  "sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+  crossorigin="anonymous"></script>
+  <script src=
+  "https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+  integrity=
+  "sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+  crossorigin="anonymous"></script>
+  <script src=
+  "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+  integrity=
+  "sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+  crossorigin="anonymous"></script>
+  <script src="essenceInput.js"></script>
+
+
+</head>
+<body>
+  <!-- Banner with the title. At the top of the page. -->
+  <div class="jumbotron text-center bg-info" style=
+  "color: #EEEEEE">
+    <h1>ATHANOR Solver Page</h1>
+    <h3>Interactive webpage for using the ATHANOR Solver.</h3>
+  </div><!-- Container for the main stuff -->
+  <div class="container">
+    <!-- Row for the tool bar-->
+    <div class="row">
+      <div class="col">
+        <nav>
+          <div class="nav nav-tabs nav-fill" id="nav-tab" role=
+          "tablist">
+            <a class="nav-item nav-link active" id="nav-spec-tab"
+            data-toggle="tab" href="#nav-spec" role="tab"
+            aria-controls="nav-spec" aria-selected="true">Input
+            Specification</a> <a class="nav-item nav-link" id=
+            "nav-param-tab" data-toggle="tab" href="#nav-param"
+            role="tab" aria-controls="nav-parameter" aria-selected=
+            "false">Input Parameter</a>
+          </div>
+        </nav>
+      </div>
+      <div class="col">
+        <!-- Button for model input/upload from file -->
+        <label for="input_file">Load from file:</label>
+        <input type="file" class="form-control-file" id=
+        "input_file">
+      </div>
+    </div><!-- Row for the file input -->
+    <div class="row">
+      <div class="col">
+        <div class="tab-content" id="nav-tabContent">
+          <div class="tab-pane fade show active" id="nav-spec"
+          role="tabpanel" aria-labelledby="nav-spec-tab">
+            <label for="spec_text">Write specification or input
+            from file:</label> 
+            <textarea class="form-control" rows="25" id="spec_text"
+            placeholder="model specification"></textarea>
+          </div>
+          <div class="tab-pane fade" id="nav-param" role="tabpanel"
+          aria-labelledby="nav-param-tab">
+            <label for="param_text">Write parameter or input from
+            file:</label> 
+            <textarea class="form-control" rows="25" id=
+            "param_text" placeholder=
+            "Parameter lettings"></textarea>
+          </div>
+        </div>
+      </div>
+    </div><!-- Run statistics and info table -->
+    <div class="row">
+      <div class="col">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Solution number</th>
+              <th>Wall time</th>
+              <th>Number iterations</th>
+              <th>Violations</th>
+              <th>Objective</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td id="stats_solution_number">--</td>
+              <td id="stats_wall_time">--</td>
+              <td id="stats_number_iterations">0</td>
+              <td id="stats_violation">--</td>
+              <td id="stats_objective">--</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <button type="button" class="btn btn-success", onClick
+        ="runButtonPressed()", id="run_button">RUN</button>
+      </div>
+    </div><!-- Row for the solver output -->
+    <div class="row" style="margin-top: 30px">
+      <div class="col">
+        <!-- `pre` is bootstrap for multiline code-formatted blocks; added a slightly grey background -->
+        <pre id="console_output", class="pre-scrollable text-*-left" id="output" style=
+        "background: #f1f1f1">
+                    OUTPUT HERE (would be server-controlled)
+                </pre>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

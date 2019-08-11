@@ -7,10 +7,10 @@ template <typename View>
 struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
     typedef typename AssociatedTriggerType<View>::type TriggerType;
     struct RefTrigger;
-    u_int64_t id;
+    UInt64 id;
     ExprRef<View> ref;
     std::shared_ptr<RefTrigger> refTrigger;
-    Iterator(u_int64_t id, ExprRef<View> ref) : id(id), ref(std::move(ref)) {}
+    Iterator(UInt64 id, ExprRef<View> ref) : id(id), ref(std::move(ref)) {}
     void reattachRefTrigger();
 
     void changeValue(const ExprRef<View>& newVal) {

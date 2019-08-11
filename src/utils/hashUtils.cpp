@@ -5,7 +5,7 @@
 #include "base/intSize.h"
 #include "picosha2.h"
 
-HashType::HashType(u_int64_t value) : value(value) {}
+HashType::HashType(UInt64 value) : value(value) {}
 
 HashType HashType::operator+(const HashType other) const {
     return HashType(value + other.value);
@@ -46,20 +46,20 @@ size_t std::hash<HashType>::operator()(const HashType& val) const {
     return val.value;
 }
 
-u_int64_t truncatedSha256(char* input, size_t inputSize) {
+UInt64 truncatedSha256(char* input, size_t inputSize) {
     std::vector<unsigned char> hash(8);
     picosha2::hash256(input, input + inputSize, hash);
-    u_int64_t truncatedHash = 0;
+    UInt64 truncatedHash = 0;
     for (int i = 0; i < 8; ++i) {
-        u_int64_t temp = hash[i];
+        UInt64 temp = hash[i];
         truncatedHash |= (temp << i * 8);
     }
     return truncatedHash;
 }
 
-u_int64_t truncatedMurmurHash3(char* input, size_t inputSize) {
+UInt64 truncatedMurmurHash3(char* input, size_t inputSize) {
     static const unsigned int MURMURHASH3_SEED = 0;
-    u_int64_t result[2];
+    UInt64 result[2];
     MurmurHash3_x64_128(input, inputSize, MURMURHASH3_SEED, result);
     return result[0] ^ result[1];
 }

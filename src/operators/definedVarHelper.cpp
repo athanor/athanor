@@ -12,7 +12,7 @@
 #include "types/tupleVal.h"
 using namespace std;
 
-u_int64_t DefinesLock::globalStamp = 1;
+UInt64 DefinesLock::globalStamp = 1;
 deque<AnyDefinedVarTrigger> definedVarTriggerQueue;
 deque<AnyDefinedVarTrigger> delayedDefinedVarTriggerQueue;
 

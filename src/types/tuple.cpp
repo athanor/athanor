@@ -116,7 +116,7 @@ void matchInnerType(const TupleDomain&, TupleValue&) {}
 
 template <>
 UInt getDomainSize<TupleDomain>(const TupleDomain& domain) {
-    u_int64_t total = 1;
+    UInt64 total = 1;
     for (auto& innerDomain : domain.inners) {
         total *= getDomainSize(innerDomain);
     }

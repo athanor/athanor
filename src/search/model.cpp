@@ -1,6 +1,11 @@
 #include "search/model.h"
 #include <iostream>
 #include "search/endOfSearchException.h"
+#include "search/statsContainer.h"
+#ifdef WASM_TARGET
+#include <emscripten/bind.h>
+#endif
+
 using namespace std;
 void ModelBuilder::createNeighbourhoods() {
     for (size_t i = 0; i < model.variables.size(); ++i) {
@@ -132,9 +137,17 @@ size_t randomSize(size_t minSize, size_t maxSize) {
 }
 
 void Model::printVariables() const {
+#ifdef WASM_TARGET
+    using namespace emscripten;
+    ostringstream os;
+#endif
     for (size_t i = 0; i < variables.size(); ++i) {
         auto& v = variables[i];
+#ifdef WASM_TARGET
+        os << "letting <var>" << variableNames[i] << "</var> be ";
+#else
         cout << "letting " << variableNames[i] << " be ";
+#endif
         mpark::visit(
             [&](auto& domain) {
                 typedef
@@ -148,11 +161,23 @@ void Model::printVariables() const {
                     expr = mpark::get<ExprRef<View>>(
                         definingExpressions.at(valBase(v.second).id));
                 }
+#ifdef WASM_TARGET
+                prettyPrint(os << "<code>", *domain, expr->getViewIfDefined())
+                    << "</code>";
+#else
                 prettyPrint(cout, *domain, expr->getViewIfDefined());
+#endif
             },
             v.first);
+#ifdef WASM_TARGET
+        os << "\n";
+#else
         cout << endl;
+#endif
     }
+#ifdef WASM_TARGET
+    val::global().call<void>("printSolution", os.str());
+#endif
 }
 
 void Model::debugSanityCheck() const {

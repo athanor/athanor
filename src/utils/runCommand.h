@@ -4,13 +4,13 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
 #include <array>
 #include <cstdio>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include "ignoreUnused.h"
 namespace RunCommandDetail {
 inline char* toStr(char* str) { return str; }
 inline const char* toStr(const std::string& str) { return str.data(); }
@@ -18,6 +18,11 @@ inline const char* toStr(const std::string& str) { return str.data(); }
 template <typename... Args>
 std::pair<int, std::string> runCommand(const std::string& command,
                                        const Args&... args) {
+#ifdef WASM_TARGET
+    ignoreUnused(command, args...);
+    std::cerr << "Not allowed in WASM\n";
+    shouldNotBeCalledPanic;
+#else
     pid_t pid = 0;
     std::array<int, 2> pipeFD;
     pipe(pipeFD.data());
@@ -44,6 +49,7 @@ std::pair<int, std::string> runCommand(const std::string& command,
     int status;
     waitpid(pid, &status, 0);
     return std::make_pair(status, output);
+#endif
 }
 
 #endif /* SRC_UTILS_RUNCOMMAND_H_ */

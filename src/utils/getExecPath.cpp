@@ -3,7 +3,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
+#include "utils/ignoreUnused.h"
+#ifndef WASM_TARGET
 #ifdef __linux__
 #include <limits.h>
 #include <unistd.h>
@@ -37,6 +38,12 @@ std::string getExecutablePath() {
 #endif
     return std::string(exePath);
 }
+#else
+std::string getExecutablePath() {
+    std::cerr << "not allowed in WASM\n";
+    shouldNotBeCalledPanic;
+}
+#endif
 
 std::string getDirectoryContainingExecutable() {
     std::string execPath = getExecutablePath();

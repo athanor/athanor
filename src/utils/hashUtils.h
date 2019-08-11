@@ -1,6 +1,7 @@
 #ifndef SRC_UTILS_HASHUTILS_H_
 #define SRC_UTILS_HASHUTILS_H_
 #include <iostream>
+#include "base/intSize.h"
 class HashType;
 
 namespace std {
@@ -10,11 +11,11 @@ struct hash<HashType>;
 
 class HashType {
     friend std::hash<HashType>;
-    u_int64_t value = 0;
+    UInt64 value = 0;
 
    public:
     HashType() {}
-    explicit HashType(u_int64_t value);
+    explicit HashType(UInt64 value);
 
     HashType operator+(const HashType other) const;
 

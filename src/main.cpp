@@ -14,7 +14,9 @@
 #include "utils/getExecPath.h"
 #include "utils/hashUtils.h"
 #include "utils/runCommand.h"
-
+#ifdef WASM_TARGET
+#include <emscripten/bind.h>
+#endif
 using namespace std;
 using namespace AutoArgParse;
 
@@ -205,30 +207,30 @@ auto& realTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
 auto& realTimeLimitArg =
     realTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
 bool hasIterationLimit = false;
-u_int64_t iterationLimit = 0;
+UInt64 iterationLimit = 0;
 auto& iterationLimitFlag = argParser.add<ComplexFlag>(
     "--iteration-limit", Policy::OPTIONAL,
     "Specify the maximum number of iterations to spend in search.");
 
-auto& iterationLimitArg = iterationLimitFlag.add<Arg<u_int64_t>>(
+auto& iterationLimitArg = iterationLimitFlag.add<Arg<UInt64>>(
     "number_iterations", Policy::MANDATORY, "",
-    chain(Converter<u_int64_t>(), [](u_int64_t value) {
+    chain(Converter<UInt64>(), [](UInt64 value) {
         hasIterationLimit = true;
         iterationLimit = value;
         return value;
     }));
 
 bool hasSolutionLimit = false;
-u_int64_t solutionLimit = 0;
+UInt64 solutionLimit = 0;
 auto& solutionLimitFlag = argParser.add<ComplexFlag>(
     "--solution-limit", Policy::OPTIONAL,
     "Exit search if the specified number of solutions has been found.  Note, "
     "this only applies to optimisation problems.  Only solutions that improve "
     "on the objective are counted.");
 
-auto& solutionLimitArg = solutionLimitFlag.add<Arg<u_int64_t>>(
+auto& solutionLimitArg = solutionLimitFlag.add<Arg<UInt64>>(
     "number_solutions", Policy::MANDATORY, "Value greater 0",
-    chain(Converter<u_int64_t>(), [](u_int64_t value) {
+    chain(Converter<UInt64>(), [](UInt64 value) {
         if (value < 1) {
             throw ErrorMessage("Value must be greater than 0.");
         }
@@ -498,6 +500,7 @@ static vector<nlohmann::json> getInputs() {
     return jsons;
 }
 
+#ifndef WASM_TARGET
 int main(const int argc, const char** argv) {
     cout << "ATHANOR\n";
 
@@ -524,7 +527,7 @@ int main(const int argc, const char** argv) {
         vector<nlohmann::json> jsons = getInputs();
         ParsedModel parsedModel = parseModelFromJson(jsons);
         State state(parsedModel.builder->build());
-        u_int32_t seed = (seedArg) ? seedArg.get() : random_device()();
+        UInt32 seed = (seedArg) ? seedArg.get() : random_device()();
         globalRandomGenerator.seed(seed);
         cout << "Using seed: " << seed << endl;
         state.disableVarViolations = disableVioBiasFlag;
@@ -555,7 +558,7 @@ int main(const int argc, const char** argv) {
         abort();
     }
 }
-
+#endif
 void setTimeout(int numberSeconds, bool virtualTimer) {
     struct itimerval timer;
     // numberSeconds
@@ -592,3 +595,29 @@ void sigAlarmHandler(int) {
     sigAlarmActivated = true;
     setTimeout(DELAYED_FORCED_EXIT_TIME, false);
 }
+
+/* for running with web assembly */
+void runSolverWasm(string specJsonString, string paramJsonString) {
+    vector<nlohmann::json> jsons;
+    if (!paramJsonString.empty()) {
+        jsons.emplace_back(nlohmann::json::parse(
+            find(begin(paramJsonString), end(paramJsonString), '{'),
+            end(paramJsonString)));
+    }
+    jsons.emplace_back(
+        nlohmann::json::parse(begin(specJsonString), end(specJsonString)));
+    ParsedModel parsedModel = parseModelFromJson(jsons);
+    State state(parsedModel.builder->build());
+    UInt32 seed = (seedArg) ? seedArg.get() : random_device()();
+    globalRandomGenerator.seed(seed);
+    cout << "Using seed: " << seed << endl;
+    runSearch(state);
+    printFinalStats(state);
+}
+
+#ifdef WASM_TARGET
+using namespace emscripten;
+EMSCRIPTEN_BINDINGS(my_module) {
+    emscripten::function("runSolverWasm", &runSolverWasm);
+}
+#endif

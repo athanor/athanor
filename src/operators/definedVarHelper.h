@@ -5,8 +5,8 @@
 // lock structure, used to prevent circular walks when expressions forward
 // values to variables that are defined off them.
 class DefinesLock {
-    static u_int64_t globalStamp;
-    u_int64_t localStamp = 0;
+    static UInt64 globalStamp;
+    UInt64 localStamp = 0;
 
    public:
     // try to acquire this lock, this will only return  true once  per round of
@@ -25,16 +25,14 @@ class DefinesLock {
     inline bool softTry() { return localStamp < globalStamp; }
 
     // disable this lock so that try() always returns false
-    inline void disable() {
-        localStamp = std::numeric_limits<u_int64_t>().max();
-    }
+    inline void disable() { localStamp = std::numeric_limits<UInt64>().max(); }
 
     inline bool isDisabled() const {
-        return localStamp == std::numeric_limits<u_int64_t>().max();
+        return localStamp == std::numeric_limits<UInt64>().max();
     }
     // reset this lock, allow try() to return true again
     bool reset() {
-        u_int64_t copy = localStamp;
+        UInt64 copy = localStamp;
         localStamp = 0;
         return copy != 0;
     }

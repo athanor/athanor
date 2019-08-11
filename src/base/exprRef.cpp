@@ -7,7 +7,7 @@
 using namespace std;
 bool sanityCheckRepeatMode = true;
 int TriggerDepthTracker::globalDepth = -1;
-u_int64_t triggerEventCount = 0;
+UInt64 triggerEventCount = 0;
 UInt LARGE_VIOLATION = ((UInt)1) << ((sizeof(UInt) * 4) - 1);
 UInt MAX_DOMAIN_SIZE = numeric_limits<UInt>().max();
 BoolValue makeViolatingBoolValue() {

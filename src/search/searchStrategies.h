@@ -8,7 +8,7 @@
 #include "search/solver.h"
 #include "search/statsContainer.h"
 
-u_int64_t DEFAULT_PEAK_ITERATIONS = 5000;
+UInt64 DEFAULT_PEAK_ITERATIONS = 5000;
 
 template <typename Integer>
 class ExponentialIncrementer {
@@ -24,7 +24,7 @@ class ExponentialIncrementer {
     }
     Integer getValue() { return std::round(value); }
     void increment() {
-        if (value > ((u_int64_t)1) << 32) {
+        if (value > ((UInt64)1) << 32) {
             value = 1;
         }
         value *= exponent;
@@ -34,7 +34,7 @@ class ExponentialIncrementer {
 template <typename Strategy>
 class HillClimbing {
     std::shared_ptr<Strategy> strategy;
-    const u_int64_t allowedIterationsAtPeak = DEFAULT_PEAK_ITERATIONS;
+    const UInt64 allowedIterationsAtPeak = DEFAULT_PEAK_ITERATIONS;
 
    public:
     HillClimbing(std::shared_ptr<Strategy> strategy)
@@ -46,7 +46,7 @@ class HillClimbing {
     void resetTerminationLimit() {}
 
     void run(State& state, bool isOuterMostStrategy) {
-        u_int64_t iterationsAtPeak = 0;
+        UInt64 iterationsAtPeak = 0;
         while (true) {
             bool allowed = false, strictImprovement = false;
             strategy->run(state, [&](const auto& result) {
@@ -88,14 +88,14 @@ class RandomWalk {
         std::make_shared<RandomNeighbourhood>();
 
    public:
-    u_int64_t numberMovesToTake = 0;
+    UInt64 numberMovesToTake = 0;
     bool allowViolations;
 
     RandomWalk(bool allowViolations) : allowViolations(allowViolations) {}
     void run(State& state, bool) {
         UInt startViolation = state.model.getViolation();
         UInt allowedViolationBackOff = numberMovesToTake;
-        u_int64_t numberIterations = 0;
+        UInt64 numberIterations = 0;
         while (numberIterations <= numberMovesToTake) {
             nhSelector->run(state, [&](const auto& result) {
                 if (!result.foundAssignment) {
@@ -140,7 +140,7 @@ class ExplorationUsingViolationBackOff {
 
     void backOff(State& state, const Objective& objToBeat,
                  ExponentialIncrementer<UInt>& violationBackOff) {
-        u_int64_t iterationsWithoutChange = 0;
+        UInt64 iterationsWithoutChange = 0;
         while (objToBeat <= state.model.getObjective()) {
             bool allowed = false;
             exploreStrategy->run(state, [&](const auto& result) {
@@ -173,7 +173,7 @@ class ExplorationUsingViolationBackOff {
     }
 
     bool repair(State& state, const Objective& objToBeat) {
-        u_int64_t iterationsWithoutChange = 0;
+        UInt64 iterationsWithoutChange = 0;
         while (state.model.getViolation() != 0) {
             bool allowed = false;
             exploreStrategy->run(state, [&](const auto& result) {
@@ -220,7 +220,7 @@ auto makeExplorationUsingViolationBackOff(
 
 template <typename ClimbStrategy>
 class ExplorationUsingRandomWalk {
-    static constexpr u_int64_t MAX_NUMBER_RANDOM_MOVES = 500;
+    static constexpr UInt64 MAX_NUMBER_RANDOM_MOVES = 500;
     static constexpr double baseValue = 10;
     static constexpr double multiplier = 1.3;
     std::shared_ptr<ClimbStrategy> climbStrategy;
@@ -233,8 +233,7 @@ class ExplorationUsingRandomWalk {
     void runImpl(State& state, Func1&& quality, Func2&& finished) {
         climbStrategy->reset();
         auto bestQuality = quality(state);
-        ExponentialIncrementer<u_int64_t> numberRandomMoves(baseValue,
-                                                            multiplier);
+        ExponentialIncrementer<UInt64> numberRandomMoves(baseValue, multiplier);
         while (true) {
             climbStrategy->run(state, false);
             if (finished(state)) {

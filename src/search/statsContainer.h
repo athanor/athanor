@@ -6,9 +6,9 @@
 #include "search/objective.h"
 struct Model;
 struct StatsMarkPoint {
-    u_int64_t numberIterations;
-    u_int64_t minorNodeCount;
-    u_int64_t triggerEventCount;
+    UInt64 numberIterations;
+    UInt64 minorNodeCount;
+    UInt64 triggerEventCount;
     double realTime;
     UInt bestViolation;
     UInt lastViolation;
@@ -16,8 +16,8 @@ struct StatsMarkPoint {
     Objective lastObjective;
     bool lastObjectiveDefined;
 
-    StatsMarkPoint(u_int64_t numberIterations, u_int64_t minorNodeCount,
-                   u_int64_t triggerEventCount, double realTime,
+    StatsMarkPoint(UInt64 numberIterations, UInt64 minorNodeCount,
+                   UInt64 triggerEventCount, double realTime,
                    UInt bestViolation, UInt lastViolation,
                    Objective bestObjective, Objective lastObjective,
                    bool lastObjectiveDefined)
@@ -53,16 +53,16 @@ struct NeighbourhoodResult {
 
 struct NeighbourhoodStats {
     std::string name;
-    u_int64_t numberActivations = 0;
-    u_int64_t minorNodeCount = 0;
-    u_int64_t triggerEventCount = 0;
+    UInt64 numberActivations = 0;
+    UInt64 minorNodeCount = 0;
+    UInt64 triggerEventCount = 0;
     double totalRealTime = 0;
     double vioTotalRealTime = 0;
-    u_int64_t numberVioActivations = 0;
-    u_int64_t vioMinorNodeCount = 0;
-    u_int64_t vioTriggerEventCount = 0;
-    u_int64_t numberObjImprovements = 0;
-    u_int64_t numberVioImprovements = 0;
+    UInt64 numberVioActivations = 0;
+    UInt64 vioMinorNodeCount = 0;
+    UInt64 vioTriggerEventCount = 0;
+    UInt64 numberObjImprovements = 0;
+    UInt64 numberVioImprovements = 0;
 
     NeighbourhoodStats(const std::string& name) : name(name) {}
     inline double getAverage(double value) const {
@@ -79,12 +79,12 @@ struct NeighbourhoodStats {
 
 struct StatsContainer {
     OptimiseMode optimiseMode;
-    u_int64_t numberIterations = 0;
-    u_int64_t numberVioIterations = 0;
-    u_int64_t minorNodeCount = 0;
-    u_int64_t vioMinorNodeCount = 0;
-    u_int64_t vioTriggerEventCount = 0;
-    u_int64_t numberBetterFeasibleSolutionsFound = 0;
+    UInt64 numberIterations = 0;
+    UInt64 numberVioIterations = 0;
+    UInt64 minorNodeCount = 0;
+    UInt64 vioMinorNodeCount = 0;
+    UInt64 vioTriggerEventCount = 0;
+    UInt64 numberBetterFeasibleSolutionsFound = 0;
     std::chrono::high_resolution_clock::time_point startTime =
         std::chrono::high_resolution_clock::now();
     std::clock_t startCpuTime = std::clock();

@@ -72,13 +72,23 @@ endif()
 if(FLAGS)
 set(CMAKE_CXX_FLAGS_DEBUG "${FLAGS}")
 else()
-set(CMAKE_CXX_FLAGS_DEBUG "-Wextra -Wall  -DDEBUG_MODE=1 -g")
+set(CMAKE_CXX_FLAGS_DEBUG "-Wextra -Wall  -DDEBUG_MODE=1 -g -O0")
 endif()
+
 
 #default build type:
 if(NOT CMAKE_BUILD_TYPE) 
     set(CMAKE_BUILD_TYPE release)
 endif(NOT CMAKE_BUILD_TYPE)
+
+if(WASM_TARGET)
+    if("${CMAKE_BUILD_TYPE}" STREQUAL "release") 
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} --bind -s \"BINARYEN_TRAP_MODE='clamp'\" -DWASM_TARGET")
+    else()
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --bind -s \"BINARYEN_TRAP_MODE='clamp'\" -DWASM_TARGET")
+    endif() 
+endif() 
+
 
 #print info on build type and flags
 message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")

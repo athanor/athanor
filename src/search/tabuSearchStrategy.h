@@ -9,7 +9,7 @@ class TabuList {
 template <typename Strategy>
 class TabuSearch {
     std::shared_ptr<Strategy> strategy;
-    const u_int64_t allowedIterationsAtPeak = DEFAULT_PEAK_ITERATIONS;
+    const UInt64 allowedIterationsAtPeak = DEFAULT_PEAK_ITERATIONS;
 
    public:
     HillClimbing(std::shared_ptr<Strategy> strategy)
@@ -21,7 +21,7 @@ class TabuSearch {
     void resetTerminationLimit() {}
 
     void run(State& state, bool isOuterMostStrategy) {
-        u_int64_t iterationsAtPeak = 0;
+        UInt64 iterationsAtPeak = 0;
         while (true) {
             bool allowed = false, strictImprovement = false;
             strategy->run(state, [&](const auto& result) {

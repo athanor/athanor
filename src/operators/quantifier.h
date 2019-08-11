@@ -5,8 +5,8 @@
 #include "types/bool.h"
 #include "types/sequence.h"
 
-inline static u_int64_t nextQuantId() {
-    static u_int64_t quantId = 0;
+inline static UInt64 nextQuantId() {
+    static UInt64 quantId = 0;
     return quantId++;
 }
 

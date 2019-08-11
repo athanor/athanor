@@ -29,7 +29,7 @@ bool isOpAnd(const AnyExprRef& expr) {
     return boolExprTest && getAs<OpAnd>(*boolExprTest);
 }
 
-bool isMatchingIterRef(ExprRef<IntView>& operand, u_int64_t quantId) {
+bool isMatchingIterRef(ExprRef<IntView>& operand, UInt64 quantId) {
     auto tupleIndexTest = getAs<OpTupleIndex<IntView>>(operand);
     if (tupleIndexTest) {
         auto tupleIterTest =
@@ -141,7 +141,7 @@ bool areAllConstant(const ExprRefVec<IntView>& exprs) {
 
 bool appendLimits(
     pair<ExprRefVec<IntView>, ExprRefVec<IntView>>& lowerAndUpperLimits,
-    ExprRef<BoolView>& condition, u_int64_t quantId) {
+    ExprRef<BoolView>& condition, UInt64 quantId) {
     auto opLessEqTest = getAs<OpLessEq>(condition);
     if (opLessEqTest) {
         if (isMatchingIterRef(opLessEqTest->left, quantId)) {
@@ -189,7 +189,7 @@ bool appendLimits(
 
 bool appendLimitsFromOpAndCondition(
     pair<ExprRefVec<IntView>, ExprRefVec<IntView>>& lowerAndUpperLimits,
-    ExprRef<BoolView>& condition, u_int64_t quantId,
+    ExprRef<BoolView>& condition, UInt64 quantId,
     size_t& numberOpAndOperandsLeft) {
     auto opAndTest = getAs<OpAnd>(condition);
     if (!opAndTest) {

@@ -107,13 +107,13 @@ class UcbWithTriggerCount : public UcbSelector<UcbWithTriggerCount> {
         auto& s = nhStats(i);
         double penalty = 0;
         if (s.minorNodeCount > s.triggerEventCount) {
-            u_int64_t minorNodeCount =
-                std::max(state.stats.minorNodeCount, ((u_int64_t)1));
+            UInt64 minorNodeCount =
+                std::max(state.stats.minorNodeCount, ((UInt64)1));
             double penaltyRatio = ((double)triggerEventCount) / minorNodeCount;
             penalty = s.minorNodeCount * penaltyRatio;
         }
-        u_int64_t vioCost = s.vioMinorNodeCount + s.vioTriggerEventCount;
-        u_int64_t cost = s.minorNodeCount + s.triggerEventCount;
+        UInt64 vioCost = s.vioMinorNodeCount + s.vioTriggerEventCount;
+        UInt64 cost = s.minorNodeCount + s.triggerEventCount;
         return (optimising()) ? (cost + penalty) - vioCost : vioCost + penalty;
     }
     inline double totalCost() {

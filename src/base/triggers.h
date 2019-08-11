@@ -8,7 +8,7 @@
 #include "utils/ignoreUnused.h"
 template <typename T>
 struct ExprRef;
-extern u_int64_t triggerEventCount;
+extern UInt64 triggerEventCount;
 struct TriggerBase {
    private:
     bool _active = true;

@@ -12,9 +12,9 @@ void dumpVarViolations(const ViolationContainer& vioContainer);
 extern volatile bool sigIntActivated;
 extern volatile bool sigAlarmActivated;
 extern bool hasIterationLimit;
-extern u_int64_t iterationLimit;
+extern UInt64 iterationLimit;
 extern bool hasSolutionLimit;
-extern u_int64_t solutionLimit;
+extern UInt64 solutionLimit;
 
 extern bool runSanityChecks;
 inline bool alwaysTrue(const AnyValVec&) { return true; }

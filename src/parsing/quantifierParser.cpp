@@ -14,7 +14,7 @@ auto fakeTupleDomain(vector<AnyDomainRef> inners) {
     return make_shared<TupleDomain>(move(inners));
 }
 auto fakeSequenceDomain(AnyDomainRef domain) {
-    return make_shared<SequenceDomain>(maxSize(numeric_limits<UInt>().max()),
+    return make_shared<SequenceDomain>(maxSize(numeric_limits<size_t>().max()),
                                        domain);
 }
 auto fakeIntDomain = make_shared<IntDomain>(vector<pair<Int, Int>>({{0, 0}}));

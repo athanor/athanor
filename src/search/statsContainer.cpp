@@ -1,6 +1,9 @@
 #include "search/statsContainer.h"
 #include <iostream>
 #include "search/model.h"
+#ifdef WASM_TARGET
+#include <emscripten/bind.h>
+#endif
 
 using namespace std;
 extern bool noPrintSolutions;
@@ -63,11 +66,81 @@ void StatsContainer::initialSolution(Model& model) {
     checkForBestSolution(true, true, model);
 }
 
+// struct to hold information if printing to the athanor web app
+static const size_t WEB_STATS_REPORT_INTERVAL = 2000;
+class WebAppStats {
+    string solutionNumber;
+    string wallTime;
+    string numberIterations;
+    string violation;
+    bool _hasObjective;
+    string objective;
+    // objective is string as this might be tuple of int instead of int
+   public:
+    WebAppStats(UInt64 solutionNumber, double wallTime, UInt64 numberIterations,
+                Int violation, bool hasObjective, string objective)
+        : solutionNumber(toString(solutionNumber)),
+          wallTime(toString(wallTime)),
+          numberIterations(toString(numberIterations)),
+          violation(toString(violation)),
+          _hasObjective(hasObjective),
+          objective(move(objective)) {}
+
+    string getSolutionNumber() const { return solutionNumber; }
+    void setSolutionNumber(string solutionNumber) {
+        this->solutionNumber = solutionNumber;
+    }
+    string getWallTime() const { return wallTime; }
+    void setWallTime(string wallTime) { this->wallTime = wallTime; }
+    string getNumberIterations() const { return numberIterations; }
+    void setNumberIterations(string numberIterations) {
+        this->numberIterations = numberIterations;
+    }
+    string getViolation() const { return violation; }
+    void setViolation(string violation) { this->violation = violation; }
+    bool hasObjective() const { return _hasObjective; }
+    void setHasObjective(bool o) { _hasObjective = o; }
+    string getObjective() const { return objective; }
+    void setObjective(string objective) { this->objective = objective; }
+};
+#ifdef WASM_TARGET
+using namespace emscripten;
+EMSCRIPTEN_BINDINGS(WebAppStats) {
+    class_<WebAppStats>("WebAppStats")
+        .constructor<UInt64, double, UInt64, Int, bool, string>()
+        .property("solutionNumber", &WebAppStats::getSolutionNumber,
+                  &WebAppStats::setSolutionNumber)
+        .property("wallTime", &WebAppStats::getWallTime,
+                  &WebAppStats::setWallTime)
+        .property("numberIterations", &WebAppStats::getNumberIterations,
+                  &WebAppStats::setNumberIterations)
+        .property("violation", &WebAppStats::getViolation,
+                  &WebAppStats::setViolation)
+        .property("hasObjective", &WebAppStats::hasObjective,
+                  &WebAppStats::setHasObjective)
+        .property("objective", &WebAppStats::getObjective,
+                  &WebAppStats::setObjective);
+}
+#endif
+
+void printStatsToWebApp(const StatsContainer& stats) {
+    static_cast<void>(stats);
+#ifdef WASM_TARGET
+    WebAppStats solutionStats(stats.numberBetterFeasibleSolutionsFound,
+                              stats.getRealTime(), stats.numberIterations,
+                              stats.bestViolation,
+                              stats.optimiseMode != OptimiseMode::NONE,
+                              toString(stats.bestObjective));
+    val::global().call<void>("printStats", solutionStats);
+
+#endif
+}
+
 void StatsContainer::reportResult(bool solutionAccepted,
                                   const NeighbourhoodResult& result) {
-    u_int64_t minorNodeCountDiff =
+    UInt64 minorNodeCountDiff =
         minorNodeCount - result.statsMarkPoint.minorNodeCount;
-    u_int64_t triggerEventCountDiff =
+    UInt64 triggerEventCountDiff =
         triggerEventCount - result.statsMarkPoint.triggerEventCount;
     ++numberIterations;
     ++neighbourhoodStats[result.neighbourhoodIndex].numberActivations;
@@ -95,6 +168,11 @@ void StatsContainer::reportResult(bool solutionAccepted,
     }
     neighbourhoodStats[result.neighbourhoodIndex].numberVioImprovements +=
         (result.getDeltaViolation() < 0);
+#ifdef WASM_TARGET
+    if (numberIterations % WEB_STATS_REPORT_INTERVAL == 0) {
+        printStatsToWebApp(*this);
+    }
+#endif
     if (!solutionAccepted) {
         return;
     }
@@ -159,6 +237,7 @@ void StatsContainer::printCurrentState(Model& model) {
     if (!noPrintSolutions && lastViolation == 0) {
         cout << "solution start\n";
         model.printVariables();
+        printStatsToWebApp(*this);
         cout << "solution end\n";
     }
     debug_code(if (debugLogAllowed) {

@@ -18,7 +18,7 @@
 
 extern ValBase inlinedPool;
 class ModelBuilder;
-
+struct StatsContainer;
 struct Model {
     friend ModelBuilder;
     std::vector<std::pair<AnyDomainRef, AnyValRef>> variables;

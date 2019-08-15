@@ -8,6 +8,14 @@ import json
 import subprocess
 USE_HTTPS = False
 
+pathWhiteList = {"/",
+    "/athanor.js",
+    "/athanor.wasm",
+    "/athanorWorker.js",
+    "/essenceInput.js",
+    "/index.html"}
+
+
 def cleanError(error,prefix):
     return error[error.find(prefix) + len(prefix):].strip()
 def essenceToJson(essence,isParam):
@@ -28,6 +36,16 @@ def essenceToJson(essence,isParam):
 
 
 class Handler(SimpleHTTPRequestHandler):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+    
+    def do_GET(self):
+        print("path is " + self.path)
+        #hack so that if the path is not in the white list, make the path garbidge so it fails to return anything
+        if self.path not in pathWhiteList:
+            self.path = "unknown"
+        return super().do_GET()
     def do_POST(self):
         length = int(self.headers['Content-Length'])
         postData = json.loads(self.rfile.read(length).decode('utf-8'))

@@ -166,13 +166,13 @@ struct FunctionView : public ExprInterface<FunctionView>,
     }
     inline void checkNotUsingCachedHash() {
         if (cachedHashTotal.isValid()) {
-            std::cerr
+            myCerr
                 << "Error: constraint changing a member of a function without "
                    "passing a previous member hash.  Means no support for "
                    "getting total hash of this function.  Suspected "
                    "reason is that one of the constraints has not been "
                    "updated to support this.\n";
-            abort();
+            myAbort();
         }
     }
 

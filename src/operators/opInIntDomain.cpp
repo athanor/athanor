@@ -76,8 +76,8 @@ void OpInDomain<IntView>::debugSanityCheckImpl() const {
 
     const auto& bounds = domain->bounds;
     if (bounds.empty()) {
-        cerr << "Error: empty domain.\n";
-        abort();
+        myCerr << "Error: empty domain.\n";
+        myAbort();
     }
     sanityCheck(closestBound >= 0 && closestBound < bounds.size(),
                 "closestBound out of range.\n");
@@ -120,7 +120,7 @@ void OpInDomain<IntView>::debugSanityCheckImpl() const {
         }
     }
     assert(false);
-    abort();
+    myAbort();
 }
 
 template <typename Op>

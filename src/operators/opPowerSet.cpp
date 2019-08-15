@@ -16,9 +16,9 @@ struct OpMaker<OpSetLit> {
 
 void OpPowerSet::reevaluateImpl(SetView& operandView) {
     if (sizeLimit != 2) {
-        std::cerr << "Only supporting powerset when limiting produced sets "
-                     "to exactly size 2.\n";
-        abort();
+        myCerr << "Only supporting powerset when limiting produced sets "
+                  "to exactly size 2.\n";
+        myAbort();
     }
 
     silentClear();
@@ -50,8 +50,8 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
     void hasBecomeDefined() { todoImpl(); }
 
     void valueRemoved(UInt, HashType) final {
-        cerr << "Only supporting powersets over fixed size sets at the "
-                "moment.\n";
+        myCerr << "Only supporting powersets over fixed size sets at the "
+                  "moment.\n";
         todoImpl();
     }
     void reattachTrigger() final {
@@ -61,8 +61,8 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
         op->operandTrigger = move(trigger);
     }
     void valueAdded(const AnyExprRef&) final {
-        cerr << "Only supporting powersets over fixed size sets at the "
-                "moment.\n";
+        myCerr << "Only supporting powersets over fixed size sets at the "
+                  "moment.\n";
         todoImpl();
         ;
     }

@@ -41,8 +41,8 @@ Objective::Objective(OptimiseMode mode, const ExprRef<TupleView>& expr)
             break;
         }
         case 0:
-            cerr << "Error, cannot build objective value from empty tuple\n";
-            abort();
+            myCerr << "Error, cannot build objective value from empty tuple\n";
+            myAbort();
         default: {
             assignElements(tupleView, value.emplace<vector<Int>>(
                                           tupleView.members.size(), 0));

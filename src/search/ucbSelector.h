@@ -6,6 +6,7 @@
 #include <vector>
 #include "search/endOfSearchException.h"
 #include "utils/random.h"
+void signalEndOfSearch();
 extern double DEFAULT_UCB_EXPLORATION_BIAS;
 template <typename Derived>
 class UcbSelector {
@@ -54,7 +55,7 @@ class UcbSelector {
         if (bestOptions.empty()) {
             std::cout << "UCBOptionSelection: could not activate a "
                          "option.\n";
-            throw EndOfSearchException();
+            signalEndOfSearch();
         }
         size_t chosenOption =
             bestOptions[globalRandom<size_t>(0, bestOptions.size() - 1)];

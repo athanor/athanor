@@ -31,10 +31,10 @@ struct FunctionDomain {
     static std::shared_ptr<FunctionDomain> makeMatrixDomain(
         std::shared_ptr<IntDomain> indexingDomain, DomainType&& inner) {
         if (indexingDomain->bounds.size() > 1) {
-            std::cerr
+            myCerr
                 << "Error: currently no support for matrix domains with holes "
                    "in the index.\n";
-            abort();
+            myAbort();
         }
         auto matrix = std::make_shared<FunctionDomain>(
             JectivityAttr::NONE, PartialAttr::TOTAL, indexingDomain,
@@ -59,13 +59,13 @@ struct FunctionDomain {
    private:
     void checkSupported() {
         if (jectivity != JectivityAttr::NONE) {
-            std::cerr
+            myCerr
                 << "Sorry, jectivity for functions must currently be None.\n";
-            abort();
+            myAbort();
         }
         if (partial != PartialAttr::TOTAL) {
-            std::cerr << "Error, functions must currently be total.\n";
-            abort();
+            myCerr << "Error, functions must currently be total.\n";
+            myAbort();
         }
     }
 };

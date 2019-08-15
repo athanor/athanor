@@ -52,9 +52,9 @@ ExprRef<RetType> expect(Constraint&& constraint, Func&& func) {
                            return OpMaker<OpUndefined<RetType>>::make();
                        }
                        func(constraint);
-                       std::cerr << "\nType found was instead "
-                                 << TypeAsString<Value>::value << std::endl;
-                       abort();
+                       myCerr << "\nType found was instead "
+                              << TypeAsString<Value>::value << std::endl;
+                       myAbort();
                    }),
         constraint);
 }

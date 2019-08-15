@@ -10,7 +10,7 @@ auto fakeIntDomain = make_shared<IntDomain>(vector<pair<Int, Int>>({{0, 0}}));
 }
 Int parseExprAsInt(AnyExprRef expr, const string& errorMessage) {
     auto intExpr = expect<IntView>(expr, [&](auto&&) {
-        cerr << "Error: Expected int expression " << errorMessage << endl;
+        myCerr << "Error: Expected int expression " << errorMessage << endl;
     });
     intExpr->evaluate();
     return intExpr->getViewIfDefined()
@@ -59,8 +59,8 @@ shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
                                   errorMessage);
             to = from;
         } else {
-            cerr << "Unrecognised type of int range: " << rangeExpr << endl;
-            abort();
+            myCerr << "Unrecognised type of int range: " << rangeExpr << endl;
+            myAbort();
         }
         ranges.emplace_back(from, to);
     }
@@ -71,10 +71,10 @@ ParseResult parseOpMod(json& modExpr, ParsedModel& parsedModel) {
     string errorMessage = "Expected int returning expression within Op mod: ";
     ExprRef<IntView> left =
         expect<IntView>(parseExpr(modExpr[0], parsedModel).expr,
-                        [&](auto&&) { cerr << errorMessage << modExpr[0]; });
+                        [&](auto&&) { myCerr << errorMessage << modExpr[0]; });
     ExprRef<IntView> right =
         expect<IntView>(parseExpr(modExpr[1], parsedModel).expr,
-                        [&](auto&&) { cerr << errorMessage << modExpr[1]; });
+                        [&](auto&&) { myCerr << errorMessage << modExpr[1]; });
     bool constant = left->isConstant() && right->isConstant();
     auto op = OpMaker<OpMod>::make(move(left), move(right));
     op->setConstant(constant);
@@ -85,9 +85,9 @@ ParseResult parseOpNegate(json& negateExpr, ParsedModel& parsedModel) {
     string errorMessage =
         "Expected int returning expression within "
         "OpNegate: ";
-    ExprRef<IntView> operand =
-        expect<IntView>(parseExpr(negateExpr, parsedModel).expr,
-                        [&](auto&&) { cerr << errorMessage << negateExpr[0]; });
+    ExprRef<IntView> operand = expect<IntView>(
+        parseExpr(negateExpr, parsedModel).expr,
+        [&](auto&&) { myCerr << errorMessage << negateExpr[0]; });
     bool constant = operand->isConstant();
     auto op = OpMaker<OpNegate>::make(move(operand));
     op->setConstant(constant);
@@ -99,10 +99,10 @@ ParseResult parseOpDiv(json& modExpr, ParsedModel& parsedModel) {
     string errorMessage = "Expected int returning expression within Op div: ";
     ExprRef<IntView> left =
         expect<IntView>(parseExpr(modExpr[0], parsedModel).expr,
-                        [&](auto&&) { cerr << errorMessage << modExpr[0]; });
+                        [&](auto&&) { myCerr << errorMessage << modExpr[0]; });
     ExprRef<IntView> right =
         expect<IntView>(parseExpr(modExpr[1], parsedModel).expr,
-                        [&](auto&&) { cerr << errorMessage << modExpr[1]; });
+                        [&](auto&&) { myCerr << errorMessage << modExpr[1]; });
     bool constant = left->isConstant() && right->isConstant();
     auto op = OpMaker<OpDiv>::make(move(left), move(right));
     op->setConstant(constant);
@@ -113,12 +113,12 @@ ParseResult parseOpMinus(json& minusExpr, ParsedModel& parsedModel) {
     string errorMessage =
         "Expected int returning expression within Op "
         "minus: ";
-    ExprRef<IntView> left =
-        expect<IntView>(parseExpr(minusExpr[0], parsedModel).expr,
-                        [&](auto&&) { cerr << errorMessage << minusExpr[0]; });
-    ExprRef<IntView> right =
-        expect<IntView>(parseExpr(minusExpr[1], parsedModel).expr,
-                        [&](auto&&) { cerr << errorMessage << minusExpr[1]; });
+    ExprRef<IntView> left = expect<IntView>(
+        parseExpr(minusExpr[0], parsedModel).expr,
+        [&](auto&&) { myCerr << errorMessage << minusExpr[0]; });
+    ExprRef<IntView> right = expect<IntView>(
+        parseExpr(minusExpr[1], parsedModel).expr,
+        [&](auto&&) { myCerr << errorMessage << minusExpr[1]; });
     bool constant = left->isConstant() && right->isConstant();
     auto op = OpMaker<OpMinus>::make(move(left), move(right));
     op->setConstant(constant);
@@ -129,12 +129,12 @@ ParseResult parseOpPower(json& powerExpr, ParsedModel& parsedModel) {
     string errorMessage =
         "Expected int returning expression within Op "
         "power: ";
-    ExprRef<IntView> left =
-        expect<IntView>(parseExpr(powerExpr[0], parsedModel).expr,
-                        [&](auto&&) { cerr << errorMessage << powerExpr[0]; });
-    ExprRef<IntView> right =
-        expect<IntView>(parseExpr(powerExpr[1], parsedModel).expr,
-                        [&](auto&&) { cerr << errorMessage << powerExpr[1]; });
+    ExprRef<IntView> left = expect<IntView>(
+        parseExpr(powerExpr[0], parsedModel).expr,
+        [&](auto&&) { myCerr << errorMessage << powerExpr[0]; });
+    ExprRef<IntView> right = expect<IntView>(
+        parseExpr(powerExpr[1], parsedModel).expr,
+        [&](auto&&) { myCerr << errorMessage << powerExpr[1]; });
     bool constant = left->isConstant() && right->isConstant();
     ;
     auto op = OpMaker<OpPower>::make(move(left), move(right));
@@ -169,8 +169,8 @@ ParseResult parseOpTwoBars(json& operandExpr, ParsedModel& parsedModel) {
     }
     auto expr = tryParseExpr(operandExpr, parsedModel);
     if (!expr) {
-        cerr << "Error parsing OpTwoBars, expected domain or expression.\n";
-        abort();
+        myCerr << "Error parsing OpTwoBars, expected domain or expression.\n";
+        myAbort();
     }
     auto& operand = expr->expr;
     return mpark::visit(
@@ -191,13 +191,13 @@ ParseResult parseOpTwoBars(json& operandExpr, ParsedModel& parsedModel) {
                 return ParseResult(fakeIntDomain, op, false);
             },
             [&](auto&& operand) -> ParseResult {
-                cerr << "Error, not yet handling OpTwoBars "
-                        "with an operand "
-                        "of type "
-                     << TypeAsString<typename AssociatedValueType<viewType(
-                            operand)>::type>::value
-                     << ": " << operandExpr << endl;
-                abort();
+                myCerr << "Error, not yet handling OpTwoBars "
+                          "with an operand "
+                          "of type "
+                       << TypeAsString<typename AssociatedValueType<viewType(
+                              operand)>::type>::value
+                       << ": " << operandExpr << endl;
+                myAbort();
             }),
         operand);
 }
@@ -205,7 +205,7 @@ ParseResult parseOpTwoBars(json& operandExpr, ParsedModel& parsedModel) {
 ParseResult parseOpToInt(json& expr, ParsedModel& parsedModel) {
     auto operand = expect<BoolView>(
         parseExpr(expr, parsedModel).expr,
-        [&](auto&) { cerr << "OpToInt requires a bool operand.\n"; });
+        [&](auto&) { myCerr << "OpToInt requires a bool operand.\n"; });
     auto op = OpMaker<OpToInt>::make(operand);
     op->setConstant(operand->isConstant());
     return ParseResult(make_shared<IntDomain>(vector<pair<Int, Int>>({{0, 1}})),

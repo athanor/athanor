@@ -20,7 +20,7 @@ std::pair<int, std::string> runCommand(const std::string& command,
                                        const Args&... args) {
 #ifdef WASM_TARGET
     ignoreUnused(command, args...);
-    std::cerr << "Not allowed in WASM\n";
+    myCerr << "Not allowed in WASM\n";
     shouldNotBeCalledPanic;
 #else
     pid_t pid = 0;
@@ -34,7 +34,7 @@ std::pair<int, std::string> runCommand(const std::string& command,
         dup2(pipeFD[1], STDERR_FILENO);
         execlp(command.data(), command.data(), RunCommandDetail::toStr(args)...,
                (char*)NULL);
-        exit(1);
+        myExit(1);
     }
     // Only parent gets here
     close(pipeFD[1]);

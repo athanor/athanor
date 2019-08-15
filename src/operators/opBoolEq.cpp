@@ -37,7 +37,7 @@ void OpBoolEq::updateVarViolationsImpl(const ViolationContext&,
         right->updateVarViolations(BoolViolationContext(violation, rightIsTrue),
                                    vioContainer);
     } else {
-        cerr << "internal error, bool operators claiming to be undefined.\n";
+        myCerr << "internal error, bool operators claiming to be undefined.\n";
         shouldNotBeCalledPanic;
     }
 }

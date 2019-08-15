@@ -40,7 +40,7 @@ std::string getExecutablePath() {
 }
 #else
 std::string getExecutablePath() {
-    std::cerr << "not allowed in WASM\n";
+    myCerr << "not allowed in WASM\n";
     shouldNotBeCalledPanic;
 }
 #endif

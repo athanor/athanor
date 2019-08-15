@@ -14,8 +14,9 @@ using namespace std;
 struct NoSupportException {};
 Dimension intDomainToDimension(IntDomain& dom) {
     if (dom.bounds.size() > 1) {
-        cerr << "Error: this function does not support int domains with holes "
-                "in it.\n";
+        myCerr
+            << "Error: this function does not support int domains with holes "
+               "in it.\n";
         throw NoSupportException();
     }
     return Dimension(dom.bounds.front().first, dom.bounds.front().second);
@@ -41,10 +42,11 @@ void makeDimensionVecFromDomainHelper(const AnyDomainRef& domain,
             domain);
 
     } catch (...) {
-        cerr << "Currently no support for building DimensionVecs from function "
-                "domain: ";
-        prettyPrint(cerr, domain) << endl;
-        abort();
+        myCerr
+            << "Currently no support for building DimensionVecs from function "
+               "domain: ";
+        prettyPrint(myCerr, domain) << endl;
+        myAbort();
     }
 }
 

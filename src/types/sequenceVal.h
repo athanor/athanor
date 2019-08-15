@@ -37,9 +37,9 @@ struct SequenceDomain {
     void checkMaxSize() {
         if (sizeAttr.sizeType == SizeAttr::SizeAttrType::NO_SIZE ||
             sizeAttr.sizeType == SizeAttr::SizeAttrType::MIN_SIZE) {
-            std::cerr << "Error, Sequence domain must be initialised with "
-                         "maxSize() or exactSize()\n";
-            abort();
+            myCerr << "Error, Sequence domain must be initialised with "
+                      "maxSize() or exactSize()\n";
+            myAbort();
         }
     }
 };

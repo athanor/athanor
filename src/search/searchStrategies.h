@@ -132,7 +132,7 @@ class ExplorationUsingViolationBackOff {
         while (true) {
             climbStrategy->run(state, !explorationSupported);
             if (!explorationSupported) {
-                throw EndOfSearchException();
+                signalEndOfSearch();
             }
             explore(state);
         }

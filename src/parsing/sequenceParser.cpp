@@ -16,10 +16,10 @@ shared_ptr<SequenceDomain> parseDomainSequence(json& sequenceDomainExpr,
         return make_shared<SequenceDomain>(
             sizeAttr, parseDomain(sequenceDomainExpr[2], parsedModel), true);
     } else {
-        cerr << "Not sure what this attribute for domain "
-                "sequence is:\n"
-             << sequenceDomainExpr[1][1] << endl;
-        abort();
+        myCerr << "Not sure what this attribute for domain "
+                  "sequence is:\n"
+               << sequenceDomainExpr[1][1] << endl;
+        myAbort();
     }
 }
 
@@ -29,8 +29,8 @@ ParseResult parseOpSequenceIndex(AnyDomainRef& innerDomain,
                                  ParsedModel& parsedModel) {
     auto index =
         expect<IntView>(parseExpr(indexExpr, parsedModel).expr, [](auto&&) {
-            cerr << "Sequence must be indexed by an int "
-                    "expression.\n";
+            myCerr << "Sequence must be indexed by an int "
+                      "expression.\n";
         });
     return mpark::visit(
         [&](auto& innerDomain) -> ParseResult {

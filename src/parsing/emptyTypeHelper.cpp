@@ -32,7 +32,7 @@ void tryRemoveEmptyType(const AnyDomainRef& domain, AnyExprRef val) {
             typedef typename AssociatedViewType<Domain>::type View;
             auto* exprPtr = mpark::get_if<ExprRef<View>>(&val);
             if (!exprPtr) {
-                cerr << DOMAIN_MISS_MATCH_MESSAGE;
+                myCerr << DOMAIN_MISS_MATCH_MESSAGE;
                 shouldNotBeCalledPanic;
             }
             auto view = (*exprPtr)->view();
@@ -53,7 +53,7 @@ void tryRemoveEmptyType(const AnyDomainRef& domain, AnyExprVec& vals) {
             } else {
                 auto* valsPtr = mpark::get_if<ExprRefVec<View>>(&vals);
                 if (!valsPtr) {
-                    cerr << DOMAIN_MISS_MATCH_MESSAGE;
+                    myCerr << DOMAIN_MISS_MATCH_MESSAGE;
                     shouldNotBeCalledPanic;
                 }
                 for (auto& expr : *valsPtr) {

@@ -8,6 +8,7 @@
 #include "search/model.h"
 #include "search/statsContainer.h"
 #include "triggers/allTriggers.h"
+void signalEndOfSearch();
 void dumpVarViolations(const ViolationContainer& vioContainer);
 extern volatile bool sigIntActivated;
 extern volatile bool sigAlarmActivated;
@@ -86,26 +87,26 @@ class State {
     inline void testForTermination() {
         if (sigIntActivated) {
             std::cout << "control-c pressed\n";
-            throw EndOfSearchException();
+            signalEndOfSearch();
         }
         if (sigAlarmActivated) {
             std::cout << "timeout\n";
-            throw EndOfSearchException();
+            signalEndOfSearch();
         }
         if (hasIterationLimit && stats.numberIterations >= iterationLimit) {
             std::cout << "iteration limit reached\n";
-            throw EndOfSearchException();
+            signalEndOfSearch();
         }
 
         if (hasSolutionLimit &&
             stats.numberBetterFeasibleSolutionsFound >= solutionLimit) {
             std::cout << "solution limit reached\n";
-            throw EndOfSearchException();
+            signalEndOfSearch();
         }
 
         if (model.optimiseMode == OptimiseMode::NONE &&
             stats.bestViolation == 0) {
-            throw EndOfSearchException();
+            signalEndOfSearch();
         }
     }
 
@@ -192,7 +193,7 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
     state.updateVarViolations();
     try {
         if (state.model.neighbourhoods.empty()) {
-            throw EndOfSearchException();
+            signalEndOfSearch();
         }
         searchStrategy->run(state, true);
     } catch (EndOfSearchException&) {

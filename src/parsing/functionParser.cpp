@@ -11,8 +11,8 @@ ParseResult parseOpFunctionLit(json& functionExpr, ParsedModel& parsedModel) {
     auto rangeResult = parseAllAsSameType(
         functionExpr, parsedModel, [](json& j) -> json& { return j[1]; });
     if (!domainResult.allConstant || !rangeResult.allConstant) {
-        cerr << "Error: at the moment, do not support function literals with "
-                "decision variables.\n";
+        myCerr << "Error: at the moment, do not support function literals with "
+                  "decision variables.\n";
     }
     auto function = make<FunctionValue>();
     mpark::visit(
@@ -24,22 +24,23 @@ ParseResult parseOpFunctionLit(json& functionExpr, ParsedModel& parsedModel) {
                 FunctionView::makeDimensionVecFromDomain(domainResult.domain));
             for (size_t i = 0; i < rangeExprs.size(); i++) {
                 if (!domainExprs[i]->isConstant()) {
-                    cerr << "Error: function literals only support constants "
-                            "at the moment.\n";
-                    exit(1);
+                    myCerr << "Error: function literals only support constants "
+                              "at the moment.\n";
+                    myExit(1);
                 }
                 domainExprs[i]->evaluate();
                 auto index = function->domainToIndex(
                     domainExprs[i]->getViewIfDefined().checkedGet(
                         NO_FUNCTION_UNDEFINED_MEMBERS));
                 if (!index) {
-                    cerr << "Error in function literal: domain out of range.\n";
-                    abort();
+                    myCerr
+                        << "Error in function literal: domain out of range.\n";
+                    myAbort();
                 }
                 if (!getAs<Value>(rangeExprs[i])) {
-                    cerr << "Error: function literals currently only "
-                            "support literals, expressions not allowed.\n";
-                    exit(1);
+                    myCerr << "Error: function literals currently only "
+                              "support literals, expressions not allowed.\n";
+                    myExit(1);
                 }
                 function->assignImage<Value>(*index,
                                              assumeAsValue(rangeExprs[i]));
@@ -58,21 +59,21 @@ shared_ptr<FunctionDomain> parseDomainFunction(json& functionDomainExpr,
     SizeAttr sizeAttr = parseSizeAttr(functionDomainExpr[1][0], parsedModel);
 
     if (sizeAttr.sizeType != SizeAttr::SizeAttrType::NO_SIZE) {
-        cerr << "Do not support/understand function with "
-                "size attribute.\nn";
-        abort();
+        myCerr << "Do not support/understand function with "
+                  "size attribute.\nn";
+        myAbort();
     }
     PartialAttr partialAttr = parsePartialAttr(functionDomainExpr[1][1]);
     if (partialAttr != PartialAttr::TOTAL) {
-        cerr << "Error: currently only support total "
-                "functions.\n";
-        abort();
+        myCerr << "Error: currently only support total "
+                  "functions.\n";
+        myAbort();
     }
     if (functionDomainExpr[1][2] != "JectivityAttr_None") {
-        cerr << "Error, not supporting jectivity attributes "
-                "on functions at "
-                "the moment.\n";
-        abort
+        myCerr << "Error, not supporting jectivity attributes "
+                  "on functions at "
+                  "the moment.\n";
+        myAbort
 
             ();
     }
@@ -96,13 +97,13 @@ ParseResult parseOpFunctionImage(const FunctionDomain& domain,
             typedef typename AssociatedDomain<preImageViewType>::type
                 preImageDomain;
             if (!mpark::get_if<shared_ptr<preImageDomain>>(&domain.from)) {
-                cerr << "Miss match in pre image domain and function domain "
-                        "when parsing OpFunctionImage.\nfunction:"
-                     << domain << "\npre image type: "
-                     << TypeAsString<typename AssociatedValueType<
-                            preImageDomain>::type>::value
-                     << endl;
-                abort();
+                myCerr << "Miss match in pre image domain and function domain "
+                          "when parsing OpFunctionImage.\nfunction:"
+                       << domain << "\npre image type: "
+                       << TypeAsString<typename AssociatedValueType<
+                              preImageDomain>::type>::value
+                       << endl;
+                myAbort();
             }
             bool constant = function->isConstant() && preImage->isConstant();
             auto op = OpMaker<OpFunctionImage<View>>::make(function, preImage);
@@ -121,8 +122,8 @@ shared_ptr<FunctionDomain> parseDomainMatrix(json& matrixDomainExpr,
     auto indexingDomainIntTest =
         mpark::get_if<shared_ptr<IntDomain>>(&indexingDomain);
     if (!indexingDomainIntTest) {
-        cerr << "Error: matrices must be indexed by int domains.\n";
-        abort();
+        myCerr << "Error: matrices must be indexed by int domains.\n";
+        myAbort();
     }
     return FunctionDomain::makeMatrixDomain(
         *indexingDomainIntTest, parseDomain(matrixDomainExpr[1], parsedModel));

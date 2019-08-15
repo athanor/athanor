@@ -1,13 +1,8 @@
 
-window.onload = function() {
-    document.getElementById("input_file").addEventListener('change',
-            handleFileSelect, false);
-}
 
 
 
 function display(message, escape) {
-    var pre = document.getElementById("console_output")
     pre.innerHTML = ""
     if (escape) {
         var text = document.createTextNode(message);
@@ -18,7 +13,6 @@ function display(message, escape) {
 }
 
 function displayError(message, escape) {
-    var pre = document.getElementById("console_output")
     pre.innerHTML = ""
     if (escape) {
         var text = document.createTextNode("Error: " + message);
@@ -52,21 +46,28 @@ function processFile(file) {
 
 
 function runButtonPressed() {
-    var button = document.getElementById("run_button")
-    if (button.innerHTML === "RUN") {
-        button.innerHTML = "STOP";
+    if (runButton.innerHTML === "RUN") {
+        runButton.innerHTML = "STOP";
         parseAndRun()
     } else {
-        button.innerHTML = "RUN";
-        if (window.athanorWorker) {
-            window.athanorWorker.terminate()
-            window.athanorWorker = null;
-            if (document.getElementById("stats_violation").innerHTML != "0") {
-                display("cancelled");   
-            }
-        }
+        stop();
+        display("Cancelled");
     }
-    s}
+}
+
+function stop() {
+    runButton.innerHTML = "RUN";
+    if (window.athanorWorker) {
+        window.athanorWorker.terminate()
+        window.athanorWorker = null;
+    }
+    if (window.xhr) {
+        window.xhr.abort();
+    }
+}
+
+
+
 
 /* submit essence spec and param to server and return JSON representation. */
 function parseAndRun() {
@@ -80,11 +81,12 @@ function parseAndRun() {
     data = {}
     data["spec"] = document.getElementById("spec_text").value
     data["param"] = document.getElementById("param_text").value
-    var xhr = new XMLHttpRequest();
+    window.xhr = new XMLHttpRequest();
     xhr.open("POST","essenceToJson",true);
     xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
     xhr.onload = function() {
         handleServerResponse(xhr)
+        window.xhr = null;
     }
     // send the collected data as JSON
     xhr.send(JSON.stringify(data));
@@ -93,8 +95,7 @@ function parseAndRun() {
 function handleServerResponse(xhr) {
     var button = document.getElementById("run_button");
     if (button.innerHTML === "RUN") {
-        //button was pressed again, switching it from STOP to RUN
-        display("cancelled");
+        //button was pressed again, which switched it from STOP to RUN
         return
     }
     if (xhr.status === 200) {
@@ -107,7 +108,7 @@ function handleServerResponse(xhr) {
             displayError(jsonResponse["param"]["data"],true)
             return
         }
-        display("Received translation, initialising solver...");
+        display("Received translation, initialising solver...",true);
         runAthanor(jsonResponse["spec"]["data"], jsonResponse["param"]["data"])
     } else {
         displayError(xhr.responseText,false)
@@ -130,16 +131,33 @@ function runAthanor(spec,param) {
     }
     window.athanorWorker = new Worker("athanorWorker.js");
     window.athanorWorker.onmessage = function(e) {
-        window.myVar = e
-        var pre = document.getElementById("console_output")
         if (e.data.display) {
-            pre.innerHTML = e.data.display;
+            display(e.data.display, e.data.escape);
         }
         if (e.data.stats) {
             showStats(e.data.stats);
         }
+        if (e.data.endOfSearch) {
+            stop();
+        }
     };
-    
     window.athanorWorker.postMessage([spec,param])
 }
 
+
+
+window.onload = function() {
+    document.getElementById("input_file").addEventListener('change',
+        handleFileSelect, false);
+    
+    window.runButton = document.getElementById("run_button");
+    window.pre = document.getElementById("console_output");
+    window.athanorWorker = new Worker("athanorWorker.js");
+    display("Loading solver...",true);
+    window.athanorWorker.onmessage = function(e) {
+        if (e.data.display) {
+            display(e.data.display, true);
+        }
+    };
+    window.athanorWorker.postMessage({"initCall":true})
+}

@@ -18,7 +18,7 @@ ParseResult parseOpPowerSet(json& powerSetExpr, ParsedModel& parsedModel) {
         "PowerSet: ";
     auto parsedExpr = parseExpr(powerSetExpr, parsedModel);
     auto operand = expect<SetView>(parsedExpr.expr, [&](auto&&) {
-        cerr << errorMessage << powerSetExpr << endl;
+        myCerr << errorMessage << powerSetExpr << endl;
     });
     auto& domain = mpark::get<shared_ptr<SetDomain>>(parsedExpr.domain);
     bool constant = operand->isConstant();

@@ -252,18 +252,18 @@ void OpAllDiff::assertValidState() {
         HashType hash = indicesHashMap[i];
         auto iter = hashIndicesMap.find(hash);
         if (iter == hashIndicesMap.end()) {
-            cerr << "Error: hash " << hash << " at index " << i
-                 << " mapped to no set in hashIndicesMap\n";
+            myCerr << "Error: hash " << hash << " at index " << i
+                   << " mapped to no set in hashIndicesMap\n";
             success = false;
             break;
         }
         auto& indices = iter->second;
         if (!indices.count(i)) {
-            cerr << "Error: index " << i << " maps to hash "
-                 << " hash "
-                 << " but hashIndicesMap does not have the hash index "
-                    "mapping\n";
-            cerr << "Error: Hash " << hash << " maps to " << indices << endl;
+            myCerr << "Error: index " << i << " maps to hash "
+                   << " hash "
+                   << " but hashIndicesMap does not have the hash index "
+                      "mapping\n";
+            myCerr << "Error: Hash " << hash << " maps to " << indices << endl;
             success = false;
             break;
         }
@@ -280,39 +280,39 @@ void OpAllDiff::assertValidState() {
             }
         }
         if (total != indicesHashMap.size()) {
-            cerr << "Error: found " << total
-                 << " indices in hashIndicesMap but indicesHashMap has a "
-                    "size "
-                    "of "
-                 << indicesHashMap.size() << endl;
+            myCerr << "Error: found " << total
+                   << " indices in hashIndicesMap but indicesHashMap has a "
+                      "size "
+                      "of "
+                   << indicesHashMap.size() << endl;
             success = false;
         }
     }
     if (success) {
         for (auto& index : duplicateOperands) {
             if (!violatingOperands.count(index)) {
-                cerr << "Error: violatingOperands does not contain index "
-                     << index << endl;
+                myCerr << "Error: violatingOperands does not contain index "
+                       << index << endl;
                 success = false;
                 break;
             }
         }
     }
     if (success && duplicateOperands.size() != violatingOperands.size()) {
-        cerr << "violatingOperands has too many indices.\n";
+        myCerr << "violatingOperands has too many indices.\n";
         success = false;
     }
     if (!success) {
-        cerr << "hashIndicesMap: " << hashIndicesMap << endl;
-        cerr << "indicesHashMap: " << indicesHashMap << endl;
+        myCerr << "hashIndicesMap: " << hashIndicesMap << endl;
+        myCerr << "indicesHashMap: " << indicesHashMap << endl;
         vector<UInt> sortedViolatingOperands(violatingOperands.begin(),
                                              violatingOperands.end());
         sort(sortedViolatingOperands.begin(), sortedViolatingOperands.end());
 
-        cerr << "violatingOperands(sorted): " << sortedViolatingOperands
-             << endl;
+        myCerr << "violatingOperands(sorted): " << sortedViolatingOperands
+               << endl;
         assert(false);
-        abort();
+        myAbort();
     }
 }
 

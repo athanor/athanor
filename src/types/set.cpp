@@ -208,7 +208,7 @@ void SetView::assertValidState() {
             bool success = true;
             HashType calculatedTotal(0);
             if (memberHashes.size() != valMembersImpl.size()) {
-                cerr << "memberHashes and members differ in size.\n";
+                myCerr << "memberHashes and members differ in size.\n";
                 success = false;
             } else {
                 for (size_t i = 0; i < valMembersImpl.size(); i++) {
@@ -216,15 +216,15 @@ void SetView::assertValidState() {
                     HashType memberHash = getValueHash(
                         member->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
                     if (!seenHashes.insert(memberHash).second) {
-                        cerr << "Error: possible duplicate member: "
-                             << member->view() << endl;
+                        myCerr << "Error: possible duplicate member: "
+                               << member->view() << endl;
                         success = false;
                         break;
                     }
                     if (!(memberHashes.count(memberHash))) {
-                        cerr << "Error: member " << member->view()
-                             << " has no corresponding hash in "
-                                "memberHashes.\n";
+                        myCerr << "Error: member " << member->view()
+                               << " has no corresponding hash in "
+                                  "memberHashes.\n";
                         success = false;
                         break;
                     }
@@ -233,15 +233,15 @@ void SetView::assertValidState() {
                 if (success) {
                     success = calculatedTotal == cachedHashTotal;
                     if (!success) {
-                        cerr << "Calculated hash total should be "
-                             << calculatedTotal << " but it was actually "
-                             << cachedHashTotal << endl;
+                        myCerr << "Calculated hash total should be "
+                               << calculatedTotal << " but it was actually "
+                               << cachedHashTotal << endl;
                     }
                 }
             }
             if (!success) {
-                cerr << "Members: " << valMembersImpl << endl;
-                cerr << "memberHashes: " << memberHashes << endl;
+                myCerr << "Members: " << valMembersImpl << endl;
+                myCerr << "memberHashes: " << memberHashes << endl;
                 assert(false);
             }
         },
@@ -260,17 +260,18 @@ void SetValue::assertValidVarBases() {
                     valBase(*assumeAsValue(valMembersImpl[i]));
                 if (base.container != this) {
                     success = false;
-                    cerr << "member " << i
-                         << "'s container does not point to this set." << endl;
+                    myCerr << "member " << i
+                           << "'s container does not point to this set."
+                           << endl;
                 } else if (base.id != i) {
                     success = false;
-                    cerr << "member " << i << "has id " << base.id
-                         << " but it should be " << i << endl;
+                    myCerr << "member " << i << "has id " << base.id
+                           << " but it should be " << i << endl;
                 }
             }
             if (!success) {
-                cerr << "Members: " << valMembersImpl << endl;
-                cerr << "memberHashes: " << memberHashes << endl;
+                myCerr << "Members: " << valMembersImpl << endl;
+                myCerr << "memberHashes: " << memberHashes << endl;
                 this->printVarBases();
                 assert(false);
             }

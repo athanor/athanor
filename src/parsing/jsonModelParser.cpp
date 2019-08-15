@@ -102,8 +102,8 @@ ParseResult parseExpr(json& essenceExpr, ParsedModel& parsedModel) {
     if (constraint) {
         return move(*constraint);
     } else {
-        cerr << "Failed to parse expression: " << essenceExpr << endl;
-        abort();
+        myCerr << "Failed to parse expression: " << essenceExpr << endl;
+        myAbort();
     }
 }
 
@@ -112,8 +112,8 @@ AnyDomainRef parseDomain(json& essenceExpr, ParsedModel& parsedModel) {
     if (domain) {
         return move(*domain);
     } else {
-        cerr << "Failed to parse domain: " << essenceExpr << endl;
-        abort();
+        myCerr << "Failed to parse domain: " << essenceExpr << endl;
+        myAbort();
     }
 }
 
@@ -123,10 +123,10 @@ ParseResult parseValueReference(json& essenceReference,
     if (parsedModel.namedExprs.count(referenceName)) {
         return parsedModel.namedExprs.at(referenceName);
     } else {
-        cerr << "Found reference to value with name \"" << referenceName
-             << "\" but this does not appear to be in "
-                "scope.\n";
-        exit(1);
+        myCerr << "Found reference to value with name \"" << referenceName
+               << "\" but this does not appear to be in "
+                  "scope.\n";
+        myExit(1);
     }
 }
 
@@ -134,11 +134,11 @@ AnyDomainRef parseDomainReference(json& domainReference,
                                   ParsedModel& parsedModel) {
     string referenceName = domainReference[0]["Name"];
     if (!parsedModel.domainLettings.count(referenceName)) {
-        cerr << "Found reference to domainwith name \"" << referenceName
-             << "\" but this does not appear to be in "
-                "scope.\n"
-             << domainReference << endl;
-        abort();
+        myCerr << "Found reference to domainwith name \"" << referenceName
+               << "\" but this does not appear to be in "
+                  "scope.\n"
+               << domainReference << endl;
+        myAbort();
     } else {
         return parsedModel.domainLettings.at(referenceName);
     }
@@ -181,15 +181,15 @@ ParseResult parseOpRelationProj(json& operandsExpr, ParsedModel& parsedModel) {
                     leftOperand.hasEmptyType, parsedModel);
             },
             [&](auto&& operand) -> ParseResult {
-                cerr << "Error, not yet handling op "
-                        "relation projection "
-                        "with a "
-                        "left operand "
-                        "of type "
-                     << TypeAsString<typename AssociatedValueType<viewType(
-                            operand)>::type>::value
-                     << ": " << operandsExpr << endl;
-                abort();
+                myCerr << "Error, not yet handling op "
+                          "relation projection "
+                          "with a "
+                          "left operand "
+                          "of type "
+                       << TypeAsString<typename AssociatedValueType<viewType(
+                              operand)>::type>::value
+                       << ": " << operandsExpr << endl;
+                myAbort();
             }),
         leftOperand.expr);
 }
@@ -227,15 +227,15 @@ ParseResult parseOpIndexingHelper(json& operandsExpr, ParsedModel& parsedModel,
                     leftOperand.hasEmptyType, parsedModel);
             },
             [&](auto&& operand) -> ParseResult {
-                cerr << "Error, not yet handling op "
-                        "Indexing "
-                        "with a "
-                        "left operand "
-                        "of type "
-                     << TypeAsString<typename AssociatedValueType<viewType(
-                            operand)>::type>::value
-                     << ": " << operandsExpr << endl;
-                abort();
+                myCerr << "Error, not yet handling op "
+                          "Indexing "
+                          "with a "
+                          "left operand "
+                          "of type "
+                       << TypeAsString<typename AssociatedValueType<viewType(
+                              operand)>::type>::value
+                       << ": " << operandsExpr << endl;
+                myAbort();
             }),
         leftOperand.expr);
     if (currentIndex + 1 == operandsExpr.size()) {
@@ -276,10 +276,10 @@ ParseResult parseOpCatchUndef(json& operandsExpr, ParsedModel& parsedModel) {
             // this error handler will prob not be called as the merging of
             // domains above will throw an error if the types do not match.
             auto errorHandler = [&](auto&&) {
-                cerr << "Expected right operand to be of "
-                        "same type as left, "
-                        "i.e. "
-                     << TypeAsString<Value>::value << endl;
+                myCerr << "Expected right operand to be of "
+                          "same type as left, "
+                          "i.e. "
+                       << TypeAsString<Value>::value << endl;
             };
             auto rightExpr = expect<View>(right.expr, errorHandler);
             auto op = OpMaker<OpCatchUndef<View>>::make(leftExpr, rightExpr);
@@ -310,11 +310,11 @@ ParseResult parseSequenceFoldingOp(json& operandExpr,
     if (!mpark::get_if<shared_ptr<ExpectedInnerDomain>>(
             &(sequenceDomain->inner)) &&
         !mpark::get_if<shared_ptr<EmptyDomain>>(&(sequenceDomain->inner))) {
-        cerr << "Error: expected sequence with inner type "
-             << TypeAsString<ExpectedInnerValue>::value << " for op "
-             << op->getOpName() << endl;
-        cerr << *sequenceDomain << endl;
-        exit(1);
+        myCerr << "Error: expected sequence with inner type "
+               << TypeAsString<ExpectedInnerValue>::value << " for op "
+               << op->getOpName() << endl;
+        myCerr << *sequenceDomain << endl;
+        myExit(1);
     }
     auto domain = (is_same<BoolView, SequenceInnerViewType>::value)
                       ? AnyDomainRef(fakeBoolDomain)
@@ -393,8 +393,8 @@ void handleLettingDeclaration(json& lettingArray, ParsedModel& parsedModel) {
         parsedModel.domainLettings.emplace(lettingName, domain);
         return;
     }
-    cerr << "Not sure how to parse this letting: " << lettingArray << endl;
-    abort();
+    myCerr << "Not sure how to parse this letting: " << lettingArray << endl;
+    myAbort();
 }
 
 void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {
@@ -419,10 +419,10 @@ void parseExprs(json& suchThat, ParsedModel& parsedModel) {
         debug_log("parsing op");
         ExprRef<BoolView> constraint =
             expect<BoolView>(parseExpr(op, parsedModel).expr, [&](auto&&) {
-                cerr << "Expected Bool returning constraint "
-                        "within "
-                        "such that: "
-                     << op << endl;
+                myCerr << "Expected Bool returning constraint "
+                          "within "
+                          "such that: "
+                       << op << endl;
             });
         parsedModel.builder->addConstraint(constraint);
     }
@@ -436,16 +436,16 @@ void validateObjectiveType(json& expr, AnyDomainRef domain) {
                    [&](const shared_ptr<TupleDomain>& domain) {
                        for (auto& inner : domain->inners) {
                            if (!mpark::get_if<shared_ptr<IntDomain>>(&inner)) {
-                               cerr << errorMessage;
-                               cerr << expr << endl;
-                               abort();
+                               myCerr << errorMessage;
+                               myCerr << expr << endl;
+                               myAbort();
                            }
                        }
                    },
                    [&](const auto&) {
-                       cerr << errorMessage;
-                       cerr << expr << endl;
-                       abort();
+                       myCerr << errorMessage;
+                       myCerr << expr << endl;
+                       myAbort();
                    }),
         domain);
 }

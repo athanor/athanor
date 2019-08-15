@@ -24,7 +24,7 @@ ParseResult parseOpNot(json& notExpr, ParsedModel& parsedModel) {
     string errorMessage = "Expected bool returning expression within OpNot: ";
     ExprRef<BoolView> operand =
         expect<BoolView>(parseExpr(notExpr, parsedModel).expr,
-                         [&](auto&&) { cerr << errorMessage << notExpr[0]; });
+                         [&](auto&&) { myCerr << errorMessage << notExpr[0]; });
     bool constant = operand->isConstant();
     auto op = OpMaker<OpNot>::make(move(operand));
     op->setConstant(constant);
@@ -35,7 +35,7 @@ ParseResult parseOpIn(json& inExpr, ParsedModel& parsedModel) {
     AnyExprRef expr = parseExpr(inExpr[0], parsedModel).expr;
     auto setOperand =
         expect<SetView>(parseExpr(inExpr[1], parsedModel).expr, [&](auto&&) {
-            cerr << "OpIn expects a set on the right.\n" << inExpr;
+            myCerr << "OpIn expects a set on the right.\n" << inExpr;
         });
     bool constant = false;
     mpark::visit(
@@ -52,12 +52,12 @@ ParseResult parseOpSubsetEq(json& subsetExpr, ParsedModel& parsedModel) {
     string errorMessage =
         "Expected set returning expression within Op "
         "subset: ";
-    ExprRef<SetView> left =
-        expect<SetView>(parseExpr(subsetExpr[0], parsedModel).expr,
-                        [&](auto&&) { cerr << errorMessage << subsetExpr[0]; });
-    ExprRef<SetView> right =
-        expect<SetView>(parseExpr(subsetExpr[1], parsedModel).expr,
-                        [&](auto&&) { cerr << errorMessage << subsetExpr[1]; });
+    ExprRef<SetView> left = expect<SetView>(
+        parseExpr(subsetExpr[0], parsedModel).expr,
+        [&](auto&&) { myCerr << errorMessage << subsetExpr[0]; });
+    ExprRef<SetView> right = expect<SetView>(
+        parseExpr(subsetExpr[1], parsedModel).expr,
+        [&](auto&&) { myCerr << errorMessage << subsetExpr[1]; });
     bool constant = left->isConstant() && right->isConstant();
     auto op = OpMaker<OpSubsetEq>::make(move(left), move(right));
     op->setConstant(constant);
@@ -80,12 +80,12 @@ ParseResult parseOpEq(json& operandsExpr, ParsedModel& parsedModel) {
     return mpark::visit(
         [&](auto& left) -> ParseResult {
             auto errorHandler = [&](auto&&) {
-                cerr << "Expected right operand to be of "
-                        "same type as left, "
-                        "i.e. "
-                     << TypeAsString<typename AssociatedValueType<viewType(
-                            left)>::type>::value
-                     << endl;
+                myCerr << "Expected right operand to be of "
+                          "same type as left, "
+                          "i.e. "
+                       << TypeAsString<typename AssociatedValueType<viewType(
+                              left)>::type>::value
+                       << endl;
             };
             auto right = expect<viewType(left)>(rightAnyExpr, errorHandler);
 
@@ -110,13 +110,13 @@ ParseResult parseOpEq(json& operandsExpr, ParsedModel& parsedModel) {
                     return ParseResult(fakeBoolDomain, op, false);
                 },
                 [&](auto&& left, auto &&) -> ParseResult {
-                    cerr << "Error, not yet handling OpEq "
-                            "with operands of "
-                            "type "
-                         << TypeAsString<typename AssociatedValueType<viewType(
-                                left)>::type>::value
-                         << ": " << operandsExpr << endl;
-                    abort();
+                    myCerr << "Error, not yet handling OpEq "
+                              "with operands of "
+                              "type "
+                           << TypeAsString<typename AssociatedValueType<
+                                  viewType(left)>::type>::value
+                           << ": " << operandsExpr << endl;
+                    myAbort();
                 })(left, 0);
             // 0 is a fake arg put there to match the auto parameter to the
             // above lambdas
@@ -130,12 +130,12 @@ ParseResult parseOpNotEq(json& operandsExpr, ParsedModel& parsedModel) {
     return mpark::visit(
         [&](auto& left) {
             auto errorHandler = [&](auto&&) {
-                cerr << "Expected right operand to be of "
-                        "same type as left, "
-                        "i.e. "
-                     << TypeAsString<typename AssociatedValueType<viewType(
-                            left)>::type>::value
-                     << endl;
+                myCerr << "Expected right operand to be of "
+                          "same type as left, "
+                          "i.e. "
+                       << TypeAsString<typename AssociatedValueType<viewType(
+                              left)>::type>::value
+                       << endl;
             };
             typedef viewType(left) View;
             auto rightImpl = expect<View>(right, errorHandler);
@@ -153,28 +153,28 @@ ParseResult parseOpTogether(json& operandsExpr, ParsedModel& parsedModel) {
         "of two elements "
         "as "
         "the first parameter.\n";
-    auto set = expect<SetView>(parseExpr(operandsExpr[0], parsedModel).expr,
-                               [&](auto&&) {
-                                   cerr << "Error, together takes a set as its "
-                                           "first parameter.\n";
-                               });
+    auto set = expect<SetView>(
+        parseExpr(operandsExpr[0], parsedModel).expr, [&](auto&&) {
+            myCerr << "Error, together takes a set as its "
+                      "first parameter.\n";
+        });
 
     auto partition = expect<PartitionView>(
         parseExpr(operandsExpr[1], parsedModel).expr, [&](auto&&) {
-            cerr << "Error, together takes a partition as "
-                    "its second "
-                    "parameter.\n";
+            myCerr << "Error, together takes a partition as "
+                      "its second "
+                      "parameter.\n";
         });
     auto setLit = getAs<OpSetLit>(set);
     if (!setLit) {
-        cerr << UNSUPPORTED_MESSAGE << endl;
-        abort();
+        myCerr << UNSUPPORTED_MESSAGE << endl;
+        myAbort();
     }
     return mpark::visit(
         [&](auto& members) {
             if (members.size() != 2) {
-                cerr << UNSUPPORTED_MESSAGE << endl;
-                abort();
+                myCerr << UNSUPPORTED_MESSAGE << endl;
+                myAbort();
             }
 
             typedef viewType(members) View;
@@ -192,7 +192,7 @@ ParseResult parseOpTogether(json& operandsExpr, ParsedModel& parsedModel) {
 template <bool flipped>
 ParseResult parseOpLess(json& expr, ParsedModel& parsedModel) {
     auto errorFunc = [&](auto&&) {
-        cerr << "Expected int within op less\n" << expr << endl;
+        myCerr << "Expected int within op less\n" << expr << endl;
     };
     auto left =
         expect<IntView>(parseExpr(expr[0], parsedModel).expr, errorFunc);
@@ -209,7 +209,7 @@ ParseResult parseOpLess(json& expr, ParsedModel& parsedModel) {
 template <bool flipped>
 ParseResult parseOpLessEq(json& expr, ParsedModel& parsedModel) {
     auto errorFunc = [&](auto&&) {
-        cerr << "Expected int within op lessEQ\n" << expr << endl;
+        myCerr << "Expected int within op lessEQ\n" << expr << endl;
     };
     auto left =
         expect<IntView>(parseExpr(expr[0], parsedModel).expr, errorFunc);
@@ -231,7 +231,7 @@ template ParseResult parseOpLessEq<true>(json&, ParsedModel&);
 
 ParseResult parseOpImplies(json& expr, ParsedModel& parsedModel) {
     auto errorFunc = [&](auto&&) {
-        cerr << "Expected bool within OpImplies less\n" << expr << endl;
+        myCerr << "Expected bool within OpImplies less\n" << expr << endl;
     };
     auto left =
         expect<BoolView>(parseExpr(expr[0], parsedModel).expr, errorFunc);

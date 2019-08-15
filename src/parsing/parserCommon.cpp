@@ -19,9 +19,9 @@ void mergeIfSameType(shared_ptr<T>&, shared_ptr<U>&) {
     }
     typedef typename AssociatedValueType<T>::type Type1;
     typedef typename AssociatedValueType<U>::type Type2;
-    cerr << "Cannot merge domains for type " << TypeAsString<Type1>::value
-         << " and " << TypeAsString<Type2>::value << ".\n";
-    abort();
+    myCerr << "Cannot merge domains for type " << TypeAsString<Type1>::value
+           << " and " << TypeAsString<Type2>::value << ".\n";
+    myAbort();
 }
 
 void mergeDomains(AnyDomainRef& dest, AnyDomainRef& src) {
@@ -87,9 +87,9 @@ SizeAttr parseSizeAttr(json& sizeAttrExpr, ParsedModel& parsedModel) {
             parseExprAsInt(sizeRangeExpr[0], parsedModel, errorMessage),
             parseExprAsInt(sizeRangeExpr[1], parsedModel, errorMessage));
     } else {
-        cerr << "Could not parse this as a size attribute: " << sizeAttrExpr
-             << endl;
-        abort();
+        myCerr << "Could not parse this as a size attribute: " << sizeAttrExpr
+               << endl;
+        myAbort();
     }
 }
 PartialAttr parsePartialAttr(json& partialAttrExpr) {
@@ -98,8 +98,8 @@ PartialAttr parsePartialAttr(json& partialAttrExpr) {
     } else if (partialAttrExpr == "PartialityAttr_Total") {
         return PartialAttr::TOTAL;
     } else {
-        cerr << "Error: unknown partiality attribute: " << partialAttrExpr
-             << endl;
-        abort();
+        myCerr << "Error: unknown partiality attribute: " << partialAttrExpr
+               << endl;
+        myAbort();
     }
 }

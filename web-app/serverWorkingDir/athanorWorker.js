@@ -21,6 +21,10 @@ var Module = {}
 onmessage = function(e) {
     Module = {
         onRuntimeInitialized : function() {
+            if (e.data.initCall) {
+                postMessage({"display":"Solver loaded!"})
+                return
+            }
             postMessage({"display":"Solver initialised, searching for solutions..."})
             Module.runSolverWasm(e.data[0],e.data[1]);
         }
@@ -30,3 +34,10 @@ onmessage = function(e) {
     
 };
 
+function reportError(message) {
+    postMessage({"display":message,"escape":true,"endOfSearch":true})
+}
+
+function reportEndOfSearch() {
+    postMessage({"endOfSearch":true})
+}

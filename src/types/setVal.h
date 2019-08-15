@@ -37,11 +37,11 @@ struct SetDomain {
             sizeAttr.maxSize = innerDomainSize;
         }
         if (sizeAttr.maxSize < sizeAttr.minSize) {
-            std::cerr << "Error, either by deduction or from original "
-                         "specification, deduced max size of set to be less "
-                         "than min size.\n"
-                      << *this << std::endl;
-            abort();
+            myCerr << "Error, either by deduction or from original "
+                      "specification, deduced max size of set to be less "
+                      "than min size.\n"
+                   << *this << std::endl;
+            myAbort();
         }
     }
 };

@@ -69,8 +69,8 @@ struct IntDomain {
         ContainingBound;
     inline ContainingBound findContainingBound(Int value) const {
         if (bounds.empty()) {
-            std::cerr << "Error: empty domain.'n";
-            abort();
+            myCerr << "Error: empty domain.'n";
+            myAbort();
         }
 
         if (value < bounds.front().first) {

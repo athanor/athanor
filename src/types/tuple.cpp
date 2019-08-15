@@ -182,16 +182,16 @@ void TupleValue::assertValidVarBases() {
         const ValBase& base = valBase(toAnyValRef(members[i]));
         if (base.container != this) {
             success = false;
-            cerr << "member " << i
-                 << "'s container does not point to this tuple." << endl;
+            myCerr << "member " << i
+                   << "'s container does not point to this tuple." << endl;
         } else if (base.id != i) {
             success = false;
-            cerr << "member " << i << "has id " << base.id
-                 << " but it should be " << i << endl;
+            myCerr << "member " << i << "has id " << base.id
+                   << " but it should be " << i << endl;
         }
     }
     if (!success) {
-        prettyPrint(cerr, asView(*this)) << endl;
+        prettyPrint(myCerr, asView(*this)) << endl;
         ;
         this->printVarBases();
         assert(false);

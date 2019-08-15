@@ -21,15 +21,15 @@ struct PartitionDomain {
           numberParts(numberParts),
           numberElements(getDomainSize(this->inner)) {
         if (numberParts == 0 || !regular) {
-            std::cerr << "Error: only supporting partitions if they are "
-                         "regular with a fixed number of cells.\n";
-            abort();
+            myCerr << "Error: only supporting partitions if they are "
+                      "regular with a fixed number of cells.\n";
+            myAbort();
         }
         if (numberElements % numberParts != 0) {
-            std::cerr << "Error: cannot create a regular partition with this "
-                         "number of parts.\n";
-            prettyPrint(std::cerr, *this);
-            abort();
+            myCerr << "Error: cannot create a regular partition with this "
+                      "number of parts.\n";
+            prettyPrint(myCerr, *this);
+            myAbort();
         }
     }
 

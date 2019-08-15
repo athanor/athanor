@@ -37,16 +37,16 @@ using EnableIfDomainNotMatchView = typename enable_if<
 void checkTuplePatternMatchSize(json& tupleMatchExpr,
                                 const shared_ptr<TupleDomain>& domain) {
     if (tupleMatchExpr.size() != domain->inners.size()) {
-        cerr << "Error, given pattern match assumes exactly "
-             << tupleMatchExpr.size()
-             << " members to be present in tuple.  However, "
-                "it appears "
-                "that the number of members in the "
-                "tuple is "
-             << domain->inners.size() << ".\n";
-        cerr << "expr: " << tupleMatchExpr << "\ntuple domain: " << *domain
-             << endl;
-        abort();
+        myCerr << "Error, given pattern match assumes exactly "
+               << tupleMatchExpr.size()
+               << " members to be present in tuple.  However, "
+                  "it appears "
+                  "that the number of members in the "
+                  "tuple is "
+               << domain->inners.size() << ".\n";
+        myCerr << "expr: " << tupleMatchExpr << "\ntuple domain: " << *domain
+               << endl;
+        myAbort();
     }
 }
 
@@ -89,12 +89,12 @@ void addLocalVarsToScopeFromPatternMatch(
     } else if (patternExpr.count("AbsPatTuple")) {
         overloaded(
             [&](auto&, auto&) {
-                cerr << "Error, Found tuple pattern, but in "
-                        "this context "
-                        "expected a different expression.\n";
-                cerr << "Found domain: " << *domain << endl;
-                cerr << "Expr: " << patternExpr << endl;
-                abort();
+                myCerr << "Error, Found tuple pattern, but in "
+                          "this context "
+                          "expected a different expression.\n";
+                myCerr << "Found domain: " << *domain << endl;
+                myCerr << "Expr: " << patternExpr << endl;
+                myAbort();
             },
             [&](const shared_ptr<TupleDomain>& domain,
                 ExprRef<TupleView>& expr) {
@@ -116,12 +116,12 @@ void addLocalVarsToScopeFromPatternMatch(
     } else if (patternExpr.count("AbsPatSet")) {
         overloaded(
             [&](auto&, auto&) {
-                cerr << "Error, found set pattern, but did "
-                        "not expect a set "
-                        "pattern in this context\n";
-                cerr << "Found domain: " << *domain << endl;
-                cerr << "Expr: " << patternExpr << endl;
-                abort();
+                myCerr << "Error, found set pattern, but did "
+                          "not expect a set "
+                          "pattern in this context\n";
+                myCerr << "Found domain: " << *domain << endl;
+                myCerr << "Expr: " << patternExpr << endl;
+                myAbort();
             },
             [&](const shared_ptr<SetDomain>& domain, ExprRef<SetView>& expr) {
                 json& setMatchExpr = patternExpr["AbsPatSet"];
@@ -233,8 +233,8 @@ void parseGenerator(json& generatorParent,
                         variablesAddedToScope);
                 },
                 [&](auto&) {
-                    cerr << "no support for this type\n";
-                    abort();
+                    myCerr << "no support for this type\n";
+                    myAbort();
                 });
             overload(containerDomain);
         },
@@ -261,9 +261,9 @@ void addConditionsToQuantifier(json& comprExpr, Quantifier& quantifier,
         }
         auto parsedCondition = expect<BoolView>(
             parseExpr(expr["Condition"], parsedModel).expr, [&](auto&&) {
-                cerr << "Conitions for quantifiers must be "
-                        "bool "
-                        "returning.\n";
+                myCerr << "Conitions for quantifiers must be "
+                          "bool "
+                          "returning.\n";
             });
         conditions.emplace_back(parsedCondition);
     }
@@ -388,10 +388,10 @@ optional<ParseResult> parseComprehensionImpl(json& comprExpr,
                               parsedModel);
         },
         [&](auto &&) -> ParseResult {
-            cerr << "Error, not yet handling quantifier for "
-                    "this type: "
-                 << generatorExpr << endl;
-            abort();
+            myCerr << "Error, not yet handling quantifier for "
+                      "this type: "
+                   << generatorExpr << endl;
+            myAbort();
         });
 
     return mpark::visit(overload, quantifyingOver.expr);
@@ -402,19 +402,19 @@ ParseResult parseComprehension(json& comprExpr, ParsedModel& parsedModel) {
     if (compr) {
         return move(*compr);
     } else {
-        cerr << "Failed to find a generator to parse in the "
-                "comprehension.\n";
-        abort();
+        myCerr << "Failed to find a generator to parse in the "
+                  "comprehension.\n";
+        myAbort();
     }
 }
 
 ParseResult makeDomainGeneratorFromIntDomain(
     const shared_ptr<IntDomain>& domain) {
     if (domain->bounds.size() != 1) {
-        cerr << "Do not currently support unrolling over "
-                "int domains with "
-                "holes.\n";
-        abort();
+        myCerr << "Do not currently support unrolling over "
+                  "int domains with "
+                  "holes.\n";
+        myAbort();
     }
     auto from = make<IntValue>();
     from->value = domain->bounds.front().first;
@@ -438,8 +438,8 @@ ParseResult parseIntDomainAsIntRange(json& intDomainExpr,
     auto& rangesToParse =
         (intDomainExpr[0].count("TagInt")) ? intDomainExpr[1] : intDomainExpr;
     if (rangesToParse.size() != 1) {
-        cerr << "Cannot currently quantify over int domains with holes.\n";
-        abort();
+        myCerr << "Cannot currently quantify over int domains with holes.\n";
+        myAbort();
     }
     auto& rangeExpr = rangesToParse[0];
     lib::optional<ParseResult> from, to;
@@ -450,12 +450,13 @@ ParseResult parseIntDomainAsIntRange(json& intDomainExpr,
         from = parseExpr(rangeExpr["RangeSingle"], parsedModel);
         to = from;
     } else {
-        cerr << "Unrecognised type of int range: " << rangeExpr << endl;
-        abort();
+        myCerr << "Unrecognised type of int range: " << rangeExpr << endl;
+        myAbort();
     }
     auto errorHandler = [&](auto&) {
-        cerr << "Expected int expressions , whilst parsing quantifier over int "
-                "domain.\n";
+        myCerr
+            << "Expected int expressions , whilst parsing quantifier over int "
+               "domain.\n";
     };
     auto fromExpr = expect<IntView>(from->expr, errorHandler);
     auto toExpr = expect<IntView>(to->expr, errorHandler);
@@ -485,11 +486,11 @@ IntRange constraint which will delaythe unrolling.*/
                 return makeDomainGeneratorFromEnumDomain(domain);
             },
             [&](auto& domain) -> ParseResult {
-                cerr << "Error: do not yet support "
-                        "unrolling this domain.\n";
-                prettyPrint(cerr, domain) << endl;
-                cerr << domainExpr << endl;
-                abort();
+                myCerr << "Error: do not yet support "
+                          "unrolling this domain.\n";
+                prettyPrint(myCerr, domain) << endl;
+                myCerr << domainExpr << endl;
+                myAbort();
             }),
         domain);
 }

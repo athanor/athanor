@@ -11,8 +11,8 @@ void OpMSetLit::evaluateImpl() {
             for (auto& member : members) {
                 member->evaluate();
                 if (!member->appearsDefined()) {
-                    cerr << NO_MSET_UNDEFINED_MEMBERS;
-                    abort();
+                    myCerr << NO_MSET_UNDEFINED_MEMBERS;
+                    myAbort();
                 }
             }
         },
@@ -46,13 +46,13 @@ struct ExprTrigger
     }
 
     void adapterHasBecomeDefined() {
-        cerr << NO_MSET_UNDEFINED_MEMBERS;
-        abort();
+        myCerr << NO_MSET_UNDEFINED_MEMBERS;
+        myAbort();
     }
 
     void adapterHasBecomeUndefined() {
-        cerr << NO_MSET_UNDEFINED_MEMBERS;
-        abort();
+        myCerr << NO_MSET_UNDEFINED_MEMBERS;
+        myAbort();
     }
 };  // namespace
 }  // namespace

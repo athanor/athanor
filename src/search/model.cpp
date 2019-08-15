@@ -200,8 +200,8 @@ Objective Model::getObjective() const {
                                 return Objective(optimiseMode, e);
                             },
                             [&](const auto& e) -> Objective {
-                                cerr << "unsupported objective type\n";
-                                cerr << "value = " << e << endl;
+                                myCerr << "unsupported objective type\n";
+                                myCerr << "value = " << e << endl;
                                 todoImpl();
                             }),
                         objective);

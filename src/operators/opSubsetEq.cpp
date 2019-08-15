@@ -22,8 +22,8 @@ HashType getHashForceDefined(const AnyExprRef& expr) {
         [&](auto& expr) {
             auto view = expr->getViewIfDefined();
             if (!view) {
-                cerr << NO_UNDEFINED_IN_SUBSET;
-                abort();
+                myCerr << NO_UNDEFINED_IN_SUBSET;
+                myAbort();
             }
             return getValueHash(*view);
         },

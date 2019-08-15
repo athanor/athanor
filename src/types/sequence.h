@@ -101,13 +101,13 @@ struct SequenceView : public ExprInterface<SequenceView>,
 
     inline void checkNotUsingCachedHash() {
         if (cachedHashTotal.isValid()) {
-            std::cerr
+            myCerr
                 << "Error: constraint changing a subsequence without "
                    "passing a previous subsequence hash.  Means no support for "
                    "getting total hash of this sequence.  Suspected "
                    "reason is that one of the constraints has not been "
                    "updated to support this.\n";
-            abort();
+            myAbort();
         }
     }
 
@@ -212,7 +212,7 @@ struct SequenceView : public ExprInterface<SequenceView>,
         notifySubsequenceChanged(startIndex, endIndex);
     }
     virtual inline AnyExprVec& getChildrenOperands() {
-        std::cerr << "\nError:\n" << getOpName() << std::endl;
+        myCerr << "\nError:\n" << getOpName() << std::endl;
         shouldNotBeCalledPanic;
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

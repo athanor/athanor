@@ -48,15 +48,15 @@ class OptionalRef {
     }
     inline T& checkedGet(const std::string& errorMessage) {
         if (!hasValue()) {
-            std::cerr << errorMessage << std::endl;
-            abort();
+            myCerr << errorMessage << std::endl;
+            myAbort();
         }
         return *ptr;
     }
     inline T& checkedGet(const std::string& errorMessage) const {
         if (!hasValue()) {
-            std::cerr << errorMessage << std::endl;
-            abort();
+            myCerr << errorMessage << std::endl;
+            myAbort();
         }
         return *ptr;
     }

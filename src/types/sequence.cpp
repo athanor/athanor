@@ -230,9 +230,9 @@ void SequenceView::assertValidState() {
                 cachedHashTotal.applyIfValid([&](const auto& value) {
                     success = (value == calculatedTotal);
                     if (!success) {
-                        cerr << "Calculated hash total should be "
-                             << calculatedTotal << " but it was actually "
-                             << value << endl;
+                        myCerr << "Calculated hash total should be "
+                               << calculatedTotal << " but it was actually "
+                               << value << endl;
                         ;
                     }
                 });
@@ -240,17 +240,17 @@ void SequenceView::assertValidState() {
             if (success) {
                 success = numberUndefined == numberUndefinedFound;
                 if (!success) {
-                    cerr << "Error: numberUndefined = " << numberUndefined
-                         << " but think it should be " << numberUndefinedFound
-                         << endl;
-                    cerr << "members size " << valMembersImpl.size() << endl;
+                    myCerr << "Error: numberUndefined = " << numberUndefined
+                           << " but think it should be " << numberUndefinedFound
+                           << endl;
+                    myCerr << "members size " << valMembersImpl.size() << endl;
                     success = false;
                 }
             }
             if (!success) {
-                cerr << "sequence Members: " << valMembersImpl << endl;
+                myCerr << "sequence Members: " << valMembersImpl << endl;
                 assert(false);
-                abort();
+                myAbort();
             }
         },
         members);
@@ -265,28 +265,28 @@ void SequenceValue::assertValidState() {
                     auto& member = valMembersImpl[i];
                     HashType hash = getValueHash(member->view().get());
                     if (!memberHashes.count(hash)) {
-                        cerr << "Error: member " << member->view()
-                             << " with hash " << hash
-                             << " is not in memberHashes.\n";
+                        myCerr << "Error: member " << member->view()
+                               << " with hash " << hash
+                               << " is not in memberHashes.\n";
                         success = false;
                         break;
                     }
                 }
                 if (success) {
                     if (memberHashes.size() != numberElements()) {
-                        cerr << "Found member hashes of elements not in the "
-                                "sequence.\n";
+                        myCerr << "Found member hashes of elements not in the "
+                                  "sequence.\n";
                         success = false;
                     }
                 }
             }
             if (!success) {
-                cerr << "sequence Members: " << valMembersImpl << endl;
+                myCerr << "sequence Members: " << valMembersImpl << endl;
                 if (injective) {
-                    cerr << "memberHashes: " << memberHashes << endl;
+                    myCerr << "memberHashes: " << memberHashes << endl;
                 }
                 assert(false);
-                abort();
+                myAbort();
             }
         },
         members);
@@ -359,17 +359,17 @@ void SequenceValue::assertValidVarBases() {
                     valBase(*assumeAsValue(valMembersImpl[i]));
                 if (base.container != this) {
                     success = false;
-                    cerr << "member " << i
-                         << "'s container does not point to this sequence."
-                         << endl;
+                    myCerr << "member " << i
+                           << "'s container does not point to this sequence."
+                           << endl;
                 } else if (base.id != i) {
                     success = false;
-                    cerr << "sequence member " << i << "has id " << base.id
-                         << " but it should be " << i << endl;
+                    myCerr << "sequence member " << i << "has id " << base.id
+                           << " but it should be " << i << endl;
                 }
             }
             if (!success) {
-                cerr << "Members: " << valMembersImpl << endl;
+                myCerr << "Members: " << valMembersImpl << endl;
                 this->printVarBases();
                 assert(false);
             }

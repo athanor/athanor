@@ -34,9 +34,9 @@ struct MSetDomain {
     void checkMaxSize() {
         if (sizeAttr.sizeType == SizeAttr::SizeAttrType::NO_SIZE ||
             sizeAttr.sizeType == SizeAttr::SizeAttrType::MIN_SIZE) {
-            std::cerr << "Error, MSet domain must be initialised with "
-                         "maxSize() or exactSize()\n";
-            abort();
+            myCerr << "Error, MSet domain must be initialised with "
+                      "maxSize() or exactSize()\n";
+            myAbort();
         }
     }
 };

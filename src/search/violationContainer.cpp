@@ -31,7 +31,7 @@ static UInt findContainingInterval(const ViolationContainer &vioCont,
         }
     }
     assert(false);
-    abort();
+    myAbort();
 }
 
 static UInt pickRandomVariable(const ViolationContainer &vioCont, UInt maxVar,

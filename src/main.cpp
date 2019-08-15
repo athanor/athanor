@@ -312,7 +312,7 @@ void constructStratAndRunImpl(State& state, ImproveStrategy&& improve,
             return;
         }
         default:
-            abort();
+            myAbort();
     }
 }
 
@@ -330,7 +330,7 @@ void constructStratAndRun(State& state, SelectionStrategy&& nhSelection) {
             return;
         }
         default:
-            abort();
+            myAbort();
     }
 }
 
@@ -377,7 +377,7 @@ void runSearch(State& state) {
             return;
         }
         default:
-            abort();
+            myAbort();
     }
 }
 
@@ -417,10 +417,10 @@ string findConjure() {
         if (runCommand(conjurePathArg.get()).first == 0) {
             return conjurePathArg.get();
         } else {
-            cerr << toString("Error: the path specified by --conjure-path ('",
-                             conjurePathArg.get(),
-                             "') does not point to an executable.");
-            exit(1);
+            myCerr << toString("Error: the path specified by --conjure-path ('",
+                               conjurePathArg.get(),
+                               "') does not point to an executable.");
+            myExit(1);
         }
     }
 
@@ -430,9 +430,10 @@ string findConjure() {
     } else if (runCommand("conjure").first == 0) {
         return "conjure";
     } else {
-        cerr << "Error: conjure not found next to athanor executable directory "
-                "nor found in path.\n";
-        exit(1);
+        myCerr
+            << "Error: conjure not found next to athanor executable directory "
+               "nor found in path.\n";
+        myExit(1);
     }
 }
 
@@ -454,8 +455,8 @@ nlohmann::json parseJson(const string& file, bool useConjure,
         pair<int, string> result;
         if (specFile &&
             (result = runCommand(conjurePath, "type-check", file)).first != 0) {
-            cerr << "Error, spec did not type check.\n" << result.second;
-            exit(1);
+            myCerr << "Error, spec did not type check.\n" << result.second;
+            myExit(1);
         }
 
         result =
@@ -465,8 +466,8 @@ nlohmann::json parseJson(const string& file, bool useConjure,
                 find(result.second.begin(), result.second.end(), '{'),
                 result.second.end());
         } else {
-            cerr << "Error translating essence: " + result.second << endl;
-            exit(1);
+            myCerr << "Error translating essence: " + result.second << endl;
+            myExit(1);
         }
     } else {
         ifstream is(file);
@@ -476,6 +477,7 @@ nlohmann::json parseJson(const string& file, bool useConjure,
     }
 }
 
+#ifndef WASM_TARGET
 static vector<nlohmann::json> getInputs() {
     string conjurePath;
     chrono::high_resolution_clock::time_point startTime =
@@ -500,7 +502,6 @@ static vector<nlohmann::json> getInputs() {
     return jsons;
 }
 
-#ifndef WASM_TARGET
 int main(const int argc, const char** argv) {
     cout << "ATHANOR\n";
 
@@ -509,17 +510,17 @@ int main(const int argc, const char** argv) {
     }
     if (argc == 1) {
         argParser.printAllUsageInfo(cout, argv[0]);
-        exit(0);
+        myExit(0);
     }
     try {
         argParser.validateArgs(argc, argv, false);
     } catch (ParseException& e) {
-        cerr << "Error: " << e.what() << endl;
-        cerr << "Successfully parsed: ";
-        argParser.printSuccessfullyParsed(cerr, argv);
-        cerr << "\n\n";
-        cerr << "For usage information, run " << argv[0] << endl;
-        exit(1);
+        myCerr << "Error: " << e.what() << endl;
+        myCerr << "Successfully parsed: ";
+        argParser.printSuccessfullyParsed(myCerr, argv);
+        myCerr << "\n\n";
+        myCerr << "For usage information, run " << argv[0] << endl;
+        myExit(1);
     }
 
     try {
@@ -536,26 +537,26 @@ int main(const int argc, const char** argv) {
         runSearch(state);
         printFinalStats(state);
     } catch (nlohmann::detail::exception& e) {
-        cerr << "Error parsing JSON: " << e.what() << endl;
-        exit(1);
+        myCerr << "Error parsing JSON: " << e.what() << endl;
+        myExit(1);
     } catch (SanityCheckException& e) {
-        cerr << "***SANITY CHECK ERROR: " << e.errorMessage << endl;
+        myCerr << "***SANITY CHECK ERROR: " << e.errorMessage << endl;
         if (!e.file.empty()) {
-            cerr << "From file: " << e.file << endl;
+            myCerr << "From file: " << e.file << endl;
         }
         if (e.line > 0) {
-            cerr << "Line: " << e.line << endl;
+            myCerr << "Line: " << e.line << endl;
         }
         if (!e.stateDump.empty()) {
-            cerr << "Operator state: " << e.stateDump << endl;
+            myCerr << "Operator state: " << e.stateDump << endl;
         }
         size_t i = 1;
         for (auto& message : e.messageStack) {
-            cerr << i << ": " << message << endl;
+            myCerr << i << ": " << message << endl;
             ++i;
         }
 
-        abort();
+        myAbort();
     }
 }
 #endif
@@ -579,7 +580,7 @@ volatile bool sigIntActivated = false, sigAlarmActivated = false;
 static const int DELAYED_FORCED_EXIT_TIME = 10;
 void forceExit() {
     cout << "\n\nFORCE EXIT\n";
-    abort();
+    myAbort();
 }
 void sigIntHandler(int) {
     if (sigIntActivated) {
@@ -594,6 +595,14 @@ void sigAlarmHandler(int) {
     }
     sigAlarmActivated = true;
     setTimeout(DELAYED_FORCED_EXIT_TIME, false);
+}
+#ifndef WASM_TARGET
+void signalEndOfSearch() { throw EndOfSearchException(); }
+#else
+using namespace emscripten;
+void signalEndOfSearch() {
+    val::global().call<void>("reportEndOfSearch");
+    exit(0);
 }
 
 /* for running with web assembly */
@@ -615,8 +624,14 @@ void runSolverWasm(string specJsonString, string paramJsonString) {
     printFinalStats(state);
 }
 
-#ifdef WASM_TARGET
-using namespace emscripten;
+std::ostringstream myCerr;
+void reportErrorToWebApp(size_t n) {
+    string error = myCerr.str();
+    if (n != 0 || !error.empty()) {
+        val::global().call<void>("reportError", error);
+    }
+}
+
 EMSCRIPTEN_BINDINGS(my_module) {
     emscripten::function("runSolverWasm", &runSolverWasm);
 }

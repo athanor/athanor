@@ -9,8 +9,8 @@ shared_ptr<EnumDomain> parseDomainEnum(json& enumDomainExpr,
     string name = enumDomainExpr[0]["Name"];
     auto iter = parsedModel.domainLettings.find(name);
     if (iter == parsedModel.domainLettings.end()) {
-        cerr << "Could Not find enum " << name << endl;
-        exit(1);
+        myCerr << "Could Not find enum " << name << endl;
+        myExit(1);
     }
     return mpark::get<shared_ptr<EnumDomain>>(iter->second);
 }
@@ -34,9 +34,9 @@ void handleEnumDeclaration(json& enumDeclExpr, ParsedModel& parsedModel) {
                 .emplace(name, ParseResult(enumDomain, val.asExpr(), false))
                 .second;
         if (!inserted) {
-            cerr << "Error: whilst defining enum domain " << enumName
-                 << ", the name " << name << " has already been used.\n";
-            abort();
+            myCerr << "Error: whilst defining enum domain " << enumName
+                   << ", the name " << name << " has already been used.\n";
+            myAbort();
         }
     }
 }

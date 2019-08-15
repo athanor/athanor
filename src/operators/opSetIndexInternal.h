@@ -55,9 +55,9 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType> {
               typename std::enable_if<std::is_same<BoolView, View>::value,
                                       int>::type = 0>
     void setAppearsDefined(bool) {
-        std::cerr << "Not handling OpSetIndexInternal with set of bools where "
-                     "a set member "
-                     "becomes undefined.\n";
+        myCerr << "Not handling OpSetIndexInternal with set of bools where "
+                  "a set member "
+                  "becomes undefined.\n";
         todoImpl();
     }
     template <typename View = SetMemberViewType,

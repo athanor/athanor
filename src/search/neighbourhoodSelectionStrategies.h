@@ -10,7 +10,7 @@
 #include "search/statsContainer.h"
 #include "search/ucbSelector.h"
 #include "utils/random.h"
-
+void signalEndOfSearch();
 class InteractiveNeighbourhoodSelector {
    public:
     template <typename ParentStrategy>
@@ -30,7 +30,7 @@ class InteractiveNeighbourhoodSelector {
             }
             if (input == -1) {
                 std::cout << "Exiting...\n";
-                throw EndOfSearchException();
+                signalEndOfSearch();
             }
             if (input < 1 || input > (int)state.model.neighbourhoods.size()) {
                 std::cout << "Error: integer out of range.\n";

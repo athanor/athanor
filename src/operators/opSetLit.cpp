@@ -116,8 +116,8 @@ void OpSetLit::evaluateImpl() {
                 auto& operand = operands[i];
                 operand->evaluate();
                 if (!operand->appearsDefined()) {
-                    cerr << NO_SET_UNDEFINED_MEMBERS;
-                    abort();
+                    myCerr << NO_SET_UNDEFINED_MEMBERS;
+                    myAbort();
                 }
                 addOperandValue<viewType(operands)>(i, true);
             }
@@ -323,7 +323,7 @@ void OpSetLit::assertValidHashes() {
             for (size_t i = 0; i < operands.size(); i++) {
                 auto& operand = operands[i];
                 if (!operand->appearsDefined()) {
-                    cerr << NO_SET_UNDEFINED_MEMBERS;
+                    myCerr << NO_SET_UNDEFINED_MEMBERS;
                     success = false;
                     break;
                     continue;
@@ -331,30 +331,30 @@ void OpSetLit::assertValidHashes() {
                 HashType hash = getValueHash(
                     operand->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
                 if (cachedOperandHashes.get(i) != hash) {
-                    cerr << "Error: cachedOperandHashes at index " << i
-                         << " has value " << cachedOperandHashes.get(i)
-                         << " but operand has value " << hash << endl;
+                    myCerr << "Error: cachedOperandHashes at index " << i
+                           << " has value " << cachedOperandHashes.get(i)
+                           << " but operand has value " << hash << endl;
                     success = false;
                     break;
                 }
                 auto iter = hashIndicesMap.find(hash);
                 if (iter == hashIndicesMap.end()) {
                     success = false;
-                    cerr << "Error, hash " << hash << " of operand ";
-                    operand->dumpState(cerr);
-                    cerr << " maps to no operand group.\n";
+                    myCerr << "Error, hash " << hash << " of operand ";
+                    operand->dumpState(myCerr);
+                    myCerr << " maps to no operand group.\n";
                     break;
                 }
                 auto& og = iter->second;
                 if (!og.operands.count(i)) {
                     success = false;
-                    operand->dumpState(cerr << "error: operand: ")
+                    operand->dumpState(myCerr << "error: operand: ")
                         << " with hash " << hash
                         << " maps to an operand group not containing the "
                            "operand "
                            "index "
                         << i << endl;
-                    cerr << og << endl;
+                    myCerr << og << endl;
                     break;
                 }
             }
@@ -364,24 +364,24 @@ void OpSetLit::assertValidHashes() {
                     HashType hash = hashIndicesPair.first;
                     auto& og = hashIndicesPair.second;
                     if (!og.operands.count(og.focusOperand)) {
-                        cerr << "Error: focus operand not in operand group: "
-                             << og << endl;
+                        myCerr << "Error: focus operand not in operand group: "
+                               << og << endl;
                         success = false;
                         break;
                     }
                     if (cachedSetHashes.get(og.focusOperandSetIndex) != hash) {
-                        cerr << "Error: cached set indices does not match up "
-                                "with operand group "
-                             << og << endl;
+                        myCerr << "Error: cached set indices does not match up "
+                                  "with operand group "
+                               << og << endl;
                         success = false;
                         break;
                     }
                     for (UInt index : og.operands) {
                         HashType hash2 = cachedOperandHashes.get(index);
                         if (hash2 != hash) {
-                            cerr << "Error: index " << index << " maps to hash "
-                                 << hash2 << " but hash " << hash << " maps to "
-                                 << index << endl;
+                            myCerr << "Error: index " << index
+                                   << " maps to hash " << hash2 << " but hash "
+                                   << hash << " maps to " << index << endl;
                             success = false;
                             break;
                         }
@@ -389,16 +389,17 @@ void OpSetLit::assertValidHashes() {
                 }
             }
             if (!success) {
-                cerr << "HashIndicesMap: " << hashIndicesMap << endl;
-                cerr << "cachedOperandHashes: " << cachedOperandHashes.contents
-                     << endl;
-                cerr << "cachedSetHashes: " << cachedSetHashes.contents << endl;
-                cerr << "operands:";
+                myCerr << "HashIndicesMap: " << hashIndicesMap << endl;
+                myCerr << "cachedOperandHashes: "
+                       << cachedOperandHashes.contents << endl;
+                myCerr << "cachedSetHashes: " << cachedSetHashes.contents
+                       << endl;
+                myCerr << "operands:";
                 for (auto& operand : operands) {
-                    operand->dumpState(cerr << "\n");
+                    operand->dumpState(myCerr << "\n");
                 }
-                cerr << endl;
-                abort();
+                myCerr << endl;
+                myAbort();
             }
         },
         operands);

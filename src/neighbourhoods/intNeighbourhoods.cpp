@@ -19,8 +19,8 @@ Int getRandomValueInDomain(const IntDomain& domain) {
             randomDomainIndex -= boundSize;
         }
     }
-    cerr << "Error: empty  domain.\n";
-    throw EndOfSearchException();
+    myCerr << "Error: empty  domain.\n";
+    signalEndOfSearch();
 }
 
 Int chooseBound(const pair<Int, Int>& bound1, const pair<Int, Int>& bound2,
@@ -39,8 +39,8 @@ Int chooseBound(const pair<Int, Int>& bound1, const pair<Int, Int>& bound2,
 Int getRandomValueInDomain(const IntDomain& domain, Int minValue,
                            Int maxValue) {
     if (domain.bounds.empty()) {
-        cerr << "Error: empty domain\n";
-        throw EndOfSearchException();
+        myCerr << "Error: empty domain\n";
+        signalEndOfSearch();
     }
     minValue = max(minValue, domain.bounds.front().first);
     maxValue = min(maxValue, domain.bounds.back().second);
@@ -62,7 +62,7 @@ Int getRandomValueInDomain(const IntDomain& domain, Int minValue,
         }
     }
     assert(false);
-    abort();
+    myAbort();
 }
 
 template <>

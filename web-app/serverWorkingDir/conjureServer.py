@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import urllib
+import time
 import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler, SimpleHTTPRequestHandler
 from socketserver import ThreadingMixIn
 import threading
 import json
 import subprocess
+import sys
 USE_HTTPS = False
 
 pathWhiteList = {"/",
@@ -14,17 +16,17 @@ pathWhiteList = {"/",
     "/athanorWorker.js",
     "/essenceInput.js",
     "/index.html"}
-
+conjurePath = "../conjure"
 
 def cleanError(error,prefix):
     return error[error.find(prefix) + len(prefix):].strip()
 def essenceToJson(essence,isParam):
-    tempFileName = "../temp_" + str(threading.get_ident())
+    tempFileName = "../temp_" + str(threading.get_ident()) + "_" + str(time.time())
     tempFileName += ".essence" if not isParam else ".param"
     with open(tempFileName,"w") as tempFile:
         print(essence,file=tempFile)
-    conjureTypeCheckCommand = ["../conjure", "type-check", tempFileName]
-    conjureJsonCommand = ["../conjure", "pretty", tempFileName, "--output-format", "json"]
+    conjureTypeCheckCommand = [conjurePath, "type-check", tempFileName]
+    conjureJsonCommand = [conjurePath, "pretty", tempFileName, "--output-format", "json"]
     proc = subprocess.run(conjureTypeCheckCommand,capture_output=True,encoding="utf-8")
     if proc.returncode != 0:
         return { "status":"error", "data":cleanError(proc.stderr,tempFileName + ":")}
@@ -68,7 +70,7 @@ class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     pass
 
 def run():
-    server = ThreadingSimpleServer(('localhost', 8000), Handler)
+    server = ThreadingSimpleServer(('127.0.0.1', 8000), Handler)
     if USE_HTTPS:
         import ssl
         server.socket = ssl.wrap_socket(server.socket, keyfile='./key.pem', certfile='./cert.pem', server_side=True)
@@ -76,4 +78,6 @@ def run():
 
 
 if __name__ == '__main__':
+    if len(sys.argv) == 2:
+        conjurePath = sys.argv[1]
     run()

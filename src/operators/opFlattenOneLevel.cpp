@@ -17,15 +17,15 @@ void OpFlattenOneLevel<SequenceInnerType>::assertValidStartingIndices() const {
     bool success = true;
     if (innerSequences.size() != startingIndices.size()) {
         success = false;
-        cerr << "Error: startingIndices not same length as number of inner "
-                "sequences.\n";
+        myCerr << "Error: startingIndices not same length as number of inner "
+                  "sequences.\n";
     }
     if (success) {
         for (size_t i = 0; i < innerSequences.size(); i++) {
             if (startingIndices[i] != total) {
                 success = false;
-                cerr << "Error: expected starting index at position " << i
-                     << " to be " << total;
+                myCerr << "Error: expected starting index at position " << i
+                       << " to be " << total;
                 break;
             }
             total += innerSequences[i]
@@ -35,18 +35,18 @@ void OpFlattenOneLevel<SequenceInnerType>::assertValidStartingIndices() const {
         }
     }
     if (!success) {
-        cerr << "\nOperand sequences:\n";
+        myCerr << "\nOperand sequences:\n";
         for (auto& innerSequence : innerSequences) {
-            prettyPrint(cerr, innerSequence->view().checkedGet(
-                                  OP_FLATTEN_DEFAULT_ERROR))
+            prettyPrint(myCerr, innerSequence->view().checkedGet(
+                                    OP_FLATTEN_DEFAULT_ERROR))
                 << endl;
         }
-        cerr << "startingIndices: " << startingIndices << endl;
-        cerr << "Flattened value: ";
-        prettyPrint(cerr, this->view().checkedGet(OP_FLATTEN_DEFAULT_ERROR))
+        myCerr << "startingIndices: " << startingIndices << endl;
+        myCerr << "Flattened value: ";
+        prettyPrint(myCerr, this->view().checkedGet(OP_FLATTEN_DEFAULT_ERROR))
             << endl;
         assert(false);
-        abort();
+        myAbort();
     }
 }
 

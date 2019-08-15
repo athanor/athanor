@@ -94,8 +94,8 @@ ParseResult parseOpTupleIndex(shared_ptr<TupleDomain>& tupleDomain,
     string errorMessage = "within tuple index expression.";
     UInt index = parseExprAsInt(indexExpr, parsedModel, errorMessage) - 1;
     if (index >= tupleDomain->inners.size()) {
-        cerr << "Error: tuple index out of range.\n";
-        exit(1);
+        myCerr << "Error: tuple index out of range.\n";
+        myExit(1);
     }
     bool hasEmptyType = hasEmptyDomain(tupleDomain->inners[index]);
     return mpark::visit(
@@ -117,9 +117,9 @@ ParseResult parseOpRecordIndex(shared_ptr<TupleDomain>& tupleDomain,
     string errorMessage = "within record index expression.";
     string indexName = indexExpr["Reference"][0]["Name"];
     if (!tupleDomain->recordNameIndexMap.count(indexName)) {
-        cerr << "Error: could not index this record by the name " << indexName
-             << endl;
-        exit(1);
+        myCerr << "Error: could not index this record by the name " << indexName
+               << endl;
+        myExit(1);
     }
     size_t index = tupleDomain->recordNameIndexMap[indexName];
     bool hasEmptyType = hasEmptyDomain(tupleDomain->inners[index]);

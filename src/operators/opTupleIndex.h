@@ -22,12 +22,12 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType>,
         : tupleOperand(std::move(tupleOperand)),
           indexOperand(std::move(indexOperand)) {
         if (std::is_same<BoolView, TupleMemberViewType>::value) {
-            std::cerr << "I've temperarily disabled OpTupleIndex for "
-                         "tuples of booleans as "
-                         "I'm not correctly handling relational semantics "
-                         "forthe case where the tuple indexbecomes "
-                         "undefined.\n";
-            abort();
+            myCerr << "I've temperarily disabled OpTupleIndex for "
+                      "tuples of booleans as "
+                      "I'm not correctly handling relational semantics "
+                      "forthe case where the tuple indexbecomes "
+                      "undefined.\n";
+            myAbort();
         }
     }
     OpTupleIndex(const OpTupleIndex<TupleMemberViewType>&) = delete;
@@ -63,8 +63,8 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType>,
               typename std::enable_if<std::is_same<BoolView, View>::value,
                                       int>::type = 0>
     void setAppearsDefined(bool) {
-        std::cerr << "Not handling tuple to bools where a tuple member "
-                     "becomes undefined.\n";
+        myCerr << "Not handling tuple to bools where a tuple member "
+                  "becomes undefined.\n";
         todoImpl();
     }
     template <typename View = TupleMemberViewType,

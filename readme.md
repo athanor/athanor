@@ -3,6 +3,7 @@
 * [Why use __ATHANOR__](#why)
 * [Using __ATHANOR__](#using)
 * [Building from source](#installation)
+* [Demo the web app version!](http://saad.ai/athanor-web-app) __ATHANOR__ can now run efficiently inside your web browser, thanks to web assembly.
 
 # <a name="why"></a> Why use __ATHANOR__
 
@@ -42,6 +43,7 @@ Conjure is a great automated constraint modelling tool that accepts __Essence__ 
 
 * Obtain the latest __ATHANOR__ Mac or Linux releases [here](https://github.com/athanor/athanor/releases). 
 * Manual installation instructions [here](#installation).
+* Or try out the [__ATHANOR__ web app](http://saad.ai/athanor-web-app), it runs natively and efficiently in your browser, thanks to Web Assembly.
 * __ATHANOR__ depends on [Conjure](https://github.com/conjure-cp/conjure) to parse __Essence__. A __Conjure__ executable is bundled with the releases and __ATHANOR__ should be able to appropriately locate it.  
 
 ## Basic usage:

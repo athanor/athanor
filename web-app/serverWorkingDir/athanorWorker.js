@@ -12,7 +12,7 @@ function printStats(stats) {
         "numberIterations": stats.numberIterations,
         "violation":stats.violation,
         "hasObjective":stats.hasObjective,
-        objective:"stats.objective"
+        "objective":stats.objective
     }
     postMessage({"stats":statsCopy})
 }

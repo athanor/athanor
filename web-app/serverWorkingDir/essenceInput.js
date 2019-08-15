@@ -58,14 +58,15 @@ function runButtonPressed() {
         parseAndRun()
     } else {
         button.innerHTML = "RUN";
-        display("cancelling...");
         if (window.athanorWorker) {
             window.athanorWorker.terminate()
             window.athanorWorker = null;
-            display("cancelled");
+            if (document.getElementById("stats_violation").innerHTML != "0") {
+                display("cancelled");   
+            }
         }
     }
-}
+    s}
 
 /* submit essence spec and param to server and return JSON representation. */
 function parseAndRun() {

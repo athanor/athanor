@@ -21,7 +21,7 @@ conjurePath = "../conjure"
 def cleanError(error,prefix):
     return error[error.find(prefix) + len(prefix):].strip()
 def essenceToJson(essence,isParam):
-    tempFileName = "../temp_" + str(threading.get_ident()) + "_" + str(time.time())
+    tempFileName = "../temp_" +  str(time.time()) + "_" + str(threading.get_ident()) 
     tempFileName += ".essence" if not isParam else ".param"
     with open(tempFileName,"w") as tempFile:
         print(essence,file=tempFile)
@@ -43,7 +43,6 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, **kwargs)
     
     def do_GET(self):
-        print("path is " + self.path)
         #hack so that if the path is not in the white list, make the path garbidge so it fails to return anything
         if self.path not in pathWhiteList:
             self.path = "unknown"
@@ -51,9 +50,6 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers['Content-Length'])
         postData = json.loads(self.rfile.read(length).decode('utf-8'))
-        print("post data = " + str(postData))
-        logging.info("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n",
-                str(self.path), str(self.headers), postData)
         response = {}
         response["spec"] = essenceToJson(postData["spec"],False)
         response["param"] = essenceToJson(postData["param"], True)
@@ -62,7 +58,6 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header('Content-type', 'application/json')
         self.end_headers()
         self.wfile.write(bytes(jsonString, "UTF-8"))
-        print(jsonString)
 
 
 

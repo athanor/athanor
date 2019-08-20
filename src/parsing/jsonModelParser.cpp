@@ -39,6 +39,7 @@ shared_ptr<EnumDomain> parseDomainEnum(json& enumDomainExpr,
 shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
                                      ParsedModel& parsedModel);
 void handleEnumDeclaration(json& enumDeclExpr, ParsedModel& parsedModel);
+void handleUnnamedTypeDeclaration(json& enumDeclExpr, ParsedModel& parsedModel);
 shared_ptr<BoolDomain> parseDomainBool(json&, ParsedModel&);
 shared_ptr<SetDomain> parseDomainSet(json& setDomainExpr,
                                      ParsedModel& parsedModel);
@@ -471,6 +472,9 @@ void parseJson(json& j, ParsedModel& parsedModel) {
             } else if (declaration.count("LettingDomainDefnEnum")) {
                 handleEnumDeclaration(declaration["LettingDomainDefnEnum"],
                                       parsedModel);
+            } else if (declaration.count("LettingDomainDefnUnnamed")) {
+                handleUnnamedTypeDeclaration(
+                    declaration["LettingDomainDefnUnnamed"], parsedModel);
             }
         } else if (statement.count("SuchThat")) {
             parseExprs(statement["SuchThat"], parsedModel);

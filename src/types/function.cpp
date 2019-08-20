@@ -25,21 +25,21 @@ Dimension intDomainToDimension(IntDomain& dom) {
 void makeDimensionVecFromDomainHelper(const AnyDomainRef& domain,
                                       DimensionVec& dimVec) {
     try {
-        mpark::visit(
-            overloaded(
-                [&](const shared_ptr<IntDomain>& domain) {
-                    dimVec.emplace_back(intDomainToDimension(*domain));
-                },
-                [&](const shared_ptr<EnumDomain>& domain) {
-                    dimVec.emplace_back(0, domain->valueNames.size() - 1);
-                },
-                [&](const shared_ptr<TupleDomain>& domain) {
-                    for (auto& inner : domain->inners) {
-                        makeDimensionVecFromDomainHelper(inner, dimVec);
-                    }
-                },
-                [&](const auto&) { throw NoSupportException(); }),
-            domain);
+        mpark::visit(overloaded(
+                         [&](const shared_ptr<IntDomain>& domain) {
+                             dimVec.emplace_back(intDomainToDimension(*domain));
+                         },
+                         [&](const shared_ptr<EnumDomain>& domain) {
+                             dimVec.emplace_back(0, domain->numberValues() - 1);
+                         },
+                         [&](const shared_ptr<TupleDomain>& domain) {
+                             for (auto& inner : domain->inners) {
+                                 makeDimensionVecFromDomainHelper(inner,
+                                                                  dimVec);
+                             }
+                         },
+                         [&](const auto&) { throw NoSupportException(); }),
+                     domain);
 
     } catch (...) {
         myCerr

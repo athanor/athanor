@@ -1,5 +1,6 @@
 #include <algorithm>
 #include "parsing/parserCommon.h"
+#include "search/model.h"
 #include "types/allVals.h"
 using namespace std;
 using namespace lib;
@@ -24,11 +25,11 @@ void handleEnumDeclaration(json& enumDeclExpr, ParsedModel& parsedModel) {
     }
     auto enumDomain = make_shared<EnumDomain>(enumName, move(valueNames));
     parsedModel.domainLettings.emplace(enumName, enumDomain);
-    for (size_t i = 0; i < enumDomain->valueNames.size(); i++) {
+    for (size_t i = 0; i < enumDomain->numberValues(); i++) {
         auto val = make<EnumValue>();
         val->value = i;
         val->setConstant(true);
-        const string& name = enumDomain->valueNames[i];
+        string name = enumDomain->name(i);
         bool inserted =
             parsedModel.namedExprs
                 .emplace(name, ParseResult(enumDomain, val.asExpr(), false))
@@ -39,4 +40,15 @@ void handleEnumDeclaration(json& enumDeclExpr, ParsedModel& parsedModel) {
             myAbort();
         }
     }
+}
+
+void handleUnnamedTypeDeclaration(json& enumDeclExpr,
+                                  ParsedModel& parsedModel) {
+    const string& enumName = enumDeclExpr[0]["Name"];
+    vector<string> valueNames;
+    Int size = parseExprAsInt(enumDeclExpr[1], parsedModel,
+                              "with in context of unnamed type size.");
+    auto enumDomain = EnumDomain::UnnamedType(enumName, size);
+    parsedModel.domainLettings.emplace(enumName, enumDomain);
+    parsedModel.builder->registerUnnamedType(enumDomain);
 }

@@ -7,7 +7,7 @@ using namespace std;
 
 void EnumRange::evaluateImpl() {
     this->silentClear();
-    for (UInt i = 0; i < domain->valueNames.size(); i++) {
+    for (UInt i = 0; i < domain->numberValues(); i++) {
         auto val = make<EnumValue>();
         val->setConstant(true);
         val->value = i;
@@ -57,9 +57,9 @@ pair<bool, ExprRef<SequenceView>> EnumRange::optimise(PathExtension path) {
 void EnumRange::findAndReplaceSelf(const FindAndReplaceFunction&) {}
 void EnumRange::debugSanityCheckImpl() const {
     sanityEqualsCheck(0, numberUndefined);
-    sanityEqualsCheck(domain->valueNames.size(), numberElements());
+    sanityEqualsCheck(domain->numberValues(), numberElements());
 
-    for (UInt i = 0; i < (UInt)domain->valueNames.size(); i++) {
+    for (size_t i = 0; i < (UInt)domain->numberValues(); i++) {
         auto memberView = getMembers<EnumView>()[i]->getViewIfDefined();
         sanityCheck(memberView, "One of the sequence members is undefined.");
         sanityEqualsCheck(i, memberView->value);

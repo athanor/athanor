@@ -17,8 +17,7 @@ ostream& prettyPrint<EnumView>(ostream& os, const EnumView& v) {
 template <>
 ostream& prettyPrint<EnumView>(ostream& os, const EnumDomain& domain,
                                const EnumView& v) {
-    debug_code(assert(v.value < domain.valueNames.size()));
-    os << domain.valueNames[v.value];
+    domain.printValue(os, v.value);
     return os;
 }
 
@@ -40,7 +39,7 @@ void matchInnerType(const EnumDomain&, EnumValue&) {}
 
 template <>
 UInt getDomainSize<EnumDomain>(const EnumDomain& domain) {
-    return domain.valueNames.size();
+    return domain.numberValues();
 }
 
 void evaluateImpl(EnumValue&) {}

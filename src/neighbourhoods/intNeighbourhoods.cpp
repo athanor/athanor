@@ -21,6 +21,7 @@ Int getRandomValueInDomain(const IntDomain& domain) {
     }
     myCerr << "Error: empty  domain.\n";
     signalEndOfSearch();
+    abort();  // put here just to stop warning
 }
 
 Int chooseBound(const pair<Int, Int>& bound1, const pair<Int, Int>& bound2,

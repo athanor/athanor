@@ -30,6 +30,7 @@ struct Model {
     AnyExprRef objective = make<IntValue>().asExpr();
     OptimiseMode optimiseMode = OptimiseMode::NONE;
     HashMap<size_t, AnyExprRef> definingExpressions;
+    std::vector<std::shared_ptr<EnumDomain>> unnamedTypes;
 
    private:
     Model() { mpark::get<ExprRef<IntView>>(objective)->view()->value = 0; }
@@ -64,6 +65,9 @@ class ModelBuilder {
         }
     }
 
+    inline void registerUnnamedType(std::shared_ptr<EnumDomain> domain) {
+        model.unnamedTypes.emplace_back(std::move(domain));
+    }
     template <typename DomainPtrType,
               typename ValueType = typename AssociatedValueType<
                   typename DomainPtrType::element_type>::type>

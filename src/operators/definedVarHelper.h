@@ -4,6 +4,7 @@
 
 // lock structure, used to prevent circular walks when expressions forward
 // values to variables that are defined off them.
+extern bool allowForwardingOfDefiningExprs;
 class DefinesLock {
     static UInt64 globalStamp;
     UInt64 localStamp = 0;
@@ -13,7 +14,7 @@ class DefinesLock {
     // triggering.  On the next round of triggering another call will be
     // allowed.
     inline bool tryLock() {
-        if (localStamp >= globalStamp) {
+        if (!allowForwardingOfDefiningExprs || localStamp >= globalStamp) {
             return false;
         }
         localStamp = globalStamp;
@@ -22,7 +23,9 @@ class DefinesLock {
     // returns whether or not try() will return true, but unlike try() the state
     // does not get changed. i.e. softTry() can be queried more than once per
     // triggering round.
-    inline bool softTry() { return localStamp < globalStamp; }
+    inline bool softTry() {
+        return allowForwardingOfDefiningExprs && localStamp < globalStamp;
+    }
 
     // disable this lock so that try() always returns false
     inline void disable() { localStamp = std::numeric_limits<UInt64>().max(); }

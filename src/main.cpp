@@ -282,7 +282,14 @@ auto& saveUcbArg =
                           "Save learned neighbourhood UCB info.\n")
         .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY,
                             "File to save results to.", outFileChecker);
-
+extern bool allowForwardingOfDefiningExprs;
+bool allowForwardingOfDefiningExprs = true;
+auto& disableDefinedExprsFlag =
+    argParser.add<Flag>("--disable-defined-vars", Policy::OPTIONAL,
+                        "Disable the forwarding of values from expressions to "
+                        "the variables that they define through equality.  "
+                        "This does not include top level equalities.",
+                        [](auto&) { allowForwardingOfDefiningExprs = false; });
 void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);
 void sigAlarmHandler(int);

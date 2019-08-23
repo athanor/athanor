@@ -257,15 +257,6 @@ auto& verboseModeFlag = argParser.add<Flag>(
     "or violation is made.",
     [](auto&) { quietMode = false; });
 
-ofstream outFileChecker(const string& path) {
-    ofstream os(path);
-    if (os.good()) {
-        return os;
-    } else {
-        throw ErrorMessage("Could not open file " + path);
-    }
-}
-
 auto& showNhStatsFlag = argParser.add<ComplexFlag>(
     "--show-nh-stats", Policy::OPTIONAL,
     "Print stats specific to each neighbourhood in a CSV format to stdout.");
@@ -273,15 +264,14 @@ auto& showNhStatsFlag = argParser.add<ComplexFlag>(
 auto& showNhStatsArg = showNhStatsFlag.add<Arg<ofstream>>(
     "path_to_file", Policy::OPTIONAL,
     "If specified, write the neighbourhood stats into a file instead of "
-    "stdout.",
-    outFileChecker);
+    "stdout.");
 
 auto& saveUcbArg =
     argParser
         .add<ComplexFlag>("--save-ucb-state", Policy::OPTIONAL,
                           "Save learned neighbourhood UCB info.\n")
         .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY,
-                            "File to save results to.", outFileChecker);
+                            "File to save results to.");
 extern bool allowForwardingOfDefiningExprs;
 bool allowForwardingOfDefiningExprs = true;
 auto& disableDefinedExprsFlag =

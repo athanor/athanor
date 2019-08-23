@@ -30,3 +30,14 @@ Create tag git tag -a vMYVERSION
 push git push public vMYVERSION
 
 Github draft new release
+
+for web,
+build wep app version: 
+mkdir -p build/wasm && cd build/wasm
+cmake ../.. -DWASM_TARGET
+make
+
+cp athanor.js and athanor.wasm to ../../web-app/serverWorkingDir
+cd into web-app (cd ../../web-app)
+run:
+rsync -azP ../web-app online@saad.ai:~/athanor

@@ -77,6 +77,7 @@ struct OperatorTrates;
 template <typename View, typename OperandView, typename Derived>
 struct SimpleBinaryOperator : public View,
                               public DefinedContainer<View, Derived> {
+    typedef SimpleBinaryOperator<View, OperandView, Derived> SimpleSuper;
     typedef typename OperatorTrates<Derived>::LeftTrigger LeftTrigger;
     typedef typename OperatorTrates<Derived>::RightTrigger RightTrigger;
     ExprRef<OperandView> left;
@@ -106,14 +107,17 @@ struct SimpleBinaryOperator : public View,
     ExprRef<View> deepCopyForUnrollImpl(const ExprRef<View>&,
                                         const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
-    bool optimiseImpl(const PathExtension& path);
-    std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
+    std::pair<bool, std::shared_ptr<Derived>> standardOptimise(
+        ExprRef<View>& self, PathExtension& path);
+    std::pair<bool, ExprRef<View>> optimiseImpl(ExprRef<View>& self,
+                                                PathExtension path) override;
     void standardSanityDefinednessChecks() const;
 };
 
 template <typename View, typename OperandView, typename Derived>
 struct SimpleUnaryOperator : public View,
                              public DefinedContainer<View, Derived> {
+    typedef SimpleUnaryOperator<View, OperandView, Derived> SimpleSuper;
     typedef typename OperatorTrates<Derived>::OperandTrigger OperandTrigger;
     ExprRef<OperandView> operand;
 
@@ -141,8 +145,10 @@ struct SimpleUnaryOperator : public View,
     ExprRef<View> deepCopyForUnrollImpl(const ExprRef<View>&,
                                         const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func) final;
-    bool optimiseImpl(const PathExtension& path);
-    std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
+    std::pair<bool, std::shared_ptr<Derived>> standardOptimise(
+        ExprRef<View>& self, PathExtension& path);
+    std::pair<bool, ExprRef<View>> optimiseImpl(ExprRef<View>& self,
+                                                PathExtension path) override;
     void standardSanityDefinednessChecks() const;
 };
 

@@ -379,16 +379,15 @@ void OpSequenceIndex<SequenceMemberViewType>::findAndReplaceSelf(
 
 template <typename SequenceMemberViewType>
 pair<bool, ExprRef<SequenceMemberViewType>>
-OpSequenceIndex<SequenceMemberViewType>::optimise(PathExtension path) {
-    bool changeMade = false;
-    auto optResult = sequenceOperand->optimise(path.extend(sequenceOperand));
-    changeMade |= optResult.first;
-    sequenceOperand = optResult.second;
-    auto optResult2 = indexOperand->optimise(path.extend(indexOperand));
-    changeMade |= optResult2.first;
-    indexOperand = optResult2.second;
-    return make_pair(changeMade,
-                     mpark::get<ExprRef<SequenceMemberViewType>>(path.expr));
+OpSequenceIndex<SequenceMemberViewType>::optimiseImpl(
+    ExprRef<SequenceMemberViewType>&, PathExtension path) {
+    bool optimised = false;
+    auto newOp = make_shared<OpSequenceIndex<SequenceMemberViewType>>(
+        sequenceOperand, indexOperand);
+    AnyExprRef newOpAsExpr = ExprRef<SequenceMemberViewType>(newOp);
+    optimised |= optimise(newOpAsExpr, newOp->sequenceOperand, path);
+    optimised |= optimise(newOpAsExpr, newOp->indexOperand, path);
+    return make_pair(optimised, newOp);
 }
 
 template <typename SequenceMemberViewType>

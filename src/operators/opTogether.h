@@ -47,7 +47,8 @@ struct OpTogether : public BoolView {
     void reevaluate(bool recalculateCachedLeftIndex,
                     bool recalculateCachedRightIndex);
     void reattachPartitionMemberTrigger(bool leftTrigger, bool rightTrigger);
-    std::pair<bool, ExprRef<BoolView>> optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<BoolView>> optimiseImpl(ExprRef<BoolView>&,
+                                                    PathExtension path) final;
 
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;

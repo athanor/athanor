@@ -211,10 +211,12 @@ std::ostream& OpSum::dumpState(std::ostream& os) const {
     return operand->dumpState(os);
 }
 
-bool OpSum::optimiseImpl(const PathExtension&) {
-    return flatten<IntView>(*this);
+std::pair<bool, ExprRef<IntView>> OpSum::optimiseImpl(ExprRef<IntView>& self,
+                                                       PathExtension path) {
+    auto boolOpPair = standardOptimise(self, path);
+    boolOpPair.first |= flatten<IntView>(*(boolOpPair.second));
+    return boolOpPair;
 }
-
 string OpSum::getOpName() const { return "OpSum"; }
 
 void OpSum::debugSanityCheckImpl() const {

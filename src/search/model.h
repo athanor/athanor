@@ -26,7 +26,7 @@ struct Model {
     std::vector<Neighbourhood> neighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
-    std::shared_ptr<OpAnd> csp = nullptr;
+    ExprRef<BoolView> csp = nullptr;
     AnyExprRef objective = make<IntValue>().asExpr();
     OptimiseMode optimiseMode = OptimiseMode::NONE;
     HashMap<size_t, AnyExprRef> definingExpressions;

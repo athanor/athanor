@@ -143,19 +143,21 @@ void OpTupleLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
     }
 }
 
-pair<bool, ExprRef<TupleView>> OpTupleLit::optimise(PathExtension path) {
-    bool changeMade = false;
-    for (auto& member : members) {
+pair<bool, ExprRef<TupleView>> OpTupleLit::optimiseImpl(ExprRef<TupleView>&,
+                                                        PathExtension path) {
+    auto newOp = make_shared<OpTupleLit>(members);
+    AnyExprRef newOpAsExpr = ExprRef<TupleView>(newOp);
+    bool optimised = false;
+    for (auto& member : newOp->members) {
         mpark::visit(
-            [&](auto& member) {
-                auto optResult = member->optimise(path.extend(member));
-                changeMade |= optResult.first;
-                member = optResult.second;
+            [&](auto& operand) {
+                optimised |= optimise(newOpAsExpr, operand, path);
             },
             member);
     }
-    return make_pair(changeMade, mpark::get<ExprRef<TupleView>>(path.expr));
+    return std::make_pair(optimised, newOp);
 }
+
 string OpTupleLit::getOpName() const { return "OpTupleLit"; }
 
 void OpTupleLit::debugSanityCheckImpl() const {

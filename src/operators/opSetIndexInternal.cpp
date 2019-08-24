@@ -275,11 +275,9 @@ void OpSetIndexInternal<SetMemberViewType>::findAndReplaceSelf(
 
 template <typename SetMemberViewType>
 pair<bool, ExprRef<SetMemberViewType>>
-OpSetIndexInternal<SetMemberViewType>::optimise(PathExtension path) {
-    auto optResult = setOperand->optimise(path.extend(setOperand));
-    setOperand = optResult.second;
-    return make_pair(optResult.first,
-                     mpark::get<ExprRef<SetMemberViewType>>(path.expr));
+OpSetIndexInternal<SetMemberViewType>::optimiseImpl(ExprRef<SetMemberViewType>&,
+                                                    PathExtension) {
+    todoImpl();
 }
 
 template <typename SetMemberViewType>

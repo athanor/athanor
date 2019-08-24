@@ -280,19 +280,16 @@ void OpTogether<PartitionMemberViewType>::findAndReplaceSelf(
 }
 
 template <typename PartitionMemberViewType>
-pair<bool, ExprRef<BoolView>> OpTogether<PartitionMemberViewType>::optimise(
-    PathExtension path) {
-    bool changeMade = false;
-    auto optResult = partitionOperand->optimise(path.extend(partitionOperand));
-    changeMade |= optResult.first;
-    partitionOperand = optResult.second;
-    auto optResult2 = left->optimise(path.extend(left));
-    changeMade |= optResult2.first;
-    left = optResult2.second;
-    optResult2 = right->optimise(path.extend(right));
-    changeMade |= optResult2.first;
-    right = optResult2.second;
-    return make_pair(changeMade, mpark::get<ExprRef<BoolView>>(path.expr));
+pair<bool, ExprRef<BoolView>> OpTogether<PartitionMemberViewType>::optimiseImpl(
+    ExprRef<BoolView>&, PathExtension path) {
+    bool optimised = false;
+    auto newOp = make_shared<OpTogether<PartitionMemberViewType>>(
+        partitionOperand, left, right);
+    AnyExprRef newOpAsExpr = ExprRef<BoolView>(newOp);
+    optimised |= optimise(newOpAsExpr, newOp->partitionOperand, path);
+    optimised |= optimise(newOpAsExpr, newOp->left, path);
+    optimised |= optimise(newOpAsExpr, newOp->right, path);
+    return make_pair(optimised, newOp);
 }
 
 template <typename PartitionMemberViewType>

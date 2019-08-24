@@ -27,7 +27,8 @@ struct OpTupleLit : public TupleView {
         const ExprRef<TupleView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool, ExprRef<TupleView>> optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<TupleView>> optimiseImpl(ExprRef<TupleView>& self,
+                                                     PathExtension path) final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };

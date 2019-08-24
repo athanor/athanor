@@ -50,6 +50,8 @@ struct SanityCheckException {
     sanityCheck(                       \
         LARGE_VIOLATION == val,        \
         toString(#val, " should be LARGE_VIOLATION but is instead ", val));
+template <typename View>
+struct ExprInterface;
 
 template <typename View>
 struct ExprRef;
@@ -64,16 +66,62 @@ using ExprRefVec = std::vector<ExprRef<InnerExprType>>;
 template <typename T>
 using ExprRefVecMaker = ExprRefVec<typename AssociatedViewType<T>::type>;
 typedef Variantised<ExprRefVecMaker> AnyExprVec;
+
 class ViolationContainer;
 
 typedef std::function<std::pair<bool, AnyExprRef>(AnyExprRef)>
     FindAndReplaceFunction;
+
 struct AnyIterRef;
-struct PathExtension;
-struct ViolationContext;
 
 template <typename View>
-struct ExprInterface;
+struct ExprRef : public StandardSharedPtr<ExprInterface<View>> {
+    using StandardSharedPtr<ExprInterface<View>>::StandardSharedPtr;
+};
+
+template <typename T>
+struct ViewType;
+template <typename T>
+struct ViewType<ExprRef<T>> {
+    typedef T type;
+};
+
+template <typename T>
+struct ViewType<std::vector<ExprRef<T>>> {
+    typedef T type;
+};
+
+#define viewType(t) typename ::ViewType<BaseType<decltype(t)>>::type
+
+struct PathExtension {
+    PathExtension* parent;
+    AnyExprRef expr;
+    bool isCondition;
+
+   private:
+    PathExtension(PathExtension* parent, AnyExprRef expr, bool isCondition)
+        : parent(parent), expr(std::move(expr)), isCondition(isCondition) {}
+
+   public:
+    inline bool isTop() const {
+        return mpark::visit([&](auto& expr) -> bool { return !expr; }, expr);
+    }
+    PathExtension extend(AnyExprRef expr, bool markAsCondition = false) {
+        return PathExtension(this, std::move(expr),
+                             isCondition || markAsCondition);
+    }
+    static inline PathExtension begin(bool markAsCondition = false) {
+        return PathExtension(NULL, ExprRef<BoolView>(nullptr), markAsCondition);
+    }
+};
+
+struct ViolationContext;
+template <typename View>
+bool optimise(AnyExprRef parentExpr, ExprRef<View>& self, PathExtension& path,
+              bool markAsCondition = false);
+template <typename View>
+bool optimise(ExprRef<View>& expr, bool markAsCondition = false);
+
 template <typename View>
 struct Undefinable {
     inline bool appearsDefined() const {
@@ -201,7 +249,10 @@ struct ExprInterface : public Undefinable<View> {
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
-    virtual std::pair<bool, ExprRef<View>> optimise(PathExtension path) = 0;
+
+    virtual std::pair<bool, ExprRef<View>> optimiseImpl(ExprRef<View>& self,
+                                                        PathExtension path) = 0;
+
     inline void debugSanityCheck() const {
         auto sanityCheckedOnce =
             const_cast<ExprInterface<View>&>(*this)
@@ -236,29 +287,38 @@ struct ExprInterface : public Undefinable<View> {
     virtual inline bool isQuantifier() const { return false; }
 };
 
+template <typename View>
+bool optimise(AnyExprRef parentExpr, ExprRef<View>& self, PathExtension& path,
+              bool markAsCondition) {
+    if (self->isConstant()) {
+        return false;
+    }
+    auto boolExprPair =
+        self->optimiseImpl(self, path.extend(parentExpr, markAsCondition));
+    if (boolExprPair.first) {
+        self = boolExprPair.second;
+    }
+    return boolExprPair.first;
+}
+
+template <typename View>
+bool optimise(ExprRef<View>& expr, bool markAsCondition) {
+    if (expr->isConstant()) {
+        return false;
+    }
+    auto boolExprPair =
+        expr->optimiseImpl(expr, PathExtension::begin(markAsCondition));
+    if (boolExprPair.first) {
+        expr = boolExprPair.second;
+    }
+    return boolExprPair.first;
+}
+
 struct ViolationContext {
     UInt parentViolation;
     ViolationContext(UInt parentViolation) : parentViolation(parentViolation) {}
     virtual ~ViolationContext() {}
 };
-template <typename View>
-struct ExprRef : public StandardSharedPtr<ExprInterface<View>> {
-    using StandardSharedPtr<ExprInterface<View>>::StandardSharedPtr;
-};
-
-template <typename T>
-struct ViewType;
-template <typename T>
-struct ViewType<ExprRef<T>> {
-    typedef T type;
-};
-
-template <typename T>
-struct ViewType<std::vector<ExprRef<T>>> {
-    typedef T type;
-};
-
-#define viewType(t) typename ::ViewType<BaseType<decltype(t)>>::type
 
 template <typename T>
 inline std::ostream& operator<<(std::ostream& os, const ExprRef<T>& ref) {
@@ -353,26 +413,6 @@ OptionalRef<const Op> getAs(const ExprRef<View>& expr) {
 
 template <typename Op, typename View>
 OptionalRef<Op> getAs(ExprRef<View>&& expr);
-struct PathExtension {
-    PathExtension* parent;
-    AnyExprRef expr;
-    bool isCondition;
-
-   private:
-    template <typename T>
-    PathExtension(PathExtension* parent, T& expr, bool isCondition)
-        : parent(parent), expr(expr), isCondition(isCondition) {}
-
-   public:
-    template <typename T>
-    PathExtension extend(T& expr, bool markAsCondition = false) {
-        return PathExtension(this, expr, isCondition || markAsCondition);
-    }
-    template <typename T>
-    static PathExtension begin(T& expr) {
-        return PathExtension(NULL, expr, false);
-    }
-};
 
 template <typename MemberExprType>
 inline void recurseSanityChecks(const ExprRefVec<MemberExprType>& members) {

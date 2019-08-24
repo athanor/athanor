@@ -167,9 +167,10 @@ inline void handledByForwardingValueChange(Op& op, View& leftView,
 // check if path up to root consists of only OpAnd and sequence view operators
 // and that the current expression is not under a quantifier condition,
 inline bool isSuitableForDefiningVars(const PathExtension& path) {
-    PathExtension* current = path.parent;
+    const PathExtension* current = &path;
+    // path does not include self, only parents
     bool success = !path.isCondition;
-    while (current && success) {
+    while (success && !current->isTop()) {
         mpark::visit(
             [&](auto& expr) {
                 if (!getAs<OpAnd>(expr) &&

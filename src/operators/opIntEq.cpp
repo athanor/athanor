@@ -48,18 +48,22 @@ void OpIntEq::updateVarViolationsImpl(const ViolationContext&,
 
 void OpIntEq::copy(OpIntEq& newOp) const {
     newOp.violation = violation;
-    if (definesLock.isDisabled()) {
-        newOp.definesLock.disable();
+    if (!definesLock.isDisabled()) {
+        newOp.definesLock.reset();
     }
 }
 
-bool OpIntEq::optimiseImpl(const PathExtension& path) {
+pair<bool, ExprRef<BoolView>> OpIntEq::optimiseImpl(ExprRef<BoolView>& self,
+                                                    PathExtension path) {
+    auto newOp = standardOptimise(self, path);
+    newOp.second->definesLock = definesLock;
     if (isSuitableForDefiningVars(path)) {
-        return definesLock.reset();
+        newOp.first |= newOp.second->definesLock.reset();
     } else {
         definesLock.disable();
-        return false;
+        newOp.second->definesLock.disable();
     }
+    return newOp;
 }
 
 ostream& OpIntEq::dumpState(ostream& os) const {

@@ -54,8 +54,8 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType>,
     OptionalRef<ExprRef<TupleMemberViewType>> getMember();
     OptionalRef<const ExprRef<TupleMemberViewType>> getMember() const;
     void reevaluate();
-    std::pair<bool, ExprRef<TupleMemberViewType>> optimise(
-        PathExtension path) final;
+    std::pair<bool, ExprRef<TupleMemberViewType>> optimiseImpl(
+        ExprRef<TupleMemberViewType>&, PathExtension path) final;
 
     void reattachTupleMemberTrigger();
     bool eventForwardedAsDefinednessChange();

@@ -31,7 +31,8 @@ struct OpIn : public BoolView {
         const ExprRef<BoolView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool, ExprRef<BoolView>> optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<BoolView>> optimiseImpl(ExprRef<BoolView>&,
+                                                    PathExtension path) final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };

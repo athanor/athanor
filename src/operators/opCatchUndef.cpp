@@ -149,16 +149,14 @@ void OpCatchUndef<ExprViewType>::findAndReplaceSelf(
 }
 
 template <typename ExprViewType>
-pair<bool, ExprRef<ExprViewType>> OpCatchUndef<ExprViewType>::optimise(
-    PathExtension path) {
-    bool changeMade = false;
-    auto optResult = expr->optimise(path.extend(expr));
-    changeMade |= optResult.first;
-    expr = optResult.second;
-    optResult = replacement->optimise(path.extend(replacement));
-    changeMade |= optResult.first;
-    replacement = optResult.second;
-    return make_pair(changeMade, mpark::get<ExprRef<ExprViewType>>(path.expr));
+pair<bool, ExprRef<ExprViewType>> OpCatchUndef<ExprViewType>::optimiseImpl(
+    ExprRef<ExprViewType>&, PathExtension path) {
+    bool optimised = false;
+    auto newOp = make_shared<OpCatchUndef<ExprViewType>>(expr, replacement);
+    AnyExprRef newOpAsExpr((ExprRef<ExprViewType>(newOp)));
+    optimised |= optimise(newOpAsExpr, newOp->expr, path);
+    optimised |= optimise(newOpAsExpr, newOp->replacement, path);
+    return make_pair(optimised, newOp);
 }
 
 template <typename ExprViewType>

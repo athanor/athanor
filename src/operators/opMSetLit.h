@@ -25,7 +25,8 @@ struct OpMSetLit : public MSetView {
         const ExprRef<MSetView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool, ExprRef<MSetView>> optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<MSetView>> optimiseImpl(ExprRef<MSetView>&,
+                                                    PathExtension path) final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };

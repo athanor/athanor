@@ -64,7 +64,7 @@ struct OpAllDiff
                                  ViolationContainer& vioContainer) final;
     void copy(OpAllDiff& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
-    bool optimiseImpl(const PathExtension&);
+    
     void assertValidState();
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;

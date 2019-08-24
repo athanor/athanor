@@ -50,8 +50,9 @@ ExprRef<SequenceView> EnumRange::deepCopyForUnrollImpl(
     return self;
 }
 
-pair<bool, ExprRef<SequenceView>> EnumRange::optimise(PathExtension path) {
-    return make_pair(false, mpark::get<ExprRef<SequenceView>>(path.expr));
+pair<bool, ExprRef<SequenceView>> EnumRange::optimiseImpl(
+    ExprRef<SequenceView>& self, PathExtension) {
+    return make_pair(false, self);
 }
 
 void EnumRange::findAndReplaceSelf(const FindAndReplaceFunction&) {}

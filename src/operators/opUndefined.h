@@ -27,7 +27,8 @@ struct OpUndefined : public ExprInterface<View>, public TriggerContainer<View> {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 
-    std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<View>> optimiseImpl(ExprRef<View>&,
+                                                PathExtension path) final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };

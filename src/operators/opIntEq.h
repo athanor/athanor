@@ -27,6 +27,7 @@ struct OpIntEq : public SimpleBinaryOperator<BoolView, IntView, OpIntEq> {
     std::ostream& dumpState(std::ostream& os) const final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
-    bool optimiseImpl(const PathExtension&);
+    std::pair<bool, ExprRef<BoolView>> optimiseImpl(ExprRef<BoolView>& self,
+                                                    PathExtension path) final;
 };
 #endif /* SRC_OPERATORS_OPINTEQ_H_ */

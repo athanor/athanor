@@ -75,7 +75,6 @@ struct Quantifier : public SequenceView {
 
     Quantifier(ExprRef<ContainerType> container, const int id = nextQuantId())
         : quantId(id), container(std::move(container)) {}
-    Quantifier(Quantifier<ContainerType>&&) = delete;
     inline void setExpression(AnyExprRef exprIn) {
         expr = std::move(exprIn);
         mpark::visit(
@@ -137,7 +136,8 @@ struct Quantifier : public SequenceView {
 
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 
-    std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension path);
+    std::pair<bool, ExprRef<SequenceView>> optimiseImpl(
+        ExprRef<SequenceView>& self, PathExtension path);
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };

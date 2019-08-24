@@ -25,9 +25,10 @@ struct OpOr : public SimpleUnaryOperator<BoolView, SequenceView, OpOr> {
     void copy(OpOr& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
 
-    bool optimiseImpl(const PathExtension&);
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
+    std::pair<bool, ExprRef<BoolView>> optimiseImpl(ExprRef<BoolView>&,
+                                                    PathExtension path) final;
 };
 
 #endif /* SRC_OPERATORS_OPOR_H_ */

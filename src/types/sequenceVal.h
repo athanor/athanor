@@ -372,7 +372,8 @@ struct SequenceValue : public SequenceView, public ValBase {
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension) final;
+    std::pair<bool, ExprRef<SequenceView>> optimiseImpl(ExprRef<SequenceView>&,
+                                                        PathExtension) final;
     void assertValidState();
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;

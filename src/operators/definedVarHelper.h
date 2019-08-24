@@ -7,7 +7,7 @@
 extern bool allowForwardingOfDefiningExprs;
 class DefinesLock {
     static UInt64 globalStamp;
-    UInt64 localStamp = 0;
+    UInt64 localStamp = std::numeric_limits<UInt64>().max();
 
    public:
     // try to acquire this lock, this will only return  true once  per round of

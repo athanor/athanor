@@ -58,8 +58,8 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType>,
     void reevaluate();
     bool allowForwardingOfTrigger();
     lib::optional<UInt> calculateIndex() const;
-    std::pair<bool, ExprRef<FunctionMemberViewType>> optimise(
-        PathExtension path) final;
+    std::pair<bool, ExprRef<FunctionMemberViewType>> optimiseImpl(
+        ExprRef<FunctionMemberViewType>&, PathExtension path) final;
 
     void reattachFunctionMemberTrigger();
     bool eventForwardedAsDefinednessChange();

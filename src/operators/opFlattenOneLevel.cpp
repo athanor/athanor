@@ -403,9 +403,12 @@ void OpFlattenOneLevel<SequenceInnerType>::findAndReplaceSelf(
 
 template <typename SequenceInnerType>
 std::pair<bool, ExprRef<SequenceView>>
-OpFlattenOneLevel<SequenceInnerType>::optimise(PathExtension path) {
-    return make_pair(operand->optimise(path.extend(operand)).first,
-                     mpark::get<ExprRef<SequenceView>>(path.expr));
+OpFlattenOneLevel<SequenceInnerType>::optimiseImpl(ExprRef<SequenceView>&,
+                                                   PathExtension path) {
+    auto newOp = make_shared<OpFlattenOneLevel>(operand);
+    bool optimised = false;
+    optimised |= optimise(ExprRef<SequenceView>(newOp), newOp->operand, path);
+    return make_pair(optimised, newOp);
 }
 template <typename SequenceInnerType>
 string OpFlattenOneLevel<SequenceInnerType>::getOpName() const {

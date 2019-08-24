@@ -33,7 +33,8 @@ struct OpFlattenOneLevel : public SequenceView {
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 
     std::ostream& dumpState(std::ostream& os) const final;
-    std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<SequenceView>> optimiseImpl(
+        ExprRef<SequenceView>&, PathExtension path) final;
     void reattachAllInnerSequenceTriggers(bool deleteFirst);
     void assertValidStartingIndices() const;
     std::string getOpName() const final;

@@ -428,21 +428,19 @@ void OpFunctionImage<FunctionMemberViewType>::findAndReplaceSelf(
 }
 template <typename FunctionMemberViewType>
 pair<bool, ExprRef<FunctionMemberViewType>>
-OpFunctionImage<FunctionMemberViewType>::optimise(PathExtension path) {
-    bool changeMade = false;
-    auto optResult = functionOperand->optimise(path.extend(functionOperand));
-    changeMade |= optResult.first;
-    functionOperand = optResult.second;
+OpFunctionImage<FunctionMemberViewType>::optimiseImpl(
+    ExprRef<FunctionMemberViewType>&, PathExtension path) {
+    bool optimised = false;
+    auto newOp = make_shared<OpFunctionImage<FunctionMemberViewType>>(
+        functionOperand, preImageOperand);
+    AnyExprRef newOpAsExpr = ExprRef<FunctionMemberViewType>(newOp);
+    optimised |= optimise(newOpAsExpr, newOp->functionOperand, path);
     mpark::visit(
         [&](auto& preImageOperand) {
-            auto optResult =
-                preImageOperand->optimise(path.extend(preImageOperand));
-            changeMade |= optResult.first;
-            preImageOperand = optResult.second;
+            optimised |= optimise(newOpAsExpr, preImageOperand, path);
         },
-        preImageOperand);
-    return make_pair(changeMade,
-                     mpark::get<ExprRef<FunctionMemberViewType>>(path.expr));
+        newOp->preImageOperand);
+    return make_pair(optimised, newOp);
 }
 
 template <typename FunctionMemberViewType>

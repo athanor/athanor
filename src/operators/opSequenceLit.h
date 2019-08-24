@@ -25,7 +25,8 @@ struct OpSequenceLit : public SequenceView {
         const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool, ExprRef<SequenceView>> optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<SequenceView>> optimiseImpl(
+        ExprRef<SequenceView>&, PathExtension path) final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
     AnyExprVec& getChildrenOperands() final;

@@ -45,7 +45,8 @@ struct OpSetLit : public SetView {
         const ExprRef<SetView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool, ExprRef<SetView>> optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<SetView>> optimiseImpl(ExprRef<SetView>&,
+                                                   PathExtension path) final;
     void assertValidHashes();
     template <typename View>
     ExprRefVec<View>& getOperands() {

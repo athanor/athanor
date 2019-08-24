@@ -161,18 +161,20 @@ void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         members);
 }
 
-pair<bool, ExprRef<SequenceView>> OpSequenceLit::optimise(PathExtension path) {
-    bool changeMade = false;
+pair<bool, ExprRef<SequenceView>> OpSequenceLit::optimiseImpl(
+    ExprRef<SequenceView>&, PathExtension path) {
+    auto newOp = make_shared<OpSequenceLit>(members);
+    AnyExprRef newOpAsExpr = ExprRef<SequenceView>(newOp);
+    bool optimised = false;
     mpark::visit(
-        [&](auto& members) {
-            for (auto& member : members) {
-                auto optResult = member->optimise(path.extend(member));
-                changeMade |= optResult.first;
-                member = optResult.second;
+        [&](auto& operands) {
+            for (auto& operand : operands) {
+                optimised |= optimise(newOpAsExpr, operand, path);
             }
         },
-        this->members);
-    return make_pair(changeMade, mpark::get<ExprRef<SequenceView>>(path.expr));
+        newOp->members);
+
+    return std::make_pair(optimised, newOp);
 }
 
 string OpSequenceLit::getOpName() const { return "OpSequenceLit"; }

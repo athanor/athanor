@@ -86,7 +86,8 @@ struct TupleValue : public TupleView, public ValBase {
         const ExprRef<TupleView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool, ExprRef<TupleView>> optimise(PathExtension) final;
+    std::pair<bool, ExprRef<TupleView>> optimiseImpl(ExprRef<TupleView>&,
+                                                     PathExtension) final;
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;
 };

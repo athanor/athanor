@@ -267,8 +267,11 @@ std::ostream& OpMinMax<minMode>::dumpState(std::ostream& os) const {
 }
 
 template <bool minMode>
-bool OpMinMax<minMode>::optimiseImpl(const PathExtension&) {
-    return flatten<IntView>(*this);
+std::pair<bool, ExprRef<IntView>> OpMinMax<minMode>::optimiseImpl(
+    ExprRef<IntView>& self, PathExtension path) {
+    auto boolOpPair = this->standardOptimise(self, path);
+    boolOpPair.first |= flatten<IntView>(*(boolOpPair.second));
+    return boolOpPair;
 }
 template <bool minMode>
 string OpMinMax<minMode>::getOpName() const {

@@ -54,8 +54,10 @@ template <typename View>
 void OpUndefined<View>::findAndReplaceSelf(const FindAndReplaceFunction&) {}
 
 template <typename View>
-pair<bool, ExprRef<View>> OpUndefined<View>::optimise(PathExtension path) {
-    return make_pair(false, mpark::get<ExprRef<View>>(path.expr));
+pair<bool, ExprRef<View>> OpUndefined<View>::optimiseImpl(ExprRef<View>& self,
+                                                          PathExtension) {
+    return make_pair(false, self);
+    ;
 }
 
 template <typename View>

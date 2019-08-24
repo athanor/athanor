@@ -66,21 +66,19 @@ lib::optional<ExprRef<BoolView>> extractBuriedConditionFromOpProd(
 // this function below
 
 template <typename Quant>
-void addToCondition(Quant& quant, ExprRef<BoolView> newCondition,
-                    PathExtension& path) {
+void addToCondition(Quant& quant, ExprRef<BoolView> newCondition) {
     if (quant.condition) {
         quant.condition = OpMaker<OpAnd>::make(OpMaker<OpSequenceLit>::make(
             ExprRefVec<BoolView>({quant.condition, newCondition})));
     } else {
         quant.condition = newCondition;
     }
-    quant.condition->optimise(path.extend(quant.condition));
 }
 template <typename Quant>
 bool tryPromotingSubExpressionsToConditions(Quant& quant,
                                             ExprRef<IntView>& expr,
                                             PathExtension& path) {
-    if (path.parent == NULL || !isOpSum(path.parent->expr)) {
+    if (path.isTop() || !isOpSum(path.expr)) {
         return false;
     }
     auto opProdTest = getAs<OpProd>(expr);
@@ -97,7 +95,7 @@ bool tryPromotingSubExpressionsToConditions(Quant& quant,
             "Optimise: moving opToInt condition from OpProd to the condition "
             "of "
             "the quantifier");
-        addToCondition(quant, *newConditionOption, path);
+        addToCondition(quant, *newConditionOption);
         return true;
     } else {
         return false;
@@ -108,7 +106,7 @@ template <typename Quant>
 bool tryPromotingSubExpressionsToConditions(Quant& quant,
                                             ExprRef<BoolView>& expr,
                                             PathExtension& path) {
-    if (path.parent == NULL || !isOpAnd(path.parent->expr)) {
+    if (path.isTop() || !isOpAnd(path.expr)) {
         return false;
     }
     auto opImpliesTest = getAs<OpImplies>(expr);
@@ -116,7 +114,7 @@ bool tryPromotingSubExpressionsToConditions(Quant& quant,
         debug_log(
             "Optimise: moving OpImplies condition to the condition of "
             "the quantifier");
-        addToCondition(quant, opImpliesTest->left, path);
+        addToCondition(quant, opImpliesTest->left);
         quant.setExpression(opImpliesTest->right);
         return true;
     } else {
@@ -258,34 +256,31 @@ bool optimiseIfIntRangeWithConditions(Quantifier& quant) {
 }
 
 template <typename ContainerType>
-pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimise(
-    PathExtension path) {
-    bool changeMade = false;
-    auto optResult = container->optimise(path.extend(container));
-    changeMade |= optResult.first;
-    container = optResult.second;
-    if (condition) {
-        auto optResult = condition->optimise(path.extend(condition, true));
-        changeMade |= optResult.first;
-        condition = optResult.second;
+pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimiseImpl(
+    ExprRef<SequenceView>&, PathExtension path) {
+    bool optimised = false;
+    auto newOp = make_shared<Quantifier<ContainerType>>(*this);
+    auto newOpAsExpr = ExprRef<SequenceView>(newOp);
+    optimised |= optimise(newOpAsExpr, newOp->container, path);
+    if (newOp->condition) {
+        optimised |= optimise(newOpAsExpr, newOp->condition, path, true);
     }
 
     mpark::visit(
         [&](auto& expr) {
-            auto optResult = expr->optimise(path.extend(expr));
-            changeMade |= optResult.first;
-            expr = optResult.second;
-            changeMade |=
-                tryPromotingSubExpressionsToConditions(*this, expr, path);
+            optimised |= optimise(newOpAsExpr, expr, path);
+            optimised |=
+                tryPromotingSubExpressionsToConditions(*newOp, expr, path);
         },
-        expr);
-    changeMade |= optimiseIfIntRangeWithConditions(*this);
-    return make_pair(changeMade, mpark::get<ExprRef<SequenceView>>(path.expr));
+        newOp->expr);
+    optimised |= optimiseIfIntRangeWithConditions(*newOp);
+    return make_pair(optimised, newOpAsExpr);
 }
 
-#define exportOptimiseFunction(name)           \
-    template pair<bool, ExprRef<SequenceView>> \
-    Quantifier<name##View>::optimise(PathExtension path);
+#define exportOptimiseFunction(name)                             \
+    template pair<bool, ExprRef<SequenceView>>                   \
+    Quantifier<name##View>::optimiseImpl(ExprRef<SequenceView>&, \
+                                         PathExtension path);
 
 exportOptimiseFunction(Set);
 exportOptimiseFunction(MSet);

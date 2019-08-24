@@ -52,8 +52,8 @@ struct OpSequenceIndex : public ExprInterface<SequenceMemberViewType>,
     OptionalRef<ExprRef<SequenceMemberViewType>> getMember();
     OptionalRef<const ExprRef<SequenceMemberViewType>> getMember() const;
     void reevaluate();
-    std::pair<bool, ExprRef<SequenceMemberViewType>> optimise(
-        PathExtension path) final;
+    std::pair<bool, ExprRef<SequenceMemberViewType>> optimiseImpl(
+        ExprRef<SequenceMemberViewType>&, PathExtension path) final;
 
     void reattachSequenceMemberTrigger();
     bool eventForwardedAsDefinednessChange();

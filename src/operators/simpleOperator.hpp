@@ -77,23 +77,26 @@ void SimpleBinaryOperator<View, OperandView, Derived>::findAndReplaceSelf(
 }
 
 template <typename View, typename OperandView, typename Derived>
-bool SimpleBinaryOperator<View, OperandView, Derived>::optimiseImpl(
-    const PathExtension&) {
-    return false;
+std::pair<bool, std::shared_ptr<Derived>>
+SimpleBinaryOperator<View, OperandView, Derived>::standardOptimise(
+    ExprRef<View>&, PathExtension& path) {
+    auto newOp = std::make_shared<Derived>(left, right);
+    derived().copy(*newOp);
+    bool optimised = false;
+    optimised |= optimise(ExprRef<View>(newOp), newOp->left, path);
+    optimised |= optimise(ExprRef<View>(newOp), newOp->right, path);
+    return std::make_pair(optimised, newOp);
 }
 
+// this assumes that Derived can be constructed with operands left and right, if
+// we ever get to a point that one of them cannot, use the arrow return type
+// trick to  disable this function. i.e. use auto ...::optimise(...)  ->
+// decltype(std::make_shared<Derived>) instead of
 template <typename View, typename OperandView, typename Derived>
 std::pair<bool, ExprRef<View>>
-SimpleBinaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
-    bool changeMade = false;
-    auto leftOptResult = left->optimise(path.extend(left));
-    changeMade |= leftOptResult.first;
-    left = leftOptResult.second;
-    auto rightOptResult = right->optimise(path.extend(right));
-    changeMade |= rightOptResult.first;
-    right = rightOptResult.second;
-    changeMade |= derived().optimiseImpl(path);
-    return std::make_pair(changeMade, mpark::get<ExprRef<View>>(path.expr));
+SimpleBinaryOperator<View, OperandView, Derived>::optimiseImpl(
+    ExprRef<View>& self, PathExtension path) {
+    return standardOptimise(self, path);
 }
 
 template <typename View, typename OperandView, typename Derived>
@@ -172,20 +175,27 @@ void SimpleUnaryOperator<View, OperandView, Derived>::findAndReplaceSelf(
 }
 
 template <typename View, typename OperandView, typename Derived>
-bool SimpleUnaryOperator<View, OperandView, Derived>::optimiseImpl(
-    const PathExtension&) {
-    return false;
+std::pair<bool, std::shared_ptr<Derived>>
+SimpleUnaryOperator<View, OperandView, Derived>::standardOptimise(
+    ExprRef<View>&, PathExtension& path) {
+    auto newOp = std::make_shared<Derived>(operand);
+    derived().copy(*newOp);
+    bool optimised = false;
+    optimised |= optimise(ExprRef<View>(newOp), newOp->operand, path);
+    return std::make_pair(optimised, newOp);
 }
+
+// this assumes that Derived can be constructed with member operand, if we ever
+// get to a point that one of them cannot, use the arrow return type trick to
+// disable this function. i.e. use auto ...::optimise(...)  ->
+// decltype(std::make_shared<Derived>) instead of
 template <typename View, typename OperandView, typename Derived>
 std::pair<bool, ExprRef<View>>
-SimpleUnaryOperator<View, OperandView, Derived>::optimise(PathExtension path) {
-    bool changeMade = false;
-    auto optResult = operand->optimise(path.extend(operand));
-    changeMade |= optResult.first;
-    operand = optResult.second;
-    changeMade |= derived().optimiseImpl(path);
-    return std::make_pair(changeMade, mpark::get<ExprRef<View>>(path.expr));
+SimpleUnaryOperator<View, OperandView, Derived>::optimiseImpl(
+    ExprRef<View>& self, PathExtension path) {
+    return standardOptimise(self, path);
 }
+
 template <typename View, typename OperandView, typename Derived>
 void SimpleUnaryOperator<View, OperandView,
                          Derived>::standardSanityDefinednessChecks() const {

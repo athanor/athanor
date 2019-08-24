@@ -115,7 +115,7 @@ class State {
             return;
         }
         vioContainer.reset();
-        if (model.csp->violation == 0) {
+        if (model.csp->view()->violation == 0) {
             return;
         }
         model.csp->updateVarViolations(0, vioContainer);

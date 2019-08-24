@@ -254,13 +254,14 @@ void OpTupleIndex<TupleMemberViewType>::findAndReplaceSelf(
 
 template <typename TupleMemberViewType>
 pair<bool, ExprRef<TupleMemberViewType>>
-OpTupleIndex<TupleMemberViewType>::optimise(PathExtension path) {
-    bool changeMade = false;
-    auto optResult = tupleOperand->optimise(path.extend(tupleOperand));
-    changeMade |= optResult.first;
-    tupleOperand = optResult.second;
-    return make_pair(changeMade,
-                     mpark::get<ExprRef<TupleMemberViewType>>(path.expr));
+OpTupleIndex<TupleMemberViewType>::optimiseImpl(ExprRef<TupleMemberViewType>&,
+                                            PathExtension path) {
+    bool optimised = false;
+    auto newOp = make_shared<OpTupleIndex<TupleMemberViewType>>(tupleOperand,
+                                                                indexOperand);
+    AnyExprRef newOpAsExpr = ExprRef<TupleMemberViewType>(newOp);
+    optimised |= optimise(newOpAsExpr, newOp->tupleOperand, path);
+    return make_pair(optimised, newOp);
 }
 
 template <typename TupleMemberViewType>

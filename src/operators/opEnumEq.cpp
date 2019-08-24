@@ -28,17 +28,22 @@ void OpEnumEq::updateVarViolationsImpl(const ViolationContext&,
 
 void OpEnumEq::copy(OpEnumEq& newOp) const {
     newOp.violation = violation;
-    if (definesLock.isDisabled()) {
-        newOp.definesLock.disable();
+    if (!definesLock.isDisabled()) {
+        newOp.definesLock.reset();
     }
 }
-bool OpEnumEq::optimiseImpl(const PathExtension& path) {
+
+pair<bool, ExprRef<BoolView>> OpEnumEq::optimiseImpl(ExprRef<BoolView>& self,
+                                                     PathExtension path) {
+    auto newOp = standardOptimise(self, path);
+    newOp.second->definesLock = definesLock;
     if (isSuitableForDefiningVars(path)) {
-        return definesLock.reset();
+        newOp.first |= newOp.second->definesLock.reset();
     } else {
         definesLock.disable();
-        return false;
+        newOp.second->definesLock.disable();
     }
+    return newOp;
 }
 
 ostream& OpEnumEq::dumpState(ostream& os) const {

@@ -236,8 +236,11 @@ std::ostream& OpProd::dumpState(std::ostream& os) const {
     return operand->dumpState(os);
 }
 
-bool OpProd::optimiseImpl(const PathExtension&) {
-    return flatten<IntView>(*this);
+std::pair<bool, ExprRef<IntView>> OpProd::optimiseImpl(ExprRef<IntView>& self,
+                                                       PathExtension path) {
+    auto boolOpPair = standardOptimise(self, path);
+    boolOpPair.first |= flatten<IntView>(*(boolOpPair.second));
+    return boolOpPair;
 }
 
 string OpProd::getOpName() const { return "OpProd"; }

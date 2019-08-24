@@ -32,7 +32,8 @@ struct OpAnd : public SimpleUnaryOperator<BoolView, SequenceView, OpAnd> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpAnd& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
-    bool optimiseImpl(const PathExtension&);
+    std::pair<bool, ExprRef<BoolView>> optimiseImpl(ExprRef<BoolView>&,
+                                                    PathExtension path) final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };

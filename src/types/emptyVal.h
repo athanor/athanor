@@ -24,7 +24,8 @@ struct EmptyValue : public EmptyView, public ValBase {
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool, ExprRef<EmptyView>> optimise(PathExtension) final;
+    std::pair<bool, ExprRef<EmptyView>> optimiseImpl(ExprRef<EmptyView>&,
+                                                     PathExtension) final;
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;
 };

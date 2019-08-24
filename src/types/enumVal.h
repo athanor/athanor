@@ -67,7 +67,8 @@ struct EnumValue : public EnumView, ValBase {
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool, ExprRef<EnumView>> optimise(PathExtension) final;
+    std::pair<bool, ExprRef<EnumView>> optimiseImpl(ExprRef<EnumView>&,
+                                                    PathExtension) final;
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;
 };

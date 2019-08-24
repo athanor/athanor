@@ -43,7 +43,8 @@ struct OpCatchUndef : public ExprInterface<ExprViewType>,
     ExprRef<ExprViewType>& getMember();
     const ExprRef<ExprViewType>& getMember() const;
     void reevaluate();
-    std::pair<bool, ExprRef<ExprViewType>> optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<ExprViewType>> optimiseImpl(
+        ExprRef<ExprViewType>&, PathExtension path) final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };

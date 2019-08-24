@@ -49,42 +49,53 @@ void ModelBuilder::addConstraints() {
     for (auto& indexExprPair : model.definingExpressions) {
         size_t varIndex = indexExprPair.first;
         debug_code(assert(varIndex < model.variables.size()));
-        auto& expr = indexExprPair.second;
         mpark::visit(
-            [&](auto& expr) {
-                typedef viewType(expr) View;
-                typedef typename AssociatedValueType<View>::type Value;
+            [&](auto& var) {
+                typedef valType(var) Value;
+                typedef typename AssociatedViewType<Value>::type View;
                 typedef typename AssociatedDomain<Value>::type Domain;
                 if (is_same<Domain, BoolDomain>::value) {
                     return;
                 }
                 auto& domain = mpark::get<shared_ptr<Domain>>(
                     model.variables[varIndex].first);
-                addConstraint(OpMaker<OpInDomain<View>>::make(domain, expr));
+                /*we don't actually put the OpInDomain constraint on the expr
+                 * directly.  Instead, we put it on the variable.  Later after
+                 * optimisations have been applied, all instances of the
+                 * variable will be replaced withthe the defining expression. */
+                addConstraint(
+                    OpMaker<OpInDomain<View>>::make(domain, var.asExpr()));
             },
-            expr);
+            model.variables[varIndex].second);
     }
     model.csp =
         make_shared<OpAnd>(make_shared<OpSequenceLit>(move(constraints)));
 }
 
 template <typename View>
-void optimiseExpr(ExprRef<View> expr) {
-    while (expr->optimise(PathExtension::begin(expr)).first) {
+void optimiseExpr(ExprRef<View>& expr) {
+    while (::optimise(expr)) {
+        // repeat until no more optimisations
     }
 }
-Model ModelBuilder::build() {
-    clock_t startBuildTime = clock();
-    addConstraints();
-    createNeighbourhoods();
-    substituteVarsToBeDefined();
-    optimiseExpr<BoolView>(model.csp);
+
+static void optimiseModel(Model& model) {
+    optimiseExpr(model.csp);
     for (auto& nameExprPair : model.definingExpressions) {
         mpark::visit([&](auto& expr) { optimiseExpr(expr); },
                      nameExprPair.second);
     }
     mpark::visit([&](auto& objective) { optimiseExpr(objective); },
                  model.objective);
+}
+
+Model ModelBuilder::build() {
+    clock_t startBuildTime = clock();
+    addConstraints();
+    createNeighbourhoods();
+    optimiseModel(model);
+    substituteVarsToBeDefined();
+    optimiseModel(model);
     clock_t endBuildTime = clock();
     cout << "Model build time (CPU): "
          << ((double)(endBuildTime - startBuildTime) / CLOCKS_PER_SEC) << "s\n";
@@ -95,7 +106,7 @@ void ModelBuilder::substituteVarsToBeDefined() {
     for (auto& var : varsToBeDefined) {
         auto func = makeFindReplaceFunc(
             var, model.definingExpressions.at(valBase(var).id));
-        model.csp->operand = findAndReplace(model.csp->operand, func);
+        model.csp = findAndReplace(model.csp, func);
         mpark::visit(
             [&](auto& objective) {
                 objective = findAndReplace(objective, func);

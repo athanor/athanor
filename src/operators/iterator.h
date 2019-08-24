@@ -43,7 +43,8 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
 
-    std::pair<bool, ExprRef<View>> optimise(PathExtension path) final;
+    std::pair<bool, ExprRef<View>> optimiseImpl(ExprRef<View>&,
+                                                PathExtension path) final;
     template <typename IterView = View,
               typename std::enable_if<std::is_same<BoolView, IterView>::value,
                                       int>::type = 0>

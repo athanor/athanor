@@ -128,15 +128,9 @@ void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction& func) {
 }
 
 template <typename View>
-pair<bool, ExprRef<View>> Iterator<View>::optimise(PathExtension path) {
-    auto returnExpr = mpark::get<ExprRef<View>>(path.expr);
-    if (!ref) {
-        return make_pair(false, returnExpr);
-    }
-
-    auto result = ref->optimise(path.extend(ref));
-    ref = result.second;
-    return make_pair(result.first, returnExpr);
+pair<bool, ExprRef<View>> Iterator<View>::optimiseImpl(ExprRef<View>& self,
+                                                   PathExtension) {
+    return make_pair(false, self);
 }
 
 std::ostream& operator<<(std::ostream& os, const AnyIterRef& ref) {

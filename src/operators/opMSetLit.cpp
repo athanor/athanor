@@ -159,18 +159,20 @@ void OpMSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         members);
 }
 
-pair<bool, ExprRef<MSetView>> OpMSetLit::optimise(PathExtension path) {
-    bool changeMade = false;
+pair<bool, ExprRef<MSetView>> OpMSetLit::optimiseImpl(ExprRef<MSetView>&,
+                                                      PathExtension path) {
+    auto newOp = make_shared<OpMSetLit>(members);
+    AnyExprRef newOpAsExpr = ExprRef<MSetView>(newOp);
+    bool optimised = false;
     mpark::visit(
-        [&](auto& members) {
-            for (auto& member : members) {
-                auto optResult = member->optimise(path.extend(member));
-                changeMade |= optResult.first;
-                member = optResult.second;
+        [&](auto& operands) {
+            for (auto& operand : operands) {
+                optimised |= optimise(newOpAsExpr, operand, path);
             }
         },
-        this->members);
-    return make_pair(changeMade, mpark::get<ExprRef<MSetView>>(path.expr));
+        newOp->members);
+
+    return std::make_pair(optimised, newOp);
 }
 
 string OpMSetLit::getOpName() const { return "OpMSetLit"; }

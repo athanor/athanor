@@ -159,19 +159,16 @@ void OpIn::findAndReplaceSelf(const FindAndReplaceFunction& func) {
     setOperand->findAndReplaceSelf(func);
 }
 
-pair<bool, ExprRef<BoolView>> OpIn::optimise(PathExtension path) {
-    bool changeMade = false;
+pair<bool, ExprRef<BoolView>> OpIn::optimiseImpl(ExprRef<BoolView>&,
+                                                 PathExtension path) {
+    auto newOp = make_shared<OpIn>(expr, setOperand);
+    AnyExprRef newOpAsExpr = ExprRef<BoolView>(newOp);
+    bool optimised = false;
     mpark::visit(
-        [&](auto& expr) {
-            auto optResult = expr->optimise(path.extend(expr));
-            changeMade |= optResult.first;
-            expr = optResult.second;
-        },
-        expr);
-    auto optResult = setOperand->optimise(path.extend(setOperand));
-    changeMade |= optResult.first;
-    setOperand = optResult.second;
-    return make_pair(changeMade, mpark::get<ExprRef<BoolView>>(path.expr));
+        [&](auto& expr) { optimised |= optimise(newOpAsExpr, expr, path); },
+        newOp->expr);
+    optimised |= optimise(newOpAsExpr, newOp->setOperand, path);
+    return make_pair(optimised, newOp);
 }
 
 string OpIn::getOpName() const { return "OpIn"; }

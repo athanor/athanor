@@ -184,8 +184,11 @@ std::ostream& OpOr::dumpState(std::ostream& os) const {
     return operand->dumpState(os);
 }
 
-bool OpOr::optimiseImpl(const PathExtension&) {
-    return flatten<BoolView>(*this);
+std::pair<bool, ExprRef<BoolView>> OpOr::optimiseImpl(ExprRef<BoolView>& self,
+                                                      PathExtension path) {
+    auto boolOpPair = standardOptimise(self, path);
+    boolOpPair.first |= flatten<BoolView>(*(boolOpPair.second));
+    return boolOpPair;
 }
 
 string OpOr::getOpName() const { return "OpOr"; }

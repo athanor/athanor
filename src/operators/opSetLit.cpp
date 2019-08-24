@@ -280,40 +280,20 @@ void OpSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
         operands);
 }
 
-pair<bool, ExprRef<SetView>> OpSetLit::optimise(PathExtension path) {
-    auto returnExpr = mpark::get<ExprRef<SetView>>(path.expr);
-    bool changeMade = false;
+pair<bool, ExprRef<SetView>> OpSetLit::optimiseImpl(ExprRef<SetView>&,
+                                                    PathExtension path) {
+    auto newOp = std::make_shared<OpSetLit>(operands);
+    AnyExprRef newOpAsExpr = ExprRef<SetView>(newOp);
+    bool optimised = false;
     mpark::visit(
         [&](auto& operands) {
             for (auto& operand : operands) {
-                auto optResult = operand->optimise(path.extend(operand));
-                changeMade |= optResult.first;
-                operand = optResult.second;
-            }
-            typedef viewType(operands) View;
-            ExprInterface<SetView>* commonSet = NULL;
-            OpSetIndexInternal<View>* setIndexTest = NULL;
-            bool first = true;
-            for (auto& operand : operands) {
-                setIndexTest =
-                    dynamic_cast<OpSetIndexInternal<View>*>(&(*operand));
-                if (!setIndexTest) {
-                    commonSet = NULL;
-                    break;
-                }
-                if (first) {
-                    commonSet = &(*(setIndexTest->setOperand));
-                } else if (commonSet != &(*(setIndexTest->setOperand))) {
-                    commonSet = NULL;
-                    break;
-                }
-            }
-            if (commonSet) {
-                returnExpr = setIndexTest->setOperand;
+                optimised |= optimise(newOpAsExpr, operand, path);
             }
         },
-        this->operands);
-    return make_pair(changeMade, returnExpr);
+        newOp->operands);
+
+    return std::make_pair(optimised, newOp);
 }
 
 void OpSetLit::assertValidHashes() {

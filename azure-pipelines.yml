@@ -20,7 +20,7 @@ jobs:
   pool:
     vmImage: $(imageName)
   steps:
-  - bash: export CXX=$(compiler) make
+  - bash: CXX=$(compiler) make
     displayName: "Build Athanor"
   - bash: echo In this step we download conjure for os $(os)
     displayName: "Download Conjure"

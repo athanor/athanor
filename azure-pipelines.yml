@@ -1,19 +1,26 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
 
 trigger:
 - master
 
-pool:
-  vmImage: 'ubuntu-latest'
+jobs:
+- job: Athanor
+  timeoutInMinutes: 0
+  strategy:
+    matrix:
+      Linux:
+        imageName: 'ubuntu-latest'
+        os: linux
+      Mac:
+        imageName: 'macos-latest'
+        os: mac
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+  pool:
+    vmImage: $(imageName)
+  steps:
+  - bash: make
+    displayName: "Build Athanor"
+  - bash: echo In this step we download conjure for os $(os)
+    displayName: "Download Conjure"
+  - bash: echo Here we run the tests.
+    displayName: "Run the tests"

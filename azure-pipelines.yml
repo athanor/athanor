@@ -10,15 +10,17 @@ jobs:
       Linux:
         imageName: 'ubuntu-latest'
         os: linux
+        compiler: g++-7
       Mac:
         imageName: 'macos-latest'
         os: mac
+        compiler: clang++
 
 
   pool:
     vmImage: $(imageName)
   steps:
-  - bash: make
+  - bash: export CXX=$(compiler) make
     displayName: "Build Athanor"
   - bash: echo In this step we download conjure for os $(os)
     displayName: "Download Conjure"

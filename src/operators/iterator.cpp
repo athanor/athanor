@@ -129,7 +129,7 @@ void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction& func) {
 
 template <typename View>
 pair<bool, ExprRef<View>> Iterator<View>::optimiseImpl(ExprRef<View>& self,
-                                                   PathExtension) {
+                                                       PathExtension) {
     return make_pair(false, self);
 }
 

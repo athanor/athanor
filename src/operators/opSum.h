@@ -25,13 +25,13 @@ struct OpSum : public SimpleUnaryOperator<IntView, SequenceView, OpSum> {
                                  ViolationContainer& vioContainer) final;
     void copy(OpSum& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
-    
+
     void addSingleValue(Int exprValue);
     void removeSingleValue(Int exprValue);
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
     std::pair<bool, ExprRef<IntView>> optimiseImpl(ExprRef<IntView>&,
-                                                    PathExtension path) final;
+                                                   PathExtension path) final;
 };
 
 #endif /* SRC_OPERATORS_OPSUM_H_ */

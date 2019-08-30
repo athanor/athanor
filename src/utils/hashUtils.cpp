@@ -38,6 +38,14 @@ bool HashType::operator!=(const HashType& other) const {
     return value != other.value;
 }
 
+bool HashType::operator<(const HashType& other) const {
+    return value < other.value;
+}
+
+bool HashType::operator<=(const HashType& other) const {
+    return value <= other.value;
+}
+
 std::ostream& operator<<(std::ostream& os, const HashType& val) {
     return os << val.value;
 }

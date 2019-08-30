@@ -18,18 +18,10 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType>,
     std::shared_ptr<TupleOperandTrigger> tupleOperandTrigger;
     std::shared_ptr<TupleOperandTrigger> tupleMemberTrigger;
     std::shared_ptr<MemberTrigger> memberTrigger;
+    bool exprDefined = false;
     OpTupleIndex(ExprRef<TupleView> tupleOperand, UInt indexOperand)
         : tupleOperand(std::move(tupleOperand)),
-          indexOperand(std::move(indexOperand)) {
-        if (std::is_same<BoolView, TupleMemberViewType>::value) {
-            myCerr << "I've temperarily disabled OpTupleIndex for "
-                      "tuples of booleans as "
-                      "I'm not correctly handling relational semantics "
-                      "forthe case where the tuple indexbecomes "
-                      "undefined.\n";
-            myAbort();
-        }
-    }
+          indexOperand(std::move(indexOperand)) {}
     OpTupleIndex(const OpTupleIndex<TupleMemberViewType>&) = delete;
     OpTupleIndex(OpTupleIndex<TupleMemberViewType>&&) = delete;
     ~OpTupleIndex() { this->stopTriggeringOnChildren(); }
@@ -58,21 +50,19 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType>,
         ExprRef<TupleMemberViewType>&, PathExtension path) final;
 
     void reattachTupleMemberTrigger();
+
     bool eventForwardedAsDefinednessChange();
     template <typename View = TupleMemberViewType,
               typename std::enable_if<std::is_same<BoolView, View>::value,
                                       int>::type = 0>
-    void setAppearsDefined(bool) {
-        myCerr << "Not handling tuple to bools where a tuple member "
-                  "becomes undefined.\n";
-        todoImpl();
-    }
+    void setAppearsDefined(bool) {}
     template <typename View = TupleMemberViewType,
               typename std::enable_if<!std::is_same<BoolView, View>::value,
                                       int>::type = 0>
     void setAppearsDefined(bool set) {
         Undefinable<View>::setAppearsDefined(set);
     }
+
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };

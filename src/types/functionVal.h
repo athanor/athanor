@@ -179,7 +179,8 @@ struct FunctionValue : public FunctionView, public ValBase {
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
     bool isUndefined();
-    std::pair<bool,ExprRef<FunctionView>> optimiseImpl(ExprRef<FunctionView>&, PathExtension) final;
+    std::pair<bool, ExprRef<FunctionView>> optimiseImpl(ExprRef<FunctionView>&,
+                                                        PathExtension) final;
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;
 };

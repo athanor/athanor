@@ -212,7 +212,7 @@ std::ostream& OpSum::dumpState(std::ostream& os) const {
 }
 
 std::pair<bool, ExprRef<IntView>> OpSum::optimiseImpl(ExprRef<IntView>& self,
-                                                       PathExtension path) {
+                                                      PathExtension path) {
     auto boolOpPair = standardOptimise(self, path);
     boolOpPair.first |= flatten<IntView>(*(boolOpPair.second));
     return boolOpPair;

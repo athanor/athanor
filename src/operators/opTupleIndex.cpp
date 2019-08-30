@@ -1,6 +1,7 @@
 #include "operators/opTupleIndex.h"
 #include <iostream>
 #include <memory>
+#include "operators/emptyOrViolatingOptional.h"
 #include "triggers/allTriggers.h"
 #include "types/tuple.h"
 #include "utils/ignoreUnused.h"
@@ -42,7 +43,7 @@ OptionalRef<TupleMemberViewType> OpTupleIndex<TupleMemberViewType>::view() {
     if (member) {
         return (*member)->view();
     } else {
-        return EmptyOptional();
+        return emptyOrViolatingOptional<TupleMemberViewType>();
     }
 }
 template <typename TupleMemberViewType>
@@ -52,7 +53,7 @@ OptionalRef<const TupleMemberViewType> OpTupleIndex<TupleMemberViewType>::view()
     if (member) {
         return (*member)->view();
     } else {
-        return EmptyOptional();
+        return emptyOrViolatingOptional<TupleMemberViewType>();
     }
 }
 
@@ -60,6 +61,7 @@ template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::reevaluate() {
     auto member = getMember();
     setAppearsDefined(member && (*member)->appearsDefined());
+    exprDefined = member && (*member)->appearsDefined();
 }
 template <typename TupleMemberViewType>
 bool OpTupleIndex<TupleMemberViewType>::allowForwardingOfTrigger() {
@@ -74,16 +76,24 @@ void OpTupleIndex<TupleMemberViewType>::evaluateImpl() {
 
 template <typename TupleMemberViewType>
 bool OpTupleIndex<TupleMemberViewType>::eventForwardedAsDefinednessChange() {
-    bool wasDefined = this->appearsDefined();
+    bool wasDefined = exprDefined;
     reevaluate();
-    if (wasDefined && !this->appearsDefined()) {
-        this->notifyValueUndefined();
+    if (wasDefined && !exprDefined) {
+        if (is_same<BoolView, TupleMemberViewType>::value) {
+            this->notifyEntireValueChanged();
+        } else {
+            this->notifyValueUndefined();
+        }
         return true;
-    } else if (!wasDefined && this->appearsDefined()) {
-        this->notifyValueDefined();
+    } else if (!wasDefined && exprDefined) {
+        if (is_same<BoolView, TupleMemberViewType>::value) {
+            this->notifyEntireValueChanged();
+        } else {
+            this->notifyValueDefined();
+        }
         return true;
     } else {
-        return !this->appearsDefined();
+        return !exprDefined;
     }
 }
 
@@ -229,6 +239,7 @@ OpTupleIndex<TupleMemberViewType>::deepCopyForUnrollImpl(
     const ExprRef<TupleMemberViewType>&, const AnyIterRef& iterator) const {
     auto newOpTupleIndex = make_shared<OpTupleIndex<TupleMemberViewType>>(
         tupleOperand->deepCopyForUnroll(tupleOperand, iterator), indexOperand);
+    newOpTupleIndex->exprDefined = exprDefined;
     return newOpTupleIndex;
 }
 
@@ -255,7 +266,7 @@ void OpTupleIndex<TupleMemberViewType>::findAndReplaceSelf(
 template <typename TupleMemberViewType>
 pair<bool, ExprRef<TupleMemberViewType>>
 OpTupleIndex<TupleMemberViewType>::optimiseImpl(ExprRef<TupleMemberViewType>&,
-                                            PathExtension path) {
+                                                PathExtension path) {
     bool optimised = false;
     auto newOp = make_shared<OpTupleIndex<TupleMemberViewType>>(tupleOperand,
                                                                 indexOperand);

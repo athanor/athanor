@@ -26,6 +26,8 @@ class HashType {
     friend HashType operator*(size_t repeatAmount, HashType hash);
     bool operator==(const HashType& other) const;
     bool operator!=(const HashType& other) const;
+    bool operator<(const HashType& other) const;
+    bool operator<=(const HashType& other) const;
     friend std::ostream& operator<<(std::ostream& os, const HashType& val);
     friend HashType mix(const HashType& hash);
 };

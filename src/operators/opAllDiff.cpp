@@ -244,8 +244,6 @@ std::ostream& OpAllDiff::dumpState(std::ostream& os) const {
     return operand->dumpState(os) << ")";
 }
 
-
-
 void OpAllDiff::assertValidState() {
     bool success = true;
     for (size_t i = 0; i < indicesHashMap.size(); i++) {

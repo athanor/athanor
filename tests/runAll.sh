@@ -137,3 +137,5 @@ fi
 echo "Number instances run: $numberInstances."
 
 
+
+exit $failedInstances

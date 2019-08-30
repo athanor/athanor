@@ -128,8 +128,8 @@ struct PartitionValue : public PartitionView, public ValBase {
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool,ExprRef<PartitionView>> optimiseImpl(ExprRef<PartitionView>&,
-                                    PathExtension) final;
+    std::pair<bool, ExprRef<PartitionView>> optimiseImpl(
+        ExprRef<PartitionView>&, PathExtension) final;
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;
 };

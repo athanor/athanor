@@ -201,7 +201,8 @@ struct MSetValue : public MSetView, public ValBase {
 
     std::ostream& dumpState(std::ostream& os) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction&) final;
-    std::pair<bool,ExprRef<MSetView>> optimiseImpl(ExprRef<MSetView>&, PathExtension) final;
+    std::pair<bool, ExprRef<MSetView>> optimiseImpl(ExprRef<MSetView>&,
+                                                    PathExtension) final;
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;
 };

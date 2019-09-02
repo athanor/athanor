@@ -10,7 +10,7 @@ jobs:
       Linux:
         imageName: 'ubuntu-latest'
         os: linux
-        compiler: g++-7
+        compiler: clang++
       Mac:
         imageName: 'macos-latest'
         os: mac

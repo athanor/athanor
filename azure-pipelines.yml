@@ -11,10 +11,12 @@ jobs:
         imageName: 'ubuntu-latest'
         os: linux
         compiler: clang++
+        conjureDownloadLink: https://github.com/conjure-cp/conjure/releases/download/v2.3.0/conjure-v2.3.0-linux.zip
       Mac:
         imageName: 'macos-latest'
         os: mac
         compiler: clang++
+        conjureDownloadLink: https://github.com/conjure-cp/conjure/releases/download/v2.3.0/conjure-v2.3.0-mac.zip
 
 
   pool:
@@ -22,7 +24,7 @@ jobs:
   steps:
   - bash: CXX=$(compiler) make
     displayName: "Build Athanor"
-  - bash: echo In this step we download conjure for os $(os)
-    displayName: "Download Conjure"
-  - bash: echo Here we run the tests.
-    displayName: "Run the tests"
+  - bash: rm -rf temp && mkdir temp && cd temp && curl -O $(conjureDownloadLink)
+    displayName: "Downloading Conjure"
+  - bash: PATH="$PWD/temp:${PATH}" cd tests && ./runAll.sh skipSanityCheck useReleaseBuild
+    displayName: "Running tests"

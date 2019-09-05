@@ -3,12 +3,16 @@
 #to use release build pass useReleaseBuild
 sanityCheckFlag="--sanity-check"
 useReleaseBuild=0
+dumpFilesOnError=0
 numberHeadTailSolutions=15
 for flag in $@ ; do
     if [[ "$flag" == "skipSanityCheck" ]] ; then
         sanityCheckFlag=""
     elif [[ "$flag" == "useReleaseBuild" ]] ; then
         useReleaseBuild=1
+    elif [[ "$flag" == "dumpFilesOnError" ]] ; then
+        dumpFilesOnError=1
+        
     else 
         echo "bad argument, see test docs." 1>&2
         exit 1
@@ -44,6 +48,12 @@ fi
 failedInstances=0
 numberInstances=0
 
+
+function maybeDump() {
+    if [ "$dumpFilesOnError" -ne 0 ] ; then
+        cat "$1"
+    fi
+}
 function markFailed() {
     ((failedInstances += 1))
     printf '\a'
@@ -57,8 +67,9 @@ function markPassed() {
 seed=$RANDOM
 
 function checkExitStatus() {
-    if [ "$exitStatus" -ne 0 ]
-    then markFailed "$outputDir" "Solver had non 0 exit code.  Could be sanity check error."
+    if [ "$exitStatus" -ne 0 ] ; then
+        maybeDump "$outputDir/solver-output.txt"
+        markFailed "$outputDir" "Solver had non 0 exit code.  Could be sanity check error."
         return 1
     fi
     return 0
@@ -75,6 +86,7 @@ function validateSolutions() {
         then if grep 'No solutions found' "$outputDir/validator-output.txt"  > /dev/null && grep -E '^\$testing:no-solutions' "$instance" > /dev/null
             then return 0
             fi
+            maybeDump "$outputDir/validator-output.txt"
             markFailed "outputDir" "validate solutions failed"
         return 1
     fi

@@ -26,5 +26,5 @@ jobs:
     displayName: "Build Athanor"
   - bash: rm -rf temp && mkdir temp && cd temp && curl -O $(conjureDownloadLink)
     displayName: "Downloading Conjure"
-  - bash: PATH="$PWD/temp:${PATH}" cd tests && ./runAll.sh skipSanityCheck useReleaseBuild
+  - bash: PATH="$PWD/temp:${PATH}" cd tests && ./runAll.sh skipSanityCheck useReleaseBuild dumpFilesOnError
     displayName: "Running tests"

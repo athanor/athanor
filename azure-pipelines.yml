@@ -11,20 +11,20 @@ jobs:
         imageName: 'ubuntu-latest'
         os: linux
         compiler: clang++
-        conjureDownloadLink: https://github.com/conjure-cp/conjure/releases/download/v2.3.0/conjure-v2.3.0-linux.zip
+        conjureFolder: conjure-v2.3.0-linux
       Mac:
         imageName: 'macos-latest'
         os: mac
         compiler: clang++
-        conjureDownloadLink: https://github.com/conjure-cp/conjure/releases/download/v2.3.0/conjure-v2.3.0-mac.zip
+        conjureFolder: conjure-v2.3.0-macos
 
 
   pool:
     vmImage: $(imageName)
   steps:
-  - bash: CXX=$(compiler) make
+  - bash: CXX=$(compiler) make -j4
     displayName: "Build Athanor"
-  - bash: rm -rf temp && mkdir temp && cd temp && curl -O $(conjureDownloadLink)
+  - bash: rm -rf temp && mkdir temp && cd temp && wget https://github.com/conjure-cp/conjure/releases/download/v2.3.0/$(conjureFolder).zip && tar -xzvf $(conjureFolder).zip
     displayName: "Downloading Conjure"
-  - bash: export PATH="$PWD/temp:${PATH}" ; cd tests && ./runAll.sh skipSanityCheck useReleaseBuild dumpFilesOnError
+  - bash: PATH="$PWD/temp/$(conjureFolder):${PATH}" ; cd tests && ./runAll.sh skipSanityCheck useReleaseBuild dumpFilesOnError
     displayName: "Running tests"

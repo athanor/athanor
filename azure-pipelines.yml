@@ -11,7 +11,7 @@ jobs:
         imageName: 'ubuntu-latest'
         os: linux
         compiler: clang++
-        conjureFolder: conjure-v2.3.0-linux
+        conjureFolder: conjure-v2.3.0-linux-ubuntu1604
       Mac:
         imageName: 'macos-latest'
         os: mac
@@ -26,5 +26,5 @@ jobs:
     displayName: "Build Athanor"
   - bash: rm -rf temp && mkdir temp && cd temp && wget https://github.com/conjure-cp/conjure/releases/download/v2.3.0/$(conjureFolder).zip && unzip $(conjureFolder).zip
     displayName: "Downloading Conjure"
-  - bash: export PATH="$PWD/temp/$(conjureFolder):${PATH}" ; echo "path is $PATH" ; which conjure ; cd tests && ./runAll.sh skipSanityCheck useReleaseBuild dumpFilesOnError
+  - bash: export PATH="$PWD/temp/$(conjureFolder):${PATH}" ; echo "path is $PATH" ; which conjure ; conjure ; cd tests && ./runAll.sh skipSanityCheck useReleaseBuild dumpFilesOnError
     displayName: "Running tests"

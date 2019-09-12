@@ -198,7 +198,10 @@ void OpTupleIndex<TupleMemberViewType>::reattachTupleMemberTrigger() {
     memberTrigger =
         make_shared<OpTupleIndex<TupleMemberViewType>::MemberTrigger>(this);
     tupleOperand->addTrigger(tupleMemberTrigger, true, indexOperand);
-    getMember().get()->addTrigger(memberTrigger);
+    auto member = getMember();
+    if (member) {
+        member.get()->addTrigger(memberTrigger);
+    }
 }
 
 template <typename TupleMemberViewType>

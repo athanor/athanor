@@ -495,6 +495,7 @@ void FunctionView::debugCheckDimensionVec() {
                 assert(d->inners.size() == dimensions.size());
             },
             [&](shared_ptr<IntDomain>&) { assert(dimensions.size() == 1); },
+            [&](shared_ptr<EnumDomain>&) { assert(dimensions.size() == 1); },
             [](auto&) { shouldNotBeCalledPanic; }),
         fromDomain);
 }

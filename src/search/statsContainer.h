@@ -12,15 +12,14 @@ struct StatsMarkPoint {
     double realTime;
     UInt bestViolation;
     UInt lastViolation;
-    Objective bestObjective;
-    Objective lastObjective;
-    bool lastObjectiveDefined;
+    lib::optional<Objective> bestObjective;
+    lib::optional<Objective> lastObjective;
 
     StatsMarkPoint(UInt64 numberIterations, UInt64 minorNodeCount,
                    UInt64 triggerEventCount, double realTime,
                    UInt bestViolation, UInt lastViolation,
-                   Objective bestObjective, Objective lastObjective,
-                   bool lastObjectiveDefined)
+                   lib::optional<Objective> bestObjective,
+                   lib::optional<Objective> lastObjective)
         : numberIterations(numberIterations),
           minorNodeCount(minorNodeCount),
           triggerEventCount(triggerEventCount),
@@ -28,8 +27,7 @@ struct StatsMarkPoint {
           bestViolation(bestViolation),
           lastViolation(lastViolation),
           bestObjective(bestObjective),
-          lastObjective(lastObjective),
-          lastObjectiveDefined(lastObjectiveDefined) {}
+          lastObjective(lastObjective) {}
 };
 
 struct NeighbourhoodResult {
@@ -93,9 +91,8 @@ struct StatsContainer {
     double vioTotalTime = 0;
     UInt bestViolation;
     UInt lastViolation;
-    Objective bestObjective;
-    Objective lastObjective;
-    bool lastObjectiveDefined;
+    lib::optional<Objective> bestObjective;
+    lib::optional<Objective> lastObjective;
     std::vector<NeighbourhoodStats> neighbourhoodStats;
 
     StatsContainer(Model& model);
@@ -103,8 +100,7 @@ struct StatsContainer {
     inline StatsMarkPoint getMarkPoint() {
         return StatsMarkPoint(numberIterations, minorNodeCount,
                               triggerEventCount, getRealTime(), bestViolation,
-                              lastViolation, bestObjective, lastObjective,
-                              lastObjectiveDefined);
+                              lastViolation, bestObjective, lastObjective);
     }
     inline void startTimer() {
         startTime = std::chrono::high_resolution_clock::now();

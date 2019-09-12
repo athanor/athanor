@@ -354,6 +354,10 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopyForUnrollImpl(
     const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
     auto newQuantifier = std::make_shared<Quantifier<ContainerType>>(
         container->deepCopyForUnroll(container, iterator), quantId);
+    if (condition) {
+        newQuantifier->condition =
+            condition->deepCopyForUnroll(condition, iterator);
+    }
     mpark::visit(
         [&](const auto& expr) {
             newQuantifier->setExpression(

@@ -73,11 +73,8 @@ void assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
     if (!val.domain) {
         val.domain = &domain;
     }
-    val.changeValue([&]() {
-        val.value = getRandomValueInDomain(domain);
-        ++stats.minorNodeCount;
-        return true;
-    });
+    val.value = getRandomValueInDomain(domain);
+    ++stats.minorNodeCount;
 }
 
 struct IntAssignRandom {

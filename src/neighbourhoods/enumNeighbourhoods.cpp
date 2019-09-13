@@ -13,10 +13,7 @@ template <>
 void assignRandomValueInDomain<EnumDomain>(const EnumDomain& domain,
                                            EnumValue& val,
                                            StatsContainer& stats) {
-    val.changeValue([&]() {
-        val.value = getRandomValueInDomain(domain, stats);
-        return true;
-    });
+    val.value = getRandomValueInDomain(domain, stats);
 }
 
 void enumAssignRandomGen(const EnumDomain& domain, int numberValsRequired,

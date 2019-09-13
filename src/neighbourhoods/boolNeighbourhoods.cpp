@@ -13,10 +13,7 @@ template <>
 void assignRandomValueInDomain<BoolDomain>(const BoolDomain& domain,
                                            BoolValue& val,
                                            StatsContainer& stats) {
-    val.changeValue([&]() {
-        val.violation = getRandomValueInDomain(domain, stats);
-        return true;
-    });
+    val.violation = getRandomValueInDomain(domain, stats);
 }
 
 void boolAssignRandomGen(const BoolDomain& domain, int numberValsRequired,

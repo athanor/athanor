@@ -55,8 +55,8 @@ jobs:
           condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')   
           displayName: 'Renaming assets'
         - task: GitHubRelease@0
-          displayName: 'Create GitHub Release'      
-                  condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')   
+          displayName: 'Create GitHub Release'
+          condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')   
           inputs:
             gitHubConnection: athanor-release
             repositoryName: '$(Build.Repository.Name)' 

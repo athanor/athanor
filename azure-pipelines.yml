@@ -3,7 +3,7 @@ trigger:
   branches:
     include:
     - 'refs/tags/release_v*'
-    - ci-fixes
+    - master
 jobs:
 - job: BuildAndTestAthanor
   timeoutInMinutes: 0
@@ -51,9 +51,12 @@ jobs:
         steps:
         #better description of arguments found at https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/utility/github-release?view=azure-devops# GitHub Release
 # Create, edit, or delete a GitHub release
+        - bash: tag=`git tag -l --points-at HEAD | tail -n1` ; mv $(Build.ArtifactStagingDirectory)/mac.tar.gz $(Build.ArtifactStagingDirectory)/athanor_${tag}_mac.tar.gz ; mv $(Build.ArtifactStagingDirectory)/linux.tar.gz $(Build.ArtifactStagingDirectory)/athanor_${tag}_linux.tar.gz
+          condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')   
+          displayName: 'Renaming assets'
         - task: GitHubRelease@0
           displayName: 'Create GitHub Release'      
-          condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')   
+                  condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')   
           inputs:
             gitHubConnection: athanor-release
             repositoryName: '$(Build.Repository.Name)' 
@@ -64,7 +67,7 @@ jobs:
             #tag: # Required when action == Edit || Action == Delete || TagSource == Manual
             #title: # Optional
             releaseNotesSource: 'file' # Optional. Options: file, input
-            releaseNotesFile: release-notes.txt # Optional
+            releaseNotesFile: '$(Build.Repository.LocalPath)/release-notes.txt' # Optional
             #releaseNotes: # Optional
             assets: '$(Build.ArtifactStagingDirectory)/*.tar.gz' # Optional
             #assetUploadMode: 'delete' # Optional. Options: delete, replace

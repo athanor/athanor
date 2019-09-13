@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 #arg 1: destination directory
-#arg 2: os, will be used as suffix
-os="$2"
-destDir="$1/$os"
-#arg 3: conjure exec
-conjureExec="$3"
+#arg 2 tag ref
+tagRef="$2"
+#arg 3: os, will be used as suffix
+os="$3"
+#arg 4: conjure exec
+conjureExec="$4"
 
+tag="${tagRef#"refs/tags/"}"
+destDir="$1/athanor_$tag_$os"
 scriptDir="$(dirname "$0")"
 
 mkdir "$destDir"

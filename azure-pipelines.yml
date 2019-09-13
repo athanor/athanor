@@ -30,13 +30,9 @@ jobs:
     displayName: "Downloading Conjure"
   # - bash: export PATH="$PWD/temp/$(conjureFolder):${PATH}" ; echo "path is $PATH" ; which conjure ; conjure ; cd tests && ./runAll.sh skipSanityCheck useReleaseBuild dumpFilesOnError
     # displayName: "Running tests"
-  - bash: scripts/makeRelease.sh . $(os) "$conjureFolder/conjure"
+  - bash: scripts/makeRelease.sh "$(Build.ArtifactStagingDirectory)" "$(Build.SourceBranch)" $(os) "$conjureFolder/conjure"
     displayName: "Compiling release assets for $(os)"
-  - task: CopyFiles@2
-    inputs:
-      contents: $(os).tar.gz
-      targetFolder: $(Build.ArtifactStagingDirectory)
-    displayName: "Copying release assets for $(os) to staging directory"
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')
 
 
 - deployment: ReleaseToGithub
@@ -66,7 +62,7 @@ jobs:
             releaseNotesSource: 'input' # Optional. Options: file, input
             # releaseNotesFile: '$(Build.Repository.LocalPath)/release-notes.txt' # Optional
             #releaseNotes: "Automated release" # Optional
-            assets: '$(Build.ArtifactStagingDirectory)/*.tar.gz' # Optional
+            # assets: 
             #assetUploadMode: 'delete' # Optional. Options: delete, replace
             isDraft: true # Optional
             #isPreRelease: false # Optional

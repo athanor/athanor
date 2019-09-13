@@ -24,12 +24,12 @@ jobs:
   pool:
     vmImage: $(imageName)
   steps:
-  - bash: CXX=$(compiler) make -j4
-    displayName: "Build Athanor"
+  # - bash: CXX=$(compiler) make -j4
+    # displayName: "Build Athanor"
   - bash: rm -rf temp && mkdir temp && cd temp && wget https://github.com/conjure-cp/conjure/releases/download/v2.3.0/$(conjureFolder).zip && unzip $(conjureFolder).zip
     displayName: "Downloading Conjure"
-  - bash: export PATH="$PWD/temp/$(conjureFolder):${PATH}" ; echo "path is $PATH" ; which conjure ; conjure ; cd tests && ./runAll.sh skipSanityCheck useReleaseBuild dumpFilesOnError
-    displayName: "Running tests"
+  # - bash: export PATH="$PWD/temp/$(conjureFolder):${PATH}" ; echo "path is $PATH" ; which conjure ; conjure ; cd tests && ./runAll.sh skipSanityCheck useReleaseBuild dumpFilesOnError
+    # displayName: "Running tests"
   - bash: scripts/makeRelease.sh . $(os) "$conjureFolder/conjure"
     displayName: "Compiling release assets for $(os)"
   - task: CopyFiles@2

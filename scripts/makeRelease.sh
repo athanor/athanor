@@ -9,7 +9,7 @@ conjureExec="$3"
 scriptDir="$(dirname "$0")"
 
 mkdir "$destDir"
-cp "$scriptDir/../build/release/athanor" "$destDir"
+# cp "$scriptDir/../build/release/athanor" "$destDir"
 cp "$conjureExec" "$destDir"
 cp "$scriptDir/../LICENSE" "$destDir"
 cp "$scriptDir/manualBuildAthanor.sh" "$destDir"

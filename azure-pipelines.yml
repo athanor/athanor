@@ -2,7 +2,7 @@
 trigger:
   branches:
     include:
-    - 'refs/tags/test*'
+    - 'refs/tags/release_v*'
     - ci-fixes
 jobs:
 - job: BuildAndTestAthanor

@@ -51,7 +51,7 @@ jobs:
         steps:
         #better description of arguments found at https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/utility/github-release?view=azure-devops# GitHub Release
 # Create, edit, or delete a GitHub release
-        - bash: tag=`git tag -l --points-at HEAD | tail -n1` ; mv $(Build.ArtifactStagingDirectory)/mac.tar.gz $(Build.ArtifactStagingDirectory)/athanor_${tag}_mac.tar.gz ; mv $(Build.ArtifactStagingDirectory)/linux.tar.gz $(Build.ArtifactStagingDirectory)/athanor_${tag}_linux.tar.gz
+        - bash: tag="$(Build.SourceBranch)" ; tag="${tag#"refs_tags_"}" ; mv $(Build.ArtifactStagingDirectory)/mac.tar.gz $(Build.ArtifactStagingDirectory)/athanor_${tag}_mac.tar.gz ; mv $(Build.ArtifactStagingDirectory)/linux.tar.gz $(Build.ArtifactStagingDirectory)/athanor_${tag}_linux.tar.gz
           condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')   
           displayName: 'Renaming assets'
         - task: GitHubRelease@0

@@ -35,7 +35,7 @@ jobs:
     displayName: "Compiling release assets for $(os)"
     condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')
 
-- job: release-check
+- job: ReleaseCheck
   displayName: Check for release actions
   dependsOn: BuildAndTestAthanor
   pool:

@@ -63,9 +63,9 @@ jobs:
             #tagPattern: # Optional
             #tag: # Required when action == Edit || Action == Delete || TagSource == Manual
             #title: # Optional
-            releaseNotesSource: 'file' # Optional. Options: file, input
-            releaseNotesFile: '$(Build.Repository.LocalPath)/release-notes.txt' # Optional
-            #releaseNotes: # Optional
+            releaseNotesSource: 'input' # Optional. Options: file, input
+            # releaseNotesFile: '$(Build.Repository.LocalPath)/release-notes.txt' # Optional
+            #releaseNotes: "Automated release" # Optional
             assets: '$(Build.ArtifactStagingDirectory)/*.tar.gz' # Optional
             #assetUploadMode: 'delete' # Optional. Options: delete, replace
             isDraft: true # Optional

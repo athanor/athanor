@@ -31,9 +31,15 @@ jobs:
     displayName: "Downloading Conjure"
   # - bash: export PATH="$PWD/temp/$(conjureFolder):${PATH}" ; echo "path is $PATH" ; which conjure ; conjure ; cd tests && ./runAll.sh skipSanityCheck useReleaseBuild dumpFilesOnError
     # displayName: "Running tests"
-  - bash: scripts/makeRelease.sh "$(Build.ArtifactStagingDirectory)" "$(Build.SourceBranch)" $(os) "$conjureFolder/conjure"
+  - bash: scripts/makeRelease.sh "$(Build.ArtifactStagingDirectory)" "$(Build.SourceBranch)" $(os) "$(conjureFolder)/conjure"
     displayName: "Compiling release assets for $(os)"
     condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')
+  - task: PublishBuildArtifacts@1
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)
+      artifactName: ReleaseAssets
+
 
 - job: ReleaseCheck
   displayName: Check for release actions

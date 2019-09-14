@@ -12,7 +12,7 @@ destDir="$1/athanor_${tag}_$os"
 scriptDir="$(dirname "$0")"
 
 mkdir "$destDir"
-# cp "$scriptDir/../build/release/athanor" "$destDir"
+cp "$scriptDir/../build/release/athanor" "$destDir"
 cp "$conjureExec" "$destDir"
 cp "$scriptDir/../LICENSE" "$destDir"
 cp "$scriptDir/manualBuildAthanorInput.sh" "$destDir"

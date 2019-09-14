@@ -47,6 +47,12 @@ jobs:
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
+  - task: DownloadPipelineArtifact@2
+    displayName: 'Downloading artifacts from staging directory'    
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')   
+    inputs:
+      artifactName: 'ReleaseAssets'
+      targetPath: $(Build.SourcesDirectory)/ReleaseAssets
   - task: GitHubRelease@0
     displayName: 'Create GitHub Release'    
     condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/release_v')   
@@ -60,9 +66,9 @@ jobs:
       #tag: # Required when action == Edit || Action == Delete || TagSource == Manual
       #title: # Optional
       releaseNotesSource: 'file' # Optional. Options: file, input
-      # releaseNotesFile: 'release-notes.txt' # Optional
+      releaseNotesFile: 'release-notes.txt' # Optional
       #releaseNotes: "Automated release" # Optional
-      # assets: 
+      assets: '$(Build.SourcesDirectory)/ReleaseAssets/*'
       #assetUploadMode: 'delete' # Optional. Options: delete, replace
       isDraft: true # Optional
       #isPreRelease: false # Optional

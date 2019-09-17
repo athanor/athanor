@@ -283,7 +283,22 @@ auto& disableDefinedExprsFlag =
 void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);
 void sigAlarmHandler(int);
+extern string bestSolution;
+extern bool saveBestSolution;
+string bestSolution;
+bool saveBestSolution = false;
 
+auto& saveBestSolutionFlag = argParser.add<ComplexFlag>(
+    "--save-best-solution", Policy::OPTIONAL,
+    "Saves the best solution to the specified file.  Note, if the process is "
+    "terminated with a non-interruptible signal (SIGSTOP, SIGKILL, ...), the "
+    "file may not be created.  Solutions are always printed to STDOUT though. "
+    " A clean exit, for example after a solver time out, iteration limit or on "
+    "receiving Control-C  will still result in the best solution being "
+    "correctly written to the specified file.",
+    [](auto&) { saveBestSolution = true; });
+auto& bestSolutionFileArg =
+    saveBestSolutionFlag.add<Arg<ofstream>>("file_path", Policy::MANDATORY, "");
 template <typename ImproveStrategy, typename SelectionStrategy>
 void constructStratAndRunImpl(State& state, ImproveStrategy&& improve,
                               SelectionStrategy&& nhSelection) {
@@ -532,6 +547,9 @@ int main(const int argc, const char** argv) {
         setSignalsAndHandlers();
 
         runSearch(state);
+        if (saveBestSolution) {
+            bestSolutionFileArg.get() << bestSolution;
+        }
         printFinalStats(state);
     } catch (nlohmann::detail::exception& e) {
         myCerr << "Error parsing JSON: " << e.what() << endl;

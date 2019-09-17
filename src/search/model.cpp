@@ -158,15 +158,34 @@ void printUnnamedType(ostream& os, const EnumDomain& domain) {
     os << "}";
 }
 
+extern string bestSolution;
+extern bool saveBestSolution;
+ostringstream bestSolutionStream;
+ostream& getBestSolutionStream() {
+    if (saveBestSolution) {
+        bestSolutionStream.str("");
+        bestSolutionStream.clear();
+        return bestSolutionStream;
+    } else {
+        return cout;
+    }
+}
+
+void dumpSolution() {
+    if (saveBestSolution) {
+        bestSolution = bestSolutionStream.str();
+        cout << bestSolution;
+    }
+}
+
 void Model::printVariables() const {
 #ifdef WASM_TARGET
     using namespace emscripten;
     ostringstream os;
 #define varName(x) "<var>" << x << "</var>"
     os << "<code>";
-
 #else
-    auto& os = cout;
+    auto& os = getBestSolutionStream();
 #define varName(x) x
 #endif
     for (auto& domain : unnamedTypes) {
@@ -199,6 +218,7 @@ void Model::printVariables() const {
     os << "</code>";
     val::global().call<void>("printSolution", os.str());
 #endif
+    dumpSolution();
 }
 
 void Model::debugSanityCheck() const {

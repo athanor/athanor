@@ -22,7 +22,7 @@ struct IntDomain {
     static inline UInt calculateDomainSize(
         const std::vector<std::pair<Int, Int>>& bounds) {
         return std::accumulate(
-            bounds.begin(), bounds.end(), 0, [](UInt total, auto& range) {
+            bounds.begin(), bounds.end(), UInt(0), [](UInt total, auto& range) {
                 return total + (range.second - range.first) + 1;
             });
     }

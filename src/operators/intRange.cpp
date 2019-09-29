@@ -143,11 +143,7 @@ void IntRange::updateVarViolationsImpl(const ViolationContext& vioContext,
     right->updateVarViolations(vioContext, vioContainer);
 }
 
-void IntRange::copy(IntRange& newOp) const {
-    newOp.members = this->members;
-    newOp.cachedLower = cachedLower;
-    newOp.cachedUpper = cachedUpper;
-}
+void IntRange::copy(IntRange&) const {}
 
 ostream& IntRange::dumpState(ostream& os) const {
     os << "IntRange(\nleft: ";

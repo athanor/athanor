@@ -24,7 +24,7 @@ struct OpSequenceLit : public SequenceView {
     ExprRef<SequenceView> deepCopyForUnrollImpl(
         const ExprRef<SequenceView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     std::pair<bool, ExprRef<SequenceView>> optimiseImpl(
         ExprRef<SequenceView>&, PathExtension path) final;
     std::string getOpName() const final;

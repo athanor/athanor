@@ -55,7 +55,8 @@ void invokeSetDefined<BoolValue>(ValRef<BoolValue>&) {}
         return prettyPrint(os, *static_cast<const name##View*>(this));      \
     }                                                                       \
                                                                             \
-    void name##Value::findAndReplaceSelf(const FindAndReplaceFunction&) {}  \
+    void name##Value::findAndReplaceSelf(const FindAndReplaceFunction&,     \
+                                         PathExtension) {}                  \
     pair<bool, ExprRef<name##View>> name##Value::optimiseImpl(              \
         ExprRef<name##View>& self, PathExtension) {                         \
         return make_pair(false, self);                                      \

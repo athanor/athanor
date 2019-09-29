@@ -21,6 +21,7 @@ struct TriggerBase {
     virtual void reattachTrigger() = 0;
     virtual void hasBecomeUndefined() = 0;
     virtual void hasBecomeDefined() = 0;
+    virtual void memberReplaced(UInt index, const AnyExprRef& oldMember) = 0;
 };
 
 static const size_t MIN_CLEAN_SIZE = 16;
@@ -171,8 +172,11 @@ void deleteTrigger(const std::shared_ptr<Trigger>& trigger) {
 }
 
 struct BoolTrigger : public virtual TriggerBase {
-    void hasBecomeUndefined() { shouldNotBeCalledPanic; }
-    void hasBecomeDefined() { shouldNotBeCalledPanic; }
+    void hasBecomeUndefined() override { shouldNotBeCalledPanic; }
+    void hasBecomeDefined() override { shouldNotBeCalledPanic; }
+    inline void memberReplaced(UInt, const AnyExprRef&) override {
+        shouldNotBeCalledPanic;
+    }
 };
 
 template <typename TriggerType, typename Child>
@@ -250,6 +254,10 @@ struct TriggerContainerBase {
     }
     void notifyValueUndefined() {
         visitTriggers([&](auto& t) { t->hasBecomeUndefined(); },
+                      static_cast<Derived&>(*this).triggers);
+    }
+    void notifyReattachTrigger() {
+        visitTriggers([&](auto& t) { t->reattachTrigger(); },
                       static_cast<Derived&>(*this).triggers);
     }
 };

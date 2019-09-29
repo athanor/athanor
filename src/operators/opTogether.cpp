@@ -61,6 +61,18 @@ struct OpTogether<PartitionMemberViewType>::PartitionOperandTrigger
         });
     }
 
+    void memberReplaced(UInt index, const AnyExprRef&) final {
+        ignoreUnused(index);
+        debug_code(assert(index == op->cachedLeftIndex ||
+                          index == op->cachedRightIndex));
+        op->reattachPartitionMemberTrigger(index == op->cachedLeftIndex,
+                                           index == op->cachedRightIndex);
+        op->changeValue([&]() {
+            op->reevaluate(false, false);
+            return true;
+        });
+    }
+
     void valueChanged() final {
         op->changeValue([&]() {
             op->reevaluate(true, true);
@@ -273,10 +285,10 @@ std::ostream& OpTogether<PartitionMemberViewType>::dumpState(
 
 template <typename PartitionMemberViewType>
 void OpTogether<PartitionMemberViewType>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func) {
-    this->partitionOperand = findAndReplace(partitionOperand, func);
-    this->left = findAndReplace(left, func);
-    this->right = findAndReplace(right, func);
+    const FindAndReplaceFunction& func, PathExtension path) {
+    this->partitionOperand = findAndReplace(partitionOperand, func, path);
+    this->left = findAndReplace(left, func, path);
+    this->right = findAndReplace(right, func, path);
 }
 
 template <typename PartitionMemberViewType>

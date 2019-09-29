@@ -177,7 +177,7 @@ struct FunctionValue : public FunctionView, public ValBase {
         const ExprRef<FunctionView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     bool isUndefined();
     std::pair<bool, ExprRef<FunctionView>> optimiseImpl(ExprRef<FunctionView>&,
                                                         PathExtension) final;

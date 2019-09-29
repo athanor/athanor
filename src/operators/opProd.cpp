@@ -109,7 +109,9 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
         op->removeSingleValue(oldValue);
         op->addSingleValue(newValue);
     }
-
+    void memberReplaced(UInt index, const AnyExprRef&) {
+        subsequenceChanged(index, index + 1);
+    }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         if (!op->evaluationComplete) {
             return;
@@ -226,13 +228,7 @@ void OpProd::updateVarViolationsImpl(const ViolationContext& vioContext,
     }
 }
 
-void OpProd::copy(OpProd& newOp) const {
-    newOp.value = value;
-    newOp.cachedValues = cachedValues;
-    newOp.cachedValue = cachedValue;
-    newOp.numberZeros = numberZeros;
-    newOp.evaluationComplete = this->evaluationComplete;
-}
+void OpProd::copy(OpProd&) const {}
 
 std::ostream& OpProd::dumpState(std::ostream& os) const {
     os << "OpProd: value=" << value << endl;

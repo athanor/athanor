@@ -2,7 +2,11 @@
 #ifndef SRC_TRIGGERS_EMPTYTRIGGER_H_
 #define SRC_TRIGGERS_EMPTYTRIGGER_H_
 #include "base/base.h"
-struct EmptyTrigger : public virtual TriggerBase {};
+struct EmptyTrigger : public virtual TriggerBase {
+    inline void memberReplaced(UInt, const AnyExprRef&) override {
+        shouldNotBeCalledPanic;
+    }
+};
 
 template <>
 struct TriggerContainer<EmptyView>

@@ -2,7 +2,11 @@
 #ifndef SRC_TRIGGERS_INTTRIGGER_H_
 #define SRC_TRIGGERS_INTTRIGGER_H_
 #include "base/base.h"
-struct IntTrigger : public virtual TriggerBase {};
+struct IntTrigger : public virtual TriggerBase {
+    inline void memberReplaced(UInt, const AnyExprRef&) override {
+        shouldNotBeCalledPanic;
+    }
+};
 
 template <>
 struct TriggerContainer<IntView>

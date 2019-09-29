@@ -131,23 +131,56 @@ struct OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger
     OpSetIndexInternal<SetMemberViewType>* op;
     SetOperandTrigger(OpSetIndexInternal<SetMemberViewType>* op) : op(op) {}
     void valueRemoved(UInt indexOfRemovedValue, HashType) {
-        if (op->eventForwardedAsDefinednessChange()) {
-            return;
-        }
-        if (op->isLastElementInSet ||
-            indexOfRemovedValue == op->elementOrder[op->indexOperand]) {
-            op->reattachSetMemberTrigger();
-            op->notifyEntireValueChanged();
+        size_t memberUnderFocus = (op->indexOperand < op->elementOrder.size())
+                                      ? op->elementOrder[op->indexOperand]
+                                      : 0;
+        if (!op->eventForwardedAsDefinednessChange()) {
+            if (op->isLastElementInSet ||  // was pointing to last element which
+                                           // is moved after a set remove
+                indexOfRemovedValue ==
+                    op->elementOrder[op->indexOperand] ||  // was pointing to
+                                                           // the removed
+                                                           // element
+                op->elementOrder[op->indexOperand] !=
+                    memberUnderFocus  // pointing to different element
+            ) {
+                op->reattachSetMemberTrigger();
+                op->notifyEntireValueChanged();
+            }
         }
     }
-    void valueAdded(const AnyExprRef&) {
-        op->eventForwardedAsDefinednessChange();
+    inline void triggerIfChanged() {
+        size_t memberUnderFocus = (op->indexOperand < op->elementOrder.size())
+                                      ? op->elementOrder[op->indexOperand]
+                                      : 0;
+        if (!op->eventForwardedAsDefinednessChange()) {
+            if (op->elementOrder[op->indexOperand] != memberUnderFocus) {
+                op->reattachSetMemberTrigger();
+                op->notifyEntireValueChanged();
+            }
+        }
     }
-    void memberValueChanged(UInt, HashType) {}
+    void valueAdded(const AnyExprRef&) { triggerIfChanged(); }
+
+    void memberValueChanged(UInt, HashType) { triggerIfChanged(); }
 
     void memberValuesChanged(const std::vector<UInt>&,
-                             const std::vector<HashType>&) {}
+                             const std::vector<HashType>&) {
+        triggerIfChanged();
+    }
 
+    void memberReplaced(UInt indexOfReplacedMember, const AnyExprRef&) {
+        size_t memberUnderFocus = (op->indexOperand < op->elementOrder.size())
+                                      ? op->elementOrder[op->indexOperand]
+                                      : 0;
+        if (!op->eventForwardedAsDefinednessChange()) {
+            if (op->elementOrder[op->indexOperand] != memberUnderFocus ||
+                memberUnderFocus == indexOfReplacedMember) {
+                op->reattachSetMemberTrigger();
+                op->notifyEntireValueChanged();
+            }
+        }
+    }
     void valueChanged() final {
         if (!op->eventForwardedAsDefinednessChange()) {
             op->notifyEntireValueChanged();
@@ -166,9 +199,7 @@ struct OpSetIndexInternal<SetMemberViewType>::SetOperandTrigger
         deleteTrigger(op->memberTrigger);
         auto trigger = make_shared<SetOperandTrigger>(op);
         op->setOperand->addTrigger(trigger, false);
-        if (op->exprDefined) {
-            op->reattachSetMemberTrigger();
-        }
+        op->reattachSetMemberTrigger();
         op->setOperandTrigger = trigger;
     }
 };
@@ -218,7 +249,9 @@ void OpSetIndexInternal<SetMemberViewType>::reattachSetMemberTrigger() {
     setMemberTrigger = make_shared<SetOperandTrigger>(this);
     memberTrigger =
         make_shared<OpSetIndexInternal<SetMemberViewType>::MemberTrigger>(this);
-    getMember().get()->addTrigger(memberTrigger);
+    if (exprDefined) {
+        getMember().get()->addTrigger(memberTrigger);
+    }
 }
 
 template <typename SetMemberViewType>
@@ -260,8 +293,6 @@ OpSetIndexInternal<SetMemberViewType>::deepCopyForUnrollImpl(
     auto newOpSetIndexInternal =
         make_shared<OpSetIndexInternal<SetMemberViewType>>(
             setOperand->deepCopyForUnroll(setOperand, iterator), indexOperand);
-    newOpSetIndexInternal->exprDefined = exprDefined;
-    newOpSetIndexInternal->isLastElementInSet = isLastElementInSet;
     return newOpSetIndexInternal;
 }
 
@@ -281,8 +312,8 @@ std::ostream& OpSetIndexInternal<SetMemberViewType>::dumpState(
 
 template <typename SetMemberViewType>
 void OpSetIndexInternal<SetMemberViewType>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func) {
-    this->setOperand = findAndReplace(setOperand, func);
+    const FindAndReplaceFunction& func, PathExtension path) {
+    this->setOperand = findAndReplace(setOperand, func, path);
 }
 
 template <typename SetMemberViewType>

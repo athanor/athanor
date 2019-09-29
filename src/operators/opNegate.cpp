@@ -21,7 +21,7 @@ void OpNegate::updateVarViolationsImpl(const ViolationContext& vioContext,
     }
 }
 
-void OpNegate::copy(OpNegate& newOp) const { newOp.value = value; }
+void OpNegate::copy(OpNegate&) const {}
 
 ostream& OpNegate::dumpState(ostream& os) const {
     os << "OpNegate: value=" << value << "\noperand: ";

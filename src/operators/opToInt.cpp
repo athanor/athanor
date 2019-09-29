@@ -37,7 +37,7 @@ void OpToInt::updateVarViolationsImpl(const ViolationContext& vioContext,
     operand->updateVarViolations(vioContext, vioContainer);
 }
 
-void OpToInt::copy(OpToInt& newOp) const { newOp.value = value; }
+void OpToInt::copy(OpToInt&) const {}
 
 std::ostream& OpToInt::dumpState(std::ostream& os) const {
     os << "OpToInt: value=" << value << "\noperand: ";

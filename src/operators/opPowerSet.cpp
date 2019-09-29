@@ -70,7 +70,7 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
     void memberValueChanged(UInt, HashType) final {
         // ignore;
     }
-
+    void memberReplaced(UInt, const AnyExprRef&) { todoImpl(); }
     void memberValuesChanged(const vector<UInt>&,
                              const vector<HashType>&) final {
         // ignore;
@@ -79,10 +79,7 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger : public SetTrigger {
 void OpPowerSet::updateVarViolationsImpl(const ViolationContext&,
                                          ViolationContainer&) {}
 
-void OpPowerSet::copy(OpPowerSet& newOp) const {
-    newOp.sizeLimit = sizeLimit;
-    newOp.reevaluate();
-}
+void OpPowerSet::copy(OpPowerSet& newOp) const { newOp.sizeLimit = sizeLimit; }
 
 std::ostream& OpPowerSet::dumpState(std::ostream& os) const {
     os << "OpPowerSet: value=";

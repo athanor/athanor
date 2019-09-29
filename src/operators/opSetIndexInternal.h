@@ -43,7 +43,7 @@ struct OpSetIndexInternal : public ExprInterface<SetMemberViewType>,
         const ExprRef<SetMemberViewType>& self,
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
 
     OptionalRef<ExprRef<SetMemberViewType>> getMember();
     OptionalRef<const ExprRef<SetMemberViewType>> getMember() const;

@@ -6,7 +6,9 @@
 #include "operators/opIntEq.h"
 #include "operators/opLess.h"
 #include "operators/opLessEq.h"
+#include "operators/opMinus.h"
 #include "operators/opProd.h"
+#include "operators/opSequenceIndex.h"
 #include "operators/opSequenceLit.h"
 #include "operators/opSum.h"
 #include "operators/opToInt.h"
@@ -17,6 +19,17 @@
 #include "triggers/allTriggers.h"
 #include "types/allTypes.h"
 #include "types/intVal.h"
+template <typename View>
+struct OpSubstringQuantify;
+template <typename View>
+struct OpMaker<OpSubstringQuantify<View>> {
+    static ExprRef<SequenceView> make(ExprRef<SequenceView> sequence,
+                                      ExprRef<IntView> lowerBound,
+                                      ExprRef<IntView> upperBound,
+                                      size_t windowSize);
+};
+template <typename View>
+struct OpTupleIndex;
 
 using namespace std;
 bool isOpSum(const AnyExprRef& expr) {
@@ -255,6 +268,15 @@ bool optimiseIfIntRangeWithConditions(Quantifier& quant) {
     return true;
 }
 
+template <typename View>
+bool optimiseIfCanBeConvertedToSubstringQuantifier(Quantifier<View>&) {
+    return false;
+}
+
+template <>
+bool optimiseIfCanBeConvertedToSubstringQuantifier<SequenceView>(
+    Quantifier<SequenceView>& quant);
+
 template <typename ContainerType>
 pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimiseImpl(
     ExprRef<SequenceView>&, PathExtension path) {
@@ -274,6 +296,7 @@ pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimiseImpl(
         },
         newOp->expr);
     optimised |= optimiseIfIntRangeWithConditions(*newOp);
+optimised |= optimiseIfCanBeConvertedToSubstringQuantifier(*newOp);
     return make_pair(optimised, newOpAsExpr);
 }
 

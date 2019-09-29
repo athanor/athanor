@@ -23,6 +23,21 @@ struct ContainerTrigger<MSetView> : public MSetTrigger {
             member);
     }
 
+    void memberReplaced(UInt index, const AnyExprRef& oldMember) {
+        debug_code(assert(index < op->unrolledIterVals.size()));
+        auto& containerView = *op->container->view();
+
+        mpark::visit(
+            [&](auto& oldMember) {
+                typedef viewType(oldMember) View;
+                auto iterRef =
+                    mpark::get<IterRef<View>>(op->unrolledIterVals[index]);
+                auto& newMember = containerView.getMembers<View>()[index];
+                iterRef->changeValueAndTrigger(newMember);
+            },
+            oldMember);
+    }
+
     void memberValueChanged(UInt) final{};
     void memberValuesChanged(const std::vector<UInt>&) final{};
 

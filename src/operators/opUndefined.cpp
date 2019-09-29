@@ -51,7 +51,8 @@ std::ostream& OpUndefined<View>::dumpState(std::ostream& os) const {
 }
 
 template <typename View>
-void OpUndefined<View>::findAndReplaceSelf(const FindAndReplaceFunction&) {}
+void OpUndefined<View>::findAndReplaceSelf(const FindAndReplaceFunction&,
+                                           PathExtension) {}
 
 template <typename View>
 pair<bool, ExprRef<View>> OpUndefined<View>::optimiseImpl(ExprRef<View>& self,

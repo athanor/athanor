@@ -128,8 +128,9 @@ FindAndReplaceFunction ModelBuilder::makeFindReplaceFunc(AnyValRef& var,
         [&](auto& var) -> FindAndReplaceFunction {
             typedef typename AssociatedViewType<valType(var)>::type ViewType;
             auto& exprImpl = mpark::get<ExprRef<ViewType>>(expr);
-            return [this, var,
-                    exprImpl](AnyExprRef ref) -> pair<bool, AnyExprRef> {
+            return [this, var, exprImpl](
+                       AnyExprRef ref,
+                       const PathExtension&) -> pair<bool, AnyExprRef> {
                 auto exprRefTest = mpark::get_if<ExprRef<ViewType>>(&ref);
                 if (exprRefTest) {
                     auto valRefTest = this->getIfNonConstValue(*exprRefTest);

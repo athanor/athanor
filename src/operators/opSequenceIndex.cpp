@@ -149,7 +149,11 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
             op->reattachSequenceMemberTrigger();
         }
     }
-
+    void memberReplaced(UInt index, const AnyExprRef&) final {
+        debug_code(assert((Int)index == op->cachedIndex));
+        op->reattachSequenceMemberTrigger();
+        op->notifyEntireValueChanged();
+    }
     void subsequenceChanged(UInt, UInt) {
         // ignore, already triggering on member
     }
@@ -350,8 +354,6 @@ OpSequenceIndex<SequenceMemberViewType>::deepCopyForUnrollImpl(
         make_shared<OpSequenceIndex<SequenceMemberViewType>>(
             sequenceOperand->deepCopyForUnroll(sequenceOperand, iterator),
             indexOperand->deepCopyForUnroll(indexOperand, iterator));
-    newOpSequenceIndex->cachedIndex = cachedIndex;
-    newOpSequenceIndex->locallyDefined = locallyDefined;
     return newOpSequenceIndex;
 }
 
@@ -372,9 +374,9 @@ std::ostream& OpSequenceIndex<SequenceMemberViewType>::dumpState(
 
 template <typename SequenceMemberViewType>
 void OpSequenceIndex<SequenceMemberViewType>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func) {
-    this->sequenceOperand = findAndReplace(sequenceOperand, func);
-    this->indexOperand = findAndReplace(indexOperand, func);
+    const FindAndReplaceFunction& func, PathExtension path) {
+    this->sequenceOperand = findAndReplace(sequenceOperand, func, path);
+    this->indexOperand = findAndReplace(indexOperand, func, path);
 }
 
 template <typename SequenceMemberViewType>

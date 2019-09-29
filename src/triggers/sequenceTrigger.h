@@ -72,6 +72,12 @@ struct TriggerContainer<SequenceView>
         }
     }
 
+    void notifyMemberReplaced(UInt index, const AnyExprRef& oldMember) {
+        visitAllMemberTriggersInRange(
+            [&](auto& t) { t->memberReplaced(index, oldMember); }, index,
+            index + 1);
+    }
+
     inline void notifySubsequenceChanged(UInt startIndex, UInt endIndex) {
         visitAllMemberTriggersInRange(
             [&](auto& t) { t->subsequenceChanged(startIndex, endIndex); },
@@ -131,6 +137,12 @@ struct ChangeTriggerAdapter<SequenceTrigger, Child>
             this->forwardValueChanged();
         }
     }
+    inline void memberReplaced(UInt, const AnyExprRef&) override {
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
+    }
+
     void positionsSwapped(UInt, UInt) override {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
@@ -184,6 +196,12 @@ struct ForwardingTrigger<SequenceTrigger, Op, Child>
     void subsequenceChanged(UInt startIndex, UInt endIndex) {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifySubsequenceChanged(startIndex, endIndex);
+        }
+    }
+
+    void memberReplaced(UInt index, const AnyExprRef& oldMember) {
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberReplaced(index, oldMember);
         }
     }
 

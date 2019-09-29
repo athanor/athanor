@@ -51,7 +51,7 @@ struct OpFunctionImage : public ExprInterface<FunctionMemberViewType>,
         const ExprRef<FunctionMemberViewType>& self,
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
 
     OptionalRef<ExprRef<FunctionMemberViewType>> getMember();
     OptionalRef<const ExprRef<FunctionMemberViewType>> getMember() const;

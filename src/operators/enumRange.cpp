@@ -55,7 +55,8 @@ pair<bool, ExprRef<SequenceView>> EnumRange::optimiseImpl(
     return make_pair(false, self);
 }
 
-void EnumRange::findAndReplaceSelf(const FindAndReplaceFunction&) {}
+void EnumRange::findAndReplaceSelf(const FindAndReplaceFunction&,
+                                   PathExtension) {}
 void EnumRange::debugSanityCheckImpl() const {
     sanityEqualsCheck(0, numberUndefined);
     sanityEqualsCheck(domain->numberValues(), numberElements());

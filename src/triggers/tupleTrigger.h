@@ -40,6 +40,11 @@ struct TriggerContainer<TupleView>
         }
     }
 
+    void notifyMemberReplaced(UInt index, const AnyExprRef& oldMember) {
+        visitMemberTriggers(
+            [&](auto& t) { t->memberReplaced(index, oldMember); }, index);
+    }
+
     inline void notifyMemberChanged(UInt index) {
         visitMemberTriggers([&](auto& t) { t->memberValueChanged(index); },
                             index);
@@ -83,27 +88,43 @@ struct ChangeTriggerAdapter<TupleTrigger, Child>
     ChangeTriggerAdapter(const ExprRef<TupleView>& op)
         : wasDefined(op->getViewIfDefined().hasValue()) {}
 
-    void memberValueChanged(UInt) {
+    void memberValueChanged(UInt) override {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
-    void memberHasBecomeDefined(UInt) { eventHandledAsDefinednessChange(); }
-    void memberHasBecomeUndefined(UInt) { eventHandledAsDefinednessChange(); }
-    void hasBecomeDefined() { eventHandledAsDefinednessChange(); }
-    void hasBecomeUndefined() { eventHandledAsDefinednessChange(); }
+    void memberHasBecomeDefined(UInt) override {
+        eventHandledAsDefinednessChange();
+    }
+    void memberHasBecomeUndefined(UInt) override {
+        eventHandledAsDefinednessChange();
+    }
+    void hasBecomeDefined() override { eventHandledAsDefinednessChange(); }
+    void hasBecomeUndefined() override { eventHandledAsDefinednessChange(); }
+
+    inline void memberReplaced(UInt, const AnyExprRef&) override {
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
+    }
 };
 
 template <typename Op, typename Child>
 struct ForwardingTrigger<TupleTrigger, Op, Child>
     : public ForwardingTriggerBase<TupleTrigger, Op> {
     using ForwardingTriggerBase<TupleTrigger, Op>::ForwardingTriggerBase;
-    void memberValueChanged(UInt index) {
+    void memberValueChanged(UInt index) override {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyMemberChanged(index);
         }
     }
-    void memberHasBecomeUndefined(UInt index) {
+    void memberReplaced(UInt index, const AnyExprRef& oldMember) override {
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberReplaced(index, oldMember);
+        }
+    }
+
+    void memberHasBecomeUndefined(UInt index) override {
         auto view = static_cast<Child*>(this)
                         ->getTriggeringOperand()
                         ->getViewIfDefined();
@@ -112,7 +133,7 @@ struct ForwardingTrigger<TupleTrigger, Op, Child>
             this->op->notifyMemberUndefined(index);
         }
     }
-    void memberHasBecomeDefined(UInt index) {
+    void memberHasBecomeDefined(UInt index) override {
         auto view = static_cast<Child*>(this)
                         ->getTriggeringOperand()
                         ->getViewIfDefined();

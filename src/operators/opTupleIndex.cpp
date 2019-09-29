@@ -102,6 +102,12 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
     : public TupleTrigger {
     OpTupleIndex<TupleMemberViewType>* op;
     TupleOperandTrigger(OpTupleIndex<TupleMemberViewType>* op) : op(op) {}
+    void memberReplaced(UInt index, const AnyExprRef&) final {
+        debug_code(assert(index == op->indexOperand));
+        op->reattachTupleMemberTrigger();
+        op->notifyEntireValueChanged();
+    }
+
     void memberValueChanged(UInt) {
         // ignore, already triggering on member
     }
@@ -262,8 +268,8 @@ std::ostream& OpTupleIndex<TupleMemberViewType>::dumpState(
 
 template <typename TupleMemberViewType>
 void OpTupleIndex<TupleMemberViewType>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func) {
-    this->tupleOperand = findAndReplace(tupleOperand, func);
+    const FindAndReplaceFunction& func, PathExtension path) {
+    this->tupleOperand = findAndReplace(tupleOperand, func, path);
 }
 
 template <typename TupleMemberViewType>

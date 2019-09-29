@@ -63,7 +63,7 @@ struct Quantifier : public SequenceView {
         }
     };
 
-    const int quantId;
+    const UInt64 quantId;
     ExprRef<ContainerType> container;
     AnyExprRef expr = ExprRef<BoolView>(nullptr);
     ExprRef<BoolView> condition = nullptr;
@@ -73,7 +73,8 @@ struct Quantifier : public SequenceView {
     std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
 
-    Quantifier(ExprRef<ContainerType> container, const int id = nextQuantId())
+    Quantifier(ExprRef<ContainerType> container,
+               const UInt64 id = nextQuantId())
         : quantId(id), container(std::move(container)) {}
     inline void setExpression(AnyExprRef exprIn) {
         expr = std::move(exprIn);
@@ -134,7 +135,7 @@ struct Quantifier : public SequenceView {
     void stopTriggeringOnExpr(UInt oldIndex);
     void stopTriggeringOnCondition(UInt oldIndex, UnrolledCondition& condition);
 
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
 
     std::pair<bool, ExprRef<SequenceView>> optimiseImpl(
         ExprRef<SequenceView>& self, PathExtension path);

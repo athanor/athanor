@@ -39,7 +39,7 @@ struct OpCatchUndef : public ExprInterface<ExprViewType>,
         const ExprRef<ExprViewType>& self,
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     ExprRef<ExprViewType>& getMember();
     const ExprRef<ExprViewType>& getMember() const;
     void reevaluate();

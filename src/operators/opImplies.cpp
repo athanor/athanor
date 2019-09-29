@@ -20,7 +20,7 @@ void OpImplies::updateVarViolationsImpl(const ViolationContext&,
         right->updateVarViolations(violation, vioContainer);
     }
 }
-void OpImplies::copy(OpImplies& newOp) const { newOp.violation = violation; }
+void OpImplies::copy(OpImplies&) const {}
 
 ostream& OpImplies::dumpState(ostream& os) const {
     os << "OpImplies: violation=" << violation << "\nleft: ";

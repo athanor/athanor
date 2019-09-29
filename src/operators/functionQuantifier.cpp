@@ -45,8 +45,17 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     ContainerTrigger(Quantifier<FunctionView>* op) : op(op) {}
 
     void imageChanged(UInt) final {}
-
     void imageChanged(const std::vector<UInt>&) final {}
+    void memberReplaced(UInt index, const AnyExprRef&) {
+        debug_code(assert(index < op->unrolledIterVals.size()));
+        auto iterRef =
+            mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
+        auto& tupleLit = *getAs<OpTupleLit>(iterRef->getValue());
+        auto& containerView = *op->container->view();
+        mpark::visit(
+            [&](auto& members) { tupleLit.replaceMember(1, members[index]); },
+            containerView.range);
+    }
 
     void valueChanged() {
         while (op->numberUnrolled() != 0) {

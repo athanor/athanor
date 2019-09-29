@@ -25,7 +25,7 @@ void OpMinus::updateVarViolationsImpl(const ViolationContext& vioContext,
     }
 }
 
-void OpMinus::copy(OpMinus& newOp) const { newOp.value = value; }
+void OpMinus::copy(OpMinus&) const {}
 
 ostream& OpMinus::dumpState(ostream& os) const {
     os << "OpMinus: value=" << value << "\nleft: ";

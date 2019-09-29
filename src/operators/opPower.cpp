@@ -36,7 +36,7 @@ void OpPower::updateVarViolationsImpl(const ViolationContext& vioContext,
     right->updateVarViolations(vioContext, vioContainer);
 }
 
-void OpPower::copy(OpPower& newOp) const { newOp.value = value; }
+void OpPower::copy(OpPower&) const {}
 
 ostream& OpPower::dumpState(ostream& os) const {
     os << "OpPower: value=" << value << "\nleft: ";

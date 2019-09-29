@@ -52,9 +52,6 @@ void OpInDomain<IntView>::updateVarViolationsImpl(
 
 void OpInDomain<IntView>::copy(OpInDomain<IntView>& newOp) const {
     newOp.domain = domain;
-    newOp.violation = violation;
-    newOp.closestBound = closestBound;
-    newOp.reason = reason;
 }
 
 std::ostream& OpInDomain<IntView>::dumpState(std::ostream& os) const {

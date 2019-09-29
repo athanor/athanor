@@ -22,7 +22,7 @@ void OpMod::updateVarViolationsImpl(const ViolationContext& vioContext,
     right->updateVarViolations(vioContext, vioContainer);
 }
 
-void OpMod::copy(OpMod& newOp) const { newOp.value = value; }
+void OpMod::copy(OpMod&) const {}
 
 ostream& OpMod::dumpState(ostream& os) const {
     os << "OpMod: value=" << value << "\nleft: ";

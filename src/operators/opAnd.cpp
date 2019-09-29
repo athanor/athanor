@@ -68,6 +68,10 @@ class OperatorTrates<OpAnd>::OperandsSequenceTrigger : public SequenceTrigger {
         debug_code(assert(index < members.size()));
         return members[index]->view()->violation;
     }
+    void memberReplaced(UInt index, const AnyExprRef&) final {
+        subsequenceChanged(index, index + 1);
+    }
+
     void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         UInt violationToAdd = 0, violationToRemove = 0;
         for (size_t i = startIndex; i < endIndex; i++) {
@@ -142,11 +146,7 @@ void OpAnd::updateVarViolationsImpl(const ViolationContext& vioContext,
     }
 }
 
-void OpAnd::copy(OpAnd& newOp) const {
-    newOp.violation = violation;
-    newOp.cachedViolations = cachedViolations;
-    newOp.violatingOperands = violatingOperands;
-}
+void OpAnd::copy(OpAnd&) const {}
 
 std::ostream& OpAnd::dumpState(std::ostream& os) const {
     os << "OpAnd: violation=" << violation << endl;

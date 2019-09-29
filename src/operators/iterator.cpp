@@ -121,11 +121,8 @@ std::ostream& Iterator<View>::dumpState(std::ostream& os) const {
 }
 
 template <typename View>
-void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction& func) {
-    if (ref) {
-        this->ref = findAndReplace(ref, func);
-    }
-}
+void Iterator<View>::findAndReplaceSelf(const FindAndReplaceFunction&,
+                                        PathExtension) {}
 
 template <typename View>
 pair<bool, ExprRef<View>> Iterator<View>::optimiseImpl(ExprRef<View>& self,

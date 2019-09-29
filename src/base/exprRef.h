@@ -69,8 +69,9 @@ using ExprRefVecMaker = ExprRefVec<typename AssociatedViewType<T>::type>;
 typedef Variantised<ExprRefVecMaker> AnyExprVec;
 
 class ViolationContainer;
-
-typedef std::function<std::pair<bool, AnyExprRef>(AnyExprRef)>
+struct PathExtension;
+typedef std::function<std::pair<bool, AnyExprRef>(AnyExprRef,
+                                                  const PathExtension&)>
     FindAndReplaceFunction;
 
 struct AnyIterRef;
@@ -247,7 +248,8 @@ struct ExprInterface : public Undefinable<View> {
         copy->flags = flags;
         return copy;
     }
-    virtual void findAndReplaceSelf(const FindAndReplaceFunction&) = 0;
+    virtual void findAndReplaceSelf(const FindAndReplaceFunction&,
+                                    PathExtension path) = 0;
 
     virtual std::ostream& dumpState(std::ostream& os) const = 0;
 
@@ -383,16 +385,24 @@ bool largerValue(const OptionalRef<View>& left,
 
 template <typename T>
 inline ExprRef<T> findAndReplace(ExprRef<T>& expr,
-                                 const FindAndReplaceFunction& func) {
-    auto newExpr = func(expr);
+                                 const FindAndReplaceFunction& func,
+                                 PathExtension& path,
+                                 bool isCondition = false) {
+    auto newExpr = func(expr, path);
     if (newExpr.first) {
         return mpark::get<ExprRef<T>>(newExpr.second);
     } else {
-        expr->findAndReplaceSelf(func);
+        expr->findAndReplaceSelf(func, path.extend(expr, isCondition));
         return expr;
     }
 }
 
+template <typename T>
+inline ExprRef<T> findAndReplace(ExprRef<T>& expr,
+                                 const FindAndReplaceFunction& func) {
+    auto path = PathExtension::begin(false);
+    return findAndReplace(expr, func, path, false);
+}
 template <typename Op, typename View>
 OptionalRef<Op> getAs(ExprRef<View>& expr) {
     Op* opTest = dynamic_cast<Op*>(&(*(expr)));

@@ -17,9 +17,7 @@ void OpIsDefined<View>::updateVarViolationsImpl(
     }
 }
 template <typename View>
-void OpIsDefined<View>::copy(OpIsDefined& newOp) const {
-    newOp.violation = this->violation;
-}
+void OpIsDefined<View>::copy(OpIsDefined&) const {}
 template <typename View>
 std::ostream& OpIsDefined<View>::dumpState(std::ostream& os) const {
     os << "OpIsDefined: violation=" << this->violation << "\noperand: ";

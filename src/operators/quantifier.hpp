@@ -66,7 +66,7 @@ ExprRef<View1> deepCopyExprAndAssignNewValue(ExprRef<View1> exprToCopy,
     iterRef->changeValue(newValue);
     newMember->evaluate();
     if (runSanityChecks) {
-//        newMember->debugSanityCheck();
+        //        newMember->debugSanityCheck();
     }
     return newMember;
 }
@@ -140,7 +140,8 @@ template <typename View>
 void Quantifier<ContainerType>::unroll(QueuedUnrollValue<View> queuedValue) {
     auto newIter = this->newIterRef<View>();
     if (!queuedValue.directUnrollExpr) {
-        unrolledIterVals.insert(unrolledIterVals.begin() + queuedValue.index,newIter);
+        unrolledIterVals.insert(unrolledIterVals.begin() + queuedValue.index,
+                                newIter);
     }
     if (!condition || queuedValue.directUnrollExpr) {
         this->unrollExpr(queuedValue.index, queuedValue.value, newIter);
@@ -490,8 +491,17 @@ template <typename ContainerType>
 std::ostream& Quantifier<ContainerType>::dumpState(std::ostream& os) const {
     mpark::visit(
         [&](auto& members) {
+//            typedef viewType(members) View;
             os << "quantifier(container=";
             container->dumpState(os) << ",\n";
+//            os << "expr=";
+//            mpark::get<ExprRef<View>>(expr)->dumpState(os) << ",\n";
+//            os << "condition=";
+//            if (condition) {
+//                condition->dumpState(os) << ",\n";
+//            } else {
+//                os << "null,\n";
+//            }
             os << "unrolledIterVals=" << unrolledIterVals << ",\n";
             os << "unrolledConditions=" << unrolledConditions << ",\n";
             os << "unrolledExprs=[";
@@ -516,9 +526,12 @@ void Quantifier<ContainerType>::updateVarViolationsImpl(const ViolationContext&,
 
 template <typename ContainerType>
 void Quantifier<ContainerType>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func) {
-    mpark::visit([&](auto& expr) { expr = findAndReplace(expr, func); },
+    const FindAndReplaceFunction& func, PathExtension path) {
+    mpark::visit([&](auto& expr) { expr = findAndReplace(expr, func, path); },
                  this->expr);
+    if (condition) {
+        condition = findAndReplace(condition, func, path, true);
+    }
 }
 
 template <typename ContainerType>

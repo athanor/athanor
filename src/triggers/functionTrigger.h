@@ -52,6 +52,11 @@ struct TriggerContainer<FunctionView>
         }
     }
 
+    void notifyMemberReplaced(UInt index, const AnyExprRef& oldMember) {
+        visitMemberTriggers(
+            [&](auto& t) { t->memberReplaced(index, oldMember); }, index);
+    }
+
     inline void notifyImageChanged(UInt index) {
         visitMemberTriggers([&](auto& t) { t->imageChanged(index); }, index);
     }
@@ -101,40 +106,53 @@ struct ChangeTriggerAdapter<FunctionTrigger, Child>
    public:
     ChangeTriggerAdapter(const ExprRef<FunctionView>& op)
         : wasDefined(op->getViewIfDefined().hasValue()) {}
-    void imageChanged(UInt) {
+    void imageChanged(UInt) override {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
-    void imageChanged(const std::vector<UInt>&) {
+
+    inline void memberReplaced(UInt, const AnyExprRef&) override {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
-    void imageSwap(UInt, UInt) {
+
+    void imageChanged(const std::vector<UInt>&) override {
         if (!eventHandledAsDefinednessChange()) {
             this->forwardValueChanged();
         }
     }
-    void hasBecomeDefined() { eventHandledAsDefinednessChange(); }
-    void hasBecomeUndefined() { eventHandledAsDefinednessChange(); }
+    void imageSwap(UInt, UInt) override {
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
+    }
+    void hasBecomeDefined() override { eventHandledAsDefinednessChange(); }
+    void hasBecomeUndefined() override { eventHandledAsDefinednessChange(); }
 };
 template <typename Op, typename Child>
 struct ForwardingTrigger<FunctionTrigger, Op, Child>
     : public ForwardingTriggerBase<FunctionTrigger, Op> {
     using ForwardingTriggerBase<FunctionTrigger, Op>::ForwardingTriggerBase;
-    void imageChanged(const std::vector<UInt>& indices) {
+    void imageChanged(const std::vector<UInt>& indices) override {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyImagesChanged(indices);
         }
     }
-    void imageChanged(UInt index) {
+    void imageChanged(UInt index) override {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyImageChanged(index);
         }
     }
 
-    void imageSwap(UInt index1, UInt index2) {
+    void memberReplaced(UInt index, const AnyExprRef& oldMember) override {
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberReplaced(index, oldMember);
+        }
+    }
+
+    void imageSwap(UInt index1, UInt index2) override {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyImagesSwapped(index1, index2);
         }

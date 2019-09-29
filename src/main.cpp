@@ -83,9 +83,9 @@ auto& conjurePathArg =
 mt19937 globalRandomGenerator;
 auto& randomSeedFlag = argParser.add<ComplexFlag>(
     "--random-seed", Policy::OPTIONAL, "Specify a random seed.");
-auto& seedArg =
-    randomSeedFlag.add<Arg<unsigned int>>("integer_seed", Policy::MANDATORY,
-                                 "Integer seed to use for random generator.");
+auto& seedArg = randomSeedFlag.add<Arg<unsigned int>>(
+    "integer_seed", Policy::MANDATORY,
+    "Integer seed to use for random generator.");
 bool runSanityChecks = false;
 bool verboseSanityError = false;
 auto& sanityCheckFlag = argParser.add<ComplexFlag>(

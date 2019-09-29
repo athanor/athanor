@@ -204,6 +204,9 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
             }
         }
     }
+    void memberReplaced(UInt index, const AnyExprRef&) {
+        subsequenceChanged(index, index + 1);
+    }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         op->changeValue([&]() {
             for (size_t i = startIndex; i < endIndex; i++) {

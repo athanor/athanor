@@ -3,8 +3,9 @@
 
 #include "base/base.h"
 #include "triggers/allTriggers.h"
-template <typename View>
-struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
+template <typename T>
+struct Iterator : public ExprInterface<T>, public TriggerContainer<T> {
+    typedef T View;
     typedef typename AssociatedTriggerType<View>::type TriggerType;
     struct RefTrigger;
     UInt64 id;
@@ -16,6 +17,11 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
     void changeValue(const ExprRef<View>& newVal) {
         ref = newVal;
         this->setAppearsDefined(ref->appearsDefined());
+    }
+    void changeValueAndTrigger(const ExprRef<View>& newVal) {
+        changeValue(newVal);
+        reattachRefTrigger();
+        this->notifyEntireValueChanged();
     }
 
     inline ExprRef<View>& getValue() { return ref; }
@@ -41,7 +47,7 @@ struct Iterator : public ExprInterface<View>, public TriggerContainer<View> {
     ExprRef<View> deepCopyForUnrollImpl(const ExprRef<View>& self,
                                         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
 
     std::pair<bool, ExprRef<View>> optimiseImpl(ExprRef<View>&,
                                                 PathExtension path) final;

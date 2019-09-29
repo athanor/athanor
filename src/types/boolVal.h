@@ -22,7 +22,7 @@ struct BoolValue : public BoolView, ValBase {
 
     std::ostream& dumpState(std::ostream& os) const final;
 
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     std::pair<bool, ExprRef<BoolView>> optimiseImpl(ExprRef<BoolView>&,
                                                     PathExtension) final;
     void debugSanityCheckImpl() const final;

@@ -25,7 +25,7 @@ void OpLessEq::updateVarViolationsImpl(const ViolationContext&,
         right->updateVarViolations(violation, vioContainer);
     }
 }
-void OpLessEq::copy(OpLessEq& newOp) const { newOp.violation = violation; }
+void OpLessEq::copy(OpLessEq&) const {}
 
 ostream& OpLessEq::dumpState(ostream& os) const {
     os << "OpLessEq: violation=" << violation << "\nleft: ";

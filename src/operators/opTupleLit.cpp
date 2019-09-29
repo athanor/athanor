@@ -5,6 +5,7 @@
 #include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
+
 void OpTupleLit::evaluateImpl() {
     numberUndefined = 0;
     for (auto& member : members) {
@@ -19,6 +20,7 @@ void OpTupleLit::evaluateImpl() {
     }
     this->setAppearsDefined(this->numberUndefined == 0);
 }
+
 namespace {
 template <typename TriggerType>
 struct ExprTrigger
@@ -53,6 +55,29 @@ struct ExprTrigger
 };
 
 }  // namespace
+
+void OpTupleLit::replaceMember(UInt index, const AnyExprRef& newMember) {
+    debug_code(assert(index < members.size()));
+    auto oldMember = move(members[index]);
+    members[index] = move(newMember);
+    mpark::visit(
+        [&](auto& member) {
+            typedef viewType(member) View;
+            typedef typename AssociatedTriggerType<View>::type TriggerType;
+
+            if (index < exprTriggers.size()) {
+                deleteTrigger(static_pointer_cast<ExprTrigger<TriggerType>>(
+                    exprTriggers[index]));
+                auto trigger =
+                    make_shared<ExprTrigger<TriggerType>>(this, index);
+                member->addTrigger(trigger);
+                exprTriggers[index] = move(trigger);
+            }
+        },
+        members[index]);
+    notifyMemberReplaced(index, oldMember);
+}
+
 void OpTupleLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {
         for (size_t i = 0; i < members.size(); i++) {
@@ -135,10 +160,11 @@ std::ostream& OpTupleLit::dumpState(std::ostream& os) const {
     return os;
 }
 
-void OpTupleLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+void OpTupleLit::findAndReplaceSelf(const FindAndReplaceFunction& func,
+                                    PathExtension path) {
     for (auto& member : members) {
         mpark::visit(
-            [&](auto& member) { member = findAndReplace(member, func); },
+            [&](auto& member) { member = findAndReplace(member, func, path); },
             member);
     }
 }

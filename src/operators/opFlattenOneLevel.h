@@ -30,7 +30,7 @@ struct OpFlattenOneLevel : public SequenceView {
     ExprRef<SequenceView> deepCopyForUnrollImpl(
         const ExprRef<SequenceView>& self,
         const AnyIterRef& iterator) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
 
     std::ostream& dumpState(std::ostream& os) const final;
     std::pair<bool, ExprRef<SequenceView>> optimiseImpl(

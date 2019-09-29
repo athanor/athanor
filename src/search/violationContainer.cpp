@@ -41,7 +41,7 @@ static UInt pickRandomVariable(const ViolationContainer &vioCont, UInt maxVar,
     }
     double simulatedMinViolation = 0;
     double rand;
-    const int numberNonViolatingVars =
+    const UInt numberNonViolatingVars =
         (maxVar + 1) - vioCont.getVarsWithViolation().size();
     if (numberNonViolatingVars == 0) {
         rand = globalRandom<double>(0, vioCont.getTotalViolation());

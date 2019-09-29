@@ -128,6 +128,9 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
             }
         }
     }
+    void memberReplaced(UInt index, const AnyExprRef&) final {
+        subsequenceChanged(index, index + 1);
+    }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         op->changeValue([&]() {
             for (size_t i = startIndex; i < endIndex; i++) {
@@ -170,10 +173,7 @@ void OpOr::updateVarViolationsImpl(const ViolationContext&,
     }
 }
 
-void OpOr::copy(OpOr& newOp) const {
-    newOp.violation = violation;
-    newOp.minViolationIndices = minViolationIndices;
-}
+void OpOr::copy(OpOr&) const {}
 
 std::ostream& OpOr::dumpState(std::ostream& os) const {
     os << "OpOr: violation=" << violation << endl;

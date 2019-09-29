@@ -67,7 +67,9 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
             return true;
         });
     }
-
+    void memberReplaced(UInt index, const AnyExprRef& oldMember) {
+        memberValueChanged(index, getValueHash(oldMember));
+    }
     inline void memberValueChanged(UInt index, HashType oldHash) final {
         HashType newHash = mpark::visit(
             [&](auto& members) {
@@ -151,6 +153,9 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
             return true;
         });
     }
+    void memberReplaced(UInt index, const AnyExprRef& oldMember) {
+        memberValueChanged(index, getValueHash(oldMember));
+    }
 
     inline void memberValueChanged(UInt index, HashType oldHash) final {
         HashType newHash = mpark::visit(
@@ -203,7 +208,7 @@ void OpSubsetEq::updateVarViolationsImpl(const ViolationContext&,
     right->updateVarViolations(violation, vioContainer);
 }
 
-void OpSubsetEq::copy(OpSubsetEq& newOp) const { newOp.violation = violation; }
+void OpSubsetEq::copy(OpSubsetEq&) const {}
 
 std::ostream& OpSubsetEq::dumpState(std::ostream& os) const {
     os << "OpSubsetEq: violation=" << violation << "\nLeft: ";

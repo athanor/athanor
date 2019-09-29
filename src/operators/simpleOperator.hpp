@@ -71,9 +71,9 @@ SimpleBinaryOperator<View, OperandView, Derived>::deepCopyForUnrollImpl(
 
 template <typename View, typename OperandView, typename Derived>
 void SimpleBinaryOperator<View, OperandView, Derived>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func) {
-    this->left = findAndReplace(left, func);
-    this->right = findAndReplace(right, func);
+    const FindAndReplaceFunction& func, PathExtension path) {
+    this->left = findAndReplace(left, func, path);
+    this->right = findAndReplace(right, func, path);
 }
 
 template <typename View, typename OperandView, typename Derived>
@@ -170,8 +170,8 @@ SimpleUnaryOperator<View, OperandView, Derived>::deepCopyForUnrollImpl(
 
 template <typename View, typename OperandView, typename Derived>
 void SimpleUnaryOperator<View, OperandView, Derived>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func) {
-    this->operand = findAndReplace(operand, func);
+    const FindAndReplaceFunction& func, PathExtension path) {
+    this->operand = findAndReplace(operand, func, path);
 }
 
 template <typename View, typename OperandView, typename Derived>

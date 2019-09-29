@@ -112,6 +112,10 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
         indices2.insert(index1);
         debug_code(op->assertValidState());
     }
+
+    void memberReplaced(UInt index, const AnyExprRef&) final {
+        subsequenceChanged(index, index + 1);
+    }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         if (!op->allOperandsAreDefined()) {
             return;
@@ -228,12 +232,7 @@ void OpAllDiff::updateVarViolationsImpl(const ViolationContext& vioContext,
         operand->view()->members);
 }
 
-void OpAllDiff::copy(OpAllDiff& newOp) const {
-    newOp.violation = violation;
-    newOp.hashIndicesMap = hashIndicesMap;
-    newOp.indicesHashMap = indicesHashMap;
-    newOp.violatingOperands = violatingOperands;
-}
+void OpAllDiff::copy(OpAllDiff&) const {}
 
 std::ostream& OpAllDiff::dumpState(std::ostream& os) const {
     os << "OpAllDiff: violation=" << violation << endl;

@@ -24,7 +24,7 @@ void OpDiv::updateVarViolationsImpl(const ViolationContext& vioContext,
     }
 }
 
-void OpDiv::copy(OpDiv& newOp) const { newOp.value = value; }
+void OpDiv::copy(OpDiv&) const {}
 
 ostream& OpDiv::dumpState(ostream& os) const {
     os << "OpDiv: value=" << value << "\nleft: ";

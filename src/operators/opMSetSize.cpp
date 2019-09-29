@@ -14,7 +14,7 @@ void OpMSetSize::updateVarViolationsImpl(const ViolationContext& vioContext,
     operand->updateVarViolations(vioContext, vioContainer);
 }
 
-void OpMSetSize::copy(OpMSetSize& newOp) const { newOp.value = value; }
+void OpMSetSize::copy(OpMSetSize&) const {}
 
 std::ostream& OpMSetSize::dumpState(std::ostream& os) const {
     os << "OpMSetSize: value=" << value << "\noperand: ";

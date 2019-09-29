@@ -23,7 +23,7 @@ struct EmptyValue : public EmptyView, public ValBase {
         const ExprRef<EmptyView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     std::pair<bool, ExprRef<EmptyView>> optimiseImpl(ExprRef<EmptyView>&,
                                                      PathExtension) final;
     void debugSanityCheckImpl() const final;

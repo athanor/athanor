@@ -128,7 +128,6 @@ ExprRef<ExprViewType> OpCatchUndef<ExprViewType>::deepCopyForUnrollImpl(
     const ExprRef<ExprViewType>&, const AnyIterRef& iterator) const {
     auto newOpCatchUndef = make_shared<OpCatchUndef<ExprViewType>>(
         expr->deepCopyForUnroll(expr, iterator), replacement);
-    newOpCatchUndef->exprDefined = exprDefined;
     return newOpCatchUndef;
 }
 
@@ -143,9 +142,9 @@ std::ostream& OpCatchUndef<ExprViewType>::dumpState(std::ostream& os) const {
 
 template <typename ExprViewType>
 void OpCatchUndef<ExprViewType>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func) {
-    this->expr = findAndReplace(expr, func);
-    this->replacement = findAndReplace(replacement, func);
+    const FindAndReplaceFunction& func, PathExtension path) {
+    this->expr = findAndReplace(expr, func, path);
+    this->replacement = findAndReplace(replacement, func, path);
 }
 
 template <typename ExprViewType>

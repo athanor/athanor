@@ -110,7 +110,22 @@ struct SequenceView : public ExprInterface<SequenceView>,
             myAbort();
         }
     }
-
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    void replaceMember(UInt index, const ExprRef<InnerViewType>& newMember) {
+        debug_code(assert(index < numberElements()));
+        if (cachedHashTotal.isValid()) {
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                value -=
+                    this->calcSubsequenceHash<InnerViewType>(index, index + 1);
+                ;
+                getMembers<InnerViewType>()[index] = newMember;
+                value +=
+                    this->calcSubsequenceHash<InnerViewType>(index, index + 1);
+            });
+        } else {
+            getMembers<InnerViewType>()[index] = newMember;
+        }
+    }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline HashType changeSubsequence(UInt startIndex, UInt endIndex) {
         checkNotUsingCachedHash();
@@ -204,6 +219,15 @@ struct SequenceView : public ExprInterface<SequenceView>,
                 calcSubsequenceHash<InnerViewType>(startIndex, endIndex);
         }
         return previousSubSequenceHash;
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    void replaceMemberAndNotify(UInt index,
+                                const ExprRef<InnerViewType>& newMember) {
+        debug_code(assert(index < numberElements()));
+        const auto oldMember = getMembers<InnerViewType>()[index];
+        replaceMember(index, newMember);
+        notifyMemberReplaced(index, oldMember);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

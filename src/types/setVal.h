@@ -219,7 +219,7 @@ struct SetValue : public SetView, public ValBase {
         const ExprRef<SetView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     std::pair<bool, ExprRef<SetView>> optimiseImpl(ExprRef<SetView>&,
                                                    PathExtension) final;
     void debugSanityCheckImpl() const final;

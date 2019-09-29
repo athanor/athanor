@@ -27,7 +27,6 @@ void OpEnumEq::updateVarViolationsImpl(const ViolationContext&,
 }
 
 void OpEnumEq::copy(OpEnumEq& newOp) const {
-    newOp.violation = violation;
     if (!definesLock.isDisabled()) {
         newOp.definesLock.reset();
     }

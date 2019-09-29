@@ -16,7 +16,7 @@ void OpNot::updateVarViolationsImpl(const ViolationContext& vioContext,
         vioContainer);
 }
 
-void OpNot::copy(OpNot& newOp) const { newOp.violation = violation; }
+void OpNot::copy(OpNot&) const {}
 
 ostream& OpNot::dumpState(ostream& os) const {
     os << "OpNot: violation=" << violation << "\noperand: ";

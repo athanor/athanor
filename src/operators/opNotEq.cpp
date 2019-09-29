@@ -21,9 +21,7 @@ void OpNotEq<OperandView>::updateVarViolationsImpl(
 }
 
 template <typename OperandView>
-void OpNotEq<OperandView>::copy(OpNotEq& newOp) const {
-    newOp.violation = this->violation;
-}
+void OpNotEq<OperandView>::copy(OpNotEq&) const {}
 template <typename OperandView>
 std::ostream& OpNotEq<OperandView>::dumpState(std::ostream& os) const {
     os << "OpNotEq: violation=" << this->violation << "\nthis->left: ";

@@ -44,7 +44,7 @@ struct OpSetLit : public SetView {
     ExprRef<SetView> deepCopyForUnrollImpl(
         const ExprRef<SetView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     std::pair<bool, ExprRef<SetView>> optimiseImpl(ExprRef<SetView>&,
                                                    PathExtension path) final;
     void assertValidHashes();

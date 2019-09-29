@@ -149,11 +149,12 @@ std::ostream& OpMSetLit::dumpState(std::ostream& os) const {
     return os;
 }
 
-void OpMSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+void OpMSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func,
+                                   PathExtension path) {
     mpark::visit(
         [&](auto& members) {
             for (auto& member : members) {
-                member = findAndReplace(member, func);
+                member = findAndReplace(member, func, path);
             }
         },
         members);

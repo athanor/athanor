@@ -41,7 +41,7 @@ struct OpTupleIndex : public ExprInterface<TupleMemberViewType>,
         const ExprRef<TupleMemberViewType>& self,
         const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
 
     OptionalRef<ExprRef<TupleMemberViewType>> getMember();
     OptionalRef<const ExprRef<TupleMemberViewType>> getMember() const;

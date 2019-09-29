@@ -119,7 +119,7 @@ struct IntValue : public IntView, ValBase {
         const ExprRef<IntView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     std::pair<bool, ExprRef<IntView>> optimiseImpl(ExprRef<IntView>&,
                                                    PathExtension) final;
     void debugSanityCheckImpl() const final;

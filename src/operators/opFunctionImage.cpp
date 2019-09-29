@@ -176,6 +176,11 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
     void imageChanged(UInt) {
         // ignore, already triggering on member
     }
+    void memberReplaced(UInt index, const AnyExprRef&) final {
+        debug_code(assert((Int)index == op->cachedIndex));
+        op->reattachFunctionMemberTrigger();
+        op->notifyEntireValueChanged();
+    }
 
     void imageChanged(const std::vector<UInt>&) {
         // ignore, already triggering
@@ -396,8 +401,6 @@ OpFunctionImage<FunctionMemberViewType>::deepCopyForUnrollImpl(
             functionOperand->deepCopyForUnroll(functionOperand, iterator),
             invoke_r(preImageOperand,
                      deepCopyForUnroll(preImageOperand, iterator), AnyExprRef));
-    newOpFunctionImage->cachedIndex = cachedIndex;
-    newOpFunctionImage->locallyDefined = locallyDefined;
     return newOpFunctionImage;
 }
 
@@ -418,11 +421,11 @@ std::ostream& OpFunctionImage<FunctionMemberViewType>::dumpState(
 
 template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func) {
-    this->functionOperand = findAndReplace(functionOperand, func);
+    const FindAndReplaceFunction& func, PathExtension path) {
+    this->functionOperand = findAndReplace(functionOperand, func, path);
     this->preImageOperand = mpark::visit(
         [&](auto& preImageOperand) -> AnyExprRef {
-            return findAndReplace(preImageOperand, func);
+            return findAndReplace(preImageOperand, func, path);
         },
         preImageOperand);
 }

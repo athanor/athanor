@@ -270,11 +270,12 @@ std::ostream& OpSetLit::dumpState(std::ostream& os) const {
     return os;
 }
 
-void OpSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func) {
+void OpSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func,
+                                  PathExtension path) {
     mpark::visit(
         [&](auto& operands) {
             for (auto& operand : operands) {
-                operand = findAndReplace(operand, func);
+                operand = findAndReplace(operand, func, path);
             }
         },
         operands);

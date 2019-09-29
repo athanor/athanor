@@ -27,6 +27,11 @@ struct TriggerContainer<MSetView>
         visitTriggers([&](auto& t) { t->valueRemoved(index, expr); }, triggers);
     }
 
+    void notifyMemberReplaced(UInt index, const AnyExprRef& oldMember) {
+        visitTriggers([&](auto& t) { t->memberReplaced(index, oldMember); },
+                      triggers);
+    }
+
     inline void notifyMemberChanged(size_t index) {
         visitTriggers([&](auto& t) { t->memberValueChanged(index); }, triggers);
     }
@@ -41,12 +46,17 @@ template <typename Child>
 struct ChangeTriggerAdapter<MSetTrigger, Child>
     : public ChangeTriggerAdapterBase<MSetTrigger, Child> {
     ChangeTriggerAdapter(const ExprRef<MSetView>&) {}
-    void valueRemoved(UInt, const AnyExprRef&) { this->forwardValueChanged(); }
-    void valueAdded(const AnyExprRef&) { this->forwardValueChanged(); }
+    void valueRemoved(UInt, const AnyExprRef&) override {
+        this->forwardValueChanged();
+    }
+    void valueAdded(const AnyExprRef&) override { this->forwardValueChanged(); }
 
-    void memberValueChanged(UInt) { this->forwardValueChanged(); }
+    void memberValueChanged(UInt) override { this->forwardValueChanged(); }
 
-    void memberValuesChanged(const std::vector<UInt>&) {
+    inline void memberReplaced(UInt, const AnyExprRef&) override {
+        this->forwardValueChanged();
+    }
+    void memberValuesChanged(const std::vector<UInt>&) override {
         this->forwardValueChanged();
     }
 };
@@ -55,24 +65,30 @@ template <typename Op, typename Child>
 struct ForwardingTrigger<MSetTrigger, Op, Child>
     : public ForwardingTriggerBase<MSetTrigger, Op> {
     using ForwardingTriggerBase<MSetTrigger, Op>::ForwardingTriggerBase;
-    void valueRemoved(UInt index, const AnyExprRef& expr) {
+    void valueRemoved(UInt index, const AnyExprRef& expr) override {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyMemberRemoved(index, expr);
         }
     }
-    void valueAdded(const AnyExprRef& expr) {
+    void valueAdded(const AnyExprRef& expr) override {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyMemberAdded(expr);
         }
     }
 
-    void memberValueChanged(UInt index) {
+    void memberValueChanged(UInt index) override {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyMemberChanged(index);
         }
     }
 
-    void memberValuesChanged(const std::vector<UInt>& indices) {
+    void memberReplaced(UInt index, const AnyExprRef& oldMember) override {
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberReplaced(index, oldMember);
+        }
+    }
+
+    void memberValuesChanged(const std::vector<UInt>& indices) override {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyMembersChanged(indices);
         }

@@ -49,6 +49,17 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
             member);
     }
 
+    void memberReplaced(UInt index, const AnyExprRef&) {
+        debug_code(assert(index < op->unrolledIterVals.size()));
+        auto iterRef =
+            mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
+        auto& tupleLit = *getAs<OpTupleLit>(iterRef->getValue());
+        auto& containerView = *op->container->view();
+        mpark::visit(
+            [&](auto& members) { tupleLit.replaceMember(1, members[index]); },
+            containerView.members);
+    }
+
     void subsequenceChanged(UInt, UInt) final{};
 
     void valueChanged() {

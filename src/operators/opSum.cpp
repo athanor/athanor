@@ -88,7 +88,9 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
         op->removeSingleValue(oldValue);
         op->addSingleValue(newValue);
     }
-
+    void memberReplaced(UInt index, const AnyExprRef&) {
+        subsequenceChanged(index, index + 1);
+    }
     inline void subsequenceChanged(UInt startIndex, UInt endIndex) final {
         if (!op->evaluationComplete) {
             return;
@@ -203,11 +205,7 @@ void OpSum::updateVarViolationsImpl(const ViolationContext& vioContext,
     }
 }
 
-void OpSum::copy(OpSum& newOp) const {
-    newOp.value = value;
-    newOp.cachedValues = cachedValues;
-    newOp.evaluationComplete = this->evaluationComplete;
-}
+void OpSum::copy(OpSum&) const {}
 
 std::ostream& OpSum::dumpState(std::ostream& os) const {
     os << "OpSum: defined=" << this->appearsDefined()

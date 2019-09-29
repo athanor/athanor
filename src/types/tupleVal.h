@@ -85,7 +85,7 @@ struct TupleValue : public TupleView, public ValBase {
     ExprRef<TupleView> deepCopyForUnrollImpl(
         const ExprRef<TupleView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     std::pair<bool, ExprRef<TupleView>> optimiseImpl(ExprRef<TupleView>&,
                                                      PathExtension) final;
     void debugSanityCheckImpl() const final;

@@ -42,7 +42,7 @@ struct OpTogether : public BoolView {
     ExprRef<BoolView> deepCopyForUnrollImpl(
         const ExprRef<BoolView>& self, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
 
     void reevaluate(bool recalculateCachedLeftIndex,
                     bool recalculateCachedRightIndex);

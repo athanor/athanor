@@ -47,7 +47,6 @@ void OpIntEq::updateVarViolationsImpl(const ViolationContext&,
 }
 
 void OpIntEq::copy(OpIntEq& newOp) const {
-    newOp.violation = violation;
     if (!definesLock.isDisabled()) {
         newOp.definesLock.reset();
     }

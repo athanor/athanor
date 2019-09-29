@@ -127,7 +127,7 @@ struct PartitionValue : public PartitionView, public ValBase {
         const ExprRef<PartitionView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     std::pair<bool, ExprRef<PartitionView>> optimiseImpl(
         ExprRef<PartitionView>&, PathExtension) final;
     void debugSanityCheckImpl() const final;

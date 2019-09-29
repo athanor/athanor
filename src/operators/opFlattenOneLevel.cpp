@@ -99,6 +99,18 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
             op->startingIndices[index] + startIndex,
             op->startingIndices[index] + endIndex);
     }
+    void memberReplaced(UInt sourceIndex, const AnyExprRef& oldMember) final {
+        auto& sourceSequence = op->operand->view()
+                                   .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
+                                   .template getMembers<SequenceView>()[index]
+                                   ->view()
+                                   .checkedGet(OP_FLATTEN_DEFAULT_ERROR);
+        UInt destIndex = op->startingIndices[index] + sourceIndex;
+        op->getMembers<SequenceInnerType>()[destIndex] =
+            sourceSequence
+                .template getMembers<SequenceInnerType>()[sourceIndex];
+        op->notifyMemberReplaced(destIndex, oldMember);
+    }
     inline void positionsSwapped(UInt index1, UInt index2) final {
         op->swapAndNotify<SequenceInnerType>(
             op->startingIndices[index] + index1,
@@ -215,6 +227,12 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
 
     void subsequenceChanged(UInt, UInt) final {
         // ignore
+    }
+    void memberReplaced(UInt index, const AnyExprRef& oldMember) final {
+        valueRemoved(index, oldMember);
+        valueAdded(index, op->operand->view()
+                              .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
+                              .template getMembers<SequenceInnerType>()[index]);
     }
     void memberHasBecomeDefined(UInt index) { todoImpl(index); }
     void memberHasBecomeUndefined(UInt index) { todoImpl(index); }
@@ -389,16 +407,13 @@ OpFlattenOneLevel<SequenceInnerType>::deepCopyForUnrollImpl(
     const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
     auto newOp = make_shared<OpFlattenOneLevel<SequenceInnerType>>(
         operand->deepCopyForUnroll(operand, iterator));
-    if (this->isEvaluated()) {
-        newOp->reevaluate();
-    }
     return newOp;
 }
 
 template <typename SequenceInnerType>
 void OpFlattenOneLevel<SequenceInnerType>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func) {
-    this->operand = findAndReplace(operand, func);
+    const FindAndReplaceFunction& func, PathExtension path) {
+    this->operand = findAndReplace(operand, func, path);
 }
 
 template <typename SequenceInnerType>

@@ -142,7 +142,6 @@ ExprRef<BoolView> OpIn::deepCopyForUnrollImpl(
     auto newOpIn = make_shared<OpIn>(
         invoke_r(expr, expr->deepCopyForUnroll(expr, iterator), AnyExprRef),
         setOperand->deepCopyForUnroll(setOperand, iterator));
-    newOpIn->violation = violation;
     return newOpIn;
 }
 
@@ -154,9 +153,11 @@ std::ostream& OpIn::dumpState(std::ostream& os) const {
     return os;
 }
 
-void OpIn::findAndReplaceSelf(const FindAndReplaceFunction& func) {
-    invoke(expr, expr->findAndReplaceSelf(func));
-    setOperand->findAndReplaceSelf(func);
+void OpIn::findAndReplaceSelf(const FindAndReplaceFunction& func,
+                              PathExtension path) {
+    expr = invoke_r(expr, findAndReplace(expr, func, path), AnyExprRef);
+    setOperand = findAndReplace(setOperand, func, path);
+    ;
 }
 
 pair<bool, ExprRef<BoolView>> OpIn::optimiseImpl(ExprRef<BoolView>&,

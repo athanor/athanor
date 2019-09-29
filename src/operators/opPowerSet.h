@@ -10,7 +10,7 @@ struct OperatorTrates<OpPowerSet> {
     struct OperandTrigger;
 };
 struct OpPowerSet : public SimpleUnaryOperator<SetView, SetView, OpPowerSet> {
-    int sizeLimit;
+    size_t sizeLimit;
     OpPowerSet(ExprRef<SetView> operand, int sizeLimit = -1)
         : SimpleUnaryOperator<SetView, SetView, OpPowerSet>(std::move(operand)),
           sizeLimit(sizeLimit) {

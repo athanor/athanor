@@ -200,7 +200,7 @@ struct MSetValue : public MSetView, public ValBase {
         const ExprRef<MSetView>&, const AnyIterRef& iterator) const final;
 
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     std::pair<bool, ExprRef<MSetView>> optimiseImpl(ExprRef<MSetView>&,
                                                     PathExtension) final;
     void debugSanityCheckImpl() const final;

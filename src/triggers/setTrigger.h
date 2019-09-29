@@ -31,6 +31,11 @@ struct TriggerContainer<SetView>
             [&](auto& t) { t->valueRemoved(index, hashOfRemovedMember); },
             triggers);
     }
+    void notifyMemberReplaced(UInt index, const AnyExprRef& oldMember) {
+        visitTriggers([&](auto& t) { t->memberReplaced(index, oldMember); },
+                      triggers);
+    }
+
     inline void notifyMemberChanged(size_t index, HashType oldHash) {
         visitTriggers([&](auto& t) { t->memberValueChanged(index, oldHash); },
                       triggers);
@@ -47,13 +52,20 @@ template <typename Child>
 struct ChangeTriggerAdapter<SetTrigger, Child>
     : public ChangeTriggerAdapterBase<SetTrigger, Child> {
     ChangeTriggerAdapter(const ExprRef<SetView>&) {}
-    void valueRemoved(UInt, HashType) { this->forwardValueChanged(); }
-    void valueAdded(const AnyExprRef&) { this->forwardValueChanged(); }
+    inline void valueRemoved(UInt, HashType) override {
+        this->forwardValueChanged();
+    }
+    void valueAdded(const AnyExprRef&) override { this->forwardValueChanged(); }
 
-    void memberValueChanged(UInt, HashType) { this->forwardValueChanged(); }
+    void memberValueChanged(UInt, HashType) override {
+        this->forwardValueChanged();
+    }
 
+    inline void memberReplaced(UInt, const AnyExprRef&) override {
+        this->forwardValueChanged();
+    }
     void memberValuesChanged(const std::vector<UInt>&,
-                             const std::vector<HashType>&) {
+                             const std::vector<HashType>&) override {
         this->forwardValueChanged();
     }
 };
@@ -76,6 +88,12 @@ struct ForwardingTrigger<SetTrigger, Op, Child>
     void memberValueChanged(UInt index, HashType oldHash) {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyMemberChanged(index, oldHash);
+        }
+    }
+
+    void memberReplaced(UInt index, const AnyExprRef& oldMember) {
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberReplaced(index, oldMember);
         }
     }
 

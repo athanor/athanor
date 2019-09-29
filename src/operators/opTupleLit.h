@@ -18,6 +18,7 @@ struct OpTupleLit : public TupleView {
     OpTupleLit(OpTupleLit&&) = delete;
     ~OpTupleLit() { this->stopTriggeringOnChildren(); }
     void evaluateImpl() final;
+    void replaceMember(UInt index, const AnyExprRef& member);
     void startTriggeringImpl() final;
     void stopTriggering() final;
     void stopTriggeringOnChildren();
@@ -26,7 +27,7 @@ struct OpTupleLit : public TupleView {
     ExprRef<TupleView> deepCopyForUnrollImpl(
         const ExprRef<TupleView>&, const AnyIterRef& iterator) const final;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&) final;
+    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
     std::pair<bool, ExprRef<TupleView>> optimiseImpl(ExprRef<TupleView>& self,
                                                      PathExtension path) final;
     std::string getOpName() const final;

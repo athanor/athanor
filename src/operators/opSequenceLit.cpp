@@ -133,7 +133,8 @@ ExprRef<SequenceView> OpSequenceLit::deepCopyForUnrollImpl(
 }
 
 std::ostream& OpSequenceLit::dumpState(std::ostream& os) const {
-    os << "OpSequenceLit: exprs=[";
+    os << "OpSequenceLit: numberUndefined=" << numberUndefined
+       << ", appearsDefined=" << this->appearsDefined() << ", exprs=[";
     mpark::visit(
         [&](auto& members) {
             bool first = true;

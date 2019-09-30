@@ -199,13 +199,10 @@ SimpleUnaryOperator<View, OperandView, Derived>::optimiseImpl(
 template <typename View, typename OperandView, typename Derived>
 void SimpleUnaryOperator<View, OperandView,
                          Derived>::standardSanityDefinednessChecks() const {
-    if (!operand->getViewIfDefined()) {
-        if (this->appearsDefined()) {
-            throw SanityCheckException(
-                "Operand is undefined but operator is still defined.");
-        }
-    }
-    if (!this->appearsDefined()) {
+    if (!operand->getViewIfDefined() && this->appearsDefined()) {
+        throw SanityCheckException(
+            "Operand is undefined but operator is still defined.");
+    } else if (operand->getViewIfDefined() && !this->appearsDefined()) {
         throw SanityCheckException("operand is defined but operator is not.");
     }
 }

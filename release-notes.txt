@@ -1,1 +1,1 @@
-Major bug fixes to nested quantifiers with conditions and function neighbourhoods that were causing incorrect answers.  Check commits for details.  This is the first automated release and hence many of the commits leading up to this one relate to correctly configuring the CI system. 
+Another bug fixing spree, most observable in non commutative operators over quantifiers.  Major bugs were resolved in this release .  The changes are quite significant so please report any issues that they cause.

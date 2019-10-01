@@ -104,6 +104,14 @@ auto& repeatSanityCheckFlag = sanityCheckFlag.add<Flag>(
     "repeat the checks of expressions that are constant.",
     [](auto&) { repeatSanityCheckOfConst = true; });
 
+bool dontSkipSanityCheckForAlreadyVisitedChildren = false;
+auto& dontSkipSanityCheckFlag = sanityCheckFlag.add<Flag>(
+    "--dont-skip-repeat-visits", Policy::OPTIONAL,
+    "When a child has multiple parents, the child will be visited multiple "
+    "times during sanity checking.  Only the first visit causes a sanity check "
+    "of child unless this option is enabled.",
+    [](auto&) { dontSkipSanityCheckForAlreadyVisitedChildren = true; });
+
 debug_code(bool debugLogAllowed = true;
            auto& disableDebugLoggingFlag = argParser.add<Flag>(
                "--disable-debug-log", Policy::OPTIONAL,

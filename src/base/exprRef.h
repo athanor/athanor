@@ -20,6 +20,7 @@ using std::experimental::optional;
 }  // namespace lib
 extern bool sanityCheckRepeatMode;
 extern bool repeatSanityCheckOfConst;
+extern bool dontSkipSanityCheckForAlreadyVisitedChildren;
 extern bool verboseSanityError;
 struct SanityCheckException {
     const std::string errorMessage;
@@ -265,7 +266,8 @@ struct ExprInterface : public Undefinable<View> {
             sanityCheckRepeat = sanityCheckRepeatMode;
         } else if (!repeatSanityCheckOfConst && this->isConstant()) {
             return;
-        } else if (sanityCheckRepeat != sanityCheckRepeatMode) {
+        } else if (sanityCheckRepeat != sanityCheckRepeatMode ||
+                   dontSkipSanityCheckForAlreadyVisitedChildren) {
             sanityCheckRepeat = sanityCheckRepeatMode;
         } else {
             return;

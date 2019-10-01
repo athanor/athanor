@@ -43,6 +43,9 @@ class OperatorTrates<OpSum>::OperandsSequenceTrigger : public SequenceTrigger {
 
     void valueRemoved(UInt index, const AnyExprRef& exprIn) final {
         if (!op->evaluationComplete) {
+            if (op->operand->getViewIfDefined()) {
+                op->reevaluateDefinedAndTrigger();
+            }
             return;
         }
         const auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
@@ -207,7 +210,10 @@ void OpSum::copy(OpSum& newOp) const {
 }
 
 std::ostream& OpSum::dumpState(std::ostream& os) const {
-    os << "OpSum: value=" << value << endl;
+    os << "OpSum: defined=" << this->appearsDefined()
+       << ", operandDefined=" << operand->appearsDefined()
+       << ", evaluationComplete=" << evaluationComplete << ", value=" << value
+       << endl;
     return operand->dumpState(os);
 }
 

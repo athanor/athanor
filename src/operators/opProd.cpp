@@ -62,6 +62,9 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
 
     void valueRemoved(UInt index, const AnyExprRef& exprIn) final {
         if (!op->evaluationComplete) {
+            if (op->operand->getViewIfDefined()) {
+                op->reevaluateDefinedAndTrigger();
+            }
             return;
         }
         const auto& expr = mpark::get<ExprRef<IntView>>(exprIn);

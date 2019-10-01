@@ -66,7 +66,7 @@ ExprRef<View1> deepCopyExprAndAssignNewValue(ExprRef<View1> exprToCopy,
     iterRef->changeValue(newValue);
     newMember->evaluate();
     if (runSanityChecks) {
-        newMember->debugSanityCheck();
+//        newMember->debugSanityCheck();
     }
     return newMember;
 }
@@ -140,7 +140,7 @@ template <typename View>
 void Quantifier<ContainerType>::unroll(QueuedUnrollValue<View> queuedValue) {
     auto newIter = this->newIterRef<View>();
     if (!queuedValue.directUnrollExpr) {
-        unrolledIterVals.emplace_back(newIter);
+        unrolledIterVals.insert(unrolledIterVals.begin() + queuedValue.index,newIter);
     }
     if (!condition || queuedValue.directUnrollExpr) {
         this->unrollExpr(queuedValue.index, queuedValue.value, newIter);

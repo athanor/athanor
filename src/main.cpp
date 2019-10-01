@@ -84,7 +84,7 @@ mt19937 globalRandomGenerator;
 auto& randomSeedFlag = argParser.add<ComplexFlag>(
     "--random-seed", Policy::OPTIONAL, "Specify a random seed.");
 auto& seedArg =
-    randomSeedFlag.add<Arg<int>>("integer_seed", Policy::MANDATORY,
+    randomSeedFlag.add<Arg<unsigned int>>("integer_seed", Policy::MANDATORY,
                                  "Integer seed to use for random generator.");
 bool runSanityChecks = false;
 bool verboseSanityError = false;
@@ -548,7 +548,7 @@ int main(const int argc, const char** argv) {
         vector<nlohmann::json> jsons = getInputs();
         ParsedModel parsedModel = parseModelFromJson(jsons);
         State state(parsedModel.builder->build());
-        UInt32 seed = (seedArg) ? seedArg.get() : random_device()();
+        unsigned int seed = (seedArg) ? seedArg.get() : random_device()();
         globalRandomGenerator.seed(seed);
         cout << "Using seed: " << seed << endl;
         state.disableVarViolations = disableVioBiasFlag;

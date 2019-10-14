@@ -45,7 +45,17 @@ function processFile(file) {
 }
 
 
+function checkForPermission() {
+    if (!window.permissionGranted) {
+        window.permissionGranted = confirm("Some models may be logged for debugging purposes.  Press okay to proceed.");
+    }
+    return window.permissionGranted;
+}
+
 function runButtonPressed() {
+    if (!checkForPermission()) {
+        return;
+    }
     if (runButton.innerHTML === "RUN") {
         runButton.innerHTML = "STOP";
         parseAndRun()
@@ -152,6 +162,7 @@ window.onload = function() {
     
     window.runButton = document.getElementById("run_button");
     window.pre = document.getElementById("console_output");
+    window.permissionGranted = false
     window.athanorWorker = new Worker("athanorWorker.js");
     display("Loading solver...",true);
     window.athanorWorker.onmessage = function(e) {

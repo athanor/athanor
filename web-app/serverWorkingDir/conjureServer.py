@@ -18,8 +18,22 @@ pathWhiteList = {"/",
     "/index.html"}
 conjurePath = "../conjure"
 
-def cleanError(error,prefix):
-    return error[error.find(prefix) + len(prefix):].strip()
+def findEndOf(text,substr):
+    i = text.find(substr)
+    return i + len(substr) if i != -1 else i
+def removeFileNames(text):
+    """this is just a prettyness thing, not a security thing"""
+    startIndex = findEndOf(text,".essence:")
+    if startIndex != -1:
+        return "In specification:" + text[startIndex:]
+    startIndex = findEndOf(text,".param:")
+    if startIndex != -1:
+        return "In parameter:" + text[startIndex:]
+    return text
+
+
+
+
 def essenceToJson(essence,isParam):
     tempFileName = "../temp_" +  str(time.time()) + "_" + str(threading.get_ident()) 
     tempFileName += ".essence" if not isParam else ".param"
@@ -29,7 +43,7 @@ def essenceToJson(essence,isParam):
     conjureJsonCommand = [conjurePath, "pretty", tempFileName, "--output-format", "json"]
     proc = subprocess.run(conjureTypeCheckCommand,capture_output=True,encoding="utf-8")
     if proc.returncode != 0:
-        return { "status":"error", "data":cleanError(proc.stderr,tempFileName + ":")}
+        return { "status":"error", "data":removeFileNames(proc.stderr)}
     proc = subprocess.run(conjureJsonCommand,capture_output=True,encoding="utf-8")
     if proc.returncode != 0:
         return { "status":"error", "data":proc.stderr }

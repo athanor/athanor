@@ -64,8 +64,11 @@ void StatsContainer::initialSolution(Model& model) {
     checkForBestSolution(true, true, model);
 }
 
-// struct to hold information if printing to the athanor web app
+#ifdef WASM_TARGET
 static const size_t WEB_STATS_REPORT_INTERVAL = 2000;
+#endif
+
+// struct to hold information if printing to the athanor web app
 class WebAppStats {
     string solutionNumber;
     string wallTime;

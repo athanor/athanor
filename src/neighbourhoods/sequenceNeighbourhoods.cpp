@@ -247,10 +247,6 @@ struct SequenceRelaxSub
         ExprRefVec<typename AssociatedViewType<InnerDomainType>::type>&
             newValues,
         size_t subseqSize) {
-        typedef
-            typename AssociatedViewType<InnerDomainType>::type InnerViewType;
-        typedef
-            typename AssociatedValueType<InnerViewType>::type InnerValueType;
         if (subseqSize < newValues.size()) {
             newValues.erase(newValues.begin() + subseqSize, newValues.end());
         }

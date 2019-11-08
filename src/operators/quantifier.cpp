@@ -277,6 +277,15 @@ template <>
 bool optimiseIfCanBeConvertedToSubstringQuantifier<SequenceView>(
     Quantifier<SequenceView>& quant);
 
+template <typename View>
+bool optimiseIfIndicesAreNotUsedInSequenceQuantifier(Quantifier<View>&) {
+    return false;
+}
+
+template <>
+bool optimiseIfIndicesAreNotUsedInSequenceQuantifier<SequenceView>(
+    Quantifier<SequenceView>& quant);
+
 template <typename ContainerType>
 pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimiseImpl(
     ExprRef<SequenceView>&, PathExtension path) {
@@ -296,7 +305,8 @@ pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimiseImpl(
         },
         newOp->expr);
     optimised |= optimiseIfIntRangeWithConditions(*newOp);
-optimised |= optimiseIfCanBeConvertedToSubstringQuantifier(*newOp);
+    optimised |= optimiseIfCanBeConvertedToSubstringQuantifier(*newOp);
+    optimised |= optimiseIfIndicesAreNotUsedInSequenceQuantifier(*newOp);
     return make_pair(optimised, newOpAsExpr);
 }
 

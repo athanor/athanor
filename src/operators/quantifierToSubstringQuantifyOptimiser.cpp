@@ -70,18 +70,27 @@ bool appendSequenceIndexOp(const PathExtension& path,
     }
     return false;
 }
-
-bool isTupleIndexOverIterator(UInt64 iterId, const AnyExprRef& expr) {
-    auto intExpr = mpark::get_if<ExprRef<IntView>>(&expr);
-    if (!intExpr) {
-        return false;
-    }
-    auto tupleIndexTest = getAs<OpTupleIndex<IntView>>(*intExpr);
+template <typename View>
+OptionalRef<const OpTupleIndex<View>> getIfTupleIndexOverIterator(
+    UInt64 iterId, const ExprRef<View>& expr) {
+    auto tupleIndexTest = getAs<OpTupleIndex<View>>(expr);
     if (!tupleIndexTest) {
-        return false;
+        return EmptyOptional();
     }
     auto iter = getAs<Iterator<TupleView>>(tupleIndexTest->tupleOperand);
-    return iter && iter->id == iterId;
+    if (iter && iter->id == iterId) {
+        return *tupleIndexTest;
+    } else {
+        return EmptyOptional();
+    }
+}
+
+bool isTupleIndexOverIterator(UInt64 iterId, const AnyExprRef& expr) {
+    return mpark::visit(
+        [&](auto& expr) {
+            return getIfTupleIndexOverIterator(iterId, expr).hasValue();
+        },
+        expr);
 }
 
 // Helps with using the findAndReplace function to search for iterator nodes.
@@ -90,13 +99,18 @@ bool isTupleIndexOverIterator(UInt64 iterId, const AnyExprRef& expr) {
 // given function on that iterator.
 // function filters for tuple index over the iterator, not the iterator itself.
 template <typename Func>
-auto filterForIntRangeValues(UInt64 iterId, Func&& func) {
+auto filterForTupleIndexOverIterator(UInt64 iterId, Func&& func) {
     return [iterId, f = forward<Func>(func)](
                AnyExprRef expr,
                const PathExtension path) -> pair<bool, AnyExprRef> {
-        if (isTupleIndexOverIterator(iterId, expr)) {
-            f(expr, path);
-        }
+        mpark::visit(
+            [&](auto& expr) {
+                auto tupleIndex = getIfTupleIndexOverIterator(iterId, expr);
+                if (tupleIndex) {
+                    f(*tupleIndex, path);
+                }
+            },
+            expr);
         return make_pair(false, expr);
     };
 }
@@ -108,13 +122,14 @@ template <typename Quantifier>
 lib::optional<AnyExprVec> searchForSequenceIndexOps(Quantifier& quant) {
     lib::optional<AnyExprVec> sequenceIndexOps;
     bool fail = false;
-    FindAndReplaceFunction sequenceIndexOpFinder = filterForIntRangeValues(
-        quant.quantId, [&](auto&, const PathExtension& path) {
-            if (fail) {
-                return;
-            }
-            fail = !appendSequenceIndexOp(path, sequenceIndexOps);
-        });
+    FindAndReplaceFunction sequenceIndexOpFinder =
+        filterForTupleIndexOverIterator(
+            quant.quantId, [&](auto&, const PathExtension& path) {
+                if (fail) {
+                    return;
+                }
+                fail = !appendSequenceIndexOp(path, sequenceIndexOps);
+            });
 
     mpark::visit(
         [&](auto& expr) { findAndReplace(expr, sequenceIndexOpFinder); },
@@ -313,4 +328,40 @@ bool optimiseIfCanBeConvertedToSubstringQuantifier<SequenceView>(
         "Optimise: rewriting sequence indexing quantifier to substring "
         "quantifier.");
     return true;
+}
+
+template <typename View>
+bool optimiseIfIndicesAreNotUsedInSequenceQuantifier(Quantifier<View>&) {
+    return false;
+}
+
+template <>
+bool optimiseIfIndicesAreNotUsedInSequenceQuantifier<SequenceView>(
+    Quantifier<SequenceView>& quant) {
+    using namespace SubstringQuantifyDetail;
+    bool canBeOptimised = true;
+    auto checker = filterForTupleIndexOverIterator(
+        quant.quantId, [&](auto& tupleIndex, const auto&) {
+            canBeOptimised &= tupleIndex.indexOperand == 1;
+        });
+    mpark::visit([&](auto& expr) { findAndReplace(expr, checker); },
+                 quant.expr);
+    if (canBeOptimised && quant.condition) {
+        findAndReplace(quant.condition, checker);
+    }
+    if (canBeOptimised != quant.optimisedToNotUpdateIndices) {
+        quant.optimisedToNotUpdateIndices = canBeOptimised;
+        if (canBeOptimised) {
+            debug_log(
+                "Optimise: quantifier over sequences will not update yielded "
+                "indices.");
+        } else {
+            debug_log(
+                "Optimise: turned off optimisation for not updating indices in "
+                "sequence quantifier.");
+        }
+        return true;
+    } else {
+        return false;
+    }
 }

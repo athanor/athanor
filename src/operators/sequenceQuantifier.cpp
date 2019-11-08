@@ -20,7 +20,8 @@ struct InitialUnroller<SequenceView> {
             [&](auto& membersImpl) {
                 for (size_t i = 0; i < membersImpl.size(); i++) {
                     auto tupleFirstMember = make<IntValue>();
-                    tupleFirstMember->value = i + 1;
+                    tupleFirstMember->value =
+                        (!quantifier.optimisedToNotUpdateIndices) ? i + 1 : 0;
                     auto unrolledExpr = OpMaker<OpTupleLit>::make(
                         {tupleFirstMember.asExpr(), membersImpl[i]});
                     unrolledExpr->evaluate();
@@ -83,7 +84,8 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
     template <typename View>
     void handleUnroll(UInt memberIndex, ExprRef<View> member) {
         auto tupleFirstMember = make<IntValue>();
-        tupleFirstMember->value = memberIndex + 1;
+        tupleFirstMember->value =
+            (!op->optimisedToNotUpdateIndices) ? memberIndex + 1 : 0;
         auto unrolledExpr =
             OpMaker<OpTupleLit>::make({tupleFirstMember.asExpr(), member});
         unrolledExpr->evaluate();
@@ -102,12 +104,19 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
     }
 
     void correctUnrolledTupleIndices(size_t startIndex) {
+        if (op->optimisedToNotUpdateIndices) {
+            return;
+        }
         debug_log("correct tuple indices from " << startIndex << " onwards.");
         for (size_t i = startIndex; i < op->unrolledIterVals.size(); i++) {
             correctUnrolledTupleIndex(i);
         }
     }
     void correctUnrolledTupleIndex(size_t index) {
+        if (op->optimisedToNotUpdateIndices) {
+            return;
+        }
+
         debug_log("Correcting tuple index " << index);
         auto& tuple =
             mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
@@ -165,7 +174,12 @@ struct ContainerSanityChecker<SequenceView> {
             auto intView = (*intExprPtr)->getViewIfDefined();
             sanityCheck(intView,
                         "First member of unrolled tuple should be defined.");
-            sanityEqualsCheck((Int)(i + 1), intView->value);
+
+            if (!quant.optimisedToNotUpdateIndices) {
+                sanityEqualsCheck((Int)(i + 1), intView->value);
+            } else {
+                sanityEqualsCheck(0, intView->value);
+            }
         }
     }
 };

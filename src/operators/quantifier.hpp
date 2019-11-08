@@ -359,6 +359,7 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopyForUnrollImpl(
         newQuantifier->condition =
             condition->deepCopyForUnroll(condition, iterator);
     }
+    newQuantifier->optimisedToNotUpdateIndices = optimisedToNotUpdateIndices;
     mpark::visit(
         [&](const auto& expr) {
             newQuantifier->setExpression(
@@ -491,17 +492,16 @@ template <typename ContainerType>
 std::ostream& Quantifier<ContainerType>::dumpState(std::ostream& os) const {
     mpark::visit(
         [&](auto& members) {
-//            typedef viewType(members) View;
+            //            typedef viewType(members) View;
             os << "quantifier(container=";
             container->dumpState(os) << ",\n";
-//            os << "expr=";
-//            mpark::get<ExprRef<View>>(expr)->dumpState(os) << ",\n";
-//            os << "condition=";
-//            if (condition) {
-//                condition->dumpState(os) << ",\n";
-//            } else {
-//                os << "null,\n";
-//            }
+            //            os << "expr=";
+            //            mpark::get<ExprRef<View>>(expr)->dumpState(os) <<
+            //            ",\n"; os << "condition="; if (condition) {
+            //                condition->dumpState(os) << ",\n";
+            //            } else {
+            //                os << "null,\n";
+            //            }
             os << "unrolledIterVals=" << unrolledIterVals << ",\n";
             os << "unrolledConditions=" << unrolledConditions << ",\n";
             os << "unrolledExprs=[";

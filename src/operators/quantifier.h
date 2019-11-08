@@ -72,7 +72,9 @@ struct Quantifier : public SequenceView {
     std::vector<AnyIterRef> unrolledIterVals;
     std::shared_ptr<ContainerTrigger<ContainerType>> containerTrigger;
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
-
+    bool optimisedToNotUpdateIndices =
+        false;  // when quantifying over a sequence and the index of each
+                // element is not used.
     Quantifier(ExprRef<ContainerType> container,
                const UInt64 id = nextQuantId())
         : quantId(id), container(std::move(container)) {}

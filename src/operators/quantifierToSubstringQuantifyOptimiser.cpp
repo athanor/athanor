@@ -140,6 +140,28 @@ lib::optional<AnyExprVec> searchForSequenceIndexOps(Quantifier& quant) {
     return (!fail) ? sequenceIndexOps : lib::nullopt;
 }
 
+bool checkAllSequenceIndicesUsedTheSameSequence(const AnyExprVec& exprs) {
+    return mpark::visit(
+        [&](auto& exprs) {
+            typedef viewType(exprs) View;
+            if (exprs.empty()) {
+                return true;
+            }
+
+            auto& firstIndexOp = *getAs<OpSequenceIndex<View>>(exprs.front());
+            auto* firstSequence = &(*(firstIndexOp.sequenceOperand));
+            for (size_t i = 1; i < exprs.size(); i++) {
+                auto& indexOp = *getAs<OpSequenceIndex<View>>(exprs[i]);
+                auto* sequence = &(*(indexOp.sequenceOperand));
+                if (sequence != firstSequence) {
+                    return false;
+                }
+            }
+            return true;
+        },
+        exprs);
+}
+
 // calculate the index offset from an integer expr.
 // The expr may either be the iterator itself, in which case the offset is 0.
 // The index operand may instead consist of a sum or minus operator, who's
@@ -313,6 +335,7 @@ bool optimiseIfCanBeConvertedToSubstringQuantifier<SequenceView>(
     lib::optional<AnyExprVec> sequenceIndexOps =
         searchForSequenceIndexOps(quant);
     if (!sequenceIndexOps ||
+        !checkAllSequenceIndicesUsedTheSameSequence(*sequenceIndexOps) ||
         mpark::visit([&](auto& ops) { return ops.empty(); },
                      *sequenceIndexOps)) {
         return false;

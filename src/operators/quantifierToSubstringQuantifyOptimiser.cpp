@@ -363,12 +363,18 @@ bool optimiseIfIndicesAreNotUsedInSequenceQuantifier<SequenceView>(
     Quantifier<SequenceView>& quant) {
     using namespace SubstringQuantifyDetail;
     bool canBeOptimised = true;
+    bool found = false;
     auto checker = filterForTupleIndexOverIterator(
         quant.quantId, [&](auto& tupleIndex, const auto&) {
             canBeOptimised &= tupleIndex.indexOperand == 1;
+
+            found |= tupleIndex.indexOperand == 1;
+            ;
         });
     mpark::visit([&](auto& expr) { findAndReplace(expr, checker); },
                  quant.expr);
+    canBeOptimised &= found;
+
     if (canBeOptimised && quant.condition) {
         findAndReplace(quant.condition, checker);
     }

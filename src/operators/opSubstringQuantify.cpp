@@ -271,14 +271,19 @@ struct OpSubstringQuantify<SequenceMemberViewType>::BoundsTrigger
             "Not handling undefined here.");
         while (newLower < op->cachedLowerBound) {
             --op->cachedLowerBound;
-            op->addMemberAndNotify(
-                0, makeWindowTuple<SequenceMemberViewType>(
-                       sequence, op->cachedLowerBound - (op->windowSize - 1),
-                       op->cachedLowerBound));
+            if (op->cachedLowerBound <= op->cachedUpperBound) {
+                op->addMemberAndNotify(
+                    0,
+                    makeWindowTuple<SequenceMemberViewType>(
+                        sequence, op->cachedLowerBound - (op->windowSize - 1),
+                        op->cachedLowerBound));
+            }
         }
         while (newLower > op->cachedLowerBound) {
             ++op->cachedLowerBound;
-            op->removeMemberAndNotify<TupleView>(0);
+            if (op->numberElements() > 0) {
+                op->removeMemberAndNotify<TupleView>(0);
+            }
         }
     }
 
@@ -291,15 +296,19 @@ struct OpSubstringQuantify<SequenceMemberViewType>::BoundsTrigger
             "Not handling undefined here.");
         while (newUpper > op->cachedUpperBound) {
             ++op->cachedUpperBound;
-            op->addMemberAndNotify(
-                op->numberElements(),
-                makeWindowTuple<SequenceMemberViewType>(
-                    sequence, op->cachedUpperBound - (op->windowSize - 1),
-                    op->cachedUpperBound));
+            if (op->cachedUpperBound >= op->cachedLowerBound) {
+                op->addMemberAndNotify(
+                    op->numberElements(),
+                    makeWindowTuple<SequenceMemberViewType>(
+                        sequence, op->cachedUpperBound - (op->windowSize - 1),
+                        op->cachedUpperBound));
+            }
         }
         while (newUpper < op->cachedUpperBound) {
             --op->cachedUpperBound;
-            op->removeMemberAndNotify<TupleView>(op->numberElements() - 1);
+            if (op->numberElements() > 0) {
+                op->removeMemberAndNotify<TupleView>(op->numberElements() - 1);
+            }
         }
     }
 

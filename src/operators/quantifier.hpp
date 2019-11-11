@@ -477,7 +477,7 @@ void Quantifier<ContainerType>::evaluateImpl() {
     debug_code(assert(unrolledIterVals.empty()));
     debug_code(assert(this->numberUnrolled() == 0));
     container->evaluate();
-    auto view = container->getViewIfDefined();
+    auto view = container->view();
     if (!view) {
         containerDefined = false;
         this->setAppearsDefined(false);

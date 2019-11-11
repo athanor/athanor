@@ -364,9 +364,6 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopyForUnrollImpl(
         [&](const auto& expr) {
             newQuantifier->setExpression(
                 expr->deepCopyForUnroll(expr, iterator));
-            if (this->isEvaluated()) {
-                newQuantifier->evaluateImpl();
-            }
         },
         this->expr);
     return newQuantifier;

@@ -47,11 +47,14 @@ struct Model {
 
 class ModelBuilder {
     Model model;
+
+   public:
     ExprRefVec<BoolView> constraints;
+
+   private:
     std::vector<AnyValRef> varsToBeDefined;
 
     void createNeighbourhoods();
-    void addConstraints();
     void substituteVarsToBeDefined();
     FindAndReplaceFunction makeFindReplaceFunc(AnyValRef& var,
                                                AnyExprRef& expr);

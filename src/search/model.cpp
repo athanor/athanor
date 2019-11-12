@@ -35,15 +35,7 @@ void ModelBuilder::createNeighbourhoods() {
     }
 }
 
-void ModelBuilder::addConstraints() {
-    if (model.optimiseMode != OptimiseMode::NONE) {
-        mpark::visit(
-            [&](auto& objective) {
-                addConstraint(
-                    OpMaker<OpIsDefined<viewType(objective)>>::make(objective));
-            },
-            model.objective);
-    }
+void addConstraintsOnVarsToBeSubstituted(ModelBuilder& builder, Model& model) {
     // insure that defining expressions, expressions that define a variable are
     // always in the domainof the variable being defined
     for (auto& indexExprPair : model.definingExpressions) {
@@ -63,13 +55,11 @@ void ModelBuilder::addConstraints() {
                  * directly.  Instead, we put it on the variable.  Later after
                  * optimisations have been applied, all instances of the
                  * variable will be replaced withthe the defining expression. */
-                addConstraint(
+                builder.addConstraint(
                     OpMaker<OpInDomain<View>>::make(domain, var.asExpr()));
             },
             model.variables[varIndex].second);
     }
-    model.csp =
-        make_shared<OpAnd>(make_shared<OpSequenceLit>(move(constraints)));
 }
 
 template <typename View>
@@ -79,8 +69,10 @@ void optimiseExpr(ExprRef<View>& expr) {
     }
 }
 
-static void optimiseModel(Model& model) {
-    optimiseExpr(model.csp);
+static void optimiseModel(ModelBuilder& builder, Model& model) {
+    for (auto& constraint : builder.constraints) {
+        optimiseExpr(constraint);
+    }
     for (auto& nameExprPair : model.definingExpressions) {
         mpark::visit([&](auto& expr) { optimiseExpr(expr); },
                      nameExprPair.second);
@@ -91,11 +83,26 @@ static void optimiseModel(Model& model) {
 
 Model ModelBuilder::build() {
     clock_t startBuildTime = clock();
-    addConstraints();
-    createNeighbourhoods();
-    optimiseModel(model);
+    addConstraintsOnVarsToBeSubstituted(*this, model);
+    optimiseModel(*this, model);
+    // calling optimise here as want to optimise model before performing the
+    // following actions like substituting vars and posting objective
+    // constraints.
+
     substituteVarsToBeDefined();
-    optimiseModel(model);
+    if (model.optimiseMode != OptimiseMode::NONE) {
+        mpark::visit(
+            [&](auto& objective) {
+                addConstraint(
+                    OpMaker<OpIsDefined<viewType(objective)>>::make(objective));
+            },
+            model.objective);
+    }
+    model.csp =
+        make_shared<OpAnd>(make_shared<OpSequenceLit>(move(constraints)));
+    optimiseExpr(model.csp);
+    createNeighbourhoods();
+
     clock_t endBuildTime = clock();
     cout << "Model build time (CPU): "
          << ((double)(endBuildTime - startBuildTime) / CLOCKS_PER_SEC) << "s\n";

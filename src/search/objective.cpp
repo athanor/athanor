@@ -11,7 +11,7 @@ Objective::Objective(OptimiseMode mode, const ExprRef<IntView>& expr)
 template <typename Array>
 void assignElements(const TupleView& tuple, Array& array) {
     for (size_t i = 0; i < tuple.members.size(); i++) {
-        Int memberValue = mpark::get<ExprRef<IntView>>(tuple.members[i])
+        Int memberValue = lib::get<ExprRef<IntView>>(tuple.members[i])
                               ->getViewIfDefined()
                               .checkedGet(NO_OBJ_UNDEFINED)
                               .value;
@@ -53,10 +53,10 @@ Objective::Objective(OptimiseMode mode, const ExprRef<TupleView>& expr)
 
 bool Objective::operator<(const Objective& other) const {
     debug_code(assert(mode == other.mode));
-    return mpark::visit(
+    return lib::visit(
         [&](const auto& value) {
             const auto& otherValue =
-                mpark::get<BaseType<decltype(value)>>(other.value);
+                lib::get<BaseType<decltype(value)>>(other.value);
             return (mode == OptimiseMode::MINIMISE) ? value < otherValue
                                                     : otherValue < value;
         },
@@ -65,10 +65,10 @@ bool Objective::operator<(const Objective& other) const {
 
 bool Objective::operator<=(const Objective& other) const {
     debug_code(assert(mode == other.mode));
-    return mpark::visit(
+    return lib::visit(
         [&](const auto& value) {
             const auto& otherValue =
-                mpark::get<BaseType<decltype(value)>>(other.value);
+                lib::get<BaseType<decltype(value)>>(other.value);
             return (mode == OptimiseMode::MINIMISE) ? value <= otherValue
                                                     : otherValue <= value;
         },
@@ -77,30 +77,30 @@ bool Objective::operator<=(const Objective& other) const {
 
 bool Objective::operator==(const Objective& other) const {
     debug_code(assert(mode == other.mode));
-    return mpark::visit(
+    return lib::visit(
         [&](const auto& value) {
             const auto& otherValue =
-                mpark::get<BaseType<decltype(value)>>(other.value);
+                lib::get<BaseType<decltype(value)>>(other.value);
             return value == otherValue;
         },
         value);
 }
 
 ostream& operator<<(ostream& os, const Objective& o) {
-    mpark::visit(overloaded([&](Int value) { os << value; },
-                            [&](const auto& value) {
-                                os << "(";
-                                bool first = true;
-                                for (const auto& i : value) {
-                                    if (first) {
-                                        first = false;
-                                    } else {
-                                        os << ",";
-                                    }
-                                    os << i;
-                                }
-                                os << ")";
-                            }),
-                 o.value);
+    lib::visit(overloaded([&](Int value) { os << value; },
+                          [&](const auto& value) {
+                              os << "(";
+                              bool first = true;
+                              for (const auto& i : value) {
+                                  if (first) {
+                                      first = false;
+                                  } else {
+                                      os << ",";
+                                  }
+                                  os << i;
+                              }
+                              os << ")";
+                          }),
+               o.value);
     return os;
 }

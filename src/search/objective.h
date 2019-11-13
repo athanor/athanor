@@ -11,8 +11,8 @@ class Objective {
     // In tuple case, if 3 or less, use stack allocated array, otherwise use
     // vector
     OptimiseMode mode;
-    typedef mpark::variant<Int, std::array<Int, 1>, std::array<Int, 2>,
-                           std::array<Int, 3>, std::vector<Int>>
+    typedef lib::variant<Int, std::array<Int, 1>, std::array<Int, 2>,
+                         std::array<Int, 3>, std::vector<Int>>
         ObjType;
     ObjType value = 0;
 

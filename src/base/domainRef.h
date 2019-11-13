@@ -8,7 +8,7 @@
 
 #define variantDomains(T) std::shared_ptr<T##Domain>
 using AnyDomainRef =
-    mpark::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
+    lib::variant<buildForAllTypes(variantDomains, MACRO_COMMA)>;
 #undef variantDomains
 
 template <typename DomainType>
@@ -21,7 +21,7 @@ ValRef<typename AssociatedValueType<DomainType>::type> constructValueFromDomain(
 
 template <typename T = int>
 inline UInt getDomainSize(const AnyDomainRef& domain, T = 0) {
-    return mpark::visit(
+    return lib::visit(
         [&](const auto& domainImpl) { return getDomainSize(*domainImpl); },
         domain);
 }
@@ -29,7 +29,7 @@ inline UInt getDomainSize(const AnyDomainRef& domain, T = 0) {
 template <typename T = int>
 inline std::ostream& prettyPrint(std::ostream& os, const AnyDomainRef& d,
                                  T = 0) {
-    return mpark::visit(
+    return lib::visit(
         [&os](auto& dImpl) -> std::ostream& { return prettyPrint(os, *dImpl); },
         d);
 }

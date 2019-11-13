@@ -6,10 +6,10 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 #define invoke(expr, func) \
-    mpark::visit([&](auto& expr) { return expr->func; }, expr)
+    lib::visit([&](auto& expr) { return expr->func; }, expr)
 
 #define invoke_r(expr, func, ret) \
-    mpark::visit([&](auto& expr) -> ret { return expr->func; }, expr)
+    lib::visit([&](auto& expr) -> ret { return expr->func; }, expr)
 
 template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::addTriggerImpl(
@@ -95,7 +95,7 @@ lib::optional<UInt> OpFunctionImage<FunctionMemberViewType>::calculateIndex()
     if (!functionView) {
         return lib::nullopt;
     }
-    return mpark::visit(
+    return lib::visit(
         [&](auto& preImageOperand) -> lib::optional<UInt> {
             auto view = preImageOperand->getViewIfDefined();
             if (!view) {
@@ -245,11 +245,11 @@ struct PreImageTrigger
         : ChangeTriggerAdapter<
               TriggerType,
               PreImageTrigger<FunctionMemberViewType, TriggerType>>(
-              mpark::get<ExprRef<PreImageType>>(op->preImageOperand)),
+              lib::get<ExprRef<PreImageType>>(op->preImageOperand)),
           OpFunctionImage<FunctionMemberViewType>::PreImageTriggerBase(op) {}
 
     ExprRef<PreImageType>& getTriggeringOperand() {
-        return mpark::get<ExprRef<PreImageType>>(op->preImageOperand);
+        return lib::get<ExprRef<PreImageType>>(op->preImageOperand);
     }
     void adapterValueChanged() {
         if (!op->eventForwardedAsDefinednessChange()) {
@@ -264,7 +264,7 @@ struct PreImageTrigger
         auto trigger =
             make_shared<PreImageTrigger<FunctionMemberViewType, TriggerType>>(
                 op);
-        mpark::get<ExprRef<PreImageType>>(op->preImageOperand)
+        lib::get<ExprRef<PreImageType>>(op->preImageOperand)
             ->addTrigger(trigger);
         op->preImageTrigger = trigger;
     }
@@ -302,7 +302,7 @@ struct OpFunctionImage<FunctionMemberViewType>::MemberTrigger
 template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::startTriggeringImpl() {
     if (!preImageTrigger) {
-        mpark::visit(
+        lib::visit(
             [&](auto& preImageOperand) {
                 typedef typename AssociatedTriggerType<viewType(
                     preImageOperand)>::type TriggerType;
@@ -346,7 +346,7 @@ void OpFunctionImage<FunctionMemberViewType>::reattachFunctionMemberTrigger() {
 template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::stopTriggeringOnChildren() {
     if (preImageTrigger) {
-        mpark::visit(
+        lib::visit(
             [&](auto& preImageOperand) {
                 typedef typename AssociatedTriggerType<viewType(
                     preImageOperand)>::type PreImageTriggerType;
@@ -423,7 +423,7 @@ template <typename FunctionMemberViewType>
 void OpFunctionImage<FunctionMemberViewType>::findAndReplaceSelf(
     const FindAndReplaceFunction& func, PathExtension path) {
     this->functionOperand = findAndReplace(functionOperand, func, path);
-    this->preImageOperand = mpark::visit(
+    this->preImageOperand = lib::visit(
         [&](auto& preImageOperand) -> AnyExprRef {
             return findAndReplace(preImageOperand, func, path);
         },
@@ -438,7 +438,7 @@ OpFunctionImage<FunctionMemberViewType>::optimiseImpl(
         functionOperand, preImageOperand);
     AnyExprRef newOpAsExpr = ExprRef<FunctionMemberViewType>(newOp);
     optimised |= optimise(newOpAsExpr, newOp->functionOperand, path);
-    mpark::visit(
+    lib::visit(
         [&](auto& preImageOperand) {
             optimised |= optimise(newOpAsExpr, preImageOperand, path);
         },

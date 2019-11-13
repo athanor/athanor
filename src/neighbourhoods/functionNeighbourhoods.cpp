@@ -30,7 +30,7 @@ template <>
 void assignRandomValueInDomain<FunctionDomain>(const FunctionDomain& domain,
                                                FunctionValue& val,
                                                StatsContainer& stats) {
-    mpark::visit(
+    lib::visit(
         [&](auto& innerDomainPtr) {
             assignRandomValueInDomainImpl(domain, innerDomainPtr, val, stats);
         },
@@ -100,7 +100,7 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
 
 void functionLiftSingleGen(const FunctionDomain& domain, int numberValsRequired,
                            std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(
+    lib::visit(
         [&](const auto& innerDomainPtr) {
             functionLiftSingleGenImpl(domain, innerDomainPtr,
                                       numberValsRequired, neighbourhoods);
@@ -180,7 +180,7 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
 void functionLiftMultipleGen(const FunctionDomain& domain,
                              int numberValsRequired,
                              std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(
+    lib::visit(
         [&](const auto& innerDomainPtr) {
             functionLiftMultipleGenImpl(domain, innerDomainPtr,
                                         numberValsRequired, neighbourhoods);
@@ -199,7 +199,7 @@ struct FunctionImagesSwap
     const UInt innerDomainSize;
     FunctionImagesSwap(const FunctionDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.to)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "FunctionImagesSwap"; }
     static bool matches(const FunctionDomain&) { return true; }
@@ -260,9 +260,8 @@ struct FunctionImagesSwapAlongAxis
 
     FunctionImagesSwapAlongAxis(const FunctionDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
-          preImageDomain(
-              mpark::get<shared_ptr<TupleDomain>>(this->domain.from)) {
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.to)),
+          preImageDomain(lib::get<shared_ptr<TupleDomain>>(this->domain.from)) {
         for (auto& innerDomain : preImageDomain->inners) {
             ignoreUnused(innerDomain);
             auto intVal = make<IntValue>();
@@ -274,7 +273,7 @@ struct FunctionImagesSwapAlongAxis
 
     static string getName() { return "FunctionImagesSwapAlongAxis"; }
     static bool matches(const FunctionDomain& domain) {
-        auto tupleDomain = mpark::get_if<shared_ptr<TupleDomain>>(&domain.from);
+        auto tupleDomain = lib::get_if<shared_ptr<TupleDomain>>(&domain.from);
         if (!tupleDomain) {
             return false;
         }
@@ -282,7 +281,7 @@ struct FunctionImagesSwapAlongAxis
             return false;
         }
         for (auto& innerDomain : (**tupleDomain).inners) {
-            if (!mpark::get_if<shared_ptr<IntDomain>>(&innerDomain)) {
+            if (!lib::get_if<shared_ptr<IntDomain>>(&innerDomain)) {
                 return false;
             }
         }
@@ -339,7 +338,7 @@ struct FunctionImagesSwapAlongAxis
         size_t dimToChange =
             globalRandom<size_t>(0, preImage->members.size() - 1);
         auto intVal = preImage->member<IntValue>(dimToChange);
-        auto& intDomain = mpark::get<shared_ptr<IntDomain>>(
+        auto& intDomain = lib::get<shared_ptr<IntDomain>>(
             preImageDomain->inners[dimToChange]);
         if (getDomainSize(*intDomain) < 2) {
             return lib::nullopt;
@@ -372,7 +371,7 @@ struct FunctionUnifyImages
     const UInt innerDomainSize;
     FunctionUnifyImages(const FunctionDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.to)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "FunctionUnifyImages"; }
     static bool matches(const FunctionDomain&) { return true; }
@@ -462,7 +461,7 @@ struct FunctionSplitImages
     const UInt innerDomainSize;
     FunctionSplitImages(const FunctionDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.to)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "FunctionSplitImages"; }
     static bool matches(const FunctionDomain&) { return true; }
@@ -550,7 +549,7 @@ struct FunctionAssignRandom
     const UInt innerDomainSize;
     FunctionAssignRandom(const FunctionDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.to)),
           innerDomainSize(getDomainSize(innerDomain)) {}
 
     static string getName() { return "FunctionAssignRandom"; }
@@ -595,7 +594,7 @@ struct FunctionCrossover
     const UInt innerDomainSize;
     FunctionCrossover(const FunctionDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.to)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.to)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "FunctionCrossover"; }
     static bool matches(const FunctionDomain&) { return true; }

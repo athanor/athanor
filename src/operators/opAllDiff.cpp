@@ -39,7 +39,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
     }
 
     pair<bool, HashType> getHashIfDefined(const AnyExprRef& expr) {
-        return mpark::visit(
+        return lib::visit(
             [&](auto& expr) -> pair<bool, HashType> {
                 auto view = expr->getViewIfDefined();
                 if (!view) {
@@ -122,7 +122,7 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
         }
         Int violationDelta = 0;
         bool foundUndefined = false;
-        mpark::visit(
+        lib::visit(
             [&](auto& members) {
                 for (size_t i = startIndex; i < endIndex; i++) {
                     auto memberView = members[i]->getViewIfDefined();
@@ -190,7 +190,7 @@ void OpAllDiff::reevaluateImpl(SequenceView& operandView) {
     violation = 0;
     hashIndicesMap.clear();
     indicesHashMap.clear();
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             indicesHashMap.resize(members.size());
             for (size_t i = 0; i < members.size(); i++) {
@@ -214,7 +214,7 @@ void OpAllDiff::updateVarViolationsImpl(const ViolationContext& vioContext,
                                         ViolationContainer& vioContainer) {
     auto* boolVioContextTest =
         dynamic_cast<const BoolViolationContext*>(&vioContext);
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             if (boolVioContextTest && boolVioContextTest->negated) {
                 if (violation == 0) {
@@ -328,7 +328,7 @@ void OpAllDiff::debugSanityCheckImpl() const {
         operandView->numberElements() == indicesHashMap.size(),
         toString("operand has ", operandView->numberElements(),
                  " elements but indicesHashMap has ", indicesHashMap.size()));
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             for (size_t i = 0; i < members.size(); i++) {
                 auto view = members[i]->getViewIfDefined();

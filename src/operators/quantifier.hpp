@@ -111,7 +111,7 @@ template <typename ContainerType>
 template <typename View>
 void Quantifier<ContainerType>::unrollExpr(UInt index, ExprRef<View> newView,
                                            IterRef<View> iterRef) {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             debug_log("unrolling expr for value " << newView << " at index "
                                                   << index);
@@ -121,7 +121,7 @@ void Quantifier<ContainerType>::unrollExpr(UInt index, ExprRef<View> newView,
             // expr, don't evaluate, just trigger the change in value to the new
             // iterRef.
             auto newMember = deepCopyExprAndAssignNewValue(
-                mpark::get<ExprRef<viewType(members)>>(expr), newView, iterRef);
+                lib::get<ExprRef<viewType(members)>>(expr), newView, iterRef);
             if (containerDefined && triggering()) {
                 this->addMemberAndNotify(index, newMember);
             } else {
@@ -163,7 +163,7 @@ void Quantifier<ContainerType>::unroll(QueuedUnrollValue<View> queuedValue) {
 template <typename ContainerType>
 inline void normalExprSwap(Quantifier<ContainerType>& quant, UInt index1,
                            UInt index2) {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             if (quant.triggering()) {
                 quant.template swapAndNotify<viewType(members)>(index1, index2);
@@ -185,7 +185,7 @@ inline void normalExprSwap(Quantifier<ContainerType>& quant, UInt index1,
 template <typename ContainerType>
 inline void swappedTrueConditionRight(Quantifier<ContainerType>& quant,
                                       UInt index1, UInt index2) {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             typedef viewType(members) View;
             if (quant.triggering()) {
@@ -227,7 +227,7 @@ inline void swappedTrueConditionRight(Quantifier<ContainerType>& quant,
 template <typename ContainerType>
 inline void swappedTrueConditionLeft(Quantifier<ContainerType>& quant,
                                      UInt index1, UInt index2) {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             typedef viewType(members) View;
             if (quant.triggering()) {
@@ -323,7 +323,7 @@ void Quantifier<ContainerType>::roll(UInt index) {
 template <typename ContainerType>
 void Quantifier<ContainerType>::rollExpr(UInt index) {
     debug_log("Rolling  expr index " << index);
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             if (containerDefined && triggering()) {
                 this->template removeMemberAndNotify<viewType(members)>(index);
@@ -360,7 +360,7 @@ ExprRef<SequenceView> Quantifier<ContainerType>::deepCopyForUnrollImpl(
             condition->deepCopyForUnroll(condition, iterator);
     }
     newQuantifier->optimisedToNotUpdateIndices = optimisedToNotUpdateIndices;
-    mpark::visit(
+    lib::visit(
         [&](const auto& expr) {
             newQuantifier->setExpression(
                 expr->deepCopyForUnroll(expr, iterator));
@@ -425,7 +425,7 @@ void Quantifier<ContainerType>::startTriggeringImpl() {
     container->addTrigger(containerTrigger);
     container->startTriggering();
 
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             for (size_t i = 0; i < members.size(); i++) {
                 this->startTriggeringOnExpr<viewType(members)>(i, members[i]);
@@ -458,7 +458,7 @@ template <typename ContainerType>
 void Quantifier<ContainerType>::stopTriggering() {
     if (containerTrigger) {
         stopTriggeringOnChildren();
-        mpark::visit(
+        lib::visit(
             [&](auto& expr) {
                 for (auto& member :
                      this->template getMembers<viewType(expr)>()) {
@@ -487,13 +487,13 @@ void Quantifier<ContainerType>::evaluateImpl() {
 
 template <typename ContainerType>
 std::ostream& Quantifier<ContainerType>::dumpState(std::ostream& os) const {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             //            typedef viewType(members) View;
             os << "quantifier(container=";
             container->dumpState(os) << ",\n";
             //            os << "expr=";
-            //            mpark::get<ExprRef<View>>(expr)->dumpState(os) <<
+            //            lib::get<ExprRef<View>>(expr)->dumpState(os) <<
             //            ",\n"; os << "condition="; if (condition) {
             //                condition->dumpState(os) << ",\n";
             //            } else {
@@ -524,8 +524,8 @@ void Quantifier<ContainerType>::updateVarViolationsImpl(const ViolationContext&,
 template <typename ContainerType>
 void Quantifier<ContainerType>::findAndReplaceSelf(
     const FindAndReplaceFunction& func, PathExtension path) {
-    mpark::visit([&](auto& expr) { expr = findAndReplace(expr, func, path); },
-                 this->expr);
+    lib::visit([&](auto& expr) { expr = findAndReplace(expr, func, path); },
+               this->expr);
     if (condition) {
         condition = findAndReplace(condition, func, path, true);
     }
@@ -553,7 +553,7 @@ void Quantifier<ContainerType>::debugSanityCheckImpl() const {
     }
     ContainerSanityChecker<viewType(container)>::debugSanityCheck(*this, *view);
     UInt checkNumberUndefined = 0;
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             for (auto& member : members) {
                 member->debugSanityCheck();

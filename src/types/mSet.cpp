@@ -8,7 +8,7 @@ using namespace std;
 template <>
 HashType getValueHash<MSetView>(const MSetView& val) {
     return val.cachedHashTotal.getOrSet([&]() {
-        return mpark::visit(
+        return lib::visit(
             [&](auto& membersImpl) {
                 HashType total(0);
                 for (auto& member : membersImpl) {
@@ -25,7 +25,7 @@ HashType getValueHash<MSetView>(const MSetView& val) {
 template <>
 ostream& prettyPrint<MSetView>(ostream& os, const MSetView& v) {
     os << "mset(";
-    mpark::visit(
+    lib::visit(
         [&](auto& membersImpl) {
             bool first = true;
             for (auto& memberPtr : membersImpl) {
@@ -46,13 +46,12 @@ template <>
 ostream& prettyPrint<MSetView>(ostream& os, const MSetDomain& domain,
                                const MSetView& v) {
     os << "mset(";
-    mpark::visit(
+    lib::visit(
         [&](auto& membersImpl) {
             typedef
                 typename AssociatedValueType<viewType(membersImpl)>::type Value;
             typedef typename AssociatedDomain<Value>::type Domain;
-            const auto& domainPtr =
-                mpark::get<shared_ptr<Domain>>(domain.inner);
+            const auto& domainPtr = lib::get<shared_ptr<Domain>>(domain.inner);
 
             bool first = true;
             for (auto& memberPtr : membersImpl) {
@@ -103,7 +102,7 @@ ostream& prettyPrint<MSetDomain>(ostream& os, const MSetDomain& d) {
 }
 
 void matchInnerType(const MSetValue& src, MSetValue& target) {
-    mpark::visit(
+    lib::visit(
         [&](auto& srcMembersImpl) {
             target.setInnerType<viewType(srcMembersImpl)>();
         },
@@ -111,7 +110,7 @@ void matchInnerType(const MSetValue& src, MSetValue& target) {
 }
 
 void matchInnerType(const MSetDomain& domain, MSetValue& target) {
-    mpark::visit(
+    lib::visit(
         [&](auto& innerDomainImpl) {
             target.setInnerType<typename AssociatedViewType<
                 typename AssociatedValueType<typename BaseType<decltype(
@@ -141,7 +140,7 @@ void normaliseImpl(MSetValue&, ExprRefVec<InnerViewType>& valMembersImpl) {
 
 template <>
 void normalise<MSetValue>(MSetValue& val) {
-    mpark::visit(
+    lib::visit(
         [&](auto& valMembersImpl) { normaliseImpl(val, valMembersImpl); },
         val.members);
 }
@@ -153,10 +152,10 @@ bool largerValue<MSetView>(const MSetView& u, const MSetView& v);
 
 template <>
 bool smallerValue<MSetView>(const MSetView& u, const MSetView& v) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
-                mpark::get<BaseType<decltype(uMembersImpl)>>(v.members);
+                lib::get<BaseType<decltype(uMembersImpl)>>(v.members);
             if (uMembersImpl.size() < vMembersImpl.size()) {
                 return true;
             } else if (uMembersImpl.size() > vMembersImpl.size()) {
@@ -178,10 +177,10 @@ bool smallerValue<MSetView>(const MSetView& u, const MSetView& v) {
 
 template <>
 bool largerValue<MSetView>(const MSetView& u, const MSetView& v) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
-                mpark::get<BaseType<decltype(uMembersImpl)>>(v.members);
+                lib::get<BaseType<decltype(uMembersImpl)>>(v.members);
             if (uMembersImpl.size() > vMembersImpl.size()) {
                 return true;
             } else if (uMembersImpl.size() < vMembersImpl.size()) {
@@ -202,7 +201,7 @@ bool largerValue<MSetView>(const MSetView& u, const MSetView& v) {
 }
 
 void MSetValue::printVarBases() {
-    mpark::visit(
+    lib::visit(
         [&](auto& valMembersImpl) {
             cout << "parent is constant: " << (this->container == &constantPool)
                  << endl;
@@ -220,7 +219,7 @@ void MSetValue::printVarBases() {
 
 void MSetView::standardSanityChecksForThisType() const {
     HashType checkCachedHashTotal(0);
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             for (auto& member : members) {
                 auto viewOption = member->getViewIfDefined();
@@ -239,7 +238,7 @@ void MSetView::standardSanityChecksForThisType() const {
 }
 
 void MSetValue::debugSanityCheckImpl() const {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             recurseSanityChecks(members);
             standardSanityChecksForThisType();

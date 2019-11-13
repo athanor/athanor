@@ -15,7 +15,7 @@ ParseResult parseOpFunctionLit(json& functionExpr, ParsedModel& parsedModel) {
                   "decision variables.\n";
     }
     auto function = make<FunctionValue>();
-    mpark::visit(
+    lib::visit(
         [&](auto& domainExprs, auto& rangeExprs) {
             typedef viewType(rangeExprs) View;
             typedef typename AssociatedValueType<View>::type Value;
@@ -88,7 +88,7 @@ ParseResult parseOpFunctionImage(const FunctionDomain& domain,
                                  json& preImageExpr, bool hasEmptyType,
                                  ParsedModel& parsedModel) {
     auto preImage = parseExpr(preImageExpr, parsedModel).expr;
-    return mpark::visit(
+    return lib::visit(
         [&](auto& innerDomain, auto& preImage) {
             typedef typename BaseType<decltype(innerDomain)>::element_type
                 InnerDomainType;
@@ -96,7 +96,7 @@ ParseResult parseOpFunctionImage(const FunctionDomain& domain,
             typedef viewType(preImage) preImageViewType;
             typedef typename AssociatedDomain<preImageViewType>::type
                 preImageDomain;
-            if (!mpark::get_if<shared_ptr<preImageDomain>>(&domain.from)) {
+            if (!lib::get_if<shared_ptr<preImageDomain>>(&domain.from)) {
                 myCerr << "Miss match in pre image domain and function domain "
                           "when parsing OpFunctionImage.\nfunction:"
                        << domain << "\npre image type: "
@@ -120,7 +120,7 @@ shared_ptr<FunctionDomain> parseDomainMatrix(json& matrixDomainExpr,
                                              ParsedModel& parsedModel) {
     auto indexingDomain = parseDomain(matrixDomainExpr[0], parsedModel);
     auto indexingDomainIntTest =
-        mpark::get_if<shared_ptr<IntDomain>>(&indexingDomain);
+        lib::get_if<shared_ptr<IntDomain>>(&indexingDomain);
     if (!indexingDomainIntTest) {
         myCerr << "Error: matrices must be indexed by int domains.\n";
         myAbort();

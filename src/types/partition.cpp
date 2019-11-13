@@ -45,7 +45,7 @@ void printPart(std::ostream& os, const InnerDomainType& domain,
 template <>
 ostream& prettyPrint<PartitionView>(ostream& os, const PartitionView& v) {
     os << "partition(";
-    mpark::visit(
+    lib::visit(
         [&](auto& membersImpl) {
             vector<ExprRefVec<viewType(membersImpl)>> parts(v.numberParts());
             for (size_t i = 0; i < v.memberPartMap.size(); i++) {
@@ -70,13 +70,12 @@ template <>
 ostream& prettyPrint<PartitionView>(ostream& os, const PartitionDomain& domain,
                                     const PartitionView& v) {
     os << "partition(";
-    mpark::visit(
+    lib::visit(
         [&](auto& membersImpl) {
             typedef
                 typename AssociatedValueType<viewType(membersImpl)>::type Value;
             typedef typename AssociatedDomain<Value>::type Domain;
-            const auto& domainPtr =
-                mpark::get<shared_ptr<Domain>>(domain.inner);
+            const auto& domainPtr = lib::get<shared_ptr<Domain>>(domain.inner);
 
             vector<ExprRefVec<viewType(membersImpl)>> parts(v.numberParts());
             for (size_t i = 0; i < v.memberPartMap.size(); i++) {
@@ -138,7 +137,7 @@ ostream& prettyPrint<PartitionDomain>(ostream& os, const PartitionDomain& d) {
 }
 
 void matchInnerType(const PartitionValue& src, PartitionValue& target) {
-    mpark::visit(
+    lib::visit(
         [&](auto& srcMembersImpl) {
             target.setInnerType<viewType(srcMembersImpl)>();
         },
@@ -146,7 +145,7 @@ void matchInnerType(const PartitionValue& src, PartitionValue& target) {
 }
 
 void matchInnerType(const PartitionDomain& domain, PartitionValue& target) {
-    mpark::visit(
+    lib::visit(
         [&](auto& innerDomainImpl) {
             target.setInnerType<typename AssociatedViewType<
                 typename AssociatedValueType<typename BaseType<decltype(
@@ -179,7 +178,7 @@ void normaliseImpl(PartitionValue& partition,
 
 template <>
 void normalise<PartitionValue>(PartitionValue& val) {
-    mpark::visit(
+    lib::visit(
         [&](auto& valMembersImpl) { normaliseImpl(val, valMembersImpl); },
         val.members);
 }
@@ -203,7 +202,7 @@ bool largerValue<PartitionView>(const PartitionView&, const PartitionView&) {
 void PartitionView::standardSanityChecksForThisType() const {
     HashType checkCachedHashTotal = INITIAL_HASH;
     vector<HashType> checkPartHashes(partHashes.size(), INITIAL_HASH);
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             for (size_t i = 0; i < members.size(); i++) {
                 auto& member = members[i];
@@ -247,7 +246,7 @@ void PartitionView::standardSanityChecksForThisType() const {
 }
 
 void PartitionValue::debugSanityCheckImpl() const {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             recurseSanityChecks(members);
             standardSanityChecksForThisType();

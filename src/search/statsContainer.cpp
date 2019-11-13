@@ -249,8 +249,8 @@ void StatsContainer::printCurrentState(Model& model) {
         model.csp->dumpState(cout) << endl;
         if (model.optimiseMode != OptimiseMode::NONE) {
             debug_log("Objective state:");
-            mpark::visit([&](auto& o) { o->dumpState(cout) << endl; },
-                         model.objective);
+            lib::visit([&](auto& o) { o->dumpState(cout) << endl; },
+                       model.objective);
         }
     });
 }

@@ -64,8 +64,8 @@ struct IntDomain {
     };
     struct OutOfBoundsSmall {};
     struct OutOfBoundsLarge {};
-    typedef mpark::variant<FoundBound, BetweenBounds, OutOfBoundsLarge,
-                           OutOfBoundsSmall>
+    typedef lib::variant<FoundBound, BetweenBounds, OutOfBoundsLarge,
+                         OutOfBoundsSmall>
         ContainingBound;
     inline ContainingBound findContainingBound(Int value) const {
         if (bounds.empty()) {
@@ -98,7 +98,7 @@ struct IntDomain {
 
     inline bool containsValue(Int value) const {
         auto c = findContainingBound(value);
-        return mpark::get_if<FoundBound>(&c);
+        return lib::get_if<FoundBound>(&c);
     }
 };
 

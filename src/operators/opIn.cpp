@@ -4,13 +4,13 @@
 #include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-#define invoke(expr, func) mpark::visit([&](auto& expr) { return func; }, expr)
+#define invoke(expr, func) lib::visit([&](auto& expr) { return func; }, expr)
 
 #define invoke_r(expr, func, ret) \
-    mpark::visit([&](auto& expr) -> ret { return func; }, expr)
+    lib::visit([&](auto& expr) -> ret { return func; }, expr)
 
 void OpIn::reevaluate() {
-    mpark::visit(
+    lib::visit(
         [&](auto& expr) {
             auto exprView = expr->getViewIfDefined();
             auto setView = setOperand->getViewIfDefined();
@@ -66,11 +66,11 @@ struct ExprTrigger
     typedef typename AssociatedViewType<ExprTriggerType>::type ExprType;
     using Trigger<ExprTrigger<ExprTriggerType>, ExprTriggerType>::Trigger;
     ExprRef<ExprType>& getTriggeringOperand() {
-        return mpark::get<ExprRef<ExprType>>(this->op->expr);
+        return lib::get<ExprRef<ExprType>>(this->op->expr);
     }
     void reattachTrigger() {
         deleteTrigger(this->op->exprTrigger);
-        auto& expr = mpark::get<ExprRef<ExprType>>(this->op->expr);
+        auto& expr = lib::get<ExprRef<ExprType>>(this->op->expr);
         auto trigger = make_shared<ExprTrigger<ExprTriggerType>>(
             this->op, getTriggeringOperand());
         expr->addTrigger(trigger);
@@ -93,7 +93,7 @@ struct OpIn::SetOperandTrigger : public Trigger<SetOperandTrigger, SetTrigger> {
 
 void OpIn::startTriggeringImpl() {
     if (!exprTrigger) {
-        mpark::visit(
+        lib::visit(
             [&](auto& expr) {
                 typedef typename AssociatedTriggerType<viewType(expr)>::type
                     TriggerType;
@@ -165,7 +165,7 @@ pair<bool, ExprRef<BoolView>> OpIn::optimiseImpl(ExprRef<BoolView>&,
     auto newOp = make_shared<OpIn>(expr, setOperand);
     AnyExprRef newOpAsExpr = ExprRef<BoolView>(newOp);
     bool optimised = false;
-    mpark::visit(
+    lib::visit(
         [&](auto& expr) { optimised |= optimise(newOpAsExpr, expr, path); },
         newOp->expr);
     optimised |= optimise(newOpAsExpr, newOp->setOperand, path);
@@ -174,7 +174,7 @@ pair<bool, ExprRef<BoolView>> OpIn::optimiseImpl(ExprRef<BoolView>&,
 
 string OpIn::getOpName() const { return "OpIn"; }
 void OpIn::debugSanityCheckImpl() const {
-    bool exprDefined = mpark::visit(
+    bool exprDefined = lib::visit(
         [&](auto& expr) {
             expr->debugSanityCheck();
             return expr->getViewIfDefined().hasValue();

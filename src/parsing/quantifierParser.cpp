@@ -101,7 +101,7 @@ void addLocalVarsToScopeFromPatternMatch(
                 json& tupleMatchExpr = patternExpr["AbsPatTuple"];
                 checkTuplePatternMatchSize(tupleMatchExpr, domain);
                 for (size_t i = 0; i < tupleMatchExpr.size(); i++) {
-                    mpark::visit(
+                    lib::visit(
                         [&](auto& innerDomain) {
                             auto tupleIndexExpr =
                                 makeTupleIndexFromDomain(innerDomain, expr, i);
@@ -125,7 +125,7 @@ void addLocalVarsToScopeFromPatternMatch(
             },
             [&](const shared_ptr<SetDomain>& domain, ExprRef<SetView>& expr) {
                 json& setMatchExpr = patternExpr["AbsPatSet"];
-                mpark::visit(
+                lib::visit(
                     [&](auto& innerDomain) {
                         for (size_t i = 0; i < setMatchExpr.size(); i++) {
                             auto setIndexExpr =
@@ -170,7 +170,7 @@ void parseGenerator(json& generatorParent,
     json& generatorExpr = (generatorParent.count("GenInExpr"))
                               ? generatorParent["GenInExpr"]
                               : generatorParent["GenDomainNoRepr"];
-    mpark::visit(
+    lib::visit(
         [&](const auto& innerDomain) {
             typedef typename BaseType<decltype(innerDomain)>::element_type
                 InnerDomainType;
@@ -276,9 +276,9 @@ void addConditionsToQuantifier(json& comprExpr, Quantifier& quantifier,
 }
 
 ParseResult makeFlatten(ParseResult sequenceExpr) {
-    auto& domain = mpark::get<shared_ptr<SequenceDomain>>(sequenceExpr.domain);
-    auto& expr = mpark::get<ExprRef<SequenceView>>(sequenceExpr.expr);
-    return mpark::visit(
+    auto& domain = lib::get<shared_ptr<SequenceDomain>>(sequenceExpr.domain);
+    auto& expr = lib::get<ExprRef<SequenceView>>(sequenceExpr.expr);
+    return lib::visit(
         [&](auto& innerDomain) {
             typedef typename AssociatedValueType<typename BaseType<decltype(
                 innerDomain)>::element_type>::type ValueType;
@@ -299,7 +299,7 @@ ParseResult buildQuant(json& comprExpr, ExprRef<ContainerReturnType>& container,
                        const AnyDomainRef& innerDomain,
                        bool containerHasEmptyType, size_t generatorIndex,
                        ParsedModel& parsedModel) {
-    if (mpark::get_if<shared_ptr<EmptyDomain>>(&innerDomain)) {
+    if (lib::get_if<shared_ptr<EmptyDomain>>(&innerDomain)) {
         auto val = make<SequenceValue>();
         val->members.emplace<ExprRefVec<EmptyView>>();
         return ParseResult(fakeSequenceDomain(make_shared<EmptyDomain>()),
@@ -361,28 +361,28 @@ optional<ParseResult> parseComprehensionImpl(json& comprExpr,
     auto overload = overloaded(
         [&](ExprRef<SetView>& set) {
             auto& domain =
-                mpark::get<shared_ptr<SetDomain>>(quantifyingOver.domain);
+                lib::get<shared_ptr<SetDomain>>(quantifyingOver.domain);
             return buildQuant(comprExpr, set, domain, domain->inner,
                               quantifyingOver.hasEmptyType, generatorIndex,
                               parsedModel);
         },
         [&](ExprRef<MSetView>& mSet) {
             auto& domain =
-                mpark::get<shared_ptr<MSetDomain>>(quantifyingOver.domain);
+                lib::get<shared_ptr<MSetDomain>>(quantifyingOver.domain);
             return buildQuant(comprExpr, mSet, domain, domain->inner,
                               quantifyingOver.hasEmptyType, generatorIndex,
                               parsedModel);
         },
         [&](ExprRef<SequenceView>& sequence) {
             auto& domain =
-                mpark::get<shared_ptr<SequenceDomain>>(quantifyingOver.domain);
+                lib::get<shared_ptr<SequenceDomain>>(quantifyingOver.domain);
             return buildQuant(comprExpr, sequence, domain, domain->inner,
                               quantifyingOver.hasEmptyType, generatorIndex,
                               parsedModel);
         },
         [&](ExprRef<FunctionView>& function) {
             auto& domain =
-                mpark::get<shared_ptr<FunctionDomain>>(quantifyingOver.domain);
+                lib::get<shared_ptr<FunctionDomain>>(quantifyingOver.domain);
             return buildQuant(comprExpr, function, domain, domain->to,
                               quantifyingOver.hasEmptyType, generatorIndex,
                               parsedModel);
@@ -394,7 +394,7 @@ optional<ParseResult> parseComprehensionImpl(json& comprExpr,
             myAbort();
         });
 
-    return mpark::visit(overload, quantifyingOver.expr);
+    return lib::visit(overload, quantifyingOver.expr);
 }
 
 ParseResult parseComprehension(json& comprExpr, ParsedModel& parsedModel) {
@@ -477,28 +477,27 @@ IntRange constraint which will delaythe unrolling.*/
         return parseIntDomainAsIntRange(domainExpr["DomainInt"], parsedModel);
     }
     auto domain = parseDomain(domainExpr, parsedModel);
-    return mpark::visit(
-        overloaded(
-            [&](shared_ptr<IntDomain>& domain) {
-                return makeDomainGeneratorFromIntDomain(domain);
-            },
-            [&](shared_ptr<EnumDomain>& domain) {
-                return makeDomainGeneratorFromEnumDomain(domain);
-            },
-            [&](auto& domain) -> ParseResult {
-                myCerr << "Error: do not yet support "
-                          "unrolling this domain.\n";
-                prettyPrint(myCerr, domain) << endl;
-                myCerr << domainExpr << endl;
-                myAbort();
-            }),
-        domain);
+    return lib::visit(overloaded(
+                          [&](shared_ptr<IntDomain>& domain) {
+                              return makeDomainGeneratorFromIntDomain(domain);
+                          },
+                          [&](shared_ptr<EnumDomain>& domain) {
+                              return makeDomainGeneratorFromEnumDomain(domain);
+                          },
+                          [&](auto& domain) -> ParseResult {
+                              myCerr << "Error: do not yet support "
+                                        "unrolling this domain.\n";
+                              prettyPrint(myCerr, domain) << endl;
+                              myCerr << domainExpr << endl;
+                              myAbort();
+                          }),
+                      domain);
 }
 
 ParseResult quantifyOverSet(shared_ptr<SetDomain>& domain,
                             ExprRef<SetView>& expr, bool hasEmptyType) {
     auto quant = make_shared<Quantifier<SetView>>(expr);
-    return mpark::visit(
+    return lib::visit(
         [&](auto& innerDomain) {
             typedef typename AssociatedValueType<typename BaseType<decltype(
                 innerDomain)>::element_type>::type InnerValueType;
@@ -516,7 +515,7 @@ ParseResult quantifyOverFunction(shared_ptr<FunctionDomain>& domain,
                                  ExprRef<FunctionView>& expr,
                                  bool hasEmptyType) {
     auto quant = make_shared<Quantifier<FunctionView>>(expr);
-    return mpark::visit(
+    return lib::visit(
         [&](auto& innerDomain) {
             auto iter = ExprRef<TupleView>(quant->newIterRef<TupleView>());
             auto image = makeTupleIndexFromDomain(innerDomain, iter, 1);
@@ -532,16 +531,16 @@ ParseResult toSequence(ParseResult parsedExpr) {
     auto overload = overloaded(
         [&](shared_ptr<SequenceDomain>&) { return parsedExpr; },
         [&](shared_ptr<SetDomain>& domain) {
-            return quantifyOverSet(
-                domain, mpark::get<ExprRef<SetView>>(parsedExpr.expr),
-                parsedExpr.hasEmptyType);
+            return quantifyOverSet(domain,
+                                   lib::get<ExprRef<SetView>>(parsedExpr.expr),
+                                   parsedExpr.hasEmptyType);
         },
         [&](shared_ptr<FunctionDomain>& domain) {
             return quantifyOverFunction(
-                domain, mpark::get<ExprRef<FunctionView>>(parsedExpr.expr),
+                domain, lib::get<ExprRef<FunctionView>>(parsedExpr.expr),
                 parsedExpr.hasEmptyType);
         },
 
         [&](auto&) -> ParseResult { todoImpl(); });
-    return mpark::visit(overload, parsedExpr.domain);
+    return lib::visit(overload, parsedExpr.domain);
 }

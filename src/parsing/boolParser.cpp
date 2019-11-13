@@ -38,7 +38,7 @@ ParseResult parseOpIn(json& inExpr, ParsedModel& parsedModel) {
             myCerr << "OpIn expects a set on the right.\n" << inExpr;
         });
     bool constant = false;
-    mpark::visit(
+    lib::visit(
         [&](auto& expr) {
             constant = expr->isConstant() && setOperand->isConstant();
         },
@@ -67,7 +67,7 @@ ParseResult parseOpSubsetEq(json& subsetExpr, ParsedModel& parsedModel) {
 ParseResult parseOpAllDiff(json& operandExpr, ParsedModel& parsedModel) {
     ParseResult parsedOperandExpr =
         toSequence(parseExpr(operandExpr, parsedModel));
-    auto sequence = mpark::get<ExprRef<SequenceView>>(parsedOperandExpr.expr);
+    auto sequence = lib::get<ExprRef<SequenceView>>(parsedOperandExpr.expr);
     bool constant = sequence->isConstant();
     auto op = OpMaker<OpAllDiff>::make(sequence);
     op->setConstant(constant);
@@ -77,7 +77,7 @@ ParseResult parseOpAllDiff(json& operandExpr, ParsedModel& parsedModel) {
 ParseResult parseOpEq(json& operandsExpr, ParsedModel& parsedModel) {
     AnyExprRef leftAnyExpr = parseExpr(operandsExpr[0], parsedModel).expr;
     AnyExprRef rightAnyExpr = parseExpr(operandsExpr[1], parsedModel).expr;
-    return mpark::visit(
+    return lib::visit(
         [&](auto& left) -> ParseResult {
             auto errorHandler = [&](auto&&) {
                 myCerr << "Expected right operand to be of "
@@ -127,7 +127,7 @@ ParseResult parseOpEq(json& operandsExpr, ParsedModel& parsedModel) {
 ParseResult parseOpNotEq(json& operandsExpr, ParsedModel& parsedModel) {
     AnyExprRef left = parseExpr(operandsExpr[0], parsedModel).expr;
     AnyExprRef right = parseExpr(operandsExpr[1], parsedModel).expr;
-    return mpark::visit(
+    return lib::visit(
         [&](auto& left) {
             auto errorHandler = [&](auto&&) {
                 myCerr << "Expected right operand to be of "
@@ -170,7 +170,7 @@ ParseResult parseOpTogether(json& operandsExpr, ParsedModel& parsedModel) {
         myCerr << UNSUPPORTED_MESSAGE << endl;
         myAbort();
     }
-    return mpark::visit(
+    return lib::visit(
         [&](auto& members) {
             if (members.size() != 2) {
                 myCerr << UNSUPPORTED_MESSAGE << endl;

@@ -33,12 +33,12 @@ struct OpTupleIndex;
 
 using namespace std;
 bool isOpSum(const AnyExprRef& expr) {
-    auto intExprTest = mpark::get_if<ExprRef<IntView>>(&expr);
+    auto intExprTest = lib::get_if<ExprRef<IntView>>(&expr);
     return intExprTest && getAs<OpSum>(*intExprTest);
 }
 
 bool isOpAnd(const AnyExprRef& expr) {
-    auto boolExprTest = mpark::get_if<ExprRef<BoolView>>(&expr);
+    auto boolExprTest = lib::get_if<ExprRef<BoolView>>(&expr);
     return boolExprTest && getAs<OpAnd>(*boolExprTest);
 }
 
@@ -56,7 +56,7 @@ bool isMatchingIterRef(ExprRef<IntView>& operand, UInt64 quantId) {
 // return the bool expression which should be a child of the Op
 lib::optional<ExprRef<BoolView>> extractBuriedConditionFromOpProd(
     OpSequenceLit& operands) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& members) -> lib::optional<ExprRef<BoolView>> {
             for (size_t i = 0; i < members.size(); i++) {
                 auto& operand = members[i];
@@ -297,7 +297,7 @@ pair<bool, ExprRef<SequenceView>> Quantifier<ContainerType>::optimiseImpl(
         optimised |= optimise(newOpAsExpr, newOp->condition, path, true);
     }
 
-    mpark::visit(
+    lib::visit(
         [&](auto& expr) {
             optimised |= optimise(newOpAsExpr, expr, path);
             optimised |=

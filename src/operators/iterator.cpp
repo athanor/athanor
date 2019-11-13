@@ -99,8 +99,7 @@ void Iterator<View>::updateVarViolationsImpl(const ViolationContext& vioContext,
 template <typename View>
 ExprRef<View> Iterator<View>::deepCopyForUnrollImpl(
     const ExprRef<View>& self, const AnyIterRef& iterator) const {
-    const auto iteratorPtr =
-        mpark::get_if<IterRef<View>>(&iterator.asVariant());
+    const auto iteratorPtr = lib::get_if<IterRef<View>>(&iterator.asVariant());
     if (iteratorPtr != NULL && (**iteratorPtr).id == id) {
         (**iteratorPtr).ref = this->ref;
         return *iteratorPtr;
@@ -131,7 +130,7 @@ pair<bool, ExprRef<View>> Iterator<View>::optimiseImpl(ExprRef<View>& self,
 }
 
 std::ostream& operator<<(std::ostream& os, const AnyIterRef& ref) {
-    mpark::visit([&](auto& ref) { ref->dumpState(os); }, ref);
+    lib::visit([&](auto& ref) { ref->dumpState(os); }, ref);
     return os;
 }
 

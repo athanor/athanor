@@ -117,8 +117,7 @@ using EnableIfView = EnableIfViewAndReturn<T, int>;
 // class is templated over a value (SetValue,IntValue, etc.)
 #define variantValues(V) T<V##Value>
 template <template <typename> class T>
-using Variantised =
-    mpark::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
+using Variantised = lib::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
 #undef variantValues
 
 template <typename Val>

@@ -25,21 +25,20 @@ Dimension intDomainToDimension(IntDomain& dom) {
 void makeDimensionVecFromDomainHelper(const AnyDomainRef& domain,
                                       DimensionVec& dimVec) {
     try {
-        mpark::visit(overloaded(
-                         [&](const shared_ptr<IntDomain>& domain) {
-                             dimVec.emplace_back(intDomainToDimension(*domain));
-                         },
-                         [&](const shared_ptr<EnumDomain>& domain) {
-                             dimVec.emplace_back(0, domain->numberValues() - 1);
-                         },
-                         [&](const shared_ptr<TupleDomain>& domain) {
-                             for (auto& inner : domain->inners) {
-                                 makeDimensionVecFromDomainHelper(inner,
-                                                                  dimVec);
-                             }
-                         },
-                         [&](const auto&) { throw NoSupportException(); }),
-                     domain);
+        lib::visit(overloaded(
+                       [&](const shared_ptr<IntDomain>& domain) {
+                           dimVec.emplace_back(intDomainToDimension(*domain));
+                       },
+                       [&](const shared_ptr<EnumDomain>& domain) {
+                           dimVec.emplace_back(0, domain->numberValues() - 1);
+                       },
+                       [&](const shared_ptr<TupleDomain>& domain) {
+                           for (auto& inner : domain->inners) {
+                               makeDimensionVecFromDomainHelper(inner, dimVec);
+                           }
+                       },
+                       [&](const auto&) { throw NoSupportException(); }),
+                   domain);
 
     } catch (...) {
         myCerr
@@ -106,7 +105,7 @@ lib::optional<UInt> domainToIndexHelper(const TupleView& tupleV,
     bool undefined = false;
     for (auto& member : tupleV.members) {
         size_t origDimIndex = dimIndex;
-        mpark::visit(
+        lib::visit(
             [&](const auto& expr) {
                 const auto memberView = expr->getViewIfDefined();
                 if (!memberView) {
@@ -200,7 +199,7 @@ ExprRef<TupleView> functionIndexToDomain<TupleDomain>(
     for (auto& inner : domain.inners) {
         UInt row = index / dimVec[dimIndex].blockSize;
         index %= dimVec[dimIndex].blockSize;
-        mpark::visit(
+        lib::visit(
             [&](auto& innerDomainPtr) {
                 tupleMembers.emplace_back(functionIndexToDomain(
                     *innerDomainPtr, dimVec, row, dimIndex));
@@ -221,14 +220,14 @@ void functionIndexToDomain<TupleDomain>(const TupleDomain& domain,
     debug_code(assert(view.members.size() == domain.inners.size()));
     for (size_t i = 0; i < domain.inners.size(); i++) {
         auto& dim = dimensions[dimIndex];
-        mpark::visit(
+        lib::visit(
             [&](auto& innerDomainPtr) {
                 typedef
                     typename BaseType<decltype(innerDomainPtr)>::element_type
                         Domain;
                 typedef typename AssociatedValueType<Domain>::type Value;
                 typedef typename AssociatedViewType<Value>::type View;
-                auto& memberExpr = mpark::get<ExprRef<View>>(view.members[i]);
+                auto& memberExpr = lib::get<ExprRef<View>>(view.members[i]);
                 auto& memberView = memberExpr->view().get();
                 UInt row = index / dim.blockSize;
                 index %= dim.blockSize;
@@ -242,7 +241,7 @@ void functionIndexToDomain<TupleDomain>(const TupleDomain& domain,
 template <>
 HashType getValueHash<FunctionView>(const FunctionView& val) {
     return val.cachedHashTotal.getOrSet([&]() {
-        return mpark::visit(
+        return lib::visit(
             [&](const auto& range) {
                 HashType total(0);
                 for (size_t i = 0; i < range.size(); ++i) {
@@ -257,13 +256,13 @@ HashType getValueHash<FunctionView>(const FunctionView& val) {
 template <>
 ostream& prettyPrint<FunctionView>(ostream& os, const FunctionView& v) {
     os << "function(";
-    mpark::visit(
+    lib::visit(
         [&](auto& rangeImpl) {
             for (size_t i = 0; i < rangeImpl.size(); i++) {
                 if (i > 0) {
                     os << ",\n";
                 }
-                mpark::visit(
+                lib::visit(
                     [&](auto& fromDomain) {
                         typedef typename BaseType<decltype(
                             fromDomain)>::element_type Domain;
@@ -284,19 +283,19 @@ template <>
 ostream& prettyPrint<FunctionView>(ostream& os, const FunctionDomain& domain,
                                    const FunctionView& v) {
     os << ((domain.isMatrixDomain) ? "[" : "function(");
-    mpark::visit(
+    lib::visit(
         [&](auto& rangeImpl) {
             typedef
                 typename AssociatedValueType<viewType(rangeImpl)>::type Value;
             typedef typename AssociatedDomain<Value>::type Domain;
-            const auto& toDomainPtr = mpark::get<shared_ptr<Domain>>(domain.to);
+            const auto& toDomainPtr = lib::get<shared_ptr<Domain>>(domain.to);
 
             for (size_t i = 0; i < rangeImpl.size(); i++) {
                 if (i > 0) {
                     os << ",";
                 }
                 if (!domain.isMatrixDomain) {
-                    mpark::visit(
+                    lib::visit(
                         [&](auto& fromDomain) {
                             typedef typename BaseType<decltype(
                                 fromDomain)>::element_type Domain;
@@ -359,7 +358,7 @@ ostream& prettyPrint<FunctionDomain>(ostream& os, const FunctionDomain& d) {
 }
 
 void matchInnerType(const FunctionValue& src, FunctionValue& target) {
-    mpark::visit(
+    lib::visit(
         [&](auto& srcMembersImpl) {
             target.setInnerType<viewType(srcMembersImpl)>();
         },
@@ -367,7 +366,7 @@ void matchInnerType(const FunctionValue& src, FunctionValue& target) {
 }
 
 void matchInnerType(const FunctionDomain& domain, FunctionValue& target) {
-    mpark::visit(
+    lib::visit(
         [&](auto& innerDomainImpl) {
             target.setInnerType<typename AssociatedViewType<
                 typename AssociatedValueType<typename BaseType<decltype(
@@ -399,7 +398,7 @@ void normaliseImpl(FunctionValue&, ExprRefVec<InnerViewType>& valMembersImpl) {
 
 template <>
 void normalise<FunctionValue>(FunctionValue& val) {
-    mpark::visit(
+    lib::visit(
         [&](auto& valMembersImpl) { normaliseImpl(val, valMembersImpl); },
         val.range);
 }
@@ -411,10 +410,10 @@ bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v);
 
 template <>
 bool smallerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
-                mpark::get<BaseType<decltype(uMembersImpl)>>(v.range);
+                lib::get<BaseType<decltype(uMembersImpl)>>(v.range);
             if (uMembersImpl.size() < vMembersImpl.size()) {
                 return true;
             } else if (uMembersImpl.size() > vMembersImpl.size()) {
@@ -436,10 +435,10 @@ bool smallerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
 
 template <>
 bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
-                mpark::get<BaseType<decltype(uMembersImpl)>>(v.range);
+                lib::get<BaseType<decltype(uMembersImpl)>>(v.range);
             if (uMembersImpl.size() > vMembersImpl.size()) {
                 return true;
             } else if (uMembersImpl.size() < vMembersImpl.size()) {
@@ -460,7 +459,7 @@ bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
 }
 
 void FunctionView::standardSanityChecksForThisType() const {
-    mpark::visit(
+    lib::visit(
         [&](auto& range) {
             cachedHashTotal.applyIfValid([&](const auto& value) {
                 HashType checkCachedHashTotal;
@@ -475,7 +474,7 @@ void FunctionView::standardSanityChecksForThisType() const {
 }
 
 void FunctionValue::debugSanityCheckImpl() const {
-    mpark::visit(
+    lib::visit(
         [&](const auto& valMembersImpl) {
             recurseSanityChecks(valMembersImpl);
             this->standardSanityChecksForThisType();
@@ -489,7 +488,7 @@ void FunctionValue::debugSanityCheckImpl() const {
 AnyExprVec& FunctionValue::getChildrenOperands() { return range; }
 
 void FunctionView::debugCheckDimensionVec() {
-    mpark::visit(
+    lib::visit(
         overloaded(
             [&](shared_ptr<TupleDomain>& d) {
                 assert(d->inners.size() == dimensions.size());

@@ -4,13 +4,13 @@
 using namespace std;
 
 AnyDomainRef deepCopyDomain(AnyDomainRef domain) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& domain) -> AnyDomainRef { return domain->deepCopy(domain); },
         domain);
 }
 
 size_t getNumberElementsLowerBound(const AnyDomainRef& domain) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& domain) {
             debug_code(assert(domain));
             return getNumberElementsLowerBound(*domain);

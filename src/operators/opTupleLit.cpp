@@ -9,7 +9,7 @@ using namespace std;
 void OpTupleLit::evaluateImpl() {
     numberUndefined = 0;
     for (auto& member : members) {
-        mpark::visit(
+        lib::visit(
             [&](auto& member) {
                 member->evaluate();
                 if (!member->appearsDefined()) {
@@ -31,11 +31,11 @@ struct ExprTrigger
 
     ExprTrigger(OpTupleLit* op, UInt index)
         : ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>(
-              mpark::get<ExprRef<View>>(op->members[index])),
+              lib::get<ExprRef<View>>(op->members[index])),
           ExprTriggerBase(op, index) {}
 
     ExprRef<View>& getTriggeringOperand() {
-        return mpark::get<ExprRef<View>>(this->op->members[this->index]);
+        return lib::get<ExprRef<View>>(this->op->members[this->index]);
     }
     void adapterValueChanged() {
         this->op->memberChangedAndNotify(this->index);
@@ -45,7 +45,7 @@ struct ExprTrigger
         deleteTrigger(static_pointer_cast<ExprTrigger<TriggerType>>(
             op->exprTriggers[index]));
         auto trigger = make_shared<ExprTrigger<TriggerType>>(op, index);
-        mpark::get<ExprRef<typename AssociatedViewType<TriggerType>::type>>(
+        lib::get<ExprRef<typename AssociatedViewType<TriggerType>::type>>(
             op->members[index])
             ->addTrigger(trigger);
         op->exprTriggers[index] = trigger;
@@ -60,7 +60,7 @@ void OpTupleLit::replaceMember(UInt index, const AnyExprRef& newMember) {
     debug_code(assert(index < members.size()));
     auto oldMember = move(members[index]);
     members[index] = move(newMember);
-    mpark::visit(
+    lib::visit(
         [&](auto& member) {
             typedef viewType(member) View;
             typedef typename AssociatedTriggerType<View>::type TriggerType;
@@ -81,7 +81,7 @@ void OpTupleLit::replaceMember(UInt index, const AnyExprRef& newMember) {
 void OpTupleLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {
         for (size_t i = 0; i < members.size(); i++) {
-            mpark::visit(
+            lib::visit(
                 [&](auto& member) {
                     typedef
                         typename AssociatedTriggerType<viewType(member)>::type
@@ -102,7 +102,7 @@ void OpTupleLit::stopTriggeringOnChildren() {
     if (!exprTriggers.empty()) {
         for (size_t i = 0; i < exprTriggers.size(); i++) {
             auto& trigger = exprTriggers[i];
-            mpark::visit(
+            lib::visit(
                 [&](auto& member) {
                     typedef
                         typename AssociatedTriggerType<viewType(member)>::type
@@ -120,8 +120,7 @@ void OpTupleLit::stopTriggering() {
     if (!exprTriggers.empty()) {
         this->stopTriggeringOnChildren();
         for (auto& member : members) {
-            mpark::visit([&](auto& member) { member->stopTriggering(); },
-                         member);
+            lib::visit([&](auto& member) { member->stopTriggering(); }, member);
         }
     }
 }
@@ -133,7 +132,7 @@ ExprRef<TupleView> OpTupleLit::deepCopyForUnrollImpl(
     const ExprRef<TupleView>&, const AnyIterRef& iterator) const {
     vector<AnyExprRef> newMembers;
     for (auto& member : members) {
-        mpark::visit(
+        lib::visit(
             [&](auto& member) {
                 newMembers.emplace_back(
                     member->deepCopyForUnroll(member, iterator));
@@ -154,7 +153,7 @@ std::ostream& OpTupleLit::dumpState(std::ostream& os) const {
         } else {
             os << ",";
         }
-        mpark::visit([&](auto& member) { member->dumpState(os); }, member);
+        lib::visit([&](auto& member) { member->dumpState(os); }, member);
     }
     os << ")";
     return os;
@@ -163,7 +162,7 @@ std::ostream& OpTupleLit::dumpState(std::ostream& os) const {
 void OpTupleLit::findAndReplaceSelf(const FindAndReplaceFunction& func,
                                     PathExtension path) {
     for (auto& member : members) {
-        mpark::visit(
+        lib::visit(
             [&](auto& member) { member = findAndReplace(member, func, path); },
             member);
     }
@@ -175,7 +174,7 @@ pair<bool, ExprRef<TupleView>> OpTupleLit::optimiseImpl(ExprRef<TupleView>&,
     AnyExprRef newOpAsExpr = ExprRef<TupleView>(newOp);
     bool optimised = false;
     for (auto& member : newOp->members) {
-        mpark::visit(
+        lib::visit(
             [&](auto& operand) {
                 optimised |= optimise(newOpAsExpr, operand, path);
             },
@@ -189,7 +188,7 @@ string OpTupleLit::getOpName() const { return "OpTupleLit"; }
 void OpTupleLit::debugSanityCheckImpl() const {
     UInt checkNumberUndefined = 0;
     for (auto& member : members) {
-        mpark::visit(
+        lib::visit(
             [&](auto& member) {
                 member->debugSanityCheck();
                 if (!member->getViewIfDefined().hasValue()) {

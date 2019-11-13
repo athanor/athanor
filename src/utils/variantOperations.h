@@ -74,5 +74,10 @@ struct AlwaysFalse : std::false_type {};
     static_assert(AlwaysFalse<std::decay_t<decltype(variant_value)>>::value, \
                   "non-exhaustive visitor!");
 */
-
+namespace lib {
+using mpark::get;
+using mpark::get_if;
+using mpark::variant;
+using mpark::visit;
+}  // namespace lib
 #endif /* SRC_VARIANTOPERATIONS_H_ */

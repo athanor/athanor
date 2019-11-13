@@ -7,7 +7,7 @@
 using namespace std;
 void OpSequenceLit::evaluateImpl() {
     numberUndefined = 0;
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             for (auto& member : members) {
                 member->evaluate();
@@ -59,7 +59,7 @@ struct ExprTrigger
 }  // namespace
 void OpSequenceLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {
-        mpark::visit(
+        lib::visit(
             [&](auto& members) {
                 typedef typename AssociatedTriggerType<viewType(members)>::type
                     TriggerType;
@@ -77,7 +77,7 @@ void OpSequenceLit::startTriggeringImpl() {
 
 void OpSequenceLit::stopTriggeringOnChildren() {
     if (!exprTriggers.empty()) {
-        mpark::visit(
+        lib::visit(
             [&](auto& members) {
                 typedef typename AssociatedTriggerType<viewType(members)>::type
                     TriggerType;
@@ -93,7 +93,7 @@ void OpSequenceLit::stopTriggeringOnChildren() {
 
 void OpSequenceLit::stopTriggering() {
     if (!exprTriggers.empty()) {
-        mpark::visit(
+        lib::visit(
             [&](auto& members) {
                 typedef typename AssociatedTriggerType<viewType(members)>::type
                     TriggerType;
@@ -116,7 +116,7 @@ void OpSequenceLit::updateVarViolationsImpl(const ViolationContext&,
 ExprRef<SequenceView> OpSequenceLit::deepCopyForUnrollImpl(
     const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
     AnyExprVec newMembers;
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             auto& newMembersImpl =
                 newMembers.emplace<ExprRefVec<viewType(members)>>();
@@ -135,7 +135,7 @@ ExprRef<SequenceView> OpSequenceLit::deepCopyForUnrollImpl(
 std::ostream& OpSequenceLit::dumpState(std::ostream& os) const {
     os << "OpSequenceLit: numberUndefined=" << numberUndefined
        << ", appearsDefined=" << this->appearsDefined() << ", exprs=[";
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             bool first = true;
             for (const auto& member : members) {
@@ -154,7 +154,7 @@ std::ostream& OpSequenceLit::dumpState(std::ostream& os) const {
 
 void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func,
                                        PathExtension path) {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             for (auto& member : members) {
                 member = findAndReplace(member, func, path);
@@ -168,7 +168,7 @@ pair<bool, ExprRef<SequenceView>> OpSequenceLit::optimiseImpl(
     auto newOp = make_shared<OpSequenceLit>(members);
     AnyExprRef newOpAsExpr = ExprRef<SequenceView>(newOp);
     bool optimised = false;
-    mpark::visit(
+    lib::visit(
         [&](auto& operands) {
             for (auto& operand : operands) {
                 optimised |= optimise(newOpAsExpr, operand, path);
@@ -182,7 +182,7 @@ pair<bool, ExprRef<SequenceView>> OpSequenceLit::optimiseImpl(
 string OpSequenceLit::getOpName() const { return "OpSequenceLit"; }
 
 void OpSequenceLit::debugSanityCheckImpl() const {
-    mpark::visit([&](auto& members) { recurseSanityChecks(members); }, members);
+    lib::visit([&](auto& members) { recurseSanityChecks(members); }, members);
     this->standardSanityChecksForThisType();
 }
 

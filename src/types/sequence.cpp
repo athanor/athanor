@@ -10,7 +10,7 @@ size_t numberElements(SequenceView& view) { return view.numberElements(); }
 template <>
 HashType getValueHash<SequenceView>(const SequenceView& val) {
     return val.cachedHashTotal.getOrSet([&]() {
-        return mpark::visit(
+        return lib::visit(
             [&](auto& members) {
                 return val.calcSubsequenceHash<viewType(members)>(
                     0, members.size());
@@ -22,7 +22,7 @@ HashType getValueHash<SequenceView>(const SequenceView& val) {
 template <>
 ostream& prettyPrint<SequenceView>(ostream& os, const SequenceView& v) {
     os << "sequence(";
-    mpark::visit(
+    lib::visit(
         [&](auto& membersImpl) {
             bool first = true;
             for (auto& memberPtr : membersImpl) {
@@ -43,13 +43,12 @@ template <>
 ostream& prettyPrint<SequenceView>(ostream& os, const SequenceDomain& domain,
                                    const SequenceView& v) {
     os << "sequence(";
-    mpark::visit(
+    lib::visit(
         [&](auto& membersImpl) {
             typedef
                 typename AssociatedValueType<viewType(membersImpl)>::type Value;
             typedef typename AssociatedDomain<Value>::type Domain;
-            const auto& domainPtr =
-                mpark::get<shared_ptr<Domain>>(domain.inner);
+            const auto& domainPtr = lib::get<shared_ptr<Domain>>(domain.inner);
 
             bool first = true;
             for (auto& memberPtr : membersImpl) {
@@ -101,7 +100,7 @@ ostream& prettyPrint<SequenceDomain>(ostream& os, const SequenceDomain& d) {
 }
 
 void matchInnerType(const SequenceValue& src, SequenceValue& target) {
-    mpark::visit(
+    lib::visit(
         [&](auto& srcMembersImpl) {
             target.setInnerType<viewType(srcMembersImpl)>();
             target.injective = src.injective;
@@ -110,7 +109,7 @@ void matchInnerType(const SequenceValue& src, SequenceValue& target) {
 }
 
 void matchInnerType(const SequenceDomain& domain, SequenceValue& target) {
-    mpark::visit(
+    lib::visit(
         [&](auto& innerDomainImpl) {
             target.setInnerType<typename AssociatedViewType<
                 typename AssociatedValueType<typename BaseType<decltype(
@@ -148,7 +147,7 @@ void normaliseImpl(SequenceValue&, ExprRefVec<InnerViewType>& valMembersImpl) {
 
 template <>
 void normalise<SequenceValue>(SequenceValue& val) {
-    mpark::visit(
+    lib::visit(
         [&](auto& valMembersImpl) { normaliseImpl(val, valMembersImpl); },
         val.members);
 }
@@ -160,10 +159,10 @@ bool largerValue<SequenceView>(const SequenceView& u, const SequenceView& v);
 
 template <>
 bool smallerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
-                mpark::get<BaseType<decltype(uMembersImpl)>>(v.members);
+                lib::get<BaseType<decltype(uMembersImpl)>>(v.members);
             if (uMembersImpl.size() < vMembersImpl.size()) {
                 return true;
             } else if (uMembersImpl.size() > vMembersImpl.size()) {
@@ -185,10 +184,10 @@ bool smallerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
 
 template <>
 bool largerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
-                mpark::get<BaseType<decltype(uMembersImpl)>>(v.members);
+                lib::get<BaseType<decltype(uMembersImpl)>>(v.members);
             if (uMembersImpl.size() > vMembersImpl.size()) {
                 return true;
             } else if (uMembersImpl.size() < vMembersImpl.size()) {
@@ -209,7 +208,7 @@ bool largerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
 }
 
 void SequenceView::assertValidState() {
-    mpark::visit(
+    lib::visit(
         [&](auto& valMembersImpl) {
             UInt numberUndefinedFound = 0;
             bool success = true;
@@ -257,7 +256,7 @@ void SequenceView::assertValidState() {
 }
 
 void SequenceValue::assertValidState() {
-    mpark::visit(
+    lib::visit(
         [&](auto& valMembersImpl) {
             bool success = true;
             if (injective) {
@@ -293,7 +292,7 @@ void SequenceValue::assertValidState() {
 }
 
 void SequenceView::standardSanityChecksForThisType() const {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             UInt checkNumberUndefined = 0;
             for (auto& member : members) {
@@ -319,7 +318,7 @@ void SequenceView::standardSanityChecksForThisType() const {
 }
 
 void SequenceValue::debugSanityCheckImpl() const {
-    mpark::visit(
+    lib::visit(
         [&](const auto& valMembersImpl) {
             recurseSanityChecks(valMembersImpl);
             standardSanityChecksForThisType();
@@ -348,7 +347,7 @@ void SequenceValue::debugSanityCheckImpl() const {
 }
 
 void SequenceValue::assertValidVarBases() {
-    mpark::visit(
+    lib::visit(
         [&](auto& valMembersImpl) {
             if (valMembersImpl.empty()) {
                 return;
@@ -378,7 +377,7 @@ void SequenceValue::assertValidVarBases() {
 }
 
 void SequenceValue::printVarBases() {
-    mpark::visit(
+    lib::visit(
         [&](auto& valMembersImpl) {
             cout << "parent is constant: " << (this->container == &constantPool)
                  << endl;

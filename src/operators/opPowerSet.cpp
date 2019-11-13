@@ -22,7 +22,7 @@ void OpPowerSet::reevaluateImpl(SetView& operandView) {
     }
 
     silentClear();
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             for (size_t i = 0; i < members.size(); i++) {
                 for (size_t j = i + 1; j < members.size(); j++) {
@@ -103,7 +103,7 @@ void OpPowerSet::debugSanityCheckImpl() const {
     UInt n = operandView.numberElements();
     UInt expectedNumberElementsInResult = (n * (n - 1)) / 2;
     sanityEqualsCheck(expectedNumberElementsInResult, this->numberElements());
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             for (size_t i = 0; i < members.size(); i++) {
                 for (size_t j = i + 1; j < members.size(); j++) {

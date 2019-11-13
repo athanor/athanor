@@ -16,7 +16,7 @@ struct ContainerTrigger<SetView> : public SetTrigger {
     }
 
     void valueAdded(const AnyExprRef& member) final {
-        mpark::visit(
+        lib::visit(
             [&](auto& expr) {
                 typedef viewType(expr) View;
                 op->unroll<View>({false, op->numberUnrolled(), expr});
@@ -28,11 +28,11 @@ struct ContainerTrigger<SetView> : public SetTrigger {
         debug_code(assert(index < op->unrolledIterVals.size()));
         auto& containerView = *op->container->view();
 
-        mpark::visit(
+        lib::visit(
             [&](auto& oldMember) {
                 typedef viewType(oldMember) View;
                 auto iterRef =
-                    mpark::get<IterRef<View>>(op->unrolledIterVals[index]);
+                    lib::get<IterRef<View>>(op->unrolledIterVals[index]);
                 auto& newMember = containerView.getMembers<View>()[index];
                 iterRef->changeValueAndTrigger(newMember);
             },
@@ -51,7 +51,7 @@ struct ContainerTrigger<SetView> : public SetTrigger {
         if (!containerView) {
             return;
         }
-        mpark::visit(
+        lib::visit(
             [&](auto& membersImpl) {
                 for (auto& member : membersImpl) {
                     this->valueAdded(member);
@@ -85,7 +85,7 @@ template <>
 struct InitialUnroller<SetView> {
     template <typename Quant>
     static void initialUnroll(Quant& quantifier, SetView& containerView) {
-        mpark::visit(
+        lib::visit(
             [&](auto& containerMembers) {
                 for (size_t i = 0; i < containerMembers.size(); i++) {
                     auto& member = containerMembers[i];
@@ -104,12 +104,12 @@ struct ContainerSanityChecker<SetView> {
         sanityEqualsCheck(container.numberElements(), quant.numberUnrolled());
         sanityEqualsCheck(container.numberElements(),
                           quant.unrolledIterVals.size());
-        mpark::visit(
+        lib::visit(
             [&](auto& containerMembers) {
                 for (size_t i = 0; i < containerMembers.size(); i++) {
                     const auto& view1 = containerMembers[i]->getViewIfDefined();
                     const auto& view2 =
-                        mpark::get<IterRef<viewType(containerMembers)>>(
+                        lib::get<IterRef<viewType(containerMembers)>>(
                             quant.unrolledIterVals[i])
                             ->getViewIfDefined();
                     sanityEqualsCheck(view1.hasValue(), view2.hasValue());

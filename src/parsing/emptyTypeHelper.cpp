@@ -17,7 +17,7 @@ bool hasEmptyDomain(const AnyDomainRef& domain) {
             return hasEmptyDomain(domain->to);
         },
         [](auto& domain) { return hasEmptyDomain(domain->inner); });
-    return mpark::visit(overload, domain);
+    return lib::visit(overload, domain);
 }
 static const char* DOMAIN_MISS_MATCH_MESSAGE =
     "Found a miss match in domain and value type.\n";
@@ -26,11 +26,11 @@ template <typename Domain>
 void tryRemoveEmptyType(Domain& domain,
                         typename AssociatedViewType<Domain>::type& val);
 void tryRemoveEmptyType(const AnyDomainRef& domain, AnyExprRef val) {
-    mpark::visit(
+    lib::visit(
         [&](const auto& domain) {
             typedef typename BaseType<decltype(domain)>::element_type Domain;
             typedef typename AssociatedViewType<Domain>::type View;
-            auto* exprPtr = mpark::get_if<ExprRef<View>>(&val);
+            auto* exprPtr = lib::get_if<ExprRef<View>>(&val);
             if (!exprPtr) {
                 myCerr << DOMAIN_MISS_MATCH_MESSAGE;
                 shouldNotBeCalledPanic;
@@ -44,14 +44,14 @@ void tryRemoveEmptyType(const AnyDomainRef& domain, AnyExprRef val) {
 }
 
 void tryRemoveEmptyType(const AnyDomainRef& domain, AnyExprVec& vals) {
-    mpark::visit(
+    lib::visit(
         [&](const auto& domain) {
             typedef typename BaseType<decltype(domain)>::element_type Domain;
             typedef typename AssociatedViewType<Domain>::type View;
-            if (mpark::get_if<ExprRefVec<EmptyView>>(&vals)) {
+            if (lib::get_if<ExprRefVec<EmptyView>>(&vals)) {
                 vals.emplace<ExprRefVec<View>>();
             } else {
-                auto* valsPtr = mpark::get_if<ExprRefVec<View>>(&vals);
+                auto* valsPtr = lib::get_if<ExprRefVec<View>>(&vals);
                 if (!valsPtr) {
                     myCerr << DOMAIN_MISS_MATCH_MESSAGE;
                     shouldNotBeCalledPanic;

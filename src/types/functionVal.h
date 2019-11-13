@@ -87,7 +87,7 @@ struct FunctionValue : public FunctionView, public ValBase {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     void setInnerType() {
-        if (mpark::get_if<ExprRefVec<InnerViewType>>(&(range)) == NULL) {
+        if (lib::get_if<ExprRefVec<InnerViewType>>(&(range)) == NULL) {
             range.emplace<ExprRefVec<InnerViewType>>();
         }
     }

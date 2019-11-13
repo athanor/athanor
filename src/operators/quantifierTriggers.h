@@ -22,7 +22,7 @@ struct ExprChangeTrigger
         return op->template getMembers<View>()[index];
     }
     void adapterValueChanged() {
-        mpark::visit(
+        lib::visit(
             [&](auto& members) {
                 op->template changeSubsequenceAndNotify<viewType(members)>(
                     index, index + 1);
@@ -41,14 +41,14 @@ struct ExprChangeTrigger
     }
 
     void adapterHasBecomeDefined() {
-        mpark::visit(
+        lib::visit(
             [&](auto& members) {
                 op->template defineMemberAndNotify<viewType(members)>(index);
             },
             op->members);
     }
     void adapterHasBecomeUndefined() {
-        mpark::visit(
+        lib::visit(
             [&](auto& members) {
                 op->template undefineMemberAndNotify<viewType(members)>(index);
             },
@@ -92,7 +92,7 @@ struct ConditionChangeTrigger
         std::for_each(unrolledConditions.begin() + index,
                       unrolledConditions.end(),
                       [&](auto& cond) { ++cond.exprIndex; });
-        mpark::visit(
+        lib::visit(
             [&](auto& unrolledIterVal) {
                 typedef viewType(unrolledIterVal->getValue()) View;
                 op->template unroll<View>({true,

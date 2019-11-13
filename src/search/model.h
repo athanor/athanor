@@ -33,7 +33,7 @@ struct Model {
     std::vector<std::shared_ptr<EnumDomain>> unnamedTypes;
 
    private:
-    Model() { mpark::get<ExprRef<IntView>>(objective)->view()->value = 0; }
+    Model() { lib::get<ExprRef<IntView>>(objective)->view()->value = 0; }
 
    public:
     void printVariables() const;

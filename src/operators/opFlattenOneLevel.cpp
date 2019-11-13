@@ -86,7 +86,7 @@ struct OpFlattenOneLevel<SequenceInnerType>::InnerSequenceTrigger
     }
     inline void valueAdded(UInt indexOfAdded, const AnyExprRef& member) final {
         op->addMemberAndNotify(op->startingIndices[index] + indexOfAdded,
-                               mpark::get<ExprRef<SequenceInnerType>>(member));
+                               lib::get<ExprRef<SequenceInnerType>>(member));
 
         for (size_t i = index + 1; i < op->startingIndices.size(); i++) {
             ++op->startingIndices[i];
@@ -206,7 +206,7 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
         }
     }
     void valueAdded(UInt index, const AnyExprRef& newOperand) final {
-        auto& sequence = mpark::get<ExprRef<SequenceView>>(newOperand);
+        auto& sequence = lib::get<ExprRef<SequenceView>>(newOperand);
         shiftStartingIndicesUp(index, sequence->view()
                                           .checkedGet(OP_FLATTEN_DEFAULT_ERROR)
                                           .numberElements());

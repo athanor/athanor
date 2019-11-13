@@ -100,7 +100,7 @@ struct SetView : public ExprInterface<SetView>,
     }
 
     void silentClear() {
-        mpark::visit(
+        lib::visit(
             [&](auto& membersImpl) {
                 cachedHashTotal = HashType(0);
                 memberHashes.clear();
@@ -162,12 +162,12 @@ struct SetView : public ExprInterface<SetView>,
     virtual inline AnyExprVec& getChildrenOperands() { shouldNotBeCalledPanic; }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
-        return mpark::get<ExprRefVec<InnerViewType>>(members);
+        return lib::get<ExprRefVec<InnerViewType>>(members);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline const ExprRefVec<InnerViewType>& getMembers() const {
-        return mpark::get<ExprRefVec<InnerViewType>>(members);
+        return lib::get<ExprRefVec<InnerViewType>>(members);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

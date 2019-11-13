@@ -41,7 +41,7 @@ void addConstraintsOnVarsToBeSubstituted(ModelBuilder& builder, Model& model) {
     for (auto& indexExprPair : model.definingExpressions) {
         size_t varIndex = indexExprPair.first;
         debug_code(assert(varIndex < model.variables.size()));
-        mpark::visit(
+        lib::visit(
             [&](auto& var) {
                 typedef valType(var) Value;
                 typedef typename AssociatedViewType<Value>::type View;
@@ -49,7 +49,7 @@ void addConstraintsOnVarsToBeSubstituted(ModelBuilder& builder, Model& model) {
                 if (is_same<Domain, BoolDomain>::value) {
                     return;
                 }
-                auto& domain = mpark::get<shared_ptr<Domain>>(
+                auto& domain = lib::get<shared_ptr<Domain>>(
                     model.variables[varIndex].first);
                 /*we don't actually put the OpInDomain constraint on the expr
                  * directly.  Instead, we put it on the variable.  Later after
@@ -74,11 +74,11 @@ static void optimiseModel(ModelBuilder& builder, Model& model) {
         optimiseExpr(constraint);
     }
     for (auto& nameExprPair : model.definingExpressions) {
-        mpark::visit([&](auto& expr) { optimiseExpr(expr); },
-                     nameExprPair.second);
+        lib::visit([&](auto& expr) { optimiseExpr(expr); },
+                   nameExprPair.second);
     }
-    mpark::visit([&](auto& objective) { optimiseExpr(objective); },
-                 model.objective);
+    lib::visit([&](auto& objective) { optimiseExpr(objective); },
+               model.objective);
 }
 
 Model ModelBuilder::build() {
@@ -91,7 +91,7 @@ Model ModelBuilder::build() {
 
     substituteVarsToBeDefined();
     if (model.optimiseMode != OptimiseMode::NONE) {
-        mpark::visit(
+        lib::visit(
             [&](auto& objective) {
                 addConstraint(
                     OpMaker<OpIsDefined<viewType(objective)>>::make(objective));
@@ -116,14 +116,14 @@ void ModelBuilder::substituteVarsToBeDefined() {
         for (auto& constraint : constraints) {
             constraint = findAndReplace(constraint, func);
         }
-        mpark::visit(
+        lib::visit(
             [&](auto& objective) {
                 objective = findAndReplace(objective, func);
             },
             model.objective);
         for (auto& varIdExprPair : model.definingExpressions) {
             if (varIdExprPair.first != valBase(var).id) {
-                mpark::visit(
+                lib::visit(
                     [&](auto& expr) { expr = findAndReplace(expr, func); },
                     varIdExprPair.second);
             }
@@ -133,14 +133,14 @@ void ModelBuilder::substituteVarsToBeDefined() {
 
 FindAndReplaceFunction ModelBuilder::makeFindReplaceFunc(AnyValRef& var,
                                                          AnyExprRef& expr) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& var) -> FindAndReplaceFunction {
             typedef typename AssociatedViewType<valType(var)>::type ViewType;
-            auto& exprImpl = mpark::get<ExprRef<ViewType>>(expr);
+            auto& exprImpl = lib::get<ExprRef<ViewType>>(expr);
             return [this, var, exprImpl](
                        AnyExprRef ref,
                        const PathExtension&) -> pair<bool, AnyExprRef> {
-                auto exprRefTest = mpark::get_if<ExprRef<ViewType>>(&ref);
+                auto exprRefTest = lib::get_if<ExprRef<ViewType>>(&ref);
                 if (exprRefTest) {
                     auto valRefTest = this->getIfNonConstValue(*exprRefTest);
                     if (valRefTest && (valBase(valRefTest) == valBase(var))) {
@@ -206,7 +206,7 @@ void Model::printVariables() const {
     for (size_t i = 0; i < variables.size(); ++i) {
         auto& v = variables[i];
         os << "letting " << varName(variableNames[i]) << " be ";
-        mpark::visit(
+        lib::visit(
             [&](auto& domain) {
                 typedef
                     typename BaseType<decltype(domain)>::element_type Domain;
@@ -214,9 +214,9 @@ void Model::printVariables() const {
                 typedef typename AssociatedViewType<Value>::type View;
                 ExprRef<View> expr(nullptr);
                 if (valBase(v.second).container != &inlinedPool) {
-                    expr = mpark::get<ValRef<Value>>(v.second).asExpr();
+                    expr = lib::get<ValRef<Value>>(v.second).asExpr();
                 } else {
-                    expr = mpark::get<ExprRef<View>>(
+                    expr = lib::get<ExprRef<View>>(
                         definingExpressions.at(valBase(v.second).id));
                 }
                 prettyPrint(os, *domain, expr->getViewIfDefined());
@@ -233,33 +233,33 @@ void Model::printVariables() const {
 
 void Model::debugSanityCheck() const {
     csp->debugSanityCheck();
-    mpark::visit([&](auto& objective) { objective->debugSanityCheck(); },
-                 objective);
+    lib::visit([&](auto& objective) { objective->debugSanityCheck(); },
+               objective);
     for (auto& indexExprPair : definingExpressions) {
-        mpark::visit([&](auto& expr) { expr->debugSanityCheck(); },
-                     indexExprPair.second);
+        lib::visit([&](auto& expr) { expr->debugSanityCheck(); },
+                   indexExprPair.second);
     }
     sanityCheckRepeatMode = !sanityCheckRepeatMode;
 }
 
 Objective Model::getObjective() const {
-    return mpark::visit(overloaded(
-                            [&](const ExprRef<IntView>& e) {
-                                return Objective(optimiseMode, e);
-                            },
-                            [&](const ExprRef<TupleView>& e) {
-                                return Objective(optimiseMode, e);
-                            },
-                            [&](const auto& e) -> Objective {
-                                myCerr << "unsupported objective type\n";
-                                myCerr << "value = " << e << endl;
-                                todoImpl();
-                            }),
-                        objective);
+    return lib::visit(overloaded(
+                          [&](const ExprRef<IntView>& e) {
+                              return Objective(optimiseMode, e);
+                          },
+                          [&](const ExprRef<TupleView>& e) {
+                              return Objective(optimiseMode, e);
+                          },
+                          [&](const auto& e) -> Objective {
+                              myCerr << "unsupported objective type\n";
+                              myCerr << "value = " << e << endl;
+                              todoImpl();
+                          }),
+                      objective);
 }
 
 bool Model::objectiveDefined() const {
-    return mpark::visit(
+    return lib::visit(
         [&](const auto& objective) {
             return objective->getViewIfDefined().hasValue();
         },

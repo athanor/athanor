@@ -18,30 +18,30 @@ void OpInDomain<IntView>::reevaluateImpl(IntView& operandView) {
         this->violation = 0;
         return;
     }
-    mpark::visit(
-        overloaded(
-            [&](IntDomain::FoundBound bound) {
-                violation = 0;
-                closestBound = bound.index;
-            },
-            [&](IntDomain::BetweenBounds betweenBounds) {
-                Int d1 = v - domain->bounds[betweenBounds.lower].second;
-                Int d2 = domain->bounds[betweenBounds.upper].first - v;
-                tie(violation, closestBound, reason) =
-                    (d1 < d2) ? make_tuple(d1, betweenBounds.lower, TO_LARGE)
-                              : make_tuple(d2, betweenBounds.upper, TO_SMALL);
-            },
-            [&](IntDomain::OutOfBoundsSmall) {
-                violation = domain->bounds.front().first - v;
-                closestBound = 0;
-                reason = TO_SMALL;
-            },
-            [&](IntDomain::OutOfBoundsLarge) {
-                violation = v - domain->bounds.back().second;
-                closestBound = domain->bounds.size() - 1;
-                reason = TO_LARGE;
-            }),
-        domain->findContainingBound(v));
+    lib::visit(overloaded(
+                   [&](IntDomain::FoundBound bound) {
+                       violation = 0;
+                       closestBound = bound.index;
+                   },
+                   [&](IntDomain::BetweenBounds betweenBounds) {
+                       Int d1 = v - domain->bounds[betweenBounds.lower].second;
+                       Int d2 = domain->bounds[betweenBounds.upper].first - v;
+                       tie(violation, closestBound, reason) =
+                           (d1 < d2)
+                               ? make_tuple(d1, betweenBounds.lower, TO_LARGE)
+                               : make_tuple(d2, betweenBounds.upper, TO_SMALL);
+                   },
+                   [&](IntDomain::OutOfBoundsSmall) {
+                       violation = domain->bounds.front().first - v;
+                       closestBound = 0;
+                       reason = TO_SMALL;
+                   },
+                   [&](IntDomain::OutOfBoundsLarge) {
+                       violation = v - domain->bounds.back().second;
+                       closestBound = domain->bounds.size() - 1;
+                       reason = TO_LARGE;
+                   }),
+               domain->findContainingBound(v));
 }
 
 void OpInDomain<IntView>::updateVarViolationsImpl(

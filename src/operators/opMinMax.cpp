@@ -154,7 +154,7 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
     }
 
     void valueAdded(UInt index, const AnyExprRef& exprIn) final {
-        auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
+        auto& expr = lib::get<ExprRef<IntView>>(exprIn);
         auto view = expr->getViewIfDefined();
 
         // if is better
@@ -343,7 +343,7 @@ template <bool minMode>
 ExprRef<IntView> OpMaker<OpMinMax<minMode>>::make(
     ExprRef<SequenceView> o, const shared_ptr<SequenceDomain>& operandDomain) {
     if (operandDomain &&
-        mpark::get_if<shared_ptr<EmptyDomain>>(&operandDomain->inner)) {
+        lib::get_if<shared_ptr<EmptyDomain>>(&operandDomain->inner)) {
         // construct empty sequence of type int
         return OpMaker<OpUndefined<IntView>>::make();
     }

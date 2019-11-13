@@ -80,7 +80,7 @@ struct Quantifier : public SequenceView {
         : quantId(id), container(std::move(container)) {}
     inline void setExpression(AnyExprRef exprIn) {
         expr = std::move(exprIn);
-        mpark::visit(
+        lib::visit(
             [&](auto& expr) { members.emplace<ExprRefVec<viewType(expr)>>(); },
             expr);
     }

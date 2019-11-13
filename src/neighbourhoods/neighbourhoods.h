@@ -37,7 +37,7 @@ struct NeighbourhoodParams {
 
     template <typename Val>
     ValRefVec<Val>& getVals() {
-        return mpark::get<ValRefVec<Val>>(vals);
+        return lib::get<ValRefVec<Val>>(vals);
     }
 };
 
@@ -121,7 +121,7 @@ buildForAllTypes(makeGeneratorDecls, )
 
 inline void generateNeighbourhoods(int maxNumberVals, const AnyDomainRef domain,
                                    std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(
+    lib::visit(
         [&](auto& domainImpl) {
             generateNeighbourhoodsImpl(maxNumberVals, domainImpl,
                                        neighbourhoods);
@@ -137,13 +137,13 @@ template <typename T = int>
 inline void assignRandomValueInDomain(const AnyDomainRef& domain,
                                       AnyValRef& val, StatsContainer& stats,
                                       T = 0) {
-    mpark::visit(
+    lib::visit(
         [&](auto& domainImpl) {
             typedef typename BaseType<decltype(domainImpl)>::element_type
                 DomainType;
             typedef ValRef<typename AssociatedValueType<DomainType>::type>
                 ValueType;
-            assignRandomValueInDomain(*domainImpl, *mpark::get<ValueType>(val),
+            assignRandomValueInDomain(*domainImpl, *lib::get<ValueType>(val),
                                       stats);
         },
         domain);
@@ -154,7 +154,7 @@ const AnyDomainRef getInner(const Domain& domain);
 template <typename Domain, template <typename> class NhFunc>
 void generateForAllTypes(const Domain& domain, int numberValsRequired,
                          std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(
+    lib::visit(
         [&](const auto& innerDomainPtr) {
             typedef typename BaseType<decltype(innerDomainPtr)>::element_type
                 InnerDomain;
@@ -171,16 +171,16 @@ template <typename Domain, typename NhFunc>
 void generate(const Domain& domain, int numberValsRequired,
               std::vector<Neighbourhood>& neighbourhoods) {
     typedef typename NhFunc::InnerDomainType InnerDomain;
-    mpark::visit(overloaded(
-                     [&](const std::shared_ptr<InnerDomain>&) {
-                         if (NhFunc::matches(domain)) {
-                             neighbourhoods.emplace_back(NhFunc::getName(),
-                                                         numberValsRequired,
-                                                         NhFunc(domain));
-                         }
-                     },
-                     [](const auto&) {}),
-                 getInner(domain));
+    lib::visit(overloaded(
+                   [&](const std::shared_ptr<InnerDomain>&) {
+                       if (NhFunc::matches(domain)) {
+                           neighbourhoods.emplace_back(NhFunc::getName(),
+                                                       numberValsRequired,
+                                                       NhFunc(domain));
+                       }
+                   },
+                   [](const auto&) {}),
+               getInner(domain));
 }
 
 static const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;

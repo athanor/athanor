@@ -37,7 +37,7 @@ struct TupleValue : public TupleView, public ValBase {
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline ValRef<InnerValueType> member(UInt index) {
         return assumeAsValue(
-            mpark::get<
+            lib::get<
                 ExprRef<typename AssociatedViewType<InnerValueType>::type>>(
                 members[index]));
     }

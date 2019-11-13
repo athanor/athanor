@@ -106,7 +106,7 @@ struct PathExtension {
 
    public:
     inline bool isTop() const {
-        return mpark::visit([&](auto& expr) -> bool { return !expr; }, expr);
+        return lib::visit([&](auto& expr) -> bool { return !expr; }, expr);
     }
     PathExtension extend(AnyExprRef expr, bool markAsCondition = false) {
         return PathExtension(this, std::move(expr),
@@ -332,8 +332,7 @@ inline std::ostream& operator<<(std::ostream& os, const ExprRef<T>& ref) {
 HashType getValueHash(const AnyExprRef& ref);
 
 inline bool appearsDefined(const AnyExprRef& expr) {
-    return mpark::visit([&](auto& expr) { return expr->appearsDefined(); },
-                        expr);
+    return lib::visit([&](auto& expr) { return expr->appearsDefined(); }, expr);
 }
 std::ostream& prettyPrint(std::ostream& os, const AnyExprRef& expr);
 inline std::ostream& operator<<(std::ostream& os, const AnyExprRef& expr) {
@@ -390,7 +389,7 @@ inline ExprRef<T> findAndReplace(ExprRef<T>& expr,
                                  bool isCondition = false) {
     auto newExpr = func(expr, path);
     if (newExpr.first) {
-        return mpark::get<ExprRef<T>>(newExpr.second);
+        return lib::get<ExprRef<T>>(newExpr.second);
     } else {
         expr->findAndReplaceSelf(func, path.extend(expr, isCondition));
         return expr;

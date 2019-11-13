@@ -32,7 +32,7 @@ ParseResult parseOpSequenceIndex(AnyDomainRef& innerDomain,
             myCerr << "Sequence must be indexed by an int "
                       "expression.\n";
         });
-    return mpark::visit(
+    return lib::visit(
         [&](auto& innerDomain) -> ParseResult {
             typedef typename BaseType<decltype(innerDomain)>::element_type
                 InnerDomainType;

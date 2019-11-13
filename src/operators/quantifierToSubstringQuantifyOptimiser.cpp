@@ -40,7 +40,7 @@ bool appendSequenceIndexOp(const PathExtension& path,
                            lib::optional<AnyExprVec>& sequenceIndexOps) {
     const PathExtension* current = &path;
     while (!current->isTop()) {
-        bool success = mpark::visit(
+        bool success = lib::visit(
             [&](auto& expr) -> bool {
                 typedef viewType(expr) View;
                 auto sequenceIndex = getAs<OpSequenceIndex<View>>(expr);
@@ -52,7 +52,7 @@ bool appendSequenceIndexOp(const PathExtension& path,
                     sequenceIndexOps->emplace<ExprRefVec<View>>({expr});
                     return true;
                 } else {
-                    auto ops = mpark::get_if<ExprRefVec<View>>(
+                    auto ops = lib::get_if<ExprRefVec<View>>(
                         &sequenceIndexOps.value());
                     if (ops) {
                         ops->emplace_back(expr);
@@ -86,7 +86,7 @@ OptionalRef<const OpTupleIndex<View>> getIfTupleIndexOverIterator(
 }
 
 bool isTupleIndexOverIterator(UInt64 iterId, const AnyExprRef& expr) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& expr) {
             return getIfTupleIndexOverIterator(iterId, expr).hasValue();
         },
@@ -103,7 +103,7 @@ auto filterForTupleIndexOverIterator(UInt64 iterId, Func&& func) {
     return [iterId, f = forward<Func>(func)](
                AnyExprRef expr,
                const PathExtension path) -> pair<bool, AnyExprRef> {
-        mpark::visit(
+        lib::visit(
             [&](auto& expr) {
                 auto tupleIndex = getIfTupleIndexOverIterator(iterId, expr);
                 if (tupleIndex) {
@@ -131,9 +131,8 @@ lib::optional<AnyExprVec> searchForSequenceIndexOps(Quantifier& quant) {
                 fail = !appendSequenceIndexOp(path, sequenceIndexOps);
             });
 
-    mpark::visit(
-        [&](auto& expr) { findAndReplace(expr, sequenceIndexOpFinder); },
-        quant.expr);
+    lib::visit([&](auto& expr) { findAndReplace(expr, sequenceIndexOpFinder); },
+               quant.expr);
     if (!fail && quant.condition) {
         findAndReplace(quant.condition, sequenceIndexOpFinder);
     }
@@ -141,7 +140,7 @@ lib::optional<AnyExprVec> searchForSequenceIndexOps(Quantifier& quant) {
 }
 
 bool checkAllSequenceIndicesUsedTheSameSequence(const AnyExprVec& exprs) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& exprs) {
             typedef viewType(exprs) View;
             if (exprs.empty()) {
@@ -192,8 +191,7 @@ lib::optional<Int> calcIndexOffset(UInt64 iterId,
             return lib::nullopt;
         }
         Int offset = 0;
-        for (auto& expr :
-             mpark::get<ExprRefVec<IntView>>(sequenceLit->members)) {
+        for (auto& expr : lib::get<ExprRefVec<IntView>>(sequenceLit->members)) {
             if (isTupleIndexOverIterator(iterId, expr)) {
                 if (!foundIterator) {
                     foundIterator = true;
@@ -219,7 +217,7 @@ lib::optional<Int> calcIndexOffset(UInt64 iterId,
 
 lib::optional<vector<Int>> calcIndexOffsets(UInt64 iterId,
                                             AnyExprVec& sequenceIndexOps) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& sequenceIndexOps) -> lib::optional<vector<Int>> {
             typedef viewType(sequenceIndexOps) View;
             vector<Int> offsets;
@@ -254,7 +252,7 @@ auto makeReplaceFunc(
     const unordered_map<OpSequenceIndex<View>*, Int>& ptrsOffsetsMap,
     IterRef<TupleView>& newIterator) {
     return [&](auto expr, const auto&) -> pair<bool, AnyExprRef> {
-        auto exprViewTest = mpark::get_if<ExprRef<View>>(&expr);
+        auto exprViewTest = lib::get_if<ExprRef<View>>(&expr);
         if (!exprViewTest) {
             return make_pair(false, expr);
         }
@@ -292,7 +290,7 @@ void completeOptimiseToSubstringQuantifier(Quant& quant, IntRange& intRange,
     for_each(offsets.begin(), offsets.end(),
              [&](Int& offset) { offset = offset - minOffset; });
 
-    mpark::visit(
+    lib::visit(
         [&](auto& sequenceIndexOps) {
             debug_code(assert(offsets.size() == sequenceIndexOps.size()));
 
@@ -312,7 +310,7 @@ void completeOptimiseToSubstringQuantifier(Quant& quant, IntRange& intRange,
             auto newIterator = quant.template newIterRef<TupleView>();
             FindAndReplaceFunction replaceFunc =
                 makeReplaceFunc(ptrsOffsetsMap, newIterator);
-            mpark::visit(
+            lib::visit(
                 [&](auto& expr) { expr = findAndReplace(expr, replaceFunc); },
                 quant.expr);
             if (quant.condition) {
@@ -336,8 +334,7 @@ bool optimiseIfCanBeConvertedToSubstringQuantifier<SequenceView>(
         searchForSequenceIndexOps(quant);
     if (!sequenceIndexOps ||
         !checkAllSequenceIndicesUsedTheSameSequence(*sequenceIndexOps) ||
-        mpark::visit([&](auto& ops) { return ops.empty(); },
-                     *sequenceIndexOps)) {
+        lib::visit([&](auto& ops) { return ops.empty(); }, *sequenceIndexOps)) {
         return false;
     }
     lib::optional<vector<Int>> offsets =
@@ -371,8 +368,7 @@ bool optimiseIfIndicesAreNotUsedInSequenceQuantifier<SequenceView>(
             found |= tupleIndex.indexOperand == 1;
             ;
         });
-    mpark::visit([&](auto& expr) { findAndReplace(expr, checker); },
-                 quant.expr);
+    lib::visit([&](auto& expr) { findAndReplace(expr, checker); }, quant.expr);
     canBeOptimised &= found;
 
     if (canBeOptimised && quant.condition) {

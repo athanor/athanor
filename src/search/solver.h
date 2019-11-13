@@ -30,7 +30,7 @@ class State {
     State(Model model) : model(std::move(model)), stats(this->model) {}
 
     auto makeVecFrom(AnyValRef& val) {
-        return mpark::visit(
+        return lib::visit(
             [](auto& val) -> AnyValVec {
                 ValRefVec<valType(val)> vec;
                 vec.emplace_back(val);
@@ -149,7 +149,7 @@ inline void assignRandomValueToVariables(State& state) {
 
 inline void evaluateAndStartTriggeringDefinedExpressions(State& state) {
     for (auto& nameExprPair : state.model.definingExpressions) {
-        mpark::visit(
+        lib::visit(
             [&](auto& expr) {
                 expr->evaluate();
                 expr->startTriggering();
@@ -175,7 +175,7 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
         evaluateAndStartTriggeringDefinedExpressions(state);
         state.model.csp->evaluate();
         state.model.csp->startTriggering();
-        mpark::visit(
+        lib::visit(
             [&](auto& objective) {
                 objective->evaluate();
                 objective->startTriggering();
@@ -186,8 +186,8 @@ void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
 
     if (runSanityChecks) {
         state.model.csp->debugSanityCheck();
-        mpark::visit([&](auto& objective) { objective->debugSanityCheck(); },
-                     state.model.objective);
+        lib::visit([&](auto& objective) { objective->debugSanityCheck(); },
+                   state.model.objective);
     }
     state.stats.initialSolution(state.model);
     state.updateVarViolations();

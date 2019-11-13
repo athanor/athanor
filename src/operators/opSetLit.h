@@ -50,7 +50,7 @@ struct OpSetLit : public SetView {
     void assertValidHashes();
     template <typename View>
     ExprRefVec<View>& getOperands() {
-        return mpark::get<ExprRefVec<View>>(operands);
+        return lib::get<ExprRefVec<View>>(operands);
     }
     template <typename InnerViewType>
     void removeMemberFromSet(const HashType& hash,

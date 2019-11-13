@@ -18,7 +18,7 @@ void OpSubsetEq::reevaluateImpl(SetView& leftView, SetView& rightView, bool,
 
 namespace {
 HashType getHashForceDefined(const AnyExprRef& expr) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& expr) {
             auto view = expr->getViewIfDefined();
             if (!view) {
@@ -71,7 +71,7 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
         memberValueChanged(index, getValueHash(oldMember));
     }
     inline void memberValueChanged(UInt index, HashType oldHash) final {
-        HashType newHash = mpark::visit(
+        HashType newHash = lib::visit(
             [&](auto& members) {
                 return getValueHash(
                     members[index]->view().checkedGet(NO_UNDEFINED_IN_SUBSET));
@@ -91,7 +91,7 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
             for (HashType hash : oldHashes) {
                 valueRemovedImpl(hash, false);
             }
-            mpark::visit(
+            lib::visit(
                 [&](auto& members) {
                     for (UInt index : indices) {
                         valueAddedImpl(
@@ -158,7 +158,7 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
     }
 
     inline void memberValueChanged(UInt index, HashType oldHash) final {
-        HashType newHash = mpark::visit(
+        HashType newHash = lib::visit(
             [&](auto& members) {
                 return getValueHash(
                     members[index]->view().checkedGet(NO_UNDEFINED_IN_SUBSET));
@@ -178,7 +178,7 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
             for (HashType hash : oldHashes) {
                 valueRemovedImpl(hash, false);
             }
-            mpark::visit(
+            lib::visit(
                 [&](auto& members) {
                     for (UInt index : indices) {
                         valueAddedImpl(

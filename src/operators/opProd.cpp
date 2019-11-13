@@ -42,7 +42,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
         if (!op->evaluationComplete) {
             return;
         }
-        auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
+        auto& expr = lib::get<ExprRef<IntView>>(exprIn);
         auto view = expr->getViewIfDefined();
         if (!view) {
             op->cachedValues.insert(index, 1);
@@ -67,7 +67,7 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
             }
             return;
         }
-        const auto& expr = mpark::get<ExprRef<IntView>>(exprIn);
+        const auto& expr = lib::get<ExprRef<IntView>>(exprIn);
 
         Int operandValue = op->cachedValues.erase(index);
 
@@ -291,7 +291,7 @@ struct OpMaker<OpProd> {
 ExprRef<IntView> OpMaker<OpProd>::make(
     ExprRef<SequenceView> o, const shared_ptr<SequenceDomain>& operandDomain) {
     if (operandDomain &&
-        mpark::get_if<shared_ptr<EmptyDomain>>(&operandDomain->inner)) {
+        lib::get_if<shared_ptr<EmptyDomain>>(&operandDomain->inner)) {
         auto val = ::make<IntValue>();
         val->value = 1;
         val->setConstant(true);

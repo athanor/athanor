@@ -6,7 +6,7 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 void OpMSetLit::evaluateImpl() {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             for (auto& member : members) {
                 member->evaluate();
@@ -58,7 +58,7 @@ struct ExprTrigger
 }  // namespace
 void OpMSetLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {
-        mpark::visit(
+        lib::visit(
             [&](auto& members) {
                 typedef typename AssociatedTriggerType<viewType(members)>::type
                     TriggerType;
@@ -76,7 +76,7 @@ void OpMSetLit::startTriggeringImpl() {
 
 void OpMSetLit::stopTriggeringOnChildren() {
     if (!exprTriggers.empty()) {
-        mpark::visit(
+        lib::visit(
             [&](auto& members) {
                 typedef typename AssociatedTriggerType<viewType(members)>::type
                     TriggerType;
@@ -92,7 +92,7 @@ void OpMSetLit::stopTriggeringOnChildren() {
 
 void OpMSetLit::stopTriggering() {
     if (!exprTriggers.empty()) {
-        mpark::visit(
+        lib::visit(
             [&](auto& members) {
                 typedef typename AssociatedTriggerType<viewType(members)>::type
                     TriggerType;
@@ -115,7 +115,7 @@ void OpMSetLit::updateVarViolationsImpl(const ViolationContext&,
 ExprRef<MSetView> OpMSetLit::deepCopyForUnrollImpl(
     const ExprRef<MSetView>&, const AnyIterRef& iterator) const {
     AnyExprVec newMembers;
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             auto& newMembersImpl =
                 newMembers.emplace<ExprRefVec<viewType(members)>>();
@@ -132,7 +132,7 @@ ExprRef<MSetView> OpMSetLit::deepCopyForUnrollImpl(
 
 std::ostream& OpMSetLit::dumpState(std::ostream& os) const {
     os << "OpMSetLit: exprs=[";
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             bool first = true;
             for (const auto& member : members) {
@@ -151,7 +151,7 @@ std::ostream& OpMSetLit::dumpState(std::ostream& os) const {
 
 void OpMSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func,
                                    PathExtension path) {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             for (auto& member : members) {
                 member = findAndReplace(member, func, path);
@@ -165,7 +165,7 @@ pair<bool, ExprRef<MSetView>> OpMSetLit::optimiseImpl(ExprRef<MSetView>&,
     auto newOp = make_shared<OpMSetLit>(members);
     AnyExprRef newOpAsExpr = ExprRef<MSetView>(newOp);
     bool optimised = false;
-    mpark::visit(
+    lib::visit(
         [&](auto& operands) {
             for (auto& operand : operands) {
                 optimised |= optimise(newOpAsExpr, operand, path);
@@ -179,7 +179,7 @@ pair<bool, ExprRef<MSetView>> OpMSetLit::optimiseImpl(ExprRef<MSetView>&,
 string OpMSetLit::getOpName() const { return "OpMSetLit"; }
 
 void OpMSetLit::debugSanityCheckImpl() const {
-    mpark::visit([&](auto& members) { recurseSanityChecks(members); }, members);
+    lib::visit([&](auto& members) { recurseSanityChecks(members); }, members);
     this->standardSanityChecksForThisType();
 }
 

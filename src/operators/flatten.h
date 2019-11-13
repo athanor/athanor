@@ -13,7 +13,7 @@ bool replaceIfOperandIsSameAsOp(Op& op, ExprRefVec<View>& members,
         auto opSequenceLitTest = getAs<OpSequenceLit>(sameOpTest->operand);
         if (opSequenceLitTest) {
             auto& operandMembers =
-                mpark::get<ExprRefVec<View>>(opSequenceLitTest->members);
+                lib::get<ExprRefVec<View>>(opSequenceLitTest->members);
             debug_log("Optimise: flattening: lifting operands for op "
                       << op.getOpName());
             members[index] = std::move(members.back());
@@ -34,7 +34,7 @@ bool flatten(Op& op) {
         return false;
     }
     ExprRefVec<OpViewType>* membersTest =
-        mpark::get_if<ExprRefVec<OpViewType>>(&(opSequenceLitTest->members));
+        lib::get_if<ExprRefVec<OpViewType>>(&(opSequenceLitTest->members));
     if (!membersTest) {
         return false;
     }

@@ -16,7 +16,7 @@ template <>
 struct InitialUnroller<SequenceView> {
     template <typename Quant>
     static void initialUnroll(Quant& quantifier, SequenceView& containerView) {
-        mpark::visit(
+        lib::visit(
             [&](auto& membersImpl) {
                 for (size_t i = 0; i < membersImpl.size(); i++) {
                     auto tupleFirstMember = make<IntValue>();
@@ -43,7 +43,7 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
         correctUnrolledTupleIndices(indexOfRemovedValue);
     }
     void valueAdded(UInt index, const AnyExprRef& member) final {
-        mpark::visit(
+        lib::visit(
             [&](auto& member) {
                 handleUnroll<viewType(member)>(index, member);
             },
@@ -53,10 +53,10 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
     void memberReplaced(UInt index, const AnyExprRef&) {
         debug_code(assert(index < op->unrolledIterVals.size()));
         auto iterRef =
-            mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
+            lib::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
         auto& tupleLit = *getAs<OpTupleLit>(iterRef->getValue());
         auto& containerView = *op->container->view();
-        mpark::visit(
+        lib::visit(
             [&](auto& members) { tupleLit.replaceMember(1, members[index]); },
             containerView.members);
     }
@@ -118,9 +118,8 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
         }
 
         debug_log("Correcting tuple index " << index);
-        auto& tuple =
-            mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
-        auto& intView = mpark::get<ExprRef<IntView>>(tuple->view()->members[0]);
+        auto& tuple = lib::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
+        auto& intView = lib::get<ExprRef<IntView>>(tuple->view()->members[0]);
         auto& intVal = static_cast<IntValue&>(*intView);
         intVal.changeValue([&]() {
             intVal.value = index + 1;
@@ -161,14 +160,14 @@ struct ContainerSanityChecker<SequenceView> {
         sanityEqualsCheck(container.numberElements(),
                           quant.unrolledIterVals.size());
         for (size_t i = 0; i < quant.unrolledIterVals.size(); i++) {
-            auto* iterPtr = mpark::get_if<IterRef<TupleView>>(
+            auto* iterPtr = lib::get_if<IterRef<TupleView>>(
                 &(quant.unrolledIterVals[i].asVariant()));
             sanityCheck(iterPtr, "Expected tuple type here.");
             auto view = (*iterPtr)->ref->view();
             sanityCheck(view, "view() should not return undefined here.");
             sanityEqualsCheck(2, view->members.size());
             auto* intExprPtr =
-                mpark::get_if<ExprRef<IntView>>(&(view->members[0]));
+                lib::get_if<ExprRef<IntView>>(&(view->members[0]));
             sanityCheck(intExprPtr,
                         "Expected first element of unrolled tuple to be int.");
             auto intView = (*intExprPtr)->getViewIfDefined();

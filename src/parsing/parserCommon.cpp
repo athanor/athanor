@@ -28,7 +28,7 @@ void mergeDomains(AnyDomainRef& dest, AnyDomainRef& src) {
     auto overload = overloaded(
         [&](shared_ptr<EmptyDomain>&, auto& src) { dest = src->deepCopy(src); },
         [](auto& dest, auto& src) { mergeIfSameType(dest, src); });
-    mpark::visit(overload, dest, src);
+    lib::visit(overload, dest, src);
 }
 
 MultiParseResult parseAllAsSameType(json& jsonArray, ParsedModel& parsedModel,
@@ -43,12 +43,12 @@ MultiParseResult parseAllAsSameType(json& jsonArray, ParsedModel& parsedModel,
         } else {
             mergeDomains(result.domain, member.domain);
         }
-        mpark::visit(
+        lib::visit(
             [&](auto& expr) {
                 auto& exprs =
                     (i == 0)
                         ? result.exprs.emplace<ExprRefVec<viewType(expr)>>()
-                        : mpark::get<ExprRefVec<viewType(expr)>>(result.exprs);
+                        : lib::get<ExprRefVec<viewType(expr)>>(result.exprs);
                 exprs.emplace_back(expr);
                 result.allConstant &= expr->isConstant();
             },
@@ -58,7 +58,7 @@ MultiParseResult parseAllAsSameType(json& jsonArray, ParsedModel& parsedModel,
         }
     }
     for (auto index : indicesOfEmpties) {
-        mpark::visit(
+        lib::visit(
             [&](auto& exprs) {
                 tryRemoveEmptyType(result.domain, exprs[index]);
             },

@@ -37,7 +37,7 @@ template <>
 void assignRandomValueInDomain<PartitionDomain>(const PartitionDomain& domain,
                                                 PartitionValue& val,
                                                 StatsContainer& stats) {
-    mpark::visit(
+    lib::visit(
         [&](auto& innerDomainPtr) {
             assignRandomValueInDomainImpl(domain, innerDomainPtr, val, stats);
         },
@@ -100,7 +100,7 @@ void partitionContainingPartsSwapGenImpl(
 void partitionContainingPartsSwapGen(
     const PartitionDomain& domain, int numberValsRequired,
     std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(
+    lib::visit(
         [&](const auto& innerDomainPtr) {
             partitionContainingPartsSwapGenImpl(
                 domain, innerDomainPtr, numberValsRequired, neighbourhoods);

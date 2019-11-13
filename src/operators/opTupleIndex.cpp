@@ -22,7 +22,7 @@ OpTupleIndex<TupleMemberViewType>::getMember() {
         return EmptyOptional();
     }
 
-    return mpark::get<ExprRef<TupleMemberViewType>>(
+    return lib::get<ExprRef<TupleMemberViewType>>(
         (*view).members[indexOperand]);
 }
 
@@ -33,7 +33,7 @@ OpTupleIndex<TupleMemberViewType>::getMember() const {
     if (!view) {
         return EmptyOptional();
     }
-    return mpark::get<ExprRef<TupleMemberViewType>>(
+    return lib::get<ExprRef<TupleMemberViewType>>(
         (*view).members[indexOperand]);
 }
 

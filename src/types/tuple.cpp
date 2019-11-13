@@ -27,8 +27,8 @@ ostream& prettyPrint<TupleView>(ostream& os, const TupleView& v) {
         } else {
             os << ",";
         }
-        mpark::visit([&](auto& member) { prettyPrint(os, member->view()); },
-                     member);
+        lib::visit([&](auto& member) { prettyPrint(os, member->view()); },
+                   member);
     }
     os << ")";
     return os;
@@ -47,13 +47,13 @@ ostream& prettyPrint<TupleView>(ostream& os, const TupleDomain& domain,
             os << domain.recordIndexNameMap[i] << " = ";
         }
 
-        mpark::visit(
+        lib::visit(
             [&](auto& member) {
                 typedef
                     typename AssociatedValueType<viewType(member)>::type Value;
                 typedef typename AssociatedDomain<Value>::type Domain;
                 const auto& domainPtr =
-                    mpark::get<shared_ptr<Domain>>(domain.inners[i]);
+                    lib::get<shared_ptr<Domain>>(domain.inners[i]);
                 prettyPrint(os, *domainPtr, member->view());
             },
             v.members[i]);
@@ -67,7 +67,7 @@ void deepCopy<TupleValue>(const TupleValue& src, TupleValue& target) {
     target.cachedHashTotal.invalidate();
     // just in case tuple is empty, make sure to populate with elements
     while (target.members.size() < src.members.size()) {
-        mpark::visit(
+        lib::visit(
             [&](const auto& srcMember) {
                 auto srcVal = assumeAsValue(srcMember);
                 auto newMember = make<valType(srcVal)>();
@@ -77,10 +77,10 @@ void deepCopy<TupleValue>(const TupleValue& src, TupleValue& target) {
             src.members[target.members.size()]);
     }
     for (size_t i = 0; i < src.members.size(); i++) {
-        mpark::visit(
+        lib::visit(
             [&](auto& srcMember) {
                 auto& targetMember =
-                    mpark::get<ExprRef<viewType(srcMember)>>(target.members[i]);
+                    lib::get<ExprRef<viewType(srcMember)>>(target.members[i]);
                 deepCopy(*assumeAsValue(srcMember),
                          *assumeAsValue(targetMember));
             },
@@ -130,7 +130,7 @@ void stopTriggering(TupleValue&) {}
 template <>
 void normalise<TupleValue>(TupleValue& val) {
     for (auto& v : val.members) {
-        mpark::visit([](auto& v) { normalise(*assumeAsValue(v)); }, v);
+        lib::visit([](auto& v) { normalise(*assumeAsValue(v)); }, v);
     }
 }
 
@@ -139,7 +139,7 @@ bool smallerValue<TupleView>(const TupleView& u, const TupleView& v);
 template <>
 bool largerValue<TupleView>(const TupleView& u, const TupleView& v);
 const AnyValRef toAnyValRef(const AnyExprRef& v) {
-    return mpark::visit(
+    return lib::visit(
         [](const auto& v) -> AnyValRef { return assumeAsValue(v); }, v);
 }
 template <>
@@ -211,7 +211,7 @@ void TupleValue::printVarBases() {
 void TupleView::standardSanityChecksForThisType() const {
     UInt checkNumberUndefined = 0;
     for (auto& member : members) {
-        mpark::visit(
+        lib::visit(
             [&](auto& member) {
                 if (!member->getViewIfDefined().hasValue()) {
                     ++checkNumberUndefined;
@@ -231,7 +231,7 @@ void TupleView::standardSanityChecksForThisType() const {
 
 void TupleValue::debugSanityCheckImpl() const {
     for (auto& member : members) {
-        mpark::visit(
+        lib::visit(
             [&](const auto& member) {
                 member->debugSanityCheck();
                 const ValBase& base = valBase(*assumeAsValue(member));

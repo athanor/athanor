@@ -109,7 +109,7 @@ bool OpSetLit::hashNotChanged(UInt index) {
 }
 void OpSetLit::evaluateImpl() {
     debug_code(assert(exprTriggers.empty()));
-    mpark::visit(
+    lib::visit(
         [&](auto& operands) {
             this->members.emplace<ExprRefVec<viewType(operands)>>();
             for (size_t i = 0; i < operands.size(); i++) {
@@ -139,10 +139,10 @@ struct ExprTrigger
 
     ExprTrigger(OpSetLit* op, UInt index)
         : ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>(
-              mpark::get<ExprRefVec<View>>(op->operands)[index]),
+              lib::get<ExprRefVec<View>>(op->operands)[index]),
           ExprTriggerBase(op, index) {}
     ExprRef<View>& getTriggeringOperand() {
-        return mpark::get<ExprRefVec<View>>(op->operands)[this->index];
+        return lib::get<ExprRefVec<View>>(op->operands)[this->index];
     }
     void adapterValueChanged() {
         op->removeOperandValue<View>(index, op->cachedOperandHashes.get(index));
@@ -164,7 +164,7 @@ struct ExprTrigger
 
 void OpSetLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {
-        mpark::visit(
+        lib::visit(
             [&](auto& operands) {
                 typedef typename AssociatedTriggerType<viewType(operands)>::type
                     TriggerType;
@@ -182,7 +182,7 @@ void OpSetLit::startTriggeringImpl() {
 
 void OpSetLit::stopTriggeringOnChildren() {
     if (!exprTriggers.empty()) {
-        mpark::visit(
+        lib::visit(
             [&](auto& operands) {
                 typedef typename AssociatedTriggerType<viewType(operands)>::type
                     TriggerType;
@@ -199,7 +199,7 @@ void OpSetLit::stopTriggeringOnChildren() {
 void OpSetLit::stopTriggering() {
     if (!exprTriggers.empty()) {
         stopTriggeringOnChildren();
-        mpark::visit(
+        lib::visit(
             [&](auto& operands) {
                 for (auto& operand : operands) {
                     operand->stopTriggering();
@@ -211,7 +211,7 @@ void OpSetLit::stopTriggering() {
 
 void OpSetLit::updateVarViolationsImpl(const ViolationContext& context,
                                        ViolationContainer& container) {
-    mpark::visit(
+    lib::visit(
         [&](auto& operands) {
             for (auto& operand : operands) {
                 operand->updateVarViolations(context, container);
@@ -222,7 +222,7 @@ void OpSetLit::updateVarViolationsImpl(const ViolationContext& context,
 
 ExprRef<SetView> OpSetLit::deepCopyForUnrollImpl(
     const ExprRef<SetView>&, const AnyIterRef& iterator) const {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& operands) {
             ExprRefVec<viewType(operands)> newOperands;
             ExprRefVec<viewType(operands)> newSetMembers(numberElements(),
@@ -253,7 +253,7 @@ std::ostream& OpSetLit::dumpState(std::ostream& os) const {
     os << "OpSetLit: SetView=";
     prettyPrint(os, this->view());
     os << "\noperands=[";
-    mpark::visit(
+    lib::visit(
         [&](auto& operands) {
             bool first = true;
             for (const auto& operand : operands) {
@@ -272,7 +272,7 @@ std::ostream& OpSetLit::dumpState(std::ostream& os) const {
 
 void OpSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func,
                                   PathExtension path) {
-    mpark::visit(
+    lib::visit(
         [&](auto& operands) {
             for (auto& operand : operands) {
                 operand = findAndReplace(operand, func, path);
@@ -286,7 +286,7 @@ pair<bool, ExprRef<SetView>> OpSetLit::optimiseImpl(ExprRef<SetView>&,
     auto newOp = std::make_shared<OpSetLit>(operands);
     AnyExprRef newOpAsExpr = ExprRef<SetView>(newOp);
     bool optimised = false;
-    mpark::visit(
+    lib::visit(
         [&](auto& operands) {
             for (auto& operand : operands) {
                 optimised |= optimise(newOpAsExpr, operand, path);
@@ -299,7 +299,7 @@ pair<bool, ExprRef<SetView>> OpSetLit::optimiseImpl(ExprRef<SetView>&,
 
 void OpSetLit::assertValidHashes() {
     bool success = true;
-    mpark::visit(
+    lib::visit(
         [&](auto& operands) {
             for (size_t i = 0; i < operands.size(); i++) {
                 auto& operand = operands[i];
@@ -389,7 +389,7 @@ void OpSetLit::assertValidHashes() {
 string OpSetLit::getOpName() const { return "OpSetLit"; }
 
 void OpSetLit::debugSanityCheckImpl() const {
-    mpark::visit(
+    lib::visit(
         [&](auto& operands) {
             for (size_t i = 0; i < operands.size(); i++) {
                 auto& operand = operands[i];

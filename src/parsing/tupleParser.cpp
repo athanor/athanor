@@ -11,8 +11,8 @@ ParseResult parseOpRecordLit(json& tupleExpr, ParsedModel& parsedModel) {
     for (auto& memberExpr : tupleExpr) {
         auto member = parseExpr(memberExpr[1], parsedModel);
         fields.emplace_back(memberExpr[0]["Name"], member.domain, member.expr);
-        mpark::visit([&](auto& member) { constant &= member->isConstant(); },
-                     member.expr);
+        lib::visit([&](auto& member) { constant &= member->isConstant(); },
+                   member.expr);
         hasEmptyType |= member.hasEmptyType;
     }
     sort(fields.begin(), fields.end(),
@@ -45,8 +45,8 @@ ParseResult parseOpTupleLit(json& tupleExpr, ParsedModel& parsedModel) {
         auto member = parseExpr(memberExpr, parsedModel);
         tupleMemberDomains.emplace_back(member.domain);
         tupleMembers.emplace_back(member.expr);
-        mpark::visit([&](auto& member) { constant &= member->isConstant(); },
-                     member.expr);
+        lib::visit([&](auto& member) { constant &= member->isConstant(); },
+                   member.expr);
         hasEmptyType |= member.hasEmptyType;
     }
     auto tuple = OpMaker<OpTupleLit>::make(move(tupleMembers));
@@ -98,7 +98,7 @@ ParseResult parseOpTupleIndex(shared_ptr<TupleDomain>& tupleDomain,
         myExit(1);
     }
     bool hasEmptyType = hasEmptyDomain(tupleDomain->inners[index]);
-    return mpark::visit(
+    return lib::visit(
         [&](auto& innerDomain) -> ParseResult {
             typedef typename BaseType<decltype(innerDomain)>::element_type
                 InnerDomainType;
@@ -123,7 +123,7 @@ ParseResult parseOpRecordIndex(shared_ptr<TupleDomain>& tupleDomain,
     }
     size_t index = tupleDomain->recordNameIndexMap[indexName];
     bool hasEmptyType = hasEmptyDomain(tupleDomain->inners[index]);
-    return mpark::visit(
+    return lib::visit(
         [&](auto& innerDomain) -> ParseResult {
             typedef typename BaseType<decltype(innerDomain)>::element_type
                 InnerDomainType;

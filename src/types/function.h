@@ -95,7 +95,7 @@ struct FunctionView : public ExprInterface<FunctionView>,
     void indexToDomain(UInt index, View& view) const {
         size_t dimIndex = 0;
         functionIndexToDomain<Domain>(
-            *mpark::get<std::shared_ptr<Domain>>(fromDomain), dimensions, index,
+            *lib::get<std::shared_ptr<Domain>>(fromDomain), dimensions, index,
             view, dimIndex);
     }
 
@@ -107,7 +107,7 @@ struct FunctionView : public ExprInterface<FunctionView>,
     ExprRef<View> indexToDomain(UInt index) const {
         size_t dimIndex = 0;
         return functionIndexToDomain<Domain>(
-            *mpark::get<std::shared_ptr<Domain>>(fromDomain), dimensions, index,
+            *lib::get<std::shared_ptr<Domain>>(fromDomain), dimensions, index,
             dimIndex);
     }
 
@@ -248,12 +248,12 @@ struct FunctionView : public ExprInterface<FunctionView>,
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getRange() {
-        return mpark::get<ExprRefVec<InnerViewType>>(range);
+        return lib::get<ExprRefVec<InnerViewType>>(range);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline const ExprRefVec<InnerViewType>& getRange() const {
-        return mpark::get<ExprRefVec<InnerViewType>>(range);
+        return lib::get<ExprRefVec<InnerViewType>>(range);
     }
     virtual inline AnyExprVec& getChildrenOperands() { shouldNotBeCalledPanic; }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -267,12 +267,12 @@ struct FunctionView : public ExprInterface<FunctionView>,
     }
 
     inline UInt rangeSize() const {
-        return mpark::visit([](auto& range) { return range.size(); }, range);
+        return lib::visit([](auto& range) { return range.size(); }, range);
     }
 
     void standardSanityChecksForThisType() const;
     void silentClear() {
-        mpark::visit(
+        lib::visit(
             [&](auto& membersImpl) {
                 cachedHashTotal.invalidate();
                 membersImpl.clear();

@@ -39,9 +39,9 @@ void ExprInterface<View>::addTriggerImpl(
 bool smallerValue(const AnyExprRef& u, const AnyExprRef& v) {
     return u.index() < v.index() ||
            (u.index() == v.index() &&
-            mpark::visit(
+            lib::visit(
                 [&v](auto& uImpl) {
-                    auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v);
+                    auto& vImpl = lib::get<BaseType<decltype(uImpl)>>(v);
                     return smallerValue(*uImpl->view(), *vImpl->view());
                 },
                 u));
@@ -50,21 +50,21 @@ bool smallerValue(const AnyExprRef& u, const AnyExprRef& v) {
 bool largerValue(const AnyExprRef& u, const AnyExprRef& v) {
     return u.index() > v.index() ||
            (u.index() == v.index() &&
-            mpark::visit(
+            lib::visit(
                 [&v](auto& uImpl) {
-                    auto& vImpl = mpark::get<BaseType<decltype(uImpl)>>(v);
+                    auto& vImpl = lib::get<BaseType<decltype(uImpl)>>(v);
                     return largerValue(*uImpl->view(), *vImpl->view());
                 },
                 u));
 }
 
 HashType getValueHash(const AnyExprRef& ref) {
-    return mpark::visit([&](auto& ref) { return getValueHash(*ref->view()); },
-                        ref);
+    return lib::visit([&](auto& ref) { return getValueHash(*ref->view()); },
+                      ref);
 }
 
 ostream& prettyPrint(ostream& os, const AnyExprRef& expr) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& ref) -> ostream& { return prettyPrint(os, ref->view()); },
         expr);
 }

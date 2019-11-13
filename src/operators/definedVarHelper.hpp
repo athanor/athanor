@@ -105,8 +105,8 @@ struct DefinedVarTrigger {
     }
 };
 
-typedef mpark::variant<DefinedVarTrigger<OpIntEq>, DefinedVarTrigger<OpBoolEq>,
-                       DefinedVarTrigger<OpEnumEq>>
+typedef lib::variant<DefinedVarTrigger<OpIntEq>, DefinedVarTrigger<OpBoolEq>,
+                     DefinedVarTrigger<OpEnumEq>>
     AnyDefinedVarTrigger;
 
 extern std::deque<AnyDefinedVarTrigger> definedVarTriggerQueue;
@@ -119,7 +119,7 @@ DefinedVarTrigger<Op>* addDefinedVarTrigger(Op* op,
     auto& queue =
         (delayedQueue) ? delayedDefinedVarTriggerQueue : definedVarTriggerQueue;
     queue.emplace_back(DefinedVarTrigger<Op>(op, definedDirection));
-    return &mpark::get<DefinedVarTrigger<Op>>(queue.back());
+    return &lib::get<DefinedVarTrigger<Op>>(queue.back());
 }
 
 // returns true if this function promises to do the necessary steps to correctly
@@ -171,7 +171,7 @@ inline bool isSuitableForDefiningVars(const PathExtension& path) {
     // path does not include self, only parents
     bool success = !path.isCondition;
     while (success && !current->isTop()) {
-        mpark::visit(
+        lib::visit(
             [&](auto& expr) {
                 if (!getAs<OpAnd>(expr) &&
                     !std::is_same<SequenceView, viewType(expr)>::value) {

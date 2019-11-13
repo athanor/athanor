@@ -164,11 +164,11 @@ optional<AnyDomainRef> tryParseDomain(json& domainExpr,
 }
 ParseResult parseOpRelationProj(json& operandsExpr, ParsedModel& parsedModel) {
     auto leftOperand = parseExpr(operandsExpr[0], parsedModel);
-    return mpark::visit(
+    return lib::visit(
         overloaded(
             [&](ExprRef<SequenceView>& sequence) -> ParseResult {
                 auto& innerDomain =
-                    mpark::get<shared_ptr<SequenceDomain>>(leftOperand.domain)
+                    lib::get<shared_ptr<SequenceDomain>>(leftOperand.domain)
                         ->inner;
                 return parseOpSequenceIndex(
                     innerDomain, sequence, operandsExpr[1][0],
@@ -176,7 +176,7 @@ ParseResult parseOpRelationProj(json& operandsExpr, ParsedModel& parsedModel) {
             },
             [&](ExprRef<FunctionView>& function) -> ParseResult {
                 auto& functionDomain =
-                    mpark::get<shared_ptr<FunctionDomain>>(leftOperand.domain);
+                    lib::get<shared_ptr<FunctionDomain>>(leftOperand.domain);
                 return parseOpFunctionImage(
                     *functionDomain, function, operandsExpr[1][0],
                     leftOperand.hasEmptyType, parsedModel);
@@ -198,11 +198,11 @@ ParseResult parseOpRelationProj(json& operandsExpr, ParsedModel& parsedModel) {
 ParseResult parseOpIndexingHelper(json& operandsExpr, ParsedModel& parsedModel,
                                   ParseResult& leftOperand,
                                   size_t currentIndex) {
-    auto indexedItem = mpark::visit(
+    auto indexedItem = lib::visit(
         overloaded(
             [&](ExprRef<TupleView>& tuple) -> ParseResult {
                 auto& tupleDomain =
-                    mpark::get<shared_ptr<TupleDomain>>(leftOperand.domain);
+                    lib::get<shared_ptr<TupleDomain>>(leftOperand.domain);
                 if (tupleDomain->isRecord) {
                     return parseOpRecordIndex(tupleDomain, tuple,
                                               operandsExpr[currentIndex],
@@ -215,14 +215,14 @@ ParseResult parseOpIndexingHelper(json& operandsExpr, ParsedModel& parsedModel,
             },
             [&](ExprRef<SequenceView>& sequence) -> ParseResult {
                 auto& sequenceDomain =
-                    mpark::get<shared_ptr<SequenceDomain>>(leftOperand.domain);
+                    lib::get<shared_ptr<SequenceDomain>>(leftOperand.domain);
                 return parseOpSequenceIndex(
                     sequenceDomain->inner, sequence, operandsExpr[currentIndex],
                     leftOperand.hasEmptyType, parsedModel);
             },
             [&](ExprRef<FunctionView>& function) -> ParseResult {
                 auto& functionDomain =
-                    mpark::get<shared_ptr<FunctionDomain>>(leftOperand.domain);
+                    lib::get<shared_ptr<FunctionDomain>>(leftOperand.domain);
                 return parseOpFunctionImage(
                     *functionDomain, function, operandsExpr[currentIndex],
                     leftOperand.hasEmptyType, parsedModel);
@@ -270,7 +270,7 @@ ParseResult parseOpCatchUndef(json& operandsExpr, ParsedModel& parsedModel) {
         tryRemoveEmptyType(right.domain, right.expr);
     }
 
-    return mpark::visit(
+    return lib::visit(
         [&](auto& leftExpr) {
             typedef viewType(leftExpr) View;
             typedef typename AssociatedValueType<View>::type Value;
@@ -304,13 +304,13 @@ ParseResult parseSequenceFoldingOp(json& operandExpr,
     ParseResult parsedOperandExpr =
         toSequence(parseExpr(operandExpr, parsedModel));
     auto& sequenceDomain =
-        mpark::get<shared_ptr<SequenceDomain>>(parsedOperandExpr.domain);
+        lib::get<shared_ptr<SequenceDomain>>(parsedOperandExpr.domain);
     auto& sequenceOperand =
-        mpark::get<ExprRef<SequenceView>>(parsedOperandExpr.expr);
+        lib::get<ExprRef<SequenceView>>(parsedOperandExpr.expr);
     auto op = OpMaker<Op>::make(sequenceOperand, sequenceDomain);
-    if (!mpark::get_if<shared_ptr<ExpectedInnerDomain>>(
+    if (!lib::get_if<shared_ptr<ExpectedInnerDomain>>(
             &(sequenceDomain->inner)) &&
-        !mpark::get_if<shared_ptr<EmptyDomain>>(&(sequenceDomain->inner))) {
+        !lib::get_if<shared_ptr<EmptyDomain>>(&(sequenceDomain->inner))) {
         myCerr << "Error: expected sequence with inner type "
                << TypeAsString<ExpectedInnerValue>::value << " for op "
                << op->getOpName() << endl;
@@ -402,7 +402,7 @@ void handleFindDeclaration(json& findArray, ParsedModel& parsedModel) {
     string findName = findArray[1]["Name"];
     debug_log("Parsing find " << findName);
     auto findDomain = parseDomain(findArray[2], parsedModel);
-    mpark::visit(
+    lib::visit(
         [&](auto& domainImpl) {
             parsedModel.namedExprs.emplace(
                 findName, ParseResult(domainImpl,
@@ -432,11 +432,11 @@ void parseExprs(json& suchThat, ParsedModel& parsedModel) {
 void validateObjectiveType(json& expr, AnyDomainRef domain) {
     const char* errorMessage =
         "Error: objective must be int or tuple of int.\n";
-    mpark::visit(
+    lib::visit(
         overloaded([&](const shared_ptr<IntDomain>&) {},
                    [&](const shared_ptr<TupleDomain>& domain) {
                        for (auto& inner : domain->inners) {
-                           if (!mpark::get_if<shared_ptr<IntDomain>>(&inner)) {
+                           if (!lib::get_if<shared_ptr<IntDomain>>(&inner)) {
                                myCerr << errorMessage;
                                myCerr << expr << endl;
                                myAbort();

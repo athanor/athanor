@@ -93,7 +93,7 @@ struct MSetView : public ExprInterface<MSetView>,
     }
 
     void silentClear() {
-        mpark::visit(
+        lib::visit(
             [&](auto& membersImpl) {
                 cachedHashTotal.invalidate();
                 membersImpl.clear();
@@ -155,17 +155,17 @@ struct MSetView : public ExprInterface<MSetView>,
     virtual inline AnyExprVec& getChildrenOperands() { shouldNotBeCalledPanic; }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
-        return mpark::get<ExprRefVec<InnerViewType>>(members);
+        return lib::get<ExprRefVec<InnerViewType>>(members);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline const ExprRefVec<InnerViewType>& getMembers() const {
-        return mpark::get<ExprRefVec<InnerViewType>>(members);
+        return lib::get<ExprRefVec<InnerViewType>>(members);
     }
 
     inline UInt numberElements() const {
-        return mpark::visit([](auto& members) { return members.size(); },
-                            members);
+        return lib::visit([](auto& members) { return members.size(); },
+                          members);
     }
     void standardSanityChecksForThisType() const;
 };

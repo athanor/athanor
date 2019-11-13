@@ -19,7 +19,7 @@ deque<AnyDefinedVarTrigger> delayedDefinedVarTriggerQueue;
 typename deque<AnyDefinedVarTrigger>::iterator findNextTrigger(
     deque<AnyDefinedVarTrigger>& queue);
 auto& active(AnyDefinedVarTrigger& t) {
-    return mpark::visit([](auto& t) -> bool& { return t.active(); }, t);
+    return lib::visit([](auto& t) -> bool& { return t.active(); }, t);
 }
 
 void handleDefinedVarTriggers() {
@@ -31,7 +31,7 @@ void handleDefinedVarTriggers() {
     while (!delayedDefinedVarTriggerQueue.empty() ||
            !definedVarTriggerQueue.empty()) {
         while (!definedVarTriggerQueue.empty()) {
-            mpark::visit(triggerHandler, definedVarTriggerQueue.front());
+            lib::visit(triggerHandler, definedVarTriggerQueue.front());
             definedVarTriggerQueue.pop_front();
         }
         DefinesLock::unlockAll();
@@ -41,7 +41,7 @@ void handleDefinedVarTriggers() {
         }
         if (!delayedDefinedVarTriggerQueue.empty()) {
             auto iter = findNextTrigger(delayedDefinedVarTriggerQueue);
-            mpark::visit(triggerHandler, *iter);
+            lib::visit(triggerHandler, *iter);
             active(*iter) = false;
         }
     }
@@ -50,7 +50,7 @@ void handleDefinedVarTriggers() {
 typename deque<AnyDefinedVarTrigger>::iterator findNextTrigger(
     deque<AnyDefinedVarTrigger>& queue) {
     auto iter = find_if(queue.begin(), queue.end(), [](auto& t) {
-        return mpark::visit(
+        return lib::visit(
             [&](auto& t) {
                 return t.active() &&
                        t.definedDirection != DefinedDirection::BOTH;
@@ -127,7 +127,7 @@ void updateParentContainer(ValBase* container) {
 }
 
 void notifyType(const ValBase* base, SequenceValue& val) {
-    mpark::visit(
+    lib::visit(
         [&](auto& members) {
             val.changeSubsequenceAndNotify<viewType(members)>(base->id,
                                                               base->id + 1);

@@ -32,7 +32,7 @@ template <>
 void assignRandomValueInDomain<SetDomain>(const SetDomain& domain,
                                           SetValue& val,
                                           StatsContainer& stats) {
-    mpark::visit(
+    lib::visit(
         [&](auto& innerDomainPtr) {
             assignRandomValueInDomainImpl(domain, innerDomainPtr, val, stats);
         },
@@ -48,7 +48,7 @@ struct SetAdd : public NeighbourhoodFunc<SetDomain, 1, SetAdd<InnerDomain>> {
     const UInt innerDomainSize;
     SetAdd(const SetDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "SetAdd"; }
     static bool matches(const SetDomain& domain) {
@@ -95,7 +95,7 @@ struct SetCrossover
     const UInt innerDomainSize;
     SetCrossover(const SetDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "SetCrossover"; }
     static bool matches(const SetDomain&) { return true; }
@@ -199,7 +199,7 @@ struct SetMove : public NeighbourhoodFunc<SetDomain, 2, SetMove<InnerDomain>> {
     const UInt innerDomainSize;
     SetMove(const SetDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
 
     static string getName() { return "SetMove"; }
@@ -332,22 +332,19 @@ void setLiftSingleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                 HashType oldHash =
                     val.notifyPossibleMemberChange<InnerValueType>(
                         indexToChange);
-                ParentCheckCallBack parentCheck =
-                    [&](const AnyValVec& newValue) {
-                        HashType newHash = getValueHash(
-                            mpark::get<ValRefVec<InnerValueType>>(newValue)
-                                .front());
-                        if (val.memberHashes.count(newHash)) {
-                            return false;
-                        }
-                        auto statusHashPair =
-                            val.tryMemberChange<InnerValueType>(
-                                indexToChange, oldHash, [&]() {
-                                    return params.parentCheck(params.vals);
-                                });
-                        oldHash = statusHashPair.second;
-                        return statusHashPair.first;
-                    };
+                ParentCheckCallBack parentCheck = [&](const AnyValVec&
+                                                          newValue) {
+                    HashType newHash = getValueHash(
+                        lib::get<ValRefVec<InnerValueType>>(newValue).front());
+                    if (val.memberHashes.count(newHash)) {
+                        return false;
+                    }
+                    auto statusHashPair = val.tryMemberChange<InnerValueType>(
+                        indexToChange, oldHash,
+                        [&]() { return params.parentCheck(params.vals); });
+                    oldHash = statusHashPair.second;
+                    return statusHashPair.first;
+                };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
@@ -379,7 +376,7 @@ void setLiftSingleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
 
 void setLiftSingleGen(const SetDomain& domain, int numberValsRequired,
                       std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(
+    lib::visit(
         [&](const auto& innerDomainPtr) {
             setLiftSingleGenImpl(domain, innerDomainPtr, numberValsRequired,
                                  neighbourhoods);
@@ -438,7 +435,7 @@ void setLiftMultipleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                 ParentCheckCallBack parentCheck =
                     [&](const AnyValVec& newMembers) {
                         auto& newMembersImpl =
-                            mpark::get<ValRefVec<InnerValueType>>(newMembers);
+                            lib::get<ValRefVec<InnerValueType>>(newMembers);
                         return setDoesNotContain(val, newMembersImpl) &&
                                val.tryMembersChange<InnerValueType>(
                                    indicesToChange, oldHashes, [&]() {
@@ -477,7 +474,7 @@ void setLiftMultipleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
 
 void setLiftMultipleGen(const SetDomain& domain, int numberValsRequired,
                         std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(
+    lib::visit(
         [&](const auto& innerDomainPtr) {
             setLiftMultipleGenImpl(domain, innerDomainPtr, numberValsRequired,
                                    neighbourhoods);
@@ -496,7 +493,7 @@ struct SetAssignRandom
     const UInt innerDomainSize;
     SetAssignRandom(const SetDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
 
     static string getName() { return "SetAssignRandom"; }

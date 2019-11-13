@@ -143,7 +143,7 @@ ParseResult parseOpPower(json& powerExpr, ParsedModel& parsedModel) {
 }
 
 static ParseResult parseDomainSize(const AnyDomainRef& domain) {
-    return mpark::visit(
+    return lib::visit(
         [&](auto& domain) {
             UInt domainSize = getDomainSize(*domain);
             if (domainSize > numeric_limits<Int>().max()) {
@@ -173,7 +173,7 @@ ParseResult parseOpTwoBars(json& operandExpr, ParsedModel& parsedModel) {
         myAbort();
     }
     auto& operand = expr->expr;
-    return mpark::visit(
+    return lib::visit(
         overloaded(
             [&](ExprRef<SetView>& set) -> ParseResult {
                 auto op = OpMaker<OpSetSize>::make(set);

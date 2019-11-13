@@ -14,7 +14,7 @@ void assignRandomValueInDomain<TupleDomain>(const TupleDomain& domain,
     // populate tuple with unassigned members if it is empty
 
     while (val.members.size() < domain.inners.size()) {
-        mpark::visit(
+        lib::visit(
             [&](auto& innerDomainPtr) {
                 auto newMember = constructValueFromDomain(*innerDomainPtr);
                 val.addMember(newMember);
@@ -22,7 +22,7 @@ void assignRandomValueInDomain<TupleDomain>(const TupleDomain& domain,
             domain.inners[val.members.size()]);
     }
     for (size_t i = 0; i < domain.inners.size(); i++) {
-        mpark::visit(
+        lib::visit(
             [&](const auto& innerDomainPtr) {
                 typedef
                     typename BaseType<decltype(innerDomainPtr)>::element_type
@@ -38,8 +38,8 @@ void assignRandomValueInDomain<TupleDomain>(const TupleDomain& domain,
 void tupleAssignRandomGen(const TupleDomain& domain, int numberValsRequired,
                           std::vector<Neighbourhood>& neighbourhoods) {
     for (auto& inner : domain.inners) {
-        if (!mpark::get_if<shared_ptr<IntDomain>>(&inner) &&
-            !mpark::get_if<shared_ptr<BoolDomain>>(&inner)) {
+        if (!lib::get_if<shared_ptr<IntDomain>>(&inner) &&
+            !lib::get_if<shared_ptr<BoolDomain>>(&inner)) {
             return;
         }
     }
@@ -127,7 +127,7 @@ void tupleLiftSingleGenImpl(const TupleDomain& domain,
 void tupleLiftSingleGen(const TupleDomain& domain, int numberValsRequired,
                         std::vector<Neighbourhood>& neighbourhoods) {
     for (size_t i = 0; i < domain.inners.size(); i++) {
-        mpark::visit(
+        lib::visit(
             [&](const auto& innerDomainPtr) {
                 tupleLiftSingleGenImpl(domain, innerDomainPtr,
                                        numberValsRequired, i, neighbourhoods);
@@ -199,7 +199,7 @@ void tupleLiftSingleTwoVarsGen(const TupleDomain& domain,
                                int numberValsRequired,
                                std::vector<Neighbourhood>& neighbourhoods) {
     for (size_t i = 0; i < domain.inners.size(); i++) {
-        mpark::visit(
+        lib::visit(
             [&](const auto& innerDomainPtr) {
                 tupleLiftSingleTwoVarsGenImpl(domain, innerDomainPtr,
                                               numberValsRequired, i,

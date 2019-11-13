@@ -13,7 +13,7 @@ shared_ptr<EnumDomain> parseDomainEnum(json& enumDomainExpr,
         myCerr << "Could Not find enum " << name << endl;
         myExit(1);
     }
-    return mpark::get<shared_ptr<EnumDomain>>(iter->second);
+    return lib::get<shared_ptr<EnumDomain>>(iter->second);
 }
 
 void handleEnumDeclaration(json& enumDeclExpr, ParsedModel& parsedModel) {

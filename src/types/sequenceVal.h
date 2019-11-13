@@ -356,7 +356,7 @@ struct SequenceValue : public SequenceView, public ValBase {
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     void setInnerType() {
-        if (mpark::get_if<ExprRefVec<InnerViewType>>(&(members)) == NULL) {
+        if (lib::get_if<ExprRefVec<InnerViewType>>(&(members)) == NULL) {
             members.emplace<ExprRefVec<InnerViewType>>();
         }
     }

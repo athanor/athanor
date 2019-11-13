@@ -77,7 +77,7 @@ class OperatorTrates<OpOr>::OperandsSequenceTrigger : public SequenceTrigger {
     OpOr* op;
     OperandsSequenceTrigger(OpOr* op) : op(op) {}
     void valueAdded(UInt index, const AnyExprRef& exprIn) final {
-        auto& expr = mpark::get<ExprRef<BoolView>>(exprIn);
+        auto& expr = lib::get<ExprRef<BoolView>>(exprIn);
         if (expr->view()->violation > op->violation) {
             shiftIndicesUp(index, op->operand->view()->numberElements(),
                            op->minViolationIndices);
@@ -246,7 +246,7 @@ struct OpMaker<OpOr> {
 ExprRef<BoolView> OpMaker<OpOr>::make(
     ExprRef<SequenceView> o, const shared_ptr<SequenceDomain>& operandDomain) {
     if (operandDomain &&
-        mpark::get_if<shared_ptr<EmptyDomain>>(&operandDomain->inner)) {
+        lib::get_if<shared_ptr<EmptyDomain>>(&operandDomain->inner)) {
         auto val = ::make<BoolValue>();
         val->violation = LARGE_VIOLATION;
         val->setConstant(true);

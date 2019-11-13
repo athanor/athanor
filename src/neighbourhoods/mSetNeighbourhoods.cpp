@@ -31,7 +31,7 @@ template <>
 void assignRandomValueInDomain<MSetDomain>(const MSetDomain& domain,
                                            MSetValue& val,
                                            StatsContainer& stats) {
-    mpark::visit(
+    lib::visit(
         [&](auto& innerDomainPtr) {
             assignRandomValueInDomainImpl(domain, innerDomainPtr, val, stats);
         },
@@ -98,7 +98,7 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
 
 void mSetLiftSingleGen(const MSetDomain& domain, int numberValsRequired,
                        std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(
+    lib::visit(
         [&](const auto& innerDomainPtr) {
             mSetLiftSingleGenImpl(domain, innerDomainPtr, numberValsRequired,
                                   neighbourhoods);
@@ -173,7 +173,7 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain, const InnerDomainPtrType,
 
 void mSetLiftMultipleGen(const MSetDomain& domain, int numberValsRequired,
                          std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(
+    lib::visit(
         [&](const auto& innerDomainPtr) {
             mSetLiftMultipleGenImpl(domain, innerDomainPtr, numberValsRequired,
                                     neighbourhoods);
@@ -190,7 +190,7 @@ struct MSetAdd : public NeighbourhoodFunc<MSetDomain, 1, MSetAdd<InnerDomain>> {
     const UInt innerDomainSize;
     MSetAdd(const MSetDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "MSetAdd"; }
     static bool matches(const MSetDomain& domain) {
@@ -283,7 +283,7 @@ struct MSetAssignRandom
     const UInt innerDomainSize;
     MSetAssignRandom(const MSetDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
 
     static string getName() { return "MSetAssignRandom"; }

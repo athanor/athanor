@@ -33,7 +33,7 @@ template <>
 void assignRandomValueInDomain<SequenceDomain>(const SequenceDomain& domain,
                                                SequenceValue& val,
                                                StatsContainer& stats) {
-    mpark::visit(
+    lib::visit(
         [&](auto& innerDomainPtr) {
             assignRandomValueInDomainImpl(domain, innerDomainPtr, val, stats);
         },
@@ -72,7 +72,7 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                     [&](const AnyValVec& newValue) {
                         if (val.injective) {
                             if (val.containsMember(
-                                    mpark::get<ValRefVec<InnerValueType>>(
+                                    lib::get<ValRefVec<InnerValueType>>(
                                         newValue)
                                         .front())) {
                                 return false;
@@ -115,7 +115,7 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
 
 void sequenceLiftSingleGen(const SequenceDomain& domain, int numberValsRequired,
                            std::vector<Neighbourhood>& neighbourhoods) {
-    mpark::visit(
+    lib::visit(
         [&](const auto& innerDomainPtr) {
             sequenceLiftSingleGenImpl(domain, innerDomainPtr,
                                       numberValsRequired, neighbourhoods);
@@ -132,7 +132,7 @@ struct SequenceAdd
     const UInt innerDomainSize;
     SequenceAdd(const SequenceDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "SequenceAdd"; }
     static bool matches(const SequenceDomain& domain) {
@@ -181,7 +181,7 @@ struct SequenceRemove
     const UInt innerDomainSize;
     SequenceRemove(const SequenceDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "SequenceRemove"; }
     static bool matches(const SequenceDomain& domain) {
@@ -236,7 +236,7 @@ struct SequenceRelaxSub
     const UInt innerDomainSize;
     SequenceRelaxSub(const SequenceDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "SequenceRelaxSub"; }
     static bool matches(const SequenceDomain&) { return true; }
@@ -394,7 +394,7 @@ struct SequenceReverseSub
     const UInt innerDomainSize;
     SequenceReverseSub(const SequenceDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "SequenceReverseSub"; }
     static bool matches(const SequenceDomain&) { return true; }
@@ -446,7 +446,7 @@ struct SequenceShuffleSub
     const UInt innerDomainSize;
     SequenceShuffleSub(const SequenceDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "SequenceShuffleSub"; }
     static bool matches(const SequenceDomain&) { return true; }
@@ -507,7 +507,7 @@ struct SequencePositionsSwap
     const UInt innerDomainSize;
     SequencePositionsSwap(const SequenceDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "SequencePositionsSwap"; }
     static bool matches(const SequenceDomain&) { return true; }
@@ -563,7 +563,7 @@ struct SequenceMove
     const UInt innerDomainSize;
     SequenceMove(const SequenceDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "SequenceMove"; }
     static bool matches(const SequenceDomain& domain) {
@@ -626,7 +626,7 @@ struct SequenceCrossover
     const UInt innerDomainSize;
     SequenceCrossover(const SequenceDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "SequenceCrossover"; }
     static bool matches(const SequenceDomain&) { return true; }
@@ -735,7 +735,7 @@ struct SequenceAssignRandom
     const UInt innerDomainSize;
     SequenceAssignRandom(const SequenceDomain& domain)
         : domain(domain),
-          innerDomain(*mpark::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
 
     static string getName() { return "SequenceAssignRandom"; }

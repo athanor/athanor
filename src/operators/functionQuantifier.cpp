@@ -16,10 +16,10 @@ template <>
 struct InitialUnroller<FunctionView> {
     template <typename Quant>
     static void initialUnroll(Quant& quantifier, FunctionView& containerView) {
-        mpark::visit(
+        lib::visit(
             [&](auto& membersImpl) {
                 for (size_t i = 0; i < membersImpl.size(); i++) {
-                    mpark::visit(
+                    lib::visit(
                         [&](auto& fromDomain) {
                             typedef typename BaseType<decltype(
                                 fromDomain)>::element_type Domain;
@@ -49,10 +49,10 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     void memberReplaced(UInt index, const AnyExprRef&) {
         debug_code(assert(index < op->unrolledIterVals.size()));
         auto iterRef =
-            mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
+            lib::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
         auto& tupleLit = *getAs<OpTupleLit>(iterRef->getValue());
         auto& containerView = *op->container->view();
-        mpark::visit(
+        lib::visit(
             [&](auto& members) { tupleLit.replaceMember(1, members[index]); },
             containerView.range);
     }
@@ -75,17 +75,16 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
 
     void correctUnrolledTupleIndex(size_t index) {
         debug_log("Correcting tuple index " << index);
-        auto& tuple =
-            mpark::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
+        auto& tuple = lib::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
         auto& containerView = *op->container->view();
-        mpark::visit(
+        lib::visit(
             [&](auto& fromDomain) {
                 typedef typename BaseType<decltype(fromDomain)>::element_type
                     Domain;
                 typedef typename AssociatedValueType<Domain>::type Value;
                 typedef typename AssociatedViewType<Value>::type View;
                 auto& preImage =
-                    mpark::get<ExprRef<View>>(tuple->view()->members[0]);
+                    lib::get<ExprRef<View>>(tuple->view()->members[0]);
                 containerView.template indexToDomain<Domain>(
                     index, (*preImage->view()));
             },
@@ -126,13 +125,13 @@ struct ContainerSanityChecker<FunctionView> {
 
         sanityEqualsCheck(container.rangeSize(), quant.unrolledIterVals.size());
         for (size_t i = 0; i < quant.unrolledIterVals.size(); i++) {
-            auto* iterPtr = mpark::get_if<IterRef<TupleView>>(
+            auto* iterPtr = lib::get_if<IterRef<TupleView>>(
                 &(quant.unrolledIterVals[i].asVariant()));
             sanityCheck(iterPtr, "Expected tuple type here.");
             auto view = (*iterPtr)->ref->view();
             sanityCheck(view, "view() should not return undefined here.");
             sanityEqualsCheck(2, view->members.size());
-            mpark::visit(
+            lib::visit(
                 [&](const auto& fromDomain) {
                     typedef
                         typename BaseType<decltype(fromDomain)>::element_type
@@ -142,7 +141,7 @@ struct ContainerSanityChecker<FunctionView> {
                     auto tupleFirstMember =
                         container.template indexToDomain<Domain>(i);
                     auto* exprPtr =
-                        mpark::get_if<ExprRef<View>>(&(view->members[0]));
+                        lib::get_if<ExprRef<View>>(&(view->members[0]));
                     sanityCheck(
                         exprPtr,
                         "Expected first element of unrolled tuple to be " +

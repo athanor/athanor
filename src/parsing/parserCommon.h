@@ -42,7 +42,7 @@ lib::optional<ReturnType> stringMatch(
 
 template <typename RetType, typename Constraint, typename Func>
 ExprRef<RetType> expect(Constraint&& constraint, Func&& func) {
-    return mpark::visit(
+    return lib::visit(
         overloaded([&](ExprRef<RetType>& constraint)
                        -> ExprRef<RetType> { return constraint; },
                    [&](auto&& constraint) -> ExprRef<RetType> {

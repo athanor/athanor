@@ -35,7 +35,7 @@ struct MultiParseResult {
           allConstant(allConstant) {}
 
     size_t numberElements() {
-        return mpark::visit([&](auto& exprs) { return exprs.size(); }, exprs);
+        return lib::visit([&](auto& exprs) { return exprs.size(); }, exprs);
     }
 };
 

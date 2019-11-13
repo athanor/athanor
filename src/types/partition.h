@@ -53,12 +53,12 @@ struct PartitionView : public ExprInterface<PartitionView>,
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
-        return mpark::get<ExprRefVec<InnerViewType>>(members);
+        return lib::get<ExprRefVec<InnerViewType>>(members);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline const ExprRefVec<InnerViewType>& getMembers() const {
-        return mpark::get<ExprRefVec<InnerViewType>>(members);
+        return lib::get<ExprRefVec<InnerViewType>>(members);
     }
 
     void silentClear() {
@@ -66,7 +66,7 @@ struct PartitionView : public ExprInterface<PartitionView>,
         memberPartMap.clear();
         hashIndexMap.clear();
         partHashes.clear();
-        mpark::visit([&](auto& members) { members.clear(); }, members);
+        lib::visit([&](auto& members) { members.clear(); }, members);
     }
 
     size_t numberElements() { return memberPartMap.size(); }

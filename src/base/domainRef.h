@@ -63,4 +63,11 @@ decltype(auto) makeAnyDomainRef(AnyDomainRefType&& d) {
 }
 void mergeDomains(AnyDomainRef& dest, AnyDomainRef& src);
 AnyDomainRef deepCopyDomain(AnyDomainRef other);
+
+template <typename Domain>
+typename std::enable_if<IsDomainType<Domain>::value, size_t>::type
+getNumberElementsLowerBound(const Domain& domain);
+
+size_t getNumberElementsLowerBound(const AnyDomainRef&);
+
 #endif /* SRC_BASE_DOMAINREF_H_ */

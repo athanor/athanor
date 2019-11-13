@@ -77,3 +77,8 @@ template <>
 UInt getSize<BoolValue>(const BoolValue&) {
     return 0;
 }
+
+template <>
+size_t getNumberElementsLowerBound<BoolDomain>(const BoolDomain&) {
+    return 1;
+}

@@ -88,3 +88,8 @@ template <>
 UInt getSize<IntValue>(const IntValue&) {
     return 0;
 }
+
+template <>
+size_t getNumberElementsLowerBound<IntDomain>(const IntDomain&) {
+    return 1;
+}

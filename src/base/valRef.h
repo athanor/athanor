@@ -130,5 +130,4 @@ inline void varBaseSanityChecks(
         sanityEqualsCheck(base.id, i);
     }
 }
-
 #endif /* SRC_BASE_VALREF_H_ */

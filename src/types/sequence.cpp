@@ -403,3 +403,10 @@ UInt getSize<SequenceValue>(const SequenceValue& v) {
     return v.numberElements();
 }
 AnyExprVec& SequenceValue::getChildrenOperands() { return members; }
+
+template <>
+size_t getNumberElementsLowerBound<SequenceDomain>(
+    const SequenceDomain& domain) {
+    return domain.sizeAttr.minSize * getNumberElementsLowerBound(domain.inner) +
+           1;
+}

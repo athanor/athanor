@@ -71,3 +71,8 @@ template <>
 UInt getSize<EmptyValue>(const EmptyValue&) {
     shouldNotBeCalledPanic;
 }
+
+template <>
+size_t getNumberElementsLowerBound<EmptyDomain>(const EmptyDomain&) {
+    shouldNotBeCalledPanic;
+}

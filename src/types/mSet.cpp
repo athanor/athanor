@@ -258,3 +258,9 @@ UInt getSize<MSetValue>(const MSetValue& v) {
 }
 
 AnyExprVec& MSetValue::getChildrenOperands() { return members; }
+
+template <>
+size_t getNumberElementsLowerBound<MSetDomain>(const MSetDomain& domain) {
+    return domain.sizeAttr.minSize * getNumberElementsLowerBound(domain.inner) +
+           1;
+}

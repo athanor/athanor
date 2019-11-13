@@ -1,5 +1,5 @@
-#include <algorithm>
 #include <cassert>
+#include <numeric>
 #include "common/common.h"
 #include "types/tupleVal.h"
 #include "utils/ignoreUnused.h"
@@ -251,4 +251,11 @@ bool hasVariableSize<TupleValue>(const TupleValue&) {
 template <>
 UInt getSize<TupleValue>(const TupleValue& v) {
     return v.members.size();
+}
+
+template <>
+size_t getNumberElementsLowerBound<TupleDomain>(const TupleDomain& domain) {
+    return std::accumulate(
+        domain.inners.begin(), domain.inners.end(), size_t(0),
+        [](size_t a, auto& d) { return a + getNumberElementsLowerBound(d); });
 }

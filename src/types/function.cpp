@@ -499,3 +499,18 @@ void FunctionView::debugCheckDimensionVec() {
             [](auto&) { shouldNotBeCalledPanic; }),
         fromDomain);
 }
+
+template <>
+size_t getNumberElementsLowerBound<FunctionDomain>(
+    const FunctionDomain& domain) {
+    DimensionVec dimVec;
+    makeDimensionVecFromDomainHelper(domain.from, dimVec);
+
+    // calculate size of from domain
+    size_t fromDomainSize = 1;
+    for (auto iter = dimVec.rbegin(); iter != dimVec.rend(); ++iter) {
+        auto& dim = *iter;
+        fromDomainSize *= (dim.upper - dim.lower) + 1;
+    }
+    return fromDomainSize * getNumberElementsLowerBound(domain.to);
+}

@@ -113,7 +113,9 @@ void ModelBuilder::substituteVarsToBeDefined() {
     for (auto& var : varsToBeDefined) {
         auto func = makeFindReplaceFunc(
             var, model.definingExpressions.at(valBase(var).id));
-        model.csp = findAndReplace(model.csp, func);
+        for (auto& constraint : constraints) {
+            constraint = findAndReplace(constraint, func);
+        }
         mpark::visit(
             [&](auto& objective) {
                 objective = findAndReplace(objective, func);

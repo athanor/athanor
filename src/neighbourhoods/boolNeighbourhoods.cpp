@@ -4,16 +4,17 @@
 #include "types/boolVal.h"
 #include "utils/random.h"
 
-auto getRandomValueInDomain(const BoolDomain&, StatsContainer& stats) {
-    ++stats.minorNodeCount;
-    return globalRandom(0, 1);
-}
+UInt getRandomValueInDomain(const BoolDomain&) { return globalRandom(0, 1); }
 
 template <>
-void assignRandomValueInDomain<BoolDomain>(const BoolDomain& domain,
-                                           BoolValue& val,
-                                           StatsContainer& stats) {
-    val.violation = getRandomValueInDomain(domain, stats);
+bool assignRandomValueInDomain<BoolDomain>(
+    const BoolDomain& domain, BoolValue& val,
+    NeighbourhoodResourceTracker& resource) {
+    if (!resource.requestResource()) {
+        return false;
+    }
+    val.violation = getRandomValueInDomain(domain);
+    return true;
 }
 
 void boolAssignRandomGen(const BoolDomain& domain, int numberValsRequired,
@@ -31,8 +32,8 @@ void boolAssignRandomGen(const BoolDomain& domain, int numberValsRequired,
             bool success;
             do {
                 success = val.changeValue([&]() {
-                    val.violation =
-                        getRandomValueInDomain(domain, params.stats);
+                    val.violation = getRandomValueInDomain(domain);
+                    ++params.stats.minorNodeCount;
                     if (params.parentCheck(params.vals)) {
                         return true;
                     } else {

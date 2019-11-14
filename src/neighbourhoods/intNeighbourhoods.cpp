@@ -67,15 +67,18 @@ Int getRandomValueInDomain(const IntDomain& domain, Int minValue,
 }
 
 template <>
-void assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
+bool assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
                                           IntValue& val,
-                                          StatsContainer& stats) {
+                                          NeighbourhoodResourceTracker& resource) {
     if (!val.domain) {
         val.domain = &domain;
     }
+    if (!resource.requestResource()) {
+        return false;
+    }
     val.value = getRandomValueInDomain(domain);
-    ++stats.minorNodeCount;
-}
+    return true;
+    }
 
 struct IntAssignRandom {
     StandardUcbSelector selector =

@@ -500,7 +500,7 @@ void FunctionView::debugCheckDimensionVec() {
 }
 
 template <>
-size_t getNumberElementsLowerBound<FunctionDomain>(
+size_t getResourceLowerBound<FunctionDomain>(
     const FunctionDomain& domain) {
     DimensionVec dimVec;
     makeDimensionVecFromDomainHelper(domain.from, dimVec);
@@ -511,5 +511,5 @@ size_t getNumberElementsLowerBound<FunctionDomain>(
         auto& dim = *iter;
         fromDomainSize *= (dim.upper - dim.lower) + 1;
     }
-    return fromDomainSize * getNumberElementsLowerBound(domain.to);
+    return fromDomainSize * getResourceLowerBound(domain.to);
 }

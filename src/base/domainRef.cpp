@@ -9,11 +9,11 @@ AnyDomainRef deepCopyDomain(AnyDomainRef domain) {
         domain);
 }
 
-size_t getNumberElementsLowerBound(const AnyDomainRef& domain) {
+size_t getResourceLowerBound(const AnyDomainRef& domain) {
     return lib::visit(
         [&](auto& domain) {
             debug_code(assert(domain));
-            return getNumberElementsLowerBound(*domain);
+            return getResourceLowerBound(*domain);
         },
         domain);
 }

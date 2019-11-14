@@ -8,9 +8,9 @@
 using namespace std;
 
 template <>
-void assignRandomValueInDomain<TupleDomain>(const TupleDomain& domain,
-                                            TupleValue& val,
-                                            StatsContainer& stats) {
+bool assignRandomValueInDomain<TupleDomain>(
+    const TupleDomain& domain, TupleValue& val,
+    NeighbourhoodResourceTracker& resource) {
     // populate tuple with unassigned members if it is empty
 
     while (val.members.size() < domain.inners.size()) {
@@ -22,24 +22,33 @@ void assignRandomValueInDomain<TupleDomain>(const TupleDomain& domain,
             domain.inners[val.members.size()]);
     }
     for (size_t i = 0; i < domain.inners.size(); i++) {
-        lib::visit(
+        auto reserved =
+            resource.reserve(domain.inners.size(), domain.inners[i], i);
+
+        bool success = lib::visit(
             [&](const auto& innerDomainPtr) {
                 typedef
                     typename BaseType<decltype(innerDomainPtr)>::element_type
                         Domain;
                 typedef typename AssociatedValueType<Domain>::type Value;
                 auto& memberVal = *val.member<Value>(i);
-                assignRandomValueInDomain(*innerDomainPtr, memberVal, stats);
+                return assignRandomValueInDomain(*innerDomainPtr, memberVal,
+                                                 resource);
             },
             domain.inners[i]);
+        if (!success) {
+            return false;
+        }
     }
+    return true;
 }
 
 void tupleAssignRandomGen(const TupleDomain& domain, int numberValsRequired,
                           std::vector<Neighbourhood>& neighbourhoods) {
     for (auto& inner : domain.inners) {
         if (!lib::get_if<shared_ptr<IntDomain>>(&inner) &&
-            !lib::get_if<shared_ptr<BoolDomain>>(&inner)) {
+            !lib::get_if<shared_ptr<BoolDomain>>(&inner) &&
+            !lib::get_if<shared_ptr<EnumDomain>>(&inner)) {
             return;
         }
     }
@@ -56,9 +65,13 @@ void tupleAssignRandomGen(const TupleDomain& domain, int numberValsRequired,
             auto newValue = constructValueFromDomain(domain);
             newValue->container = val.container;
             bool success;
+            NeighbourhoodResourceAllocator allocator(domain);
             do {
-                assignRandomValueInDomain(domain, *newValue, params.stats);
-                success = val.tryAssignNewValue(*newValue, [&]() {
+                auto resource = allocator.requestLargerResource();
+                success =
+                    assignRandomValueInDomain(domain, *newValue, resource);
+                params.stats.minorNodeCount += resource.getResourceConsumed();
+                success = success && val.tryAssignNewValue(*newValue, [&]() {
                     return params.parentCheck(params.vals);
                 });
                 if (success) {

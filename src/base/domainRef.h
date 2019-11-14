@@ -66,8 +66,8 @@ AnyDomainRef deepCopyDomain(AnyDomainRef other);
 
 template <typename Domain>
 typename std::enable_if<IsDomainType<Domain>::value, size_t>::type
-getNumberElementsLowerBound(const Domain& domain);
+getResourceLowerBound(const Domain& domain);
 
-size_t getNumberElementsLowerBound(const AnyDomainRef&);
+size_t getResourceLowerBound(const AnyDomainRef&);
 
 #endif /* SRC_BASE_DOMAINREF_H_ */

@@ -267,8 +267,8 @@ UInt getSize<PartitionValue>(const PartitionValue&) {
 AnyExprVec& PartitionValue::getChildrenOperands() { return members; }
 
 template <>
-size_t getNumberElementsLowerBound<PartitionDomain>(
+size_t getResourceLowerBound<PartitionDomain>(
     const PartitionDomain& domain) {
     return getDomainSize(domain.inner) *
-           getNumberElementsLowerBound(domain.inner);
+           getResourceLowerBound(domain.inner);
 }

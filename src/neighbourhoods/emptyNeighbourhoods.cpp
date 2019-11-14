@@ -8,8 +8,8 @@
 using namespace std;
 
 template <>
-void assignRandomValueInDomain<EmptyDomain>(const EmptyDomain&, EmptyValue&,
-                                            StatsContainer&) {
+bool assignRandomValueInDomain<EmptyDomain>(const EmptyDomain&, EmptyValue&,
+                                            NeighbourhoodResourceTracker&) {
     shouldNotBeCalledPanic;
 }
 

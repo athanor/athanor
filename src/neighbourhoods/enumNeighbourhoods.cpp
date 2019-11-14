@@ -4,16 +4,19 @@
 #include "types/enumVal.h"
 #include "utils/random.h"
 
-auto getRandomValueInDomain(const EnumDomain& d, StatsContainer& stats) {
-    ++stats.minorNodeCount;
+auto getRandomValueInDomain(const EnumDomain& d) {
     return globalRandom<UInt>(0, d.numberValues() - 1);
 }
 
 template <>
-void assignRandomValueInDomain<EnumDomain>(const EnumDomain& domain,
-                                           EnumValue& val,
-                                           StatsContainer& stats) {
-    val.value = getRandomValueInDomain(domain, stats);
+bool assignRandomValueInDomain<EnumDomain>(
+    const EnumDomain& domain, EnumValue& val,
+    NeighbourhoodResourceTracker& resource) {
+    if (!resource.requestResource()) {
+        return false;
+    }
+    val.value = getRandomValueInDomain(domain);
+    return true;
 }
 
 void enumAssignRandomGen(const EnumDomain& domain, int numberValsRequired,
@@ -31,7 +34,8 @@ void enumAssignRandomGen(const EnumDomain& domain, int numberValsRequired,
             bool success;
             do {
                 success = val.changeValue([&]() {
-                    val.value = getRandomValueInDomain(domain, params.stats);
+                    val.value = getRandomValueInDomain(domain);
+                    ++params.stats.minorNodeCount;
                     if (params.parentCheck(params.vals)) {
                         return true;
                     } else {

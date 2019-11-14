@@ -404,8 +404,8 @@ UInt getSize<SequenceValue>(const SequenceValue& v) {
 AnyExprVec& SequenceValue::getChildrenOperands() { return members; }
 
 template <>
-size_t getNumberElementsLowerBound<SequenceDomain>(
+size_t getResourceLowerBound<SequenceDomain>(
     const SequenceDomain& domain) {
-    return domain.sizeAttr.minSize * getNumberElementsLowerBound(domain.inner) +
+    return domain.sizeAttr.minSize * getResourceLowerBound(domain.inner) +
            1;
 }

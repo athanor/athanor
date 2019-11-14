@@ -75,6 +75,6 @@ UInt getSize<EnumValue>(const EnumValue&) {
 }
 
 template <>
-size_t getNumberElementsLowerBound<EnumDomain>(const EnumDomain&) {
+size_t getResourceLowerBound<EnumDomain>(const EnumDomain&) {
     return 1;
 }

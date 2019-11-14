@@ -8,12 +8,12 @@
 using namespace std;
 
 template <typename InnerDomainPtrType>
-void assignRandomValueInDomainImpl(const PartitionDomain& domain,
+bool assignRandomValueInDomainImpl(const PartitionDomain& domain,
                                    const InnerDomainPtrType& innerDomainPtr,
-                                   PartitionValue& val, StatsContainer& stats) {
+                                   PartitionValue& val,
+                                   NeighbourhoodResourceTracker& resource) {
     // clear partition and populate with new random elements
     val.silentClear();
-    stats.minorNodeCount += val.memberPartMap.size();
     vector<UInt> parts;
     size_t partSize = domain.numberElements / domain.numberParts;
     for (size_t i = 0; i < domain.numberParts; i++) {
@@ -23,23 +23,31 @@ void assignRandomValueInDomainImpl(const PartitionDomain& domain,
     }
     shuffle(begin(parts), end(parts), globalRandomGenerator);
     while (domain.numberElements > val.numberElements()) {
+        auto reserved = resource.reserve(domain.numberElements, innerDomainPtr,
+                                         val.numberElements());
         auto newMember = constructValueFromDomain(*innerDomainPtr);
-        assignRandomValueInDomain(*innerDomainPtr, *newMember, stats);
+        bool success =
+            assignRandomValueInDomain(*innerDomainPtr, *newMember, resource);
+        if (!success) {
+            return false;
+        }
         if (val.addMember(parts.back(), newMember)) {
             parts.pop_back();
         }
         // add member may reject elements, not to worry, while loop will simply
         // continue
     }
+    return true;
 }
 
 template <>
-void assignRandomValueInDomain<PartitionDomain>(const PartitionDomain& domain,
-                                                PartitionValue& val,
-                                                StatsContainer& stats) {
-    lib::visit(
+bool assignRandomValueInDomain<PartitionDomain>(
+    const PartitionDomain& domain, PartitionValue& val,
+    NeighbourhoodResourceTracker& resource) {
+    return lib::visit(
         [&](auto& innerDomainPtr) {
-            assignRandomValueInDomainImpl(domain, innerDomainPtr, val, stats);
+            return assignRandomValueInDomainImpl(domain, innerDomainPtr, val,
+                                                 resource);
         },
         domain.inner);
 }
@@ -124,9 +132,13 @@ void partitionAssignRandomGen(const PartitionDomain& domain,
             auto newValue = constructValueFromDomain(domain);
             newValue->container = val.container;
             bool success;
+            NeighbourhoodResourceAllocator allocator(domain);
             do {
-                assignRandomValueInDomain(domain, *newValue, params.stats);
-                success = val.tryAssignNewValue(*newValue, [&]() {
+                auto resource = allocator.requestLargerResource();
+                success =
+                    assignRandomValueInDomain(domain, *newValue, resource);
+                params.stats.minorNodeCount += resource.getResourceConsumed();
+                success = success && val.tryAssignNewValue(*newValue, [&]() {
                     return params.parentCheck(params.vals);
                 });
                 if (success) {

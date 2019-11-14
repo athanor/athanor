@@ -153,10 +153,6 @@ FindAndReplaceFunction ModelBuilder::makeFindReplaceFunc(AnyValRef& var,
         var);
 }
 
-size_t randomSize(size_t minSize, size_t maxSize) {
-    return globalRandom<size_t>(minSize, min(maxSize, minSize + 1000));
-}
-
 void printUnnamedType(ostream& os, const EnumDomain& domain) {
     os << "{";
     for (size_t i = 0; i < domain.numberValues(); i++) {

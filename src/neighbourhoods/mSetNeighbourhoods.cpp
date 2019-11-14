@@ -8,32 +8,43 @@
 using namespace std;
 
 template <typename InnerDomainPtrType>
-void assignRandomValueInDomainImpl(const MSetDomain& domain,
+bool assignRandomValueInDomainImpl(const MSetDomain& domain,
                                    const InnerDomainPtrType& innerDomainPtr,
-                                   MSetValue& val, StatsContainer& stats) {
-    typedef typename AssociatedValueType<
-        typename InnerDomainPtrType::element_type>::type InnerValueType;
-    size_t newNumberElements =
-        randomSize(domain.sizeAttr.minSize, domain.sizeAttr.maxSize);
-    // clear mSet and populate with new random elements
-    while (val.numberElements() > 0) {
-        val.removeMember<InnerValueType>(val.numberElements() - 1);
-        ++stats.minorNodeCount;
+                                   MSetValue& val,
+                                   NeighbourhoodResourceTracker& resource) {
+    if (!resource.requestResource()) {
+        return false;
     }
+    auto newNumberElementsOption = resource.randomNumberElements(
+        domain.sizeAttr.minSize, domain.sizeAttr.maxSize, innerDomainPtr);
+    if (!newNumberElementsOption) {
+        return false;
+    }
+    const size_t newNumberElements = *newNumberElementsOption;
+    // clear mSet and populate with new random elements
+    val.silentClear();
     while (newNumberElements > val.numberElements()) {
+        auto reserved = resource.reserve(domain.sizeAttr.minSize,
+                                         innerDomainPtr, val.numberElements());
         auto newMember = constructValueFromDomain(*innerDomainPtr);
-        assignRandomValueInDomain(*innerDomainPtr, *newMember, stats);
+        bool success =
+            assignRandomValueInDomain(*innerDomainPtr, *newMember, resource);
+        if (!success) {
+            return val.numberElements() >= domain.sizeAttr.minSize;
+        }
         val.addMember(newMember);
     }
+    return true;
 }
 
 template <>
-void assignRandomValueInDomain<MSetDomain>(const MSetDomain& domain,
-                                           MSetValue& val,
-                                           StatsContainer& stats) {
-    lib::visit(
+bool assignRandomValueInDomain<MSetDomain>(
+    const MSetDomain& domain, MSetValue& val,
+    NeighbourhoodResourceTracker& resource) {
+    return lib::visit(
         [&](auto& innerDomainPtr) {
-            assignRandomValueInDomainImpl(domain, innerDomainPtr, val, stats);
+            return assignRandomValueInDomainImpl(domain, innerDomainPtr, val,
+                                                 resource);
         },
         domain.inner);
 }
@@ -206,10 +217,17 @@ struct MSetAdd : public NeighbourhoodFunc<MSetDomain, 1, MSetAdd<InnerDomain>> {
         const int tryLimit = params.parentCheckTryLimit;
         debug_neighbourhood_action("Looking for value to add");
         bool success;
+
+        NeighbourhoodResourceAllocator resourceAllocator(innerDomain);
+
         do {
-            assignRandomValueInDomain(innerDomain, *newMember, params.stats);
-            success = val.tryAddMember(
-                newMember, [&]() { return params.parentCheck(params.vals); });
+            auto resource = resourceAllocator.requestLargerResource();
+            success =
+                assignRandomValueInDomain(innerDomain, *newMember, resource);
+            params.stats.minorNodeCount += resource.getResourceConsumed();
+            success = success && val.tryAddMember(newMember, [&]() {
+                return params.parentCheck(params.vals);
+            });
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
             debug_neighbourhood_action(
@@ -298,10 +316,14 @@ struct MSetAssignRandom
         auto newValue = constructValueFromDomain(domain);
         newValue->container = val.container;
         bool success;
+        NeighbourhoodResourceAllocator resourceAllocator(domain);
         do {
-            assignRandomValueInDomain(domain, *newValue, params.stats);
-            success = val.tryAssignNewValue(
-                *newValue, [&]() { return params.parentCheck(params.vals); });
+            auto resource = resourceAllocator.requestLargerResource();
+            success = assignRandomValueInDomain(domain, *newValue, resource);
+            params.stats.minorNodeCount += resource.getResourceConsumed();
+            success = success && val.tryAssignNewValue(*newValue, [&]() {
+                return params.parentCheck(params.vals);
+            });
             if (success) {
                 debug_neighbourhood_action("New value is " << asView(val));
             }

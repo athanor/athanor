@@ -90,6 +90,6 @@ UInt getSize<IntValue>(const IntValue&) {
 }
 
 template <>
-size_t getNumberElementsLowerBound<IntDomain>(const IntDomain&) {
+size_t getResourceLowerBound<IntDomain>(const IntDomain&) {
     return 1;
 }

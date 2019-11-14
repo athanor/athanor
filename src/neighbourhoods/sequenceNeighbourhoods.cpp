@@ -8,34 +8,46 @@
 using namespace std;
 
 template <typename InnerDomainPtrType>
-void assignRandomValueInDomainImpl(const SequenceDomain& domain,
+bool assignRandomValueInDomainImpl(const SequenceDomain& domain,
                                    const InnerDomainPtrType& innerDomainPtr,
-                                   SequenceValue& val, StatsContainer& stats) {
-    typedef typename AssociatedValueType<
-        typename InnerDomainPtrType::element_type>::type InnerValueType;
-    size_t newNumberElements =
-        randomSize(domain.sizeAttr.minSize, domain.sizeAttr.maxSize);
-    // clear sequence and populate with new random elements
-    while (val.numberElements() > 0) {
-        val.removeMember<InnerValueType>(val.numberElements() - 1);
-        ++stats.minorNodeCount;
+                                   SequenceValue& val,
+                                   NeighbourhoodResourceTracker& resource) {
+    if (!resource.requestResource()) {
+        return false;
     }
+
+    auto newNumberElementsOption = resource.randomNumberElements(
+        domain.sizeAttr.minSize, domain.sizeAttr.maxSize, innerDomainPtr);
+    if (!newNumberElementsOption) {
+        return false;
+    }
+    size_t newNumberElements = *newNumberElementsOption;
+    // clear sequence and populate with new random elements
+    val.silentClear();
     while (newNumberElements > val.numberElements()) {
+        auto reserved = resource.reserve(domain.sizeAttr.minSize,
+                                         innerDomainPtr, val.numberElements());
         auto newMember = constructValueFromDomain(*innerDomainPtr);
-        assignRandomValueInDomain(*innerDomainPtr, *newMember, stats);
+        bool success =
+            assignRandomValueInDomain(*innerDomainPtr, *newMember, resource);
+        if (!success) {
+            return val.numberElements() >= domain.sizeAttr.minSize;
+        }
         val.addMember(val.numberElements(), newMember);
         // add member may reject elements, not to worry, while loop will simply
         // continue
     }
+    return true;
 }
 
 template <>
-void assignRandomValueInDomain<SequenceDomain>(const SequenceDomain& domain,
-                                               SequenceValue& val,
-                                               StatsContainer& stats) {
-    lib::visit(
+bool assignRandomValueInDomain<SequenceDomain>(
+    const SequenceDomain& domain, SequenceValue& val,
+    NeighbourhoodResourceTracker& resource) {
+    return lib::visit(
         [&](auto& innerDomainPtr) {
-            assignRandomValueInDomainImpl(domain, innerDomainPtr, val, stats);
+            return assignRandomValueInDomainImpl(domain, innerDomainPtr, val,
+                                                 resource);
         },
         domain.inner);
 }
@@ -149,12 +161,17 @@ struct SequenceAdd
         debug_neighbourhood_action("Looking for value to add");
         bool success;
         size_t indexOfNewMember;
+        NeighbourhoodResourceAllocator allocator(innerDomain);
         do {
-            assignRandomValueInDomain(innerDomain, *newMember, params.stats);
+            auto resource = allocator.requestLargerResource();
+            success =
+                assignRandomValueInDomain(innerDomain, *newMember, resource);
+            params.stats.minorNodeCount += resource.getResourceConsumed();
             indexOfNewMember = globalRandom<UInt>(0, val.numberElements());
-            success = val.tryAddMember(indexOfNewMember, newMember, [&]() {
-                return params.parentCheck(params.vals);
-            });
+            success =
+                success && val.tryAddMember(indexOfNewMember, newMember, [&]() {
+                    return params.parentCheck(params.vals);
+                });
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
             debug_neighbourhood_action(
@@ -232,10 +249,13 @@ struct SequenceRelaxSub
     typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
 
     const SequenceDomain& domain;
+    shared_ptr<InnerDomain> innerDomainPtr;
     const InnerDomain& innerDomain;
+
     const UInt innerDomainSize;
     SequenceRelaxSub(const SequenceDomain& domain)
         : domain(domain),
+          innerDomainPtr(lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "SequenceRelaxSub"; }
@@ -258,20 +278,28 @@ struct SequenceRelaxSub
 
     template <typename InnerDomainType, typename InnerValueType,
               typename InnerViewType>
-    void assignNewValues(InnerDomainType& innerDomain, InnerValueType& val,
+    bool assignNewValues(InnerDomainType& innerDomain, InnerValueType& val,
                          vector<HashType>& oldHashes,
                          ExprRefVec<InnerViewType>& newValues,
-                         StatsContainer& stats) {
+                         NeighbourhoodResourceTracker& resource) {
         if (val.injective) {
+            // temperarily remove old hashes from val, these will be restored.
             for (auto& hash : oldHashes) {
                 val.memberHashes.erase(hash);
             }
         }
-        vector<HashType> newHashes;
+
+        vector<HashType> newHashes;  // remember the new hashes that we add to
+                                     // val so that we can remove them again.
+        bool success = true;
         for (auto& expr : newValues) {
             while (true) {
-                assignRandomValueInDomain(innerDomain, *assumeAsValue(expr),
-                                          stats);
+                success = assignRandomValueInDomain(
+                    innerDomain, *assumeAsValue(expr), resource);
+                if (!success) {
+                    // no more resource, fail
+                    break;
+                }
                 if (!val.injective) {
                     break;
                 }
@@ -282,8 +310,13 @@ struct SequenceRelaxSub
                     break;
                 }
             }
+            if (!success) {
+                // if inner while loop exited because of no more resource:
+                break;
+            }
         }
         if (val.injective) {
+            // remove new hashes and restore old hashes
             for (auto& hash : newHashes) {
                 val.memberHashes.erase(hash);
             }
@@ -291,6 +324,7 @@ struct SequenceRelaxSub
                 val.memberHashes.insert(hash);
             }
         }
+        return success;
     }
 
     template <typename InnerViewType>
@@ -329,18 +363,30 @@ struct SequenceRelaxSub
         ExprRefVec<InnerViewType> newValues;
         vector<HashType> oldHashes;
         auto& members = val.getMembers<InnerViewType>();
+        NeighbourhoodResourceAllocator allocator(innerDomain);
         do {
+            auto resource = allocator.requestLargerResource();
             startIndex = globalRandom<UInt>(0, val.numberElements() - 1);
-            endIndex = globalRandom<UInt>(startIndex + 1, val.numberElements());
+            auto subsetSize = resource.randomNumberElements(
+                0, val.numberElements() - startIndex, innerDomainPtr);
+            if (!subsetSize) {
+                success = false;
+                continue;
+            }
+            endIndex =
+                min<UInt>(startIndex + *subsetSize, val.numberElements());
             oldHashes.clear();
             HashType previousSubseqHash =
                 val.notifyPossibleSubsequenceChange<InnerValueType>(
                     startIndex, endIndex, oldHashes);
             insureSize(innerDomain, newValues, endIndex - startIndex);
 
-            assignNewValues(innerDomain, val, oldHashes, newValues,
-                            params.stats);
-
+            success = assignNewValues(innerDomain, val, oldHashes, newValues,
+                                      resource);
+            params.stats.minorNodeCount += resource.getResourceConsumed();
+            if (!success) {
+                continue;
+            }
             // temperarily swap values in, and if parent type accepts it,
             // swap it back and do a propper deepCopy
             swapSub(members, newValues, startIndex, endIndex);
@@ -750,10 +796,14 @@ struct SequenceAssignRandom
         auto newValue = constructValueFromDomain(domain);
         newValue->container = val.container;
         bool success;
+        NeighbourhoodResourceAllocator allocator(domain);
         do {
-            assignRandomValueInDomain(domain, *newValue, params.stats);
-            success = val.tryAssignNewValue(
-                *newValue, [&]() { return params.parentCheck(params.vals); });
+            auto resource = allocator.requestLargerResource();
+            success = assignRandomValueInDomain(domain, *newValue, resource);
+            params.stats.minorNodeCount += resource.getResourceConsumed();
+            success = success && val.tryAssignNewValue(*newValue, [&]() {
+                return params.parentCheck(params.vals);
+            });
             if (success) {
                 debug_neighbourhood_action("New value is " << asView(val));
             }

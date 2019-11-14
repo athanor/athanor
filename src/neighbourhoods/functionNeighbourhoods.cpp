@@ -11,28 +11,36 @@
 using namespace std;
 
 template <typename InnerDomainPtrType>
-void assignRandomValueInDomainImpl(const FunctionDomain& domain,
+bool assignRandomValueInDomainImpl(const FunctionDomain& domain,
                                    const InnerDomainPtrType& innerDomainPtr,
-                                   FunctionValue& val, StatsContainer& stats) {
+                                   FunctionValue& val,
+                                   NeighbourhoodResourceTracker& resource) {
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
     val.resetDimensions<InnerViewType>(
         domain.from, FunctionView::makeDimensionVecFromDomain(domain.from));
     for (size_t i = 0; i < val.rangeSize(); i++) {
+        auto reserved = resource.reserve(val.rangeSize(), innerDomainPtr, i);
         auto newMember = constructValueFromDomain(*innerDomainPtr);
-        assignRandomValueInDomain(*innerDomainPtr, *newMember, stats);
+        bool success =
+            assignRandomValueInDomain(*innerDomainPtr, *newMember, resource);
+        if (!success) {
+            return false;
+        }
         val.assignImage<InnerValueType>(i, newMember);
     }
+    return true;
 }
 
 template <>
-void assignRandomValueInDomain<FunctionDomain>(const FunctionDomain& domain,
-                                               FunctionValue& val,
-                                               StatsContainer& stats) {
-    lib::visit(
+bool assignRandomValueInDomain<FunctionDomain>(
+    const FunctionDomain& domain, FunctionValue& val,
+    NeighbourhoodResourceTracker& resource) {
+    return lib::visit(
         [&](auto& innerDomainPtr) {
-            assignRandomValueInDomainImpl(domain, innerDomainPtr, val, stats);
+            return assignRandomValueInDomainImpl(domain, innerDomainPtr, val,
+                                                 resource);
         },
         domain.to);
 }
@@ -482,6 +490,7 @@ struct FunctionSplitImages
         UInt index1, index2;
         ValueType valueBackup;
         lib::optional<HashType> previousMemberHash;
+        NeighbourhoodResourceAllocator allocator(innerDomain);
         do {
             ++params.stats.minorNodeCount;
             index1 =
@@ -503,9 +512,11 @@ struct FunctionSplitImages
             previousMemberHash =
                 val.notifyPossibleImageChange<InnerViewType>(index2);
             valueBackup = valueOf(*value2);
+            auto resource = allocator.requestLargerResource();
             success = value2->changeValue([&]() {
-                assignRandomValueInDomain(innerDomain, *value2, params.stats);
-                bool allowed = valueOf(*value2) != valueBackup &&
+                bool assigned =
+                    assignRandomValueInDomain(innerDomain, *value2, resource);
+                bool allowed = assigned && valueOf(*value2) != valueBackup &&
                                val.tryImageChange<InnerValueType>(
                                    index2, previousMemberHash, [&]() {
                                        return params.parentCheck(params.vals);
@@ -564,10 +575,15 @@ struct FunctionAssignRandom
         auto newValue = constructValueFromDomain(domain);
         newValue->container = val.container;
         bool success;
+        NeighbourhoodResourceAllocator allocator(domain);
         do {
-            assignRandomValueInDomain(domain, *newValue, params.stats);
-            success = val.tryAssignNewValue(
-                *newValue, [&]() { return params.parentCheck(params.vals); });
+            auto resource = allocator.requestLargerResource();
+            success = assignRandomValueInDomain(domain, *newValue, resource);
+            params.stats.minorNodeCount += resource.getResourceConsumed();
+
+            success = success && val.tryAssignNewValue(*newValue, [&]() {
+                return params.parentCheck(params.vals);
+            });
             if (success) {
                 debug_neighbourhood_action("New value is " << asView(val));
             }

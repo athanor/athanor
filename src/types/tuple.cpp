@@ -254,8 +254,8 @@ UInt getSize<TupleValue>(const TupleValue& v) {
 }
 
 template <>
-size_t getNumberElementsLowerBound<TupleDomain>(const TupleDomain& domain) {
+size_t getResourceLowerBound<TupleDomain>(const TupleDomain& domain) {
     return std::accumulate(
         domain.inners.begin(), domain.inners.end(), size_t(0),
-        [](size_t a, auto& d) { return a + getNumberElementsLowerBound(d); });
+        [](size_t a, auto& d) { return a + getResourceLowerBound(d); });
 }

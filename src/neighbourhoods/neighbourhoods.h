@@ -128,23 +128,24 @@ inline void generateNeighbourhoods(int maxNumberVals, const AnyDomainRef domain,
         },
         domain);
 }
-
+class NeighbourhoodResourceTracker;
 template <typename Domain>
-void assignRandomValueInDomain(const Domain& domain,
+bool assignRandomValueInDomain(const Domain& domain,
                                typename AssociatedValueType<Domain>::type& val,
-                               StatsContainer& stats);
+                               NeighbourhoodResourceTracker& tracker);
 template <typename T = int>
-inline void assignRandomValueInDomain(const AnyDomainRef& domain,
-                                      AnyValRef& val, StatsContainer& stats,
+inline bool assignRandomValueInDomain(const AnyDomainRef& domain,
+                                      AnyValRef& val,
+                                      NeighbourhoodResourceTracker& tracker,
                                       T = 0) {
-    lib::visit(
+    return lib::visit(
         [&](auto& domainImpl) {
             typedef typename BaseType<decltype(domainImpl)>::element_type
                 DomainType;
             typedef ValRef<typename AssociatedValueType<DomainType>::type>
                 ValueType;
-            assignRandomValueInDomain(*domainImpl, *lib::get<ValueType>(val),
-                                      stats);
+            return assignRandomValueInDomain(
+                *domainImpl, *lib::get<ValueType>(val), tracker);
         },
         domain);
 }
@@ -196,5 +197,51 @@ inline int calcNumberInsertionAttempts(UInt numberMembers, UInt domainSize) {
 template <typename Val>
 void swapValAssignments(Val& val1, Val& val2);
 
-size_t randomSize(size_t minSize, size_t maxSize);
+class NeighbourhoodResourceTracker {
+   public:
+    class Reserved;
+    friend Reserved;
+
+   private:
+    UInt64 resourceConsumed = 0;
+    UInt64 resourceLimit;
+
+   public:
+    NeighbourhoodResourceTracker(UInt64 resourceAmount)
+        : resourceLimit(resourceAmount) {}
+
+    bool requestResource();
+    bool hasResource();
+    UInt64 remainingResource();
+    UInt64 getResourceConsumed();
+    lib::optional<UInt64> randomNumberElements(size_t minNumberElements,
+                                               size_t maxNumberElements,
+                                               const AnyDomainRef& innerDomain);
+    class Reserved {
+        friend NeighbourhoodResourceTracker;
+        NeighbourhoodResourceTracker& resource;
+        const UInt64 reserved;
+        Reserved(NeighbourhoodResourceTracker& resource, const UInt64 reserved)
+            : resource(resource), reserved(reserved) {
+            debug_code(assert(reserved <= resource.resourceLimit));
+            resource.resourceLimit -= reserved;
+        }
+
+       public:
+        ~Reserved() { resource.resourceLimit += reserved; }
+    };
+
+    Reserved reserve(size_t minNumberElements,
+                     const AnyDomainRef& elementDomain,
+                     size_t numberElementsSoFar);
+};
+
+class NeighbourhoodResourceAllocator {
+    double resource;
+
+   public:
+    template <typename Domain>
+    NeighbourhoodResourceAllocator(const Domain&);
+    NeighbourhoodResourceTracker requestLargerResource();
+};
 #endif /* SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_ */

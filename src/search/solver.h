@@ -147,13 +147,8 @@ inline void assignRandomValueToVariables(State& state) {
         auto allocator = mpark::visit(
             [&](auto& d) { return NeighbourhoodResourceAllocator(*d); },
             var.first);
-        size_t tryCount = 0;
         while (!success) {
-            ++tryCount;
             auto resource = allocator.requestLargerResource();
-            std::cout << "try count = " << tryCount
-                      << " new resource with size "
-                      << resource.remainingResource() << std::endl;
             success =
                 assignRandomValueInDomain(var.first, var.second, resource);
             state.stats.minorNodeCount += resource.getResourceConsumed();

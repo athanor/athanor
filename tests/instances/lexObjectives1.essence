@@ -1,0 +1,10 @@
+$testing:numberIterations=100000
+
+
+find s,t : set (maxSize 20) of int(1..30)
+find a,b : int(1..30)
+such that forAll i in s . !(i in t)
+such that forAll i in t . !(i in s)
+such that a = |s|, b = |t|
+maximising (a,b)
+

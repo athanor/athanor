@@ -1,28 +1,44 @@
 #!/usr/bin/env bash
 #to skip sanity check which is slow!, pass arg skipSanityCheck 
 #to use release build pass useReleaseBuild
+# to pass a bash expansion filter for filtering instances, like you would pass to ls, then use --filter pattern
+pushd $(dirname "$0") > /dev/null
+trap "popd > /dev/null" EXIT
+
+
 sanityCheckFlag="--sanity-check"
 useReleaseBuild=0
 dumpFilesOnError=0
 numberHeadTailSolutions=15
-for flag in $@ ; do
+instanceFilter='instances/*.essence'
+skip=0
+while (($# > 0)) ; do
+    flag="$1"
     if [[ "$flag" == "skipSanityCheck" ]] ; then
         sanityCheckFlag=""
+        echo "Skipping sanity check"
     elif [[ "$flag" == "useReleaseBuild" ]] ; then
         useReleaseBuild=1
+        echo "using release build"
     elif [[ "$flag" == "dumpFilesOnError" ]] ; then
         dumpFilesOnError=1
-        
+        echo "dump files on error is on"
+    elif [[ "$flag" == "--filter" ]] ; then
+        if (($# < 2 )) ; then 
+            echo "Error --filter takes one argument, a bash pattern", see test docs."" 
+            exit 1
+        fi
+        instanceFilter="$2"
+        echo "instanceFilter=$instanceFilter"
+        shift
     else 
         echo "bad argument, see test docs." 1>&2
         exit 1
     fi
+    shift
 done
 
 
-
-pushd $(dirname "$0") > /dev/null
-trap "popd > /dev/null" EXIT
 
 echo "Compiling..."
 if [[ "$useReleaseBuild" -eq 0 ]] ; then
@@ -115,7 +131,7 @@ function runCommand() {
     echo "command=$@" >> "$outputFile"
     "$@" >> "$outputFile" 2>&1
 }
-for instance in instances/*.essence ; do
+for instance in $(eval ls $instanceFilter) ; do
     for param in instances/$(basename "$instance" .essence)*.param ; do
         ((numberInstances += 1))
         if [[ "$param" == "instances/$(basename "$instance" .essence)*.param" ]] ; then

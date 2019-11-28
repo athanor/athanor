@@ -148,7 +148,7 @@ inline void assignRandomValueToVariables(State& state) {
             [&](auto& d) { return NeighbourhoodResourceAllocator(*d); },
             var.first);
         while (!success) {
-            auto resource = allocator.requestLargerResource();
+                auto resource = allocator.requestLargerResource();
             success =
                 assignRandomValueInDomain(var.first, var.second, resource);
             state.stats.minorNodeCount += resource.getResourceConsumed();

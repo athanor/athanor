@@ -12,13 +12,6 @@ ostream& operator<<(std::ostream& os, const OpSetLit::OperandGroup& og) {
               << ",setIndex=" << og.focusOperandSetIndex
               << ",operands=" << og.operands << ")" << endl;
 }
-void print(const string& message, OpSetLit& op) {
-    cout << message << ":\nhashIndicesMap: " << op.hashIndicesMap
-         << "\ncachedOperandHashes: " << op.cachedOperandHashes
-         << ",\ncachedSetHashes: " << op.cachedSetHashes << endl;
-    cout << "memberHashes: " << op.memberHashes << endl;
-    cout << "view: " << op.view() << endl;
-}
 
 template <typename View>
 void OpSetLit::addOperandValue(size_t index, bool insert) {
@@ -38,7 +31,6 @@ void OpSetLit::addOperandValue(size_t index, bool insert) {
         og.focusOperand = index;
         addMemberAndNotify(expr);
         og.focusOperandSetIndex = numberElements() - 1;
-        cachedSetHashes.insert(numberElements() - 1, hash);
     }
 }
 
@@ -46,14 +38,12 @@ template <typename View>
 void OpSetLit::removeMemberFromSet(const HashType& hash,
                                    OpSetLit::OperandGroup& operandGroup) {
     UInt setIndex = operandGroup.focusOperandSetIndex;
-    removeMember<View>(setIndex, hash);
-    notifyMemberRemoved(setIndex, hash);
-    cachedSetHashes.swapErase(setIndex);
+
+    removeMemberAndNotify<View>(setIndex);
     if (setIndex < numberElements()) {
         // by deleting an element from the set, another member was moved.
         // Must tell that operand that its location in the set has changed
-        hashIndicesMap[cachedSetHashes.get(setIndex)].focusOperandSetIndex =
-            setIndex;
+        hashIndicesMap[indexHashMap[setIndex]].focusOperandSetIndex = setIndex;
     }
 }
 
@@ -70,8 +60,6 @@ void OpSetLit::addReplacementToSet(OpSetLit::OperandGroup& og) {
         og.focusOperand = *unchangedOperand;
         addMemberAndNotify(getOperands<View>()[og.focusOperand]);
         og.focusOperandSetIndex = numberElements() - 1;
-        cachedSetHashes.insert(numberElements() - 1,
-                               cachedOperandHashes.get(og.focusOperand));
     } else {
         og.active = false;
     }
@@ -124,7 +112,6 @@ void OpSetLit::evaluateImpl() {
         },
         operands);
     this->setAppearsDefined(true);
-    debug_code(assertValidHashes());
 }
 
 namespace {
@@ -232,18 +219,7 @@ ExprRef<SetView> OpSetLit::deepCopyForUnrollImpl(
                 newOperands.emplace_back(
                     operand->deepCopyForUnroll(operand, iterator));
             }
-            for (const auto& hashOGPair : hashIndicesMap) {
-                const auto& og = hashOGPair.second;
-                newSetMembers[og.focusOperandSetIndex] =
-                    newOperands[og.focusOperand];
-            }
             auto newOpSetLit = make_shared<OpSetLit>(move(newOperands));
-            newOpSetLit->members = move(newSetMembers);
-            newOpSetLit->memberHashes = memberHashes;
-            newOpSetLit->cachedHashTotal = cachedHashTotal;
-            newOpSetLit->hashIndicesMap = hashIndicesMap;
-            newOpSetLit->cachedOperandHashes = cachedOperandHashes;
-            newOpSetLit->cachedSetHashes = cachedSetHashes;
             return newOpSetLit;
         },
         operands);
@@ -297,100 +273,16 @@ pair<bool, ExprRef<SetView>> OpSetLit::optimiseImpl(ExprRef<SetView>&,
     return std::make_pair(optimised, newOp);
 }
 
-void OpSetLit::assertValidHashes() {
-    bool success = true;
-    lib::visit(
-        [&](auto& operands) {
-            for (size_t i = 0; i < operands.size(); i++) {
-                auto& operand = operands[i];
-                if (!operand->appearsDefined()) {
-                    myCerr << NO_SET_UNDEFINED_MEMBERS;
-                    success = false;
-                    break;
-                    continue;
-                }
-                HashType hash = getValueHash(
-                    operand->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
-                if (cachedOperandHashes.get(i) != hash) {
-                    myCerr << "Error: cachedOperandHashes at index " << i
-                           << " has value " << cachedOperandHashes.get(i)
-                           << " but operand has value " << hash << endl;
-                    success = false;
-                    break;
-                }
-                auto iter = hashIndicesMap.find(hash);
-                if (iter == hashIndicesMap.end()) {
-                    success = false;
-                    myCerr << "Error, hash " << hash << " of operand ";
-                    operand->dumpState(myCerr);
-                    myCerr << " maps to no operand group.\n";
-                    break;
-                }
-                auto& og = iter->second;
-                if (!og.operands.count(i)) {
-                    success = false;
-                    operand->dumpState(myCerr << "error: operand: ")
-                        << " with hash " << hash
-                        << " maps to an operand group not containing the "
-                           "operand "
-                           "index "
-                        << i << endl;
-                    myCerr << og << endl;
-                    break;
-                }
-            }
-
-            if (success) {
-                for (const auto& hashIndicesPair : hashIndicesMap) {
-                    HashType hash = hashIndicesPair.first;
-                    auto& og = hashIndicesPair.second;
-                    if (!og.operands.count(og.focusOperand)) {
-                        myCerr << "Error: focus operand not in operand group: "
-                               << og << endl;
-                        success = false;
-                        break;
-                    }
-                    if (cachedSetHashes.get(og.focusOperandSetIndex) != hash) {
-                        myCerr << "Error: cached set indices does not match up "
-                                  "with operand group "
-                               << og << endl;
-                        success = false;
-                        break;
-                    }
-                    for (UInt index : og.operands) {
-                        HashType hash2 = cachedOperandHashes.get(index);
-                        if (hash2 != hash) {
-                            myCerr << "Error: index " << index
-                                   << " maps to hash " << hash2 << " but hash "
-                                   << hash << " maps to " << index << endl;
-                            success = false;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!success) {
-                myCerr << "HashIndicesMap: " << hashIndicesMap << endl;
-                myCerr << "cachedOperandHashes: "
-                       << cachedOperandHashes.contents << endl;
-                myCerr << "cachedSetHashes: " << cachedSetHashes.contents
-                       << endl;
-                myCerr << "operands:";
-                for (auto& operand : operands) {
-                    operand->dumpState(myCerr << "\n");
-                }
-                myCerr << endl;
-                myAbort();
-            }
-        },
-        operands);
-}
-
 string OpSetLit::getOpName() const { return "OpSetLit"; }
 
 void OpSetLit::debugSanityCheckImpl() const {
     lib::visit(
         [&](auto& operands) {
+            for (auto& o : operands) {
+                o->debugSanityCheck();
+            }
+            standardSanityChecksForThisType();
+
             for (size_t i = 0; i < operands.size(); i++) {
                 auto& operand = operands[i];
                 auto view = operand->getViewIfDefined();
@@ -417,7 +309,7 @@ void OpSetLit::debugSanityCheckImpl() const {
                 sanityCheck(og.operands.count(og.focusOperand),
                             "focus operand not in operand group.");
                 sanityEqualsCheck(hash,
-                                  cachedSetHashes.get(og.focusOperandSetIndex));
+                                  indexHashMap.at(og.focusOperandSetIndex));
                 for (UInt index : og.operands) {
                     HashType hash2 = cachedOperandHashes.get(index);
                     sanityEqualsCheck(hash, hash2);

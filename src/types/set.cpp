@@ -56,30 +56,14 @@ ostream& prettyPrint<SetView>(ostream& os, const SetDomain& domain,
 }
 
 template <typename InnerViewType>
-void deepCopyImpl(const SetValue& src,
+void deepCopyImpl(const SetValue&,
                   const ExprRefVec<InnerViewType>& srcMemnersImpl,
                   SetValue& target) {
-    auto& targetMembersImpl = target.getMembers<InnerViewType>();
-    // to be optimised later
-    // cannot just clear vector as other constraints will hold pointers to
-    // values that are in this set and assume that they are still in this set
-    // instead, we remove values that are not   to be in the final target
-    size_t index = 0;
-    while (index < targetMembersImpl.size()) {
-        if (!src.containsMember(targetMembersImpl[index]->view().get())) {
-            target.removeMember<
-                typename AssociatedValueType<InnerViewType>::type>(index);
-        } else {
-            ++index;
-        }
-    }
+    target.silentClear();
     for (auto& member : srcMemnersImpl) {
-        if (!target.memberHashes.count(getValueHash(
-                member->view().checkedGet(NO_SET_UNDEFINED_MEMBERS)))) {
-            target.addMember(deepCopy(*assumeAsValue(member)));
-        }
+        target.addMember(deepCopy(*assumeAsValue(member)));
     }
-    debug_code(target.assertValidState());
+    debug_code(target.standardSanityChecksForThisType());
     target.notifyEntireValueChanged();
 }
 
@@ -200,82 +184,10 @@ bool largerValue<SetView>(const SetView& u, const SetView& v) {
         },
         u.members);
 }
-void SetView::assertValidState() {
-    lib::visit(
-        [&](auto& valMembersImpl) {
-            HashSet<HashType> seenHashes;
-            bool success = true;
-            HashType calculatedTotal(0);
-            if (memberHashes.size() != valMembersImpl.size()) {
-                myCerr << "memberHashes and members differ in size.\n";
-                success = false;
-            } else {
-                for (size_t i = 0; i < valMembersImpl.size(); i++) {
-                    auto& member = valMembersImpl[i];
-                    HashType memberHash = getValueHash(
-                        member->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
-                    if (!seenHashes.insert(memberHash).second) {
-                        myCerr << "Error: possible duplicate member: "
-                               << member->view() << endl;
-                        success = false;
-                        break;
-                    }
-                    if (!(memberHashes.count(memberHash))) {
-                        myCerr << "Error: member " << member->view()
-                               << " has no corresponding hash in "
-                                  "memberHashes.\n";
-                        success = false;
-                        break;
-                    }
-                    calculatedTotal += mix(memberHash);
-                }
-                if (success) {
-                    success = calculatedTotal == cachedHashTotal;
-                    if (!success) {
-                        myCerr << "Calculated hash total should be "
-                               << calculatedTotal << " but it was actually "
-                               << cachedHashTotal << endl;
-                    }
-                }
-            }
-            if (!success) {
-                myCerr << "Members: " << valMembersImpl << endl;
-                myCerr << "memberHashes: " << memberHashes << endl;
-                assert(false);
-            }
-        },
-        members);
-}
 
 void SetValue::assertValidVarBases() {
-    lib::visit(
-        [&](auto& valMembersImpl) {
-            if (valMembersImpl.empty()) {
-                return;
-            }
-            bool success = true;
-            for (size_t i = 0; i < valMembersImpl.size(); i++) {
-                const ValBase& base =
-                    valBase(*assumeAsValue(valMembersImpl[i]));
-                if (base.container != this) {
-                    success = false;
-                    myCerr << "member " << i
-                           << "'s container does not point to this set."
-                           << endl;
-                } else if (base.id != i) {
-                    success = false;
-                    myCerr << "member " << i << "has id " << base.id
-                           << " but it should be " << i << endl;
-                }
-            }
-            if (!success) {
-                myCerr << "Members: " << valMembersImpl << endl;
-                myCerr << "memberHashes: " << memberHashes << endl;
-                this->printVarBases();
-                assert(false);
-            }
-        },
-        members);
+    lib::visit([&](auto& members) { varBaseSanityChecks(*this, members); },
+               members);
 }
 
 void SetValue::printVarBases() {
@@ -299,17 +211,22 @@ void SetView::standardSanityChecksForThisType() const {
     HashType checkCachedHashTotal(0);
     lib::visit(
         [&](auto& members) {
-            for (auto& member : members) {
+            sanityEqualsCheck(members.size(), indexHashMap.size());
+            for (size_t index = 0; index < members.size(); index++) {
+                auto& member = members[index];
                 auto viewOption = member->getViewIfDefined();
                 sanityCheck(viewOption, NO_SET_UNDEFINED_MEMBERS);
                 auto& view = *viewOption;
                 HashType hash = getValueHash(view);
                 checkCachedHashTotal += mix(hash);
-                sanityCheck(memberHashes.count(hash),
-                            toString("member ", member->view(), " with hash ",
-                                     hash, " is not in memberHashes."));
+                sanityCheck(hashIndexMap.count(hash),
+                            toString("member with index ", index, " and value ",
+                                     member->view(), " with hash ", hash,
+                                     " is not in hashIndexMap."));
+                sanityEqualsCheck(index, hashIndexMap.at(hash));
+                sanityEqualsCheck(hash, indexHashMap[index]);
             }
-            sanityEqualsCheck(memberHashes.size(), numberElements());
+            sanityEqualsCheck(hashIndexMap.size(), numberElements());
             sanityEqualsCheck(checkCachedHashTotal, cachedHashTotal);
         },
         members);
@@ -338,6 +255,5 @@ AnyExprVec& SetValue::getChildrenOperands() { return members; }
 
 template <>
 size_t getResourceLowerBound<SetDomain>(const SetDomain& domain) {
-    return domain.sizeAttr.minSize * getResourceLowerBound(domain.inner) +
-           1;
+    return domain.sizeAttr.minSize * getResourceLowerBound(domain.inner) + 1;
 }

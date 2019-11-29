@@ -103,8 +103,8 @@ struct SetValue : public SetView, public ValBase {
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline std::pair<bool, ValRef<InnerValueType>> tryRemoveMember(
-        UInt index, Func&& func) {
+    inline lib::optional<ValRef<InnerValueType>> tryRemoveMember(UInt index,
+                                                                 Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         auto removedMember =
             assumeAsValue(SetView::removeMember<InnerViewType>(index));
@@ -116,74 +116,68 @@ struct SetValue : public SetView, public ValBase {
             debug_code(assertValidVarBases());
             SetView::notifyMemberRemoved(index,
                                          getValueHash(asView(*removedMember)));
-            return std::make_pair(true, std::move(removedMember));
+            return std::move(removedMember);
         } else {
             SetView::addMember<InnerViewType>(removedMember.asExpr());
             auto& members = getMembers<InnerViewType>();
             std::swap(members[index], members.back());
-            memberHashes.insert(getValueHash(
-                members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS)));
-            debug_code(assertValidState());
+            std::swap(indexHashMap[index], indexHashMap.back());
+            std::swap(hashIndexMap.at(indexHashMap[index]),
+                      hashIndexMap.at(indexHashMap.back()));
+            debug_code(standardSanityChecksForThisType());
             debug_code(assertValidVarBases());
-            return std::make_pair(false, ValRef<InnerValueType>(nullptr));
+            return lib::nullopt;
         }
-    }
-
-    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline HashType notifyPossibleMemberChange(UInt index) {
-        return SetView::notifyPossibleMemberChange<
-            typename AssociatedViewType<InnerValueType>::type>(index);
-    }
-
-    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline void notifyPossibleMembersChange(const std::vector<UInt>& indices,
-                                            std::vector<HashType>& hashes) {
-        SetView::notifyPossibleMembersChange<
-            typename AssociatedViewType<InnerValueType>::type>(indices, hashes);
     }
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline std::pair<bool, HashType> tryMemberChange(size_t index,
-                                                     HashType oldHash,
-                                                     Func&& func) {
+    inline bool tryMemberChange(size_t index, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        HashType newHash = memberChanged<InnerViewType>(oldHash, index);
+        debug_code(assert(index < numberElements()));
+        HashType oldHash = indexHashMap[index];
+        HashType newHash = memberChanged<InnerViewType>(index);
         if (func()) {
             SetView::notifyMemberChanged(index, oldHash);
-            return std::make_pair(true, newHash);
+            return true;
         } else {
             if (oldHash != newHash) {
-                memberHashes.insert(oldHash);
-                memberHashes.erase(newHash);
+                hashIndexMap[oldHash] = index;
+                hashIndexMap.erase(newHash);
+                indexHashMap[index] = oldHash;
                 cachedHashTotal -= mix(newHash);
                 cachedHashTotal += mix(oldHash);
             }
-            return std::make_pair(false, oldHash);
+            return false;
         }
     }
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
     inline bool tryMembersChange(const std::vector<UInt>& indices,
-                                 const std::vector<HashType>& hashes,
                                  Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        std::vector<HashType> newHashes(hashes.begin(), hashes.end());
-        membersChanged<InnerViewType>(newHashes, indices);
+        std::vector<HashType> oldHashes;
+        for (auto index : indices) {
+            oldHashes.emplace_back(indexHashMap[index]);
+        }
         HashType cachedHashTotalBackup = cachedHashTotal;
+        membersChanged<InnerViewType>(indices);
         if (func()) {
-            SetView::notifyMembersChanged(indices, hashes);
+            SetView::notifyMembersChanged(indices, oldHashes);
             return true;
         } else {
             cachedHashTotal = cachedHashTotalBackup;
-            for (auto hash : newHashes) {
-                memberHashes.erase(hash);
+            for (auto index : indices) {
+                hashIndexMap.erase(indexHashMap[index]);
             }
-            for (auto hash : hashes) {
-                memberHashes.insert(hash);
+            for (size_t i = 0; i < indices.size(); i++) {
+                auto index = indices[i];
+                auto hash = oldHashes[i];
+                hashIndexMap[hash] = index;
+                indexHashMap[index] = hash;
             }
-            debug_code(assertValidState());
+            debug_code(standardSanityChecksForThisType());
             return false;
         }
     }

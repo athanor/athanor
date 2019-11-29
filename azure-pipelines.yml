@@ -29,7 +29,7 @@ jobs:
     displayName: "Build Athanor"
   - bash: rm -rf temp && mkdir temp && cd temp && wget https://github.com/conjure-cp/conjure/releases/download/v2.3.0/$(conjureFolder).zip && unzip $(conjureFolder).zip
     displayName: "Downloading Conjure"
-  - bash: export PATH="$PWD/temp/$(conjureFolder):${PATH}" ; echo "path is $PATH" ; which conjure ; conjure ; cd tests && ./runAll.sh skipSanityCheck useReleaseBuild dumpFilesOnError
+  - bash: export PATH="$PWD/temp/$(conjureFolder):${PATH}" ; echo "path is $PATH" ; which conjure ; conjure ; cd tests && ./runAll.sh --sanity-check-intervals 100 --use-release-build --dump-files-on-error
     displayName: "Running tests"
   - bash: scripts/makeRelease.sh "$(Build.ArtifactStagingDirectory)" "$(Build.SourceBranch)" $(os) "temp/$(conjureFolder)/conjure"
     displayName: "Compiling release assets for $(os)"

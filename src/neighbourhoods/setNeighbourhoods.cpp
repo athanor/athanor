@@ -148,33 +148,20 @@ struct SetCrossover
                 fromVal.getMembers<InnerViewType>()[fromIndexToMove]);
             toMemberToMove =
                 assumeAsValue(toVal.getMembers<InnerViewType>()[toIndexToMove]);
-            HashType fromMemberHash =
-                fromVal.notifyPossibleMemberChange<InnerValueType>(
-                    fromIndexToMove);
-            HashType toMemberHash =
-                toVal.notifyPossibleMemberChange<InnerValueType>(toIndexToMove);
             swapValAssignments(*fromMemberToMove, *toMemberToMove);
             success =
-                fromVal
-                    .tryMemberChange<InnerValueType>(
-                        fromIndexToMove, fromMemberHash,
-                        [&]() {
-                            return toVal
-                                .tryMemberChange<InnerValueType>(
-                                    toIndexToMove, toMemberHash,
-                                    [&]() {
-                                        if (params.parentCheck(params.vals)) {
-                                            return true;
-                                        } else {
-                                            swapValAssignments(
-                                                *fromMemberToMove,
-                                                *toMemberToMove);
-                                            return false;
-                                        }
-                                    })
-                                .first;
-                        })
-                    .first;
+                fromVal.tryMemberChange<InnerValueType>(fromIndexToMove, [&]() {
+                    return toVal.tryMemberChange<InnerValueType>(
+                        toIndexToMove, [&]() {
+                            if (params.parentCheck(params.vals)) {
+                                return true;
+                            } else {
+                                swapValAssignments(*fromMemberToMove,
+                                                   *toMemberToMove);
+                                return false;
+                            }
+                        });
+                });
         } while (!success && ++numberTries < tryLimit);
 
         if (!success) {
@@ -190,19 +177,11 @@ struct SetCrossover
             << fromVal.getMembers<InnerViewType>()[fromIndexToMove]);
         if (!params.changeAccepted()) {
             debug_neighbourhood_action("Change rejected");
-            HashType fromMemberHash =
-                fromVal.notifyPossibleMemberChange<InnerValueType>(
-                    fromIndexToMove);
-            HashType toMemberHash =
-                toVal.notifyPossibleMemberChange<InnerValueType>(toIndexToMove);
             swapValAssignments(*fromMemberToMove, *toMemberToMove);
-            fromVal.tryMemberChange<InnerValueType>(
-                fromIndexToMove, fromMemberHash, [&]() {
-                    return toVal
-                        .tryMemberChange<InnerValueType>(
-                            toIndexToMove, toMemberHash, [&]() { return true; })
-                        .first;
-                });
+            fromVal.tryMemberChange<InnerValueType>(fromIndexToMove, [&]() {
+                return toVal.tryMemberChange<InnerValueType>(
+                    toIndexToMove, [&]() { return true; });
+            });
         }
     }
 };
@@ -252,7 +231,7 @@ struct SetMove : public NeighbourhoodFunc<SetDomain, 2, SetMove<InnerDomain>> {
                     .tryRemoveMember<InnerValueType>(
                         indexToMove,
                         [&]() { return params.parentCheck(params.vals); })
-                    .first;
+                    .has_value();
             });
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
@@ -264,11 +243,8 @@ struct SetMove : public NeighbourhoodFunc<SetDomain, 2, SetMove<InnerDomain>> {
             "Moved value: " << toVal.getMembers<InnerViewType>().back());
         if (!params.changeAccepted()) {
             debug_neighbourhood_action("Change rejected");
-            auto member =
-                toVal
-                    .tryRemoveMember<InnerValueType>(toVal.numberElements() - 1,
-                                                     []() { return true; })
-                    .second;
+            auto member = *toVal.tryRemoveMember<InnerValueType>(
+                toVal.numberElements() - 1, []() { return true; });
             fromVal.tryAddMember(member, [&]() { return true; });
         }
     }
@@ -293,7 +269,7 @@ struct SetRemove
         }
         size_t indexToRemove;
         int numberTries = 0;
-        ValRef<InnerValueType> removedMember(nullptr);
+        lib::optional<ValRef<InnerValueType>> removedMember;
         bool success = false;
         debug_neighbourhood_action("Looking for value to remove");
         do {
@@ -301,14 +277,12 @@ struct SetRemove
             indexToRemove = globalRandom<size_t>(0, val.numberElements() - 1);
             debug_log("trying to remove index " << indexToRemove << " from set "
                                                 << val.view());
-            std::pair<bool, ValRef<InnerValueType>> removeStatus =
-                val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
-                    return params.parentCheck(params.vals);
-                });
-            success = removeStatus.first;
+            removedMember = val.tryRemoveMember<InnerValueType>(
+                indexToRemove,
+                [&]() { return params.parentCheck(params.vals); });
+            success = removedMember.has_value();
             if (success) {
-                removedMember = std::move(removeStatus.second);
-                debug_neighbourhood_action("Removed " << removedMember);
+                debug_neighbourhood_action("Removed " << *removedMember);
             }
         } while (!success && ++numberTries < params.parentCheckTryLimit);
         if (!success) {
@@ -318,7 +292,7 @@ struct SetRemove
         }
         if (!params.changeAccepted()) {
             debug_neighbourhood_action("Change rejected");
-            val.tryAddMember(std::move(removedMember), []() { return true; });
+            val.tryAddMember(*removedMember, []() { return true; });
         }
     }
 };
@@ -346,30 +320,20 @@ void setLiftSingleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                     params.vioContainer.childViolations(val.id);
                 UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
                     val.numberElements() - 1);
-                HashType oldHash =
-                    val.notifyPossibleMemberChange<InnerValueType>(
-                        indexToChange);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&
                                                           newValue) {
                     HashType newHash = getValueHash(
                         lib::get<ValRefVec<InnerValueType>>(newValue).front());
-                    if (val.memberHashes.count(newHash)) {
+                    if (val.hashIndexMap.count(newHash)) {
                         return false;
                     }
-                    auto statusHashPair = val.tryMemberChange<InnerValueType>(
-                        indexToChange, oldHash,
+                    return val.tryMemberChange<InnerValueType>(
+                        indexToChange,
                         [&]() { return params.parentCheck(params.vals); });
-                    oldHash = statusHashPair.second;
-                    return statusHashPair.first;
                 };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
-                    if (requiresRevert) {
-                        oldHash =
-                            val.notifyPossibleMemberChange<InnerValueType>(
-                                indexToChange);
-                    }
                     return !requiresRevert;
                 };
                 AnyValVec changingMembers;
@@ -384,7 +348,7 @@ void setLiftSingleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                     changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
-                    val.tryMemberChange<InnerValueType>(indexToChange, oldHash,
+                    val.tryMemberChange<InnerValueType>(indexToChange,
                                                         [&]() { return true; });
                 }
             });
@@ -407,16 +371,17 @@ bool setDoesNotContain(SetValue& val,
     size_t lastInsertedIndex = 0;
     do {
         HashType hash = getValueHash(newMembers[lastInsertedIndex]);
-        bool inserted = val.memberHashes.insert(hash).second;
+        bool inserted = val.hashIndexMap.emplace(hash, 0).second;
         if (!inserted) {
             break;
         }
     } while (++lastInsertedIndex < newMembers.size());
     for (size_t i = 0; i < lastInsertedIndex; i++) {
-        val.memberHashes.erase(getValueHash(newMembers[i]));
+        val.hashIndexMap.erase(getValueHash(newMembers[i]));
     }
     return lastInsertedIndex == newMembers.size();
 }
+
 template <typename InnerDomainPtrType>
 void setLiftMultipleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                             int numberValsRequired,
@@ -446,26 +411,19 @@ void setLiftMultipleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                     vioContainerAtThisLevel.selectRandomVars(
                         val.numberElements() - 1, innerNhNumberValsRequired);
                 debug_log(indicesToChange);
-                std::vector<HashType> oldHashes;
-                val.notifyPossibleMembersChange<InnerValueType>(indicesToChange,
-                                                                oldHashes);
                 ParentCheckCallBack parentCheck =
                     [&](const AnyValVec& newMembers) {
                         auto& newMembersImpl =
                             lib::get<ValRefVec<InnerValueType>>(newMembers);
                         return setDoesNotContain(val, newMembersImpl) &&
                                val.tryMembersChange<InnerValueType>(
-                                   indicesToChange, oldHashes, [&]() {
+                                   indicesToChange, [&]() {
                                        return params.parentCheck(params.vals);
                                    });
                     };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
-                    if (requiresRevert) {
-                        val.notifyPossibleMembersChange<InnerValueType>(
-                            indicesToChange, oldHashes);
-                    }
                     return !requiresRevert;
                 };
                 AnyValVec changingMembers;
@@ -483,7 +441,7 @@ void setLiftMultipleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMembersChange<InnerValueType>(
-                        indicesToChange, oldHashes, [&]() { return true; });
+                        indicesToChange, [&]() { return true; });
                 }
             });
     }

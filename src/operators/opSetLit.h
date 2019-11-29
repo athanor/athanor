@@ -26,8 +26,6 @@ struct OpSetLit : public SetView {
     HashMap<HashType, OperandGroup> hashIndicesMap;
     PreviousValueCache<HashType>
         cachedOperandHashes;  // map from operand index to hash.
-    PreviousValueCache<HashType>
-        cachedSetHashes;  // map from set member index to hash.
 
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
     OpSetLit(AnyExprVec operands) : operands(std::move(operands)) {}

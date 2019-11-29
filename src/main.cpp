@@ -80,44 +80,105 @@ auto& conjurePathArg =
             "reported and athanor will exit.")
         .add<Arg<string>>("path_to_conjure_executable", Policy::MANDATORY, "");
 
+extern string bestSolution;
+extern bool saveBestSolution;
+string bestSolution;
+bool saveBestSolution = false;
+
+auto& saveBestSolutionFlag = argParser.add<ComplexFlag>(
+    "--save-best-solution", Policy::OPTIONAL,
+    "Saves the best solution to the specified file.  Note, if the process is "
+    "terminated with a non-interruptible signal (SIGSTOP, SIGKILL, ...), the "
+    "file may not be created.  Solutions are always printed to STDOUT though. "
+    " A clean exit, for example after a solver time out, iteration limit or on "
+    "receiving Control-C  will still result in the best solution being "
+    "correctly written to the specified file.",
+    [](auto&) { saveBestSolution = true; });
+auto& bestSolutionFileArg =
+    saveBestSolutionFlag.add<Arg<ofstream>>("file_path", Policy::MANDATORY, "");
+
 mt19937 globalRandomGenerator;
 auto& randomSeedFlag = argParser.add<ComplexFlag>(
     "--random-seed", Policy::OPTIONAL, "Specify a random seed.");
 auto& seedArg = randomSeedFlag.add<Arg<unsigned int>>(
     "integer_seed", Policy::MANDATORY,
     "Integer seed to use for random generator.");
-bool runSanityChecks = false;
-bool verboseSanityError = false;
-auto& sanityCheckFlag = argParser.add<ComplexFlag>(
-    "--sanity-check", Policy::OPTIONAL,
-    "Activate sanity check mode, this is a debugging feature,.  After each "
-    "move, the state is scanned for errors caused by bad triggering.  Note, "
-    "errors caused by hash collisions are not tested for in this mode.",
-    [](auto&) { runSanityChecks = true; });
 
-auto& verboseErrorFlag = sanityCheckFlag.add<Flag>(
-    "--verbose", Policy::OPTIONAL, "Verbose printing at point of error.",
-    [](auto&) { verboseSanityError = true; });
-bool repeatSanityCheckOfConst = false;
-auto& repeatSanityCheckFlag = sanityCheckFlag.add<Flag>(
-    "--repeat-check-of-const", Policy::OPTIONAL,
-    "repeat the checks of expressions that are constant.",
-    [](auto&) { repeatSanityCheckOfConst = true; });
+auto& exclusiveTimeLimitGroup = argParser.makeExclusiveGroup(Policy::OPTIONAL);
+auto& cpuTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
+    "--cpu-time-limit", "Specify the CPU time limit in seconds.");
 
-bool dontSkipSanityCheckForAlreadyVisitedChildren = false;
-auto& dontSkipSanityCheckFlag = sanityCheckFlag.add<Flag>(
-    "--dont-skip-repeat-visits", Policy::OPTIONAL,
-    "When a child has multiple parents, the child will be visited multiple "
-    "times during sanity checking.  Only the first visit causes a sanity check "
-    "of child unless this option is enabled.",
-    [](auto&) { dontSkipSanityCheckForAlreadyVisitedChildren = true; });
+auto& cpuTimeLimitArg =
+    cpuTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
 
-debug_code(bool debugLogAllowed = true;
-           auto& disableDebugLoggingFlag = argParser.add<Flag>(
-               "--disable-debug-log", Policy::OPTIONAL,
-               "Included only for debug builds, can be used to silence logging "
-               "but keeping assertions switched on.",
-               [](auto&) { debugLogAllowed = false; }););
+auto& realTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
+    "--real-time-limit", "Specify the CPU time limit in seconds.");
+
+auto& realTimeLimitArg =
+    realTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
+bool hasIterationLimit = false;
+UInt64 iterationLimit = 0;
+auto& iterationLimitFlag = argParser.add<ComplexFlag>(
+    "--iteration-limit", Policy::OPTIONAL,
+    "Specify the maximum number of iterations to spend in search.");
+
+auto& iterationLimitArg = iterationLimitFlag.add<Arg<UInt64>>(
+    "number_iterations", Policy::MANDATORY, "",
+    chain(Converter<UInt64>(), [](UInt64 value) {
+        hasIterationLimit = true;
+        iterationLimit = value;
+        return value;
+    }));
+
+bool hasSolutionLimit = false;
+UInt64 solutionLimit = 0;
+auto& solutionLimitFlag = argParser.add<ComplexFlag>(
+    "--solution-limit", Policy::OPTIONAL,
+    "Exit search if the specified number of solutions has been found.  Note, "
+    "this only applies to optimisation problems.  Only solutions that improve "
+    "on the objective are counted.");
+
+auto& solutionLimitArg = solutionLimitFlag.add<Arg<UInt64>>(
+    "number_solutions", Policy::MANDATORY, "Value greater 0",
+    chain(Converter<UInt64>(), [](UInt64 value) {
+        if (value < 1) {
+            throw ErrorMessage("Value must be greater than 0.");
+        }
+        hasSolutionLimit = true;
+        solutionLimit = value;
+        return value;
+    }));
+
+extern bool noPrintSolutions;
+bool noPrintSolutions = false;
+auto& noPrintSolutionsFlag = argParser.add<Flag>(
+    "--no-print-solutions", Policy::OPTIONAL,
+    "Do not print solutions, useful for timing experiements.",
+    [](auto&) { noPrintSolutions = true; });
+
+extern bool quietMode;
+bool quietMode = true;
+auto& verboseModeFlag = argParser.add<Flag>(
+    "--show-progress-stats", Policy::OPTIONAL,
+    "print stats information every time an improvement to the objective "
+    "or violation is made.",
+    [](auto&) { quietMode = false; });
+
+auto& showNhStatsFlag = argParser.add<ComplexFlag>(
+    "--show-nh-stats", Policy::OPTIONAL,
+    "Print stats specific to each neighbourhood in a CSV format to stdout.");
+
+auto& showNhStatsArg = showNhStatsFlag.add<Arg<ofstream>>(
+    "path_to_file", Policy::OPTIONAL,
+    "If specified, write the neighbourhood stats into a file instead of "
+    "stdout.");
+
+auto& saveUcbArg =
+    argParser
+        .add<ComplexFlag>("--save-ucb-state", Policy::OPTIONAL,
+                          "Save learned neighbourhood UCB info.\n")
+        .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY,
+                            "File to save results to.");
 
 enum ImproveStrategyChoice { HILL_CLIMBING, TEST_CLIMB };
 enum ExploreStrategyChoice {
@@ -202,84 +263,10 @@ auto& interactiveFlag = selectionStratGroup.add<Flag>(
     "i", "interactive, Prompt user for neighbourhood to select.",
     [](auto&&) { selectionStrategyChoice = INTERACTIVE; });
 
-auto& exclusiveTimeLimitGroup = argParser.makeExclusiveGroup(Policy::OPTIONAL);
-auto& cpuTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
-    "--cpu-time-limit", "Specify the CPU time limit in seconds.");
-
-auto& cpuTimeLimitArg =
-    cpuTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
-
-auto& realTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
-    "--real-time-limit", "Specify the CPU time limit in seconds.");
-
-auto& realTimeLimitArg =
-    realTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
-bool hasIterationLimit = false;
-UInt64 iterationLimit = 0;
-auto& iterationLimitFlag = argParser.add<ComplexFlag>(
-    "--iteration-limit", Policy::OPTIONAL,
-    "Specify the maximum number of iterations to spend in search.");
-
-auto& iterationLimitArg = iterationLimitFlag.add<Arg<UInt64>>(
-    "number_iterations", Policy::MANDATORY, "",
-    chain(Converter<UInt64>(), [](UInt64 value) {
-        hasIterationLimit = true;
-        iterationLimit = value;
-        return value;
-    }));
-
-bool hasSolutionLimit = false;
-UInt64 solutionLimit = 0;
-auto& solutionLimitFlag = argParser.add<ComplexFlag>(
-    "--solution-limit", Policy::OPTIONAL,
-    "Exit search if the specified number of solutions has been found.  Note, "
-    "this only applies to optimisation problems.  Only solutions that improve "
-    "on the objective are counted.");
-
-auto& solutionLimitArg = solutionLimitFlag.add<Arg<UInt64>>(
-    "number_solutions", Policy::MANDATORY, "Value greater 0",
-    chain(Converter<UInt64>(), [](UInt64 value) {
-        if (value < 1) {
-            throw ErrorMessage("Value must be greater than 0.");
-        }
-        hasSolutionLimit = true;
-        solutionLimit = value;
-        return value;
-    }));
-
 auto& disableVioBiasFlag = argParser.add<Flag>(
     "--disable-vio-bias", Policy::OPTIONAL,
     "Disable the search from biasing towards violating variables.");
-extern bool noPrintSolutions;
-bool noPrintSolutions = false;
-auto& noPrintSolutionsFlag = argParser.add<Flag>(
-    "--no-print-solutions", Policy::OPTIONAL,
-    "Do not print solutions, useful for timing experiements.",
-    [](auto&) { noPrintSolutions = true; });
 
-extern bool quietMode;
-bool quietMode = true;
-auto& verboseModeFlag = argParser.add<Flag>(
-    "--show-progress-stats", Policy::OPTIONAL,
-    "print stats information every time an improvement to the objective "
-    "or violation is made.",
-    [](auto&) { quietMode = false; });
-
-auto& showNhStatsFlag = argParser.add<ComplexFlag>(
-    "--show-nh-stats", Policy::OPTIONAL,
-    "Print stats specific to each neighbourhood in a CSV format to stdout.");
-
-auto& showNhStatsArg = showNhStatsFlag.add<Arg<ofstream>>(
-    "path_to_file", Policy::OPTIONAL,
-    "If specified, write the neighbourhood stats into a file instead of "
-    "stdout.");
-
-auto& saveUcbArg =
-    argParser
-        .add<ComplexFlag>("--save-ucb-state", Policy::OPTIONAL,
-                          "Save learned neighbourhood UCB info.\n")
-        .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY,
-                            "File to save results to.");
 extern bool allowForwardingOfDefiningExprs;
 bool allowForwardingOfDefiningExprs = true;
 auto& disableDefinedExprsFlag =
@@ -291,22 +278,54 @@ auto& disableDefinedExprsFlag =
 void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);
 void sigAlarmHandler(int);
-extern string bestSolution;
-extern bool saveBestSolution;
-string bestSolution;
-bool saveBestSolution = false;
 
-auto& saveBestSolutionFlag = argParser.add<ComplexFlag>(
-    "--save-best-solution", Policy::OPTIONAL,
-    "Saves the best solution to the specified file.  Note, if the process is "
-    "terminated with a non-interruptible signal (SIGSTOP, SIGKILL, ...), the "
-    "file may not be created.  Solutions are always printed to STDOUT though. "
-    " A clean exit, for example after a solver time out, iteration limit or on "
-    "receiving Control-C  will still result in the best solution being "
-    "correctly written to the specified file.",
-    [](auto&) { saveBestSolution = true; });
-auto& bestSolutionFileArg =
-    saveBestSolutionFlag.add<Arg<ofstream>>("file_path", Policy::MANDATORY, "");
+bool runSanityChecks = false;
+bool verboseSanityError = false;
+auto& sanityCheckFlag = argParser.add<ComplexFlag>(
+    "--sanity-check", Policy::OPTIONAL,
+    "Activate sanity check mode, this is a debugging feature,.  After each "
+    "move, the state is scanned for errors caused by bad triggering.  Note, "
+    "errors caused by hash collisions are not tested for in this mode.",
+    [](auto&) { runSanityChecks = true; });
+
+auto& verboseErrorFlag = sanityCheckFlag.add<Flag>(
+    "--verbose", Policy::OPTIONAL, "Verbose printing at point of error.",
+    [](auto&) { verboseSanityError = true; });
+bool repeatSanityCheckOfConst = false;
+auto& repeatSanityCheckFlag = sanityCheckFlag.add<Flag>(
+    "--repeat-check-of-const", Policy::OPTIONAL,
+    "repeat the checks of expressions that are constant.",
+    [](auto&) { repeatSanityCheckOfConst = true; });
+
+bool dontSkipSanityCheckForAlreadyVisitedChildren = false;
+auto& dontSkipSanityCheckFlag = sanityCheckFlag.add<Flag>(
+    "--dont-skip-repeat-visits", Policy::OPTIONAL,
+    "When a child has multiple parents, the child will be visited multiple "
+    "times during sanity checking.  Only the first visit causes a sanity check "
+    "of child unless this option is enabled.",
+    [](auto&) { dontSkipSanityCheckForAlreadyVisitedChildren = true; });
+
+extern UInt64 sanityCheckInterval;
+UInt64 sanityCheckInterval = 1;
+auto& sanityCheckIntervalArg =
+    sanityCheckFlag
+        .add<ComplexFlag>("--at-intervals-of", Policy::OPTIONAL,
+                          "Only run sanity check once per the specified number "
+                          "of iterations.")
+        .add<Arg<UInt64>>("interval_size", Policy::MANDATORY, "",
+                          chain(Converter<UInt64>(), [](UInt64 value) {
+                              sanityCheckInterval = value;
+                              return value;
+                          }));
+
+debug_code(bool debugLogAllowed = true;
+           auto& disableDebugLoggingFlag = argParser.add<Flag>(
+               "--disable-debug-log", Policy::OPTIONAL,
+               "Included only for debug builds, can be used to silence "
+               "logging "
+               "but keeping assertions switched on.",
+               [](auto&) { debugLogAllowed = false; }););
+
 template <typename ImproveStrategy, typename SelectionStrategy>
 void constructStratAndRunImpl(State& state, ImproveStrategy&& improve,
                               SelectionStrategy&& nhSelection) {

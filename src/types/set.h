@@ -16,7 +16,8 @@ static const char* NO_SET_UNDEFINED_MEMBERS =
 struct SetView : public ExprInterface<SetView>,
                  public TriggerContainer<SetView> {
     friend SetValue;
-    HashSet<HashType> memberHashes;
+    HashMap<HashType, size_t> hashIndexMap;
+    std::vector<HashType> indexHashMap;
     AnyExprVec members;
     HashType cachedHashTotal = HashType(0);
 
@@ -29,81 +30,82 @@ struct SetView : public ExprInterface<SetView>,
 
         HashType hash =
             getValueHash(member->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
-        debug_code(assert(!memberHashes.count(hash)));
+        debug_code(assert(!hashIndexMap.count(hash)));
         members.emplace_back(member);
-        memberHashes.insert(hash);
+        indexHashMap.emplace_back(hash);
+        hashIndexMap[hash] = indexHashMap.size() - 1;
         cachedHashTotal += mix(hash);
-        debug_code(assertValidState());
         return true;
-    }
-
-    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline ExprRef<InnerViewType> removeMember(UInt index, HashType hash) {
-        auto& members = getMembers<InnerViewType>();
-        debug_code(assert(index < members.size()));
-        debug_code(assert(memberHashes.count(hash)));
-        memberHashes.erase(hash);
-        cachedHashTotal -= mix(hash);
-        auto removedMember = std::move(members[index]);
-        members[index] = std::move(members.back());
-        members.pop_back();
-        return removedMember;
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRef<InnerViewType> removeMember(UInt index) {
         auto& members = getMembers<InnerViewType>();
         debug_code(assert(index < members.size()));
-
-        HashType hash = getValueHash(
-            members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
-        return removeMember<InnerViewType>(index, hash);
+        HashType hash = indexHashMap[index];
+        debug_code(
+            assert(hashIndexMap.count(hash) && hashIndexMap.at(hash) == index));
+        hashIndexMap.erase(hash);
+        cachedHashTotal -= mix(hash);
+        auto removedMember = std::move(members[index]);
+        members[index] = std::move(members.back());
+        members.pop_back();
+        std::swap(indexHashMap[index], indexHashMap.back());
+        indexHashMap.pop_back();
+        if (index < indexHashMap.size()) {
+            hashIndexMap.at(indexHashMap[index]) = index;
+        }
+        return removedMember;
     }
 
+
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline HashType memberChanged(HashType oldHash, UInt index) {
+    inline HashType memberChanged(UInt index) {
         auto& members = getMembers<InnerViewType>();
+        HashType oldHash = indexHashMap[index];
         HashType newHash = getValueHash(
             members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
         if (newHash != oldHash) {
-            debug_code(assert(!memberHashes.count(newHash)));
-            memberHashes.erase(oldHash);
-            memberHashes.insert(newHash);
+            debug_code(assert(!hashIndexMap.count(newHash)));
+            hashIndexMap.erase(oldHash);
+            hashIndexMap[newHash] = index;
+            indexHashMap[index] = newHash;
+
             cachedHashTotal -= mix(oldHash);
             cachedHashTotal += mix(newHash);
         }
-        debug_code(assertValidState());
         return newHash;
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void membersChanged(std::vector<HashType>& hashes,
-                               const std::vector<UInt>& indices) {
+    inline void membersChanged(const std::vector<UInt>& indices) {
         auto& members = getMembers<InnerViewType>();
-        for (HashType oldHash : hashes) {
+        for (auto index : indices) {
+            debug_code(assert(index < indexHashMap.size()));
+            HashType oldHash = indexHashMap[index];
             cachedHashTotal -= mix(oldHash);
-            bool erased = memberHashes.erase(oldHash);
+            bool erased = hashIndexMap.erase(oldHash);
             ignoreUnused(erased);
             debug_code(assert(erased));
         }
-        std::transform(
-            indices.begin(), indices.end(), hashes.begin(), [&](UInt index) {
-                return getValueHash(members[index]->view().checkedGet(
+        for (auto index : indices) {
+            HashType newHash =
+
+                getValueHash(members[index]->view().checkedGet(
                     NO_SET_UNDEFINED_MEMBERS));
-            });
-        for (HashType newHash : hashes) {
             cachedHashTotal += mix(newHash);
-            debug_code(assert(!memberHashes.count(newHash)));
-            memberHashes.insert(newHash);
+            debug_code(assert(!hashIndexMap.count(newHash)));
+            hashIndexMap[newHash] = index;
+            indexHashMap[index] = newHash;
         }
-        debug_code(assertValidState());
     }
 
     void silentClear() {
         lib::visit(
             [&](auto& membersImpl) {
                 cachedHashTotal = HashType(0);
-                memberHashes.clear();
+                hashIndexMap.clear();
+                indexHashMap.clear();
                 membersImpl.clear();
             },
             members);
@@ -130,29 +132,10 @@ struct SetView : public ExprInterface<SetView>,
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline HashType notifyPossibleMemberChange(UInt index) {
-        auto& members = getMembers<InnerViewType>();
-        debug_code(assertValidState());
-        HashType memberHash = getValueHash(
-            members[index]->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
-        return memberHash;
-    }
-    template <typename InnerViewType>
-    inline void notifyPossibleMembersChange(const std::vector<UInt>& indices,
-                                            std::vector<HashType>& hashes) {
-        auto& members = getMembers<InnerViewType>();
-        hashes.resize(indices.size());
-        std::transform(
-            indices.begin(), indices.end(), hashes.begin(), [&](UInt index) {
-                return getValueHash(members[index]->view().checkedGet(
-                    NO_SET_UNDEFINED_MEMBERS));
-            });
-        debug_code(assertValidState());
-    }
-
-    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline HashType memberChangedAndNotify(size_t index, HashType oldHash) {
-        HashType newHash = memberChanged<InnerViewType>(oldHash, index);
+    inline HashType memberChangedAndNotify(size_t index) {
+        debug_code(assert(index < numberElements()));
+        HashType oldHash = indexHashMap[index];
+        HashType newHash = memberChanged<InnerViewType>(index);
         if (oldHash == newHash) {
             return newHash;
         }
@@ -177,11 +160,10 @@ struct SetView : public ExprInterface<SetView>,
     }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline bool containsMember(const InnerViewType& member) const {
-        return memberHashes.count(getValueHash(member));
+        return hashIndexMap.count(getValueHash(member));
     }
 
-    inline UInt numberElements() const { return memberHashes.size(); }
-    void assertValidState();
+    inline UInt numberElements() const { return indexHashMap.size(); }
     void standardSanityChecksForThisType() const;
 };
 

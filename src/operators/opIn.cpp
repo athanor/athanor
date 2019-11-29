@@ -19,7 +19,7 @@ void OpIn::reevaluate() {
                 return;
             }
             HashType hash = getValueHash(*exprView);
-            violation = ((*setView).memberHashes.count(hash)) ? 0 : 1;
+            violation = ((*setView).hashIndexMap.count(hash)) ? 0 : 1;
         },
         expr);
 }
@@ -188,7 +188,7 @@ void OpIn::debugSanityCheckImpl() const {
         return;
     }
     HashType hash = getValueHash(expr);
-    if (setView->memberHashes.count(hash)) {
+    if (setView->hashIndexMap.count(hash)) {
         sanityEqualsCheck(0, violation);
     } else {
         sanityEqualsCheck(1, violation);

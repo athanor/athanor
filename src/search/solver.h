@@ -16,8 +16,9 @@ extern bool hasIterationLimit;
 extern UInt64 iterationLimit;
 extern bool hasSolutionLimit;
 extern UInt64 solutionLimit;
-
 extern bool runSanityChecks;
+extern UInt64 sanityCheckInterval;
+
 inline bool alwaysTrue(const AnyValVec&) { return true; }
 
 class State {
@@ -55,7 +56,8 @@ class State {
         auto statsMarkPoint = stats.getMarkPoint();
         bool solutionAccepted = false, changeMade = false;
         AcceptanceCallBack callback = [&]() {
-            if (runSanityChecks) {
+            if (runSanityChecks &&
+                stats.numberIterations % sanityCheckInterval == 0) {
                 model.debugSanityCheck();
             }
             changeMade = true;
@@ -68,7 +70,8 @@ class State {
         NeighbourhoodParams params(callback, alwaysTrueFunc, 1,
                                    changingVariables, stats, vioContainer);
         neighbourhood.apply(params);
-        if (runSanityChecks && !solutionAccepted) {
+        if (runSanityChecks && !solutionAccepted &&
+            stats.numberIterations % sanityCheckInterval == 0) {
             model.debugSanityCheck();
         }
         NeighbourhoodResult nhResult(model, nhIndex, changeMade,
@@ -148,7 +151,7 @@ inline void assignRandomValueToVariables(State& state) {
             [&](auto& d) { return NeighbourhoodResourceAllocator(*d); },
             var.first);
         while (!success) {
-                auto resource = allocator.requestLargerResource();
+            auto resource = allocator.requestLargerResource();
             success =
                 assignRandomValueInDomain(var.first, var.second, resource);
             state.stats.minorNodeCount += resource.getResourceConsumed();

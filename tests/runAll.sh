@@ -1,26 +1,24 @@
 #!/usr/bin/env bash
-#to skip sanity check which is slow!, pass arg skipSanityCheck 
-#to use release build pass useReleaseBuild
+#to use release build pass --use-release-build
 # to pass a bash expansion filter for filtering instances, like you would pass to ls, then use --filter pattern
+#to run sanity checks every n iterations instead of all iterations, pass --sanity-check-intervals n 
+
 pushd $(dirname "$0") > /dev/null
 trap "popd > /dev/null" EXIT
 
 
-sanityCheckFlag="--sanity-check"
 useReleaseBuild=0
 dumpFilesOnError=0
 numberHeadTailSolutions=15
 instanceFilter='instances/*.essence'
 skip=0
+sanityCheckIntervals=1
 while (($# > 0)) ; do
     flag="$1"
-    if [[ "$flag" == "skipSanityCheck" ]] ; then
-        sanityCheckFlag=""
-        echo "Skipping sanity check"
-    elif [[ "$flag" == "useReleaseBuild" ]] ; then
+    if [[ "$flag" == "--use-release-build" ]] ; then
         useReleaseBuild=1
         echo "using release build"
-    elif [[ "$flag" == "dumpFilesOnError" ]] ; then
+    elif [[ "$flag" == "--dump-files-on-error" ]] ; then
         dumpFilesOnError=1
         echo "dump files on error is on"
     elif [[ "$flag" == "--filter" ]] ; then
@@ -30,6 +28,14 @@ while (($# > 0)) ; do
         fi
         instanceFilter="$2"
         echo "instanceFilter=$instanceFilter"
+        shift
+    elif [[ "$flag" == "--sanity-check-intervals" ]] ; then
+        if (($# < 2 )) ; then 
+            echo "Error --sanity-check-intervals takes one argument, a integer.", see test docs."" 
+            exit 1
+        fi
+        sanityCheckIntervals="$2"
+        echo "sanityCheckIntervals=$sanityCheckIntervals"
         shift
     else 
         echo "bad argument, see test docs." 1>&2
@@ -140,14 +146,14 @@ for instance in $(eval ls $instanceFilter) ; do
             outputDir="output/$(basename "$instance" .essence)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$instance" | grep -Eo '[0-9]+')
-            runCommand "$outputDir/solver-output.txt" "$solver" $disableDebugLogFlag $sanityCheckFlag --random-seed $seed --iteration-limit $numberIterations  --spec "$instance" 
+            runCommand "$outputDir/solver-output.txt" "$solver" $disableDebugLogFlag --sanity-check --at-intervals-of $sanityCheckIntervals --random-seed $seed --iteration-limit $numberIterations  --spec "$instance" 
         else
             withParam=1
             echo "Running test $instance with param $param with seed $seed"
             outputDir="output/$(basename "$instance" .essence)-$(basename "$param" .param)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$param" | grep -Eo '[0-9]+')
-            runCommand "$outputDir/solver-output.txt" "$solver" $disableDebugLogFlag $sanityCheckFlag --random-seed $seed --iteration-limit $numberIterations  --spec "$instance" --param "$param" 
+            runCommand "$outputDir/solver-output.txt" "$solver" $disableDebugLogFlag --sanity-check --at-intervals-of $sanityCheckIntervals  --random-seed $seed --iteration-limit $numberIterations  --spec "$instance" --param "$param" 
         fi
         exitStatus=$?
         checkExitStatus &&

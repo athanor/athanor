@@ -1,0 +1,9 @@
+$testing:numberIterations:10000
+
+letting c be {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}
+letting c2 be {}
+find s,t : set of int(1..20)
+such that |c2 intersect s| = 0
+ such that |s intersect c2| = 0
+such that forAll i : int(1..20) . i in t intersect c
+

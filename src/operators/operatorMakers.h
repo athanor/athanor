@@ -292,4 +292,10 @@ struct OpMaker<OpInDomain<EnumView>> {
         return OpMaker<OpIsDefined<EnumView>>::make(o);
     }
 };
+struct OpSetIntersect;
+template <>
+struct OpMaker<OpSetIntersect> {
+    static ExprRef<SetView> make(ExprRef<SetView> l, ExprRef<SetView> r);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

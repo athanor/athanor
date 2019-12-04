@@ -146,14 +146,14 @@ for instance in $(eval ls $instanceFilter) ; do
             outputDir="output/$(basename "$instance" .essence)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$instance" | grep -Eo '[0-9]+')
-            runCommand "$outputDir/solver-output.txt" "$solver" $disableDebugLogFlag --sanity-check --at-intervals-of $sanityCheckIntervals --random-seed $seed --iteration-limit $numberIterations  --spec "$instance" 
+            runCommand "$outputDir/solver-output.txt" "$solver" $disableDebugLogFlag --sanity-check --at-intervals-of $sanityCheckIntervals --dont-skip-repeat-visits --random-seed $seed --iteration-limit $numberIterations  --spec "$instance" 
         else
             withParam=1
             echo "Running test $instance with param $param with seed $seed"
             outputDir="output/$(basename "$instance" .essence)-$(basename "$param" .param)-$seed"
             mkdir -p "$outputDir"
             numberIterations=$(grep -E '^\$testing:numberIterations=' "$param" | grep -Eo '[0-9]+')
-            runCommand "$outputDir/solver-output.txt" "$solver" $disableDebugLogFlag --sanity-check --at-intervals-of $sanityCheckIntervals  --random-seed $seed --iteration-limit $numberIterations  --spec "$instance" --param "$param" 
+            runCommand "$outputDir/solver-output.txt" "$solver" $disableDebugLogFlag --sanity-check --at-intervals-of $sanityCheckIntervals  --dont-skip-repeat-visits --random-seed $seed --iteration-limit $numberIterations  --spec "$instance" --param "$param" 
         fi
         exitStatus=$?
         checkExitStatus &&

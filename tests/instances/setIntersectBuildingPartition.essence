@@ -1,0 +1,8 @@
+$testing:numberIterations=100000
+
+
+letting n be 20
+find s : set of set of int(1..n)
+such that n =  sum i in s . |i|
+such that forAll i in s . forAll j in s, j != i . |i intersect j| = 0
+maximising |s|

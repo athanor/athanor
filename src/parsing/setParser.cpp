@@ -39,3 +39,28 @@ ParseResult parseOpSetLit(json& setExpr, ParsedModel& parsedModel) {
         make_shared<SetDomain>(exactSize(numberElements), result.domain);
     return ParseResult(domain, set, result.hasEmptyType);
 }
+
+ParseResult parseOpIntersect(json& intersectExpr, ParsedModel& parsedModel) {
+    auto left = parseExpr(intersectExpr[0], parsedModel);
+    auto right = parseExpr(intersectExpr[1], parsedModel);
+    return mpark::visit(
+        overloaded(
+            [&](shared_ptr<SetDomain>& leftDomain,
+                shared_ptr<SetDomain>& rightDomain) -> ParseResult {
+                auto& returnDomain =
+                    (left.hasEmptyType) ? leftDomain : rightDomain;
+                auto& leftSet = mpark::get<ExprRef<SetView>>(left.expr);
+                auto& rightSet = mpark::get<ExprRef<SetView>>(right.expr);
+                auto op = OpMaker<OpSetIntersect>::make(leftSet, rightSet);
+                op->setConstant(leftSet->isConstant() &&
+                                rightSet->isConstant());
+                return ParseResult(returnDomain, op,
+                                   !left.hasEmptyType || !right.hasEmptyType);
+            },
+            [&](auto&, auto&) -> ParseResult {
+                myCerr << "only supporting intersect for set.\n";
+                myCerr << intersectExpr;
+                myAbort();
+            }),
+        left.domain, right.domain);
+}

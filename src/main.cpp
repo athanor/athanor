@@ -39,7 +39,11 @@ string makeMessageOnFiles(const bool essenceOrParam) {
         "used.");
 }
 
-auto& specFlag = argParser.add<ComplexFlag>(
+auto& inputGroup =
+    argParser.makePrintGroup("input",
+                             "Supplying problem specification file, parameter file, random seed, path to conjure...");
+
+auto& specFlag = inputGroup.add<ComplexFlag>(
     "--spec", Policy::MANDATORY, "Precedes essence specification file.");
 auto& specArg = specFlag.add<Arg<string>>(
     "path_to_file", Policy::MANDATORY,
@@ -54,8 +58,8 @@ auto& specArg = specFlag.add<Arg<string>>(
         }
     });
 
-auto& paramFlag = argParser.add<ComplexFlag>("--param", Policy::OPTIONAL,
-                                             "Precedes parameter file.");
+auto& paramFlag = inputGroup.add<ComplexFlag>("--param", Policy::OPTIONAL,
+                                              "Precedes parameter file.");
 auto& paramArg = paramFlag.add<Arg<string>>(
     "path_to_file", Policy::MANDATORY,
     string("path to a parameter file.  ") + makeMessageOnFiles(false),
@@ -69,7 +73,7 @@ auto& paramArg = paramFlag.add<Arg<string>>(
         }
     });
 auto& conjurePathArg =
-    argParser
+    inputGroup
         .add<ComplexFlag>(
             "--conjure-path", Policy::OPTIONAL,
             "Specify a path to the conjure executable.  Conjure is used to "
@@ -80,12 +84,21 @@ auto& conjurePathArg =
             "reported and athanor will exit.")
         .add<Arg<string>>("path_to_conjure_executable", Policy::MANDATORY, "");
 
+mt19937 globalRandomGenerator;
+auto& randomSeedFlag = inputGroup.add<ComplexFlag>(
+    "--random-seed", Policy::OPTIONAL, "Specify a random seed.");
+auto& seedArg = randomSeedFlag.add<Arg<unsigned int>>(
+    "integer_seed", Policy::MANDATORY,
+    "Integer seed to use for random generator.");
+
+auto& outputGroup = argParser.makePrintGroup(
+    "output", "Saving solutions, viewing search progress and saving stats.");
 extern string bestSolution;
 extern bool saveBestSolution;
 string bestSolution;
 bool saveBestSolution = false;
 
-auto& saveBestSolutionFlag = argParser.add<ComplexFlag>(
+auto& saveBestSolutionFlag = outputGroup.add<ComplexFlag>(
     "--save-best-solution", Policy::OPTIONAL,
     "Saves the best solution to the specified file.  Note, if the process is "
     "terminated with a non-interruptible signal (SIGSTOP, SIGKILL, ...), the "
@@ -97,28 +110,26 @@ auto& saveBestSolutionFlag = argParser.add<ComplexFlag>(
 auto& bestSolutionFileArg =
     saveBestSolutionFlag.add<Arg<ofstream>>("file_path", Policy::MANDATORY, "");
 
-mt19937 globalRandomGenerator;
-auto& randomSeedFlag = argParser.add<ComplexFlag>(
-    "--random-seed", Policy::OPTIONAL, "Specify a random seed.");
-auto& seedArg = randomSeedFlag.add<Arg<unsigned int>>(
-    "integer_seed", Policy::MANDATORY,
-    "Integer seed to use for random generator.");
+auto& searchLimitsGroup = argParser.makePrintGroup(
+    "search-limits",
+    "Limiting search, CPU time, real time, iteration count, solution count...");
 
-auto& exclusiveTimeLimitGroup = argParser.makeExclusiveGroup(Policy::OPTIONAL);
-auto& cpuTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
-    "--cpu-time-limit", "Specify the CPU time limit in seconds.");
+auto& cpuTimeLimitFlag = searchLimitsGroup.add<ComplexFlag>(
+    "--cpu-time-limit", Policy::OPTIONAL,
+    "Specify the CPU time limit in seconds.");
 
 auto& cpuTimeLimitArg =
     cpuTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
 
-auto& realTimeLimitFlag = exclusiveTimeLimitGroup.add<ComplexFlag>(
-    "--real-time-limit", "Specify the CPU time limit in seconds.");
+auto& realTimeLimitFlag = searchLimitsGroup.add<ComplexFlag>(
+    "--real-time-limit", Policy::OPTIONAL,
+    "Specify the CPU time limit in seconds.");
 
 auto& realTimeLimitArg =
     realTimeLimitFlag.add<Arg<int>>("number_seconds", Policy::MANDATORY, "");
 bool hasIterationLimit = false;
 UInt64 iterationLimit = 0;
-auto& iterationLimitFlag = argParser.add<ComplexFlag>(
+auto& iterationLimitFlag = searchLimitsGroup.add<ComplexFlag>(
     "--iteration-limit", Policy::OPTIONAL,
     "Specify the maximum number of iterations to spend in search.");
 
@@ -132,7 +143,7 @@ auto& iterationLimitArg = iterationLimitFlag.add<Arg<UInt64>>(
 
 bool hasSolutionLimit = false;
 UInt64 solutionLimit = 0;
-auto& solutionLimitFlag = argParser.add<ComplexFlag>(
+auto& solutionLimitFlag = searchLimitsGroup.add<ComplexFlag>(
     "--solution-limit", Policy::OPTIONAL,
     "Exit search if the specified number of solutions has been found.  Note, "
     "this only applies to optimisation problems.  Only solutions that improve "
@@ -151,20 +162,20 @@ auto& solutionLimitArg = solutionLimitFlag.add<Arg<UInt64>>(
 
 extern bool noPrintSolutions;
 bool noPrintSolutions = false;
-auto& noPrintSolutionsFlag = argParser.add<Flag>(
+auto& noPrintSolutionsFlag = outputGroup.add<Flag>(
     "--no-print-solutions", Policy::OPTIONAL,
     "Do not print solutions, useful for timing experiements.",
     [](auto&) { noPrintSolutions = true; });
 
 extern bool quietMode;
 bool quietMode = true;
-auto& verboseModeFlag = argParser.add<Flag>(
+auto& verboseModeFlag = outputGroup.add<Flag>(
     "--show-progress-stats", Policy::OPTIONAL,
     "print stats information every time an improvement to the objective "
     "or violation is made.",
     [](auto&) { quietMode = false; });
 
-auto& showNhStatsFlag = argParser.add<ComplexFlag>(
+auto& showNhStatsFlag = outputGroup.add<ComplexFlag>(
     "--show-nh-stats", Policy::OPTIONAL,
     "Print stats specific to each neighbourhood in a CSV format to stdout.");
 
@@ -174,7 +185,7 @@ auto& showNhStatsArg = showNhStatsFlag.add<Arg<ofstream>>(
     "stdout.");
 
 auto& saveUcbArg =
-    argParser
+    outputGroup
         .add<ComplexFlag>("--save-ucb-state", Policy::OPTIONAL,
                           "Save learned neighbourhood UCB info.\n")
         .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY,
@@ -188,6 +199,8 @@ enum ExploreStrategyChoice {
     TEST_EXPLORE
 };
 
+auto& searchStrategiesGroup = argParser.makePrintGroup(
+    "strategies", "Selecting search and neighbourhood selection strategies...");
 enum SelectionStrategyChoice { RANDOM, UCB, UCB_WITH_TRIGGER, INTERACTIVE };
 
 ImproveStrategyChoice improveStrategyChoice = HILL_CLIMBING;
@@ -197,7 +210,7 @@ SelectionStrategyChoice selectionStrategyChoice = UCB;
 double DEFAULT_UCB_EXPLORATION_BIAS = 1;
 
 auto& improveStratGroup =
-    argParser
+    searchStrategiesGroup
         .add<ComplexFlag>("--improve", Policy::OPTIONAL,
                           "Specify the strategy used to improve on an "
                           "assignment. (default=hc).")
@@ -212,7 +225,7 @@ auto& testClimbFlag = improveStratGroup.add<Flag>(
     [](auto&&) { improveStrategyChoice = TEST_CLIMB; });
 
 auto& exploreStratGroup =
-    argParser
+    searchStrategiesGroup
         .add<ComplexFlag>("--explore", Policy::OPTIONAL,
                           "Specify the strategy used to explore when the "
                           "improve strategy fails to improve on an assignment. "
@@ -237,7 +250,7 @@ auto& testExploreFlag = exploreStratGroup.add<Flag>(
     [](auto&&) { exploreStrategyChoice = TEST_EXPLORE; });
 
 auto& selectionStratGroup =
-    argParser
+    searchStrategiesGroup
         .add<ComplexFlag>("--selection", Policy::OPTIONAL,
                           "Specify neighbourhood selection strategy "
                           "(default=ucb).")
@@ -262,26 +275,26 @@ auto& ucbWithTriggerFlag = selectionStratGroup.add<Flag>(
 auto& interactiveFlag = selectionStratGroup.add<Flag>(
     "i", "interactive, Prompt user for neighbourhood to select.",
     [](auto&&) { selectionStrategyChoice = INTERACTIVE; });
-
-auto& disableVioBiasFlag = argParser.add<Flag>(
+auto& devGroup = argParser.makePrintGroup("developer", "Developer options...");
+auto& disableVioBiasFlag = devGroup.add<Flag>(
     "--disable-vio-bias", Policy::OPTIONAL,
     "Disable the search from biasing towards violating variables.");
 
 extern bool allowForwardingOfDefiningExprs;
 bool allowForwardingOfDefiningExprs = true;
 auto& disableDefinedExprsFlag =
-    argParser.add<Flag>("--disable-defined-vars", Policy::OPTIONAL,
-                        "Disable the forwarding of values from expressions to "
-                        "the variables that they define through equality.  "
-                        "This does not include top level equalities.",
-                        [](auto&) { allowForwardingOfDefiningExprs = false; });
+    devGroup.add<Flag>("--disable-defined-vars", Policy::OPTIONAL,
+                       "Disable the forwarding of values from expressions to "
+                       "the variables that they define through equality.  "
+                       "This does not include top level equalities.",
+                       [](auto&) { allowForwardingOfDefiningExprs = false; });
 void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);
 void sigAlarmHandler(int);
 
 bool runSanityChecks = false;
 bool verboseSanityError = false;
-auto& sanityCheckFlag = argParser.add<ComplexFlag>(
+auto& sanityCheckFlag = devGroup.add<ComplexFlag>(
     "--sanity-check", Policy::OPTIONAL,
     "Activate sanity check mode, this is a debugging feature,.  After each "
     "move, the state is scanned for errors caused by bad triggering.  Note, "
@@ -319,7 +332,7 @@ auto& sanityCheckIntervalArg =
                           }));
 
 debug_code(bool debugLogAllowed = true;
-           auto& disableDebugLoggingFlag = argParser.add<Flag>(
+           auto& disableDebugLoggingFlag = devGroup.add<Flag>(
                "--disable-debug-log", Policy::OPTIONAL,
                "Included only for debug builds, can be used to silence "
                "logging "
@@ -549,7 +562,7 @@ int main(const int argc, const char** argv) {
     }
     if (argc == 1) {
         argParser.printAllUsageInfo(cout, argv[0]);
-        myExit(0);
+        exit(0);
     }
     try {
         argParser.validateArgs(argc, argv, false);
@@ -558,7 +571,8 @@ int main(const int argc, const char** argv) {
         myCerr << "Successfully parsed: ";
         argParser.printSuccessfullyParsed(myCerr, argv);
         myCerr << "\n\n";
-        myCerr << "For usage information, run " << argv[0] << endl;
+        myCerr << "For usage information, run " << argv[0] << " --help "
+               << endl;
         myExit(1);
     }
 

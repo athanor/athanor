@@ -1,5 +1,6 @@
 
-Just some notes for me on releases
+Just some notes for me on releases, which are now automatically handled by azure.
+
 
 Create folder release_vMYVERSION_mac
 

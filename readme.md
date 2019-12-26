@@ -1,5 +1,7 @@
 # __ATHANOR__
 ## Automated, scalable, local search of constraint satisfaction and constraint optimisation problems written in __Essence__
+
+* [IJCAI paper here](https://www.ijcai.org/proceedings/2019/0148.pdf)
 * [Why use __ATHANOR__](#why)
 * [Using __ATHANOR__](#using)
 * [Building from source](#installation)
@@ -101,3 +103,5 @@ For parallel build, `make -jn` replacing n with number of cores.
 
 *Note*, you can specify the compiler to use by writing `export CXX=PUT_COMPILER_COMMAND_HERE`.  For example `export CXX=clang++`.
 
+
+[Who am I](http://saad.ai)

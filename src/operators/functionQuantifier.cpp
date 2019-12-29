@@ -63,6 +63,7 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
         }
         auto view = op->container->getViewIfDefined();
         if (!view) {
+            return;
         }
         InitialUnroller<FunctionView>::initialUnroll(*op, *view);
     }
@@ -72,6 +73,9 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
         correctUnrolledTupleIndex(index1);
         correctUnrolledTupleIndex(index2);
     }
+
+    void memberHasBecomeUndefined(UInt) final {}
+    void memberHasBecomeDefined(UInt) final {}
 
     void correctUnrolledTupleIndex(size_t index) {
         debug_log("Correcting tuple index " << index);

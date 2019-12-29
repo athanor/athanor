@@ -10,18 +10,19 @@ ParseResult parseOpFunctionLit(json& functionExpr, ParsedModel& parsedModel) {
         functionExpr, parsedModel, [](json& j) -> json& { return j[0]; });
     auto rangeResult = parseAllAsSameType(
         functionExpr, parsedModel, [](json& j) -> json& { return j[1]; });
-    if (!domainResult.allConstant || !rangeResult.allConstant) {
-        myCerr << "Error: at the moment, do not support function literals with "
-                  "decision variables.\n";
+    if (!domainResult.allConstant) {
+        myCerr << "Error: at the moment, do not support function literals "
+                  "who's domain (preimages) "
+                  "contain decision variables.  The co-domain (range) may "
+                  "contain decision variables.\n";
+        myExit(1);
     }
-    auto function = make<FunctionValue>();
-    lib::visit(
-        [&](auto& domainExprs, auto& rangeExprs) {
+    return lib::visit(
+        [&](auto& domainExprs, auto& rangeExprs) -> ParseResult {
             typedef viewType(rangeExprs) View;
-            typedef typename AssociatedValueType<View>::type Value;
-            function->resetDimensions<View>(
-                domainResult.domain,
-                FunctionView::makeDimensionVecFromDomain(domainResult.domain));
+            auto op =
+                OpMaker<OpFunctionLitBasic>::make<View>(domainResult.domain);
+            auto& functionView = *op->view();
             for (size_t i = 0; i < rangeExprs.size(); i++) {
                 if (!domainExprs[i]->isConstant()) {
                     myCerr << "Error: function literals only support constants "
@@ -29,29 +30,24 @@ ParseResult parseOpFunctionLit(json& functionExpr, ParsedModel& parsedModel) {
                     myExit(1);
                 }
                 domainExprs[i]->evaluate();
-                auto index = function->domainToIndex(
+                auto index = functionView.domainToIndex(
                     domainExprs[i]->getViewIfDefined().checkedGet(
-                        NO_FUNCTION_UNDEFINED_MEMBERS));
+                        "Error: whilst parsing function lit, preimage is "
+                        "undefined."));
                 if (!index) {
                     myCerr
                         << "Error in function literal: domain out of range.\n";
-                    myAbort();
-                }
-                if (!getAs<Value>(rangeExprs[i])) {
-                    myCerr << "Error: function literals currently only "
-                              "support literals, expressions not allowed.\n";
                     myExit(1);
                 }
-                function->assignImage<Value>(*index,
-                                             assumeAsValue(rangeExprs[i]));
+                functionView.assignImage(*index, rangeExprs[i]);
             }
+            auto domain = make_shared<FunctionDomain>(
+                JectivityAttr::NONE, PartialAttr::TOTAL, domainResult.domain,
+                rangeResult.domain);
+            op->setConstant(rangeResult.allConstant);
+            return ParseResult(domain, op, rangeResult.hasEmptyType);
         },
         domainResult.exprs, rangeResult.exprs);
-    function->setConstant(true);
-    auto domain =
-        make_shared<FunctionDomain>(JectivityAttr::NONE, PartialAttr::TOTAL,
-                                    domainResult.domain, rangeResult.domain);
-    return ParseResult(domain, function.asExpr(), false);
 }
 
 shared_ptr<FunctionDomain> parseDomainFunction(json& functionDomainExpr,
@@ -127,4 +123,31 @@ shared_ptr<FunctionDomain> parseDomainMatrix(json& matrixDomainExpr,
     }
     return FunctionDomain::makeMatrixDomain(
         *indexingDomainIntTest, parseDomain(matrixDomainExpr[1], parsedModel));
+}
+ParseResult parseOpSequenceLit(json& matrixExpr, ParsedModel& parsedModel);
+shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
+                                     ParsedModel& parsedModel);
+ParseResult parseOpMatrixLit(json& matrixExpr, ParsedModel& parsedModel) {
+    auto domain = parseDomainInt(matrixExpr[0]["DomainInt"], parsedModel);
+    if (domain->bounds.size() == 1 && domain->bounds.front().first == 1) {
+        return parseOpSequenceLit(matrixExpr[1], parsedModel);
+    }
+
+    auto rangeResult = parseAllAsSameType(matrixExpr[1], parsedModel);
+    return lib::visit(
+        [&](auto& rangeExprs) -> ParseResult {
+            typedef viewType(rangeExprs) View;
+            auto op = OpMaker<OpFunctionLitBasic>::make<View>(domain);
+            auto& functionView = *op->view();
+            for (size_t i = 0; i < rangeExprs.size(); i++) {
+                functionView.assignImage(i, rangeExprs[i]);
+            }
+            auto functionDomain = make_shared<FunctionDomain>(
+                JectivityAttr::NONE, PartialAttr::TOTAL, domain,
+                rangeResult.domain);
+            functionDomain->isMatrixDomain = true;
+            op->setConstant(rangeResult.allConstant);
+            return ParseResult(functionDomain, op, rangeResult.hasEmptyType);
+        },
+        rangeResult.exprs);
 }

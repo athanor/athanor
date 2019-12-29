@@ -297,5 +297,12 @@ template <>
 struct OpMaker<OpSetIntersect> {
     static ExprRef<SetView> make(ExprRef<SetView> l, ExprRef<SetView> r);
 };
+struct OpFunctionLitBasic;
+template <>
+struct OpMaker<OpFunctionLitBasic> {
+    template <typename RangeViewType>
+    static EnableIfViewAndReturn<RangeViewType, ExprRef<FunctionView>> make(
+        AnyDomainRef preImageDomain);
+};
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

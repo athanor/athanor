@@ -269,6 +269,8 @@ struct OpSequenceIndex<SequenceMemberViewType>::MemberTrigger
         this->op->getMember().get()->addTrigger(trigger);
         this->op->memberTrigger = trigger;
     }
+    void hasBecomeDefined() override {}
+    void hasBecomeUndefined() override {}
 };
 
 template <typename SequenceMemberViewType>

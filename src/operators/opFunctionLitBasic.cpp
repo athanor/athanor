@@ -1,22 +1,22 @@
-#include "operators/opSequenceLit.h"
+#include "operators/opFunctionLitBasic.h"
 #include <cassert>
 #include <cstdlib>
 #include "operators/simpleOperator.hpp"
 #include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-void OpSequenceLit::evaluateImpl() {
-    numberUndefined = 0;
+void OpFunctionLitBasic::evaluateImpl() {
+        numberUndefined = 0;
     lib::visit(
         [&](auto& members) {
             for (auto& member : members) {
                 member->evaluate();
                 if (!member->appearsDefined()) {
-                    numberUndefined++;
+                    ++numberUndefined;
                 }
             }
         },
-        members);
+        range);
     this->setAppearsDefined(numberUndefined == 0);
 }
 
@@ -24,40 +24,44 @@ namespace {
 template <typename TriggerType>
 struct ExprTrigger
     : public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>,
-      public OpSequenceLit::ExprTriggerBase {
+      public OpFunctionLitBasic::ExprTriggerBase {
     typedef typename AssociatedViewType<TriggerType>::type View;
     using ExprTriggerBase::ExprTriggerBase;
     ExprRef<View>& getTriggeringOperand() {
-        return op->getMembers<View>()[index];
+        return op->getRange<View>()[index];
     }
-    ExprTrigger(OpSequenceLit* op, UInt index)
+    ExprTrigger(OpFunctionLitBasic* op, UInt index)
         : ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>(
               op->getMembers<View>()[index]),
           ExprTriggerBase(op, index) {}
     void adapterValueChanged() {
-        this->op->template changeSubsequenceAndNotify<View>(this->index,
-                                                            this->index + 1);
+        this->op->template imageChanged<View>(this->index);
+        this->op->notifyImageChanged(this->index);
     }
 
     void reattachTrigger() final {
         deleteTrigger(static_pointer_cast<ExprTrigger<TriggerType>>(
             op->exprTriggers[index]));
         auto trigger = make_shared<ExprTrigger<TriggerType>>(op, index);
-        op->getMembers<typename AssociatedViewType<TriggerType>::type>()[index]
+        op->getRange<typename AssociatedViewType<TriggerType>::type>()[index]
             ->addTrigger(trigger);
         op->exprTriggers[index] = trigger;
     }
 
+
+
+
     void adapterHasBecomeDefined() {
-        op->template defineMemberAndNotify<View>(index);
+        this->op->template defineMemberAndNotify<View>(this->index);
     }
 
     void adapterHasBecomeUndefined() {
-        op->template undefineMemberAndNotify<View>(index);
+        this->op->template undefineMemberAndNotify<View>(this->index);
     }
-}; // namespace
+};
 }  // namespace
-void OpSequenceLit::startTriggeringImpl() {
+
+void OpFunctionLitBasic::startTriggeringImpl() {
     if (exprTriggers.empty()) {
         lib::visit(
             [&](auto& members) {
@@ -71,11 +75,11 @@ void OpSequenceLit::startTriggeringImpl() {
                     members[i]->startTriggering();
                 }
             },
-            members);
+            range);
     }
 }
 
-void OpSequenceLit::stopTriggeringOnChildren() {
+void OpFunctionLitBasic::stopTriggeringOnChildren() {
     if (!exprTriggers.empty()) {
         lib::visit(
             [&](auto& members) {
@@ -87,11 +91,11 @@ void OpSequenceLit::stopTriggeringOnChildren() {
                 }
                 exprTriggers.clear();
             },
-            members);
+            range);
     }
 }
 
-void OpSequenceLit::stopTriggering() {
+void OpFunctionLitBasic::stopTriggering() {
     if (!exprTriggers.empty()) {
         lib::visit(
             [&](auto& members) {
@@ -106,15 +110,15 @@ void OpSequenceLit::stopTriggering() {
                 }
                 exprTriggers.clear();
             },
-            members);
+            range);
     }
 }
 
-void OpSequenceLit::updateVarViolationsImpl(const ViolationContext&,
+void OpFunctionLitBasic::updateVarViolationsImpl(const ViolationContext&,
                                             ViolationContainer&) {}
 
-ExprRef<SequenceView> OpSequenceLit::deepCopyForUnrollImpl(
-    const ExprRef<SequenceView>&, const AnyIterRef& iterator) const {
+ExprRef<FunctionView> OpFunctionLitBasic::deepCopyForUnrollImpl(
+    const ExprRef<FunctionView>&, const AnyIterRef& iterator) const {
     AnyExprVec newMembers;
     lib::visit(
         [&](auto& members) {
@@ -125,15 +129,15 @@ ExprRef<SequenceView> OpSequenceLit::deepCopyForUnrollImpl(
                     member->deepCopyForUnroll(member, iterator));
             }
         },
-        members);
+        range);
 
-    auto newOpSequenceLit = make_shared<OpSequenceLit>(move(newMembers));
-    return newOpSequenceLit;
+    auto newOpFunctionLitBasic = make_shared<OpFunctionLitBasic>(fromDomain,move(newMembers));
+    return newOpFunctionLitBasic;
 }
 
-std::ostream& OpSequenceLit::dumpState(std::ostream& os) const {
-    os << "OpSequenceLit: numberUndefined=" << numberUndefined
-       << ", appearsDefined=" << this->appearsDefined() << ", exprs=[";
+std::ostream& OpFunctionLitBasic::dumpState(std::ostream& os) const {
+    os << "OpFunctionLitBasic(from " << fromDomain << "): numberUndefined=" << numberUndefined
+       << ", appearsDefined=" << this->appearsDefined() << ", range=(";
     lib::visit(
         [&](auto& members) {
             bool first = true;
@@ -146,12 +150,12 @@ std::ostream& OpSequenceLit::dumpState(std::ostream& os) const {
                 member->dumpState(os);
             }
         },
-        members);
-    os << "]";
+        range);
+    os << ")";
     return os;
 }
 
-void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func,
+void OpFunctionLitBasic::findAndReplaceSelf(const FindAndReplaceFunction& func,
                                        PathExtension path) {
     lib::visit(
         [&](auto& members) {
@@ -159,13 +163,13 @@ void OpSequenceLit::findAndReplaceSelf(const FindAndReplaceFunction& func,
                 member = findAndReplace(member, func, path);
             }
         },
-        members);
+        range);
 }
 
-pair<bool, ExprRef<SequenceView>> OpSequenceLit::optimiseImpl(
-    ExprRef<SequenceView>&, PathExtension path) {
-    auto newOp = make_shared<OpSequenceLit>(members);
-    AnyExprRef newOpAsExpr = ExprRef<SequenceView>(newOp);
+pair<bool, ExprRef<FunctionView>> OpFunctionLitBasic::optimiseImpl(
+    ExprRef<FunctionView>&, PathExtension path) {
+    auto newOp = make_shared<OpFunctionLitBasic>(fromDomain,range);
+    AnyExprRef newOpAsExpr = ExprRef<FunctionView>(newOp);
     bool optimised = false;
     lib::visit(
         [&](auto& operands) {
@@ -173,28 +177,36 @@ pair<bool, ExprRef<SequenceView>> OpSequenceLit::optimiseImpl(
                 optimised |= optimise(newOpAsExpr, operand, path);
             }
         },
-        newOp->members);
+        newOp->range);
 
     return std::make_pair(optimised, newOp);
 }
 
-string OpSequenceLit::getOpName() const { return "OpSequenceLit"; }
+string OpFunctionLitBasic::getOpName() const { return toString("OpFunctionLitBasic(from ",  fromDomain,  ")"); }
 
-void OpSequenceLit::debugSanityCheckImpl() const {
-    lib::visit([&](auto& members) { recurseSanityChecks(members); }, members);
+void OpFunctionLitBasic::debugSanityCheckImpl() const {
+    lib::visit([&](auto& members) { recurseSanityChecks(members); }, range);
     this->standardSanityChecksForThisType();
 }
 
-AnyExprVec& OpSequenceLit::getChildrenOperands() { return members; }
+AnyExprVec& OpFunctionLitBasic::getChildrenOperands() { return range; }
 
 template <typename Op>
 struct OpMaker;
 
 template <>
-struct OpMaker<OpSequenceLit> {
-    static ExprRef<SequenceView> make(AnyExprVec members);
+struct OpMaker<OpFunctionLitBasic> {
+    template<typename RangeViewType>
+    static EnableIfViewAndReturn<RangeViewType, ExprRef<FunctionView>> make(AnyDomainRef preImageDomain);
 };
 
-ExprRef<SequenceView> OpMaker<OpSequenceLit>::make(AnyExprVec o) {
-    return make_shared<OpSequenceLit>(move(o));
+template<typename RangeViewType>
+EnableIfViewAndReturn<RangeViewType, ExprRef<FunctionView>> OpMaker<OpFunctionLitBasic>::make(AnyDomainRef preImageDomain) {
+    auto op =  make_shared<OpFunctionLitBasic>();
+    op->resetDimensions<RangeViewType>(preImageDomain, FunctionView::makeDimensionVecFromDomain(preImageDomain));
+    return op;
 }
+
+#define opMakerInstantiator(name) template ExprRef<FunctionView> OpMaker<OpFunctionLitBasic>::make<name##View>(AnyDomainRef);
+buildForAllTypes(opMakerInstantiator,);
+#undef opMakerInstantiator

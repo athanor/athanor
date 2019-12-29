@@ -178,6 +178,8 @@ struct OpTupleIndex<TupleMemberViewType>::MemberTrigger
         this->op->getMember().get()->addTrigger(trigger);
         this->op->memberTrigger = trigger;
     }
+    void hasBecomeDefined() override {}
+    void hasBecomeUndefined() override {}
 };
 
 template <typename TupleMemberViewType>

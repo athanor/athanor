@@ -204,6 +204,24 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
         }
     }
 
+    void memberHasBecomeUndefined(UInt index) final {
+        debug_code(assert((!is_same<BoolView, FunctionMemberViewType>::value)));
+        if (!op->appearsDefined() || (Int)index != op->cachedIndex) {
+            return;
+        }
+        op->setAppearsDefined(false);
+        op->notifyValueUndefined();
+    }
+
+    void memberHasBecomeDefined(UInt index) final {
+        debug_code(assert((!is_same<BoolView, FunctionMemberViewType>::value)));
+        if (!op->locallyDefined || (Int)index != op->cachedIndex) {
+            return;
+        }
+        op->setAppearsDefined(true);
+        op->notifyValueDefined();
+    }
+
     void valueChanged() final {
         if (!op->eventForwardedAsDefinednessChange()) {
             op->notifyEntireValueChanged();
@@ -297,6 +315,9 @@ struct OpFunctionImage<FunctionMemberViewType>::MemberTrigger
         this->op->getMember().get()->addTrigger(trigger);
         this->op->memberTrigger = trigger;
     }
+
+    void hasBecomeDefined() override {}
+    void hasBecomeUndefined() override {}
 };
 
 template <typename FunctionMemberViewType>

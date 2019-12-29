@@ -490,7 +490,9 @@ std::ostream& Quantifier<ContainerType>::dumpState(std::ostream& os) const {
     lib::visit(
         [&](auto& members) {
             //            typedef viewType(members) View;
-            os << "quantifier(container=";
+            os << "quantifier(numberUndefined=" << numberUndefined
+               << ", apearsDefined=" << this->appearsDefined()
+               << ", container=";
             container->dumpState(os) << ",\n";
             //            os << "expr=";
             //            lib::get<ExprRef<View>>(expr)->dumpState(os) <<
@@ -551,6 +553,7 @@ void Quantifier<ContainerType>::debugSanityCheckImpl() const {
     if (!view) {
         return;
     }
+    standardSanityChecksForThisType();
     ContainerSanityChecker<viewType(container)>::debugSanityCheck(*this, *view);
     UInt checkNumberUndefined = 0;
     lib::visit(

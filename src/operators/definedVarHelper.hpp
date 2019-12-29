@@ -174,7 +174,8 @@ inline bool isSuitableForDefiningVars(const PathExtension& path) {
         lib::visit(
             [&](auto& expr) {
                 if (!getAs<OpAnd>(expr) &&
-                    !std::is_same<SequenceView, viewType(expr)>::value) {
+                    !std::is_same<SequenceView, viewType(expr)>::value &&
+                    !std::is_same<FunctionView, viewType(expr)>::value) {
                     success = false;
                 }
                 current = current->parent;

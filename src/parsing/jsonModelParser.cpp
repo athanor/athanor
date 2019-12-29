@@ -1,5 +1,4 @@
 
-
 #include "parsing/jsonModelParser.h"
 #include <functional>
 #include <iostream>
@@ -28,6 +27,7 @@ typedef function<ParseResult(json&, ParsedModel&)> ParseExprFunction;
 typedef function<AnyDomainRef(json&, ParsedModel&)> ParseDomainFunction;
 
 ParseResult parseOpSetLit(json& setExpr, ParsedModel& parsedModel);
+ParseResult parseOpMatrixLit(json& matrixExpr, ParsedModel& parsedModel);
 ParseResult parseOpFunctionLit(json& functionExpr, ParsedModel& parsedModel);
 ParseResult parseOpRecordLit(json& tupleExpr, ParsedModel& parsedModel);
 ParseResult parseOpTupleLit(json& tupleExpr, ParsedModel& parsedModel);
@@ -340,8 +340,7 @@ optional<ParseResult> tryParseExpr(json& essenceExpr,
              {"ConstantBool", parseConstantBool},
              {"AbsLitSet", parseOpSetLit},
              {"AbsLitSequence", parseOpSequenceLit},
-             {"AbsLitMatrix",
-              [](auto& j, auto& pm) { return parseOpSequenceLit(j[1], pm); }},
+             {"AbsLitMatrix", parseOpMatrixLit},
              {"AbsLitMSet", parseOpMSetLit},
              {"AbsLitFunction", parseOpFunctionLit},
              {"AbsLitTuple", parseOpTupleLit},

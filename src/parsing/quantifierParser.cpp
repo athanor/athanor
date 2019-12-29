@@ -511,18 +511,17 @@ ParseResult quantifyOverSet(shared_ptr<SetDomain>& domain,
         domain->inner);
 }
 
-ParseResult quantifyOverFunction(shared_ptr<FunctionDomain>& domain,
-                                 ExprRef<FunctionView>& expr,
-                                 bool hasEmptyType) {
+ParseResult quantifyOverFunctionRange(shared_ptr<FunctionDomain>& domain,
+                                      ExprRef<FunctionView>& expr,
+                                      bool hasEmptyType) {
     auto quant = make_shared<Quantifier<FunctionView>>(expr);
     return lib::visit(
         [&](auto& innerDomain) {
             auto iter = ExprRef<TupleView>(quant->newIterRef<TupleView>());
             auto image = makeTupleIndexFromDomain(innerDomain, iter, 1);
             quant->setExpression(image);
-            return ParseResult(
-                fakeSequenceDomain(fakeTupleDomain({domain->from, domain->to})),
-                ExprRef<SequenceView>(quant), hasEmptyType);
+            return ParseResult(fakeSequenceDomain(domain->to),
+                               ExprRef<SequenceView>(quant), hasEmptyType);
         },
         domain->to);
 }
@@ -536,7 +535,7 @@ ParseResult toSequence(ParseResult parsedExpr) {
                                    parsedExpr.hasEmptyType);
         },
         [&](shared_ptr<FunctionDomain>& domain) {
-            return quantifyOverFunction(
+            return quantifyOverFunctionRange(
                 domain, lib::get<ExprRef<FunctionView>>(parsedExpr.expr),
                 parsedExpr.hasEmptyType);
         },

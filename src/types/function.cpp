@@ -461,12 +461,20 @@ bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
 void FunctionView::standardSanityChecksForThisType() const {
     lib::visit(
         [&](auto& range) {
-            cachedHashTotal.applyIfValid([&](const auto& value) {
-                HashType checkCachedHashTotal;
-                for (size_t i = 0; i < range.size(); i++) {
+            UInt checkNumberUndefined = 0;
+            HashType checkCachedHashTotal;
+            for (size_t i = 0; i < range.size(); i++) {
+                if (!range[i]->appearsDefined()) {
+                    checkNumberUndefined++;
+                    continue;
+                }
+                cachedHashTotal.applyIfValid([&](auto&) {
                     checkCachedHashTotal +=
                         calcMemberHash<viewType(range)>(i, range[i]);
-                }
+                });
+            }
+            sanityEqualsCheck(checkNumberUndefined, numberUndefined);
+            cachedHashTotal.applyIfValid([&](auto& value) {
                 sanityEqualsCheck(checkCachedHashTotal, value);
             });
         },
@@ -500,8 +508,7 @@ void FunctionView::debugCheckDimensionVec() {
 }
 
 template <>
-size_t getResourceLowerBound<FunctionDomain>(
-    const FunctionDomain& domain) {
+size_t getResourceLowerBound<FunctionDomain>(const FunctionDomain& domain) {
     DimensionVec dimVec;
     makeDimensionVecFromDomainHelper(domain.from, dimVec);
 

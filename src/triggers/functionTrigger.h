@@ -5,6 +5,8 @@
 struct FunctionOuterTrigger : public virtual TriggerBase {
     // later will have more specific triggers, currently only those inherited
     // from TriggerBase
+    virtual void memberHasBecomeDefined(UInt) = 0;
+    virtual void memberHasBecomeUndefined(UInt) = 0;
 };
 
 struct FunctionMemberTrigger : public virtual TriggerBase {
@@ -78,6 +80,15 @@ struct TriggerContainer<FunctionView>
                           singleMemberTriggers[index2]);
         }
     }
+    inline void notifyMemberDefined(UInt index) {
+        visitTriggers([&](auto& t) { t->memberHasBecomeDefined(index); },
+                      triggers);
+    }
+
+    inline void notifyMemberUndefined(UInt index) {
+        visitTriggers([&](auto& t) { t->memberHasBecomeUndefined(index); },
+                      triggers);
+    }
 };
 
 template <typename Child>
@@ -130,11 +141,26 @@ struct ChangeTriggerAdapter<FunctionTrigger, Child>
     }
     void hasBecomeDefined() override { eventHandledAsDefinednessChange(); }
     void hasBecomeUndefined() override { eventHandledAsDefinednessChange(); }
+
+    void memberHasBecomeDefined(UInt) override {
+        eventHandledAsDefinednessChange();
+    }
+    void memberHasBecomeUndefined(UInt) override {
+        eventHandledAsDefinednessChange();
+    }
 };
 template <typename Op, typename Child>
 struct ForwardingTrigger<FunctionTrigger, Op, Child>
     : public ForwardingTriggerBase<FunctionTrigger, Op> {
     using ForwardingTriggerBase<FunctionTrigger, Op>::ForwardingTriggerBase;
+
+    void reevaluateDefined() {
+        auto view = static_cast<Child*>(this)
+                        ->getTriggeringOperand()
+                        ->getViewIfDefined();
+        this->op->setAppearsDefined(view.hasValue());
+    }
+
     void imageChanged(const std::vector<UInt>& indices) override {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyImagesChanged(indices);
@@ -155,6 +181,18 @@ struct ForwardingTrigger<FunctionTrigger, Op, Child>
     void imageSwap(UInt index1, UInt index2) override {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyImagesSwapped(index1, index2);
+        }
+    }
+    void memberHasBecomeUndefined(UInt index) override {
+        reevaluateDefined();
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberUndefined(index);
+        }
+    }
+    void memberHasBecomeDefined(UInt index) override {
+        reevaluateDefined();
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyMemberDefined(index);
         }
     }
 };

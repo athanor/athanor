@@ -77,6 +77,18 @@ struct FunctionView : public ExprInterface<FunctionView>,
     DimensionVec dimensions;
     AnyExprVec range;
     SimpleCache<HashType> cachedHashTotal;
+    UInt numberUndefined = 0;
+    FunctionView() {}
+    FunctionView(AnyDomainRef preImageDomain, AnyExprVec rangeIn) {
+        lib::visit(
+            [&](auto& rangeIn) {
+                this->resetDimensions<viewType(rangeIn)>(
+                    preImageDomain, makeDimensionVecFromDomain(preImageDomain),
+                    false);
+                this->range = rangeIn;
+            },
+            rangeIn);
+    }
 
     lib::optional<UInt> domainToIndex(const IntView& intV);
     lib::optional<UInt> domainToIndex(const EnumView& tupleV);
@@ -115,7 +127,8 @@ struct FunctionView : public ExprInterface<FunctionView>,
     void debugCheckDimensionVec();
     template <typename InnerViewType, typename DimVec,
               EnableIfView<InnerViewType> = 0>
-    void resetDimensions(AnyDomainRef fromDom, DimVec&& dim) {
+    void resetDimensions(AnyDomainRef fromDom, DimVec&& dim,
+                         bool alocateRange = true) {
         fromDomain = std::move(fromDom);
         dimensions = std::forward<DimVec>(dim);
         size_t requiredSize = 1;
@@ -125,10 +138,11 @@ struct FunctionView : public ExprInterface<FunctionView>,
             dim.blockSize = requiredSize;
             requiredSize *= (dim.upper - dim.lower) + 1;
         }
-        range.emplace<ExprRefVec<InnerViewType>>().assign(requiredSize,
-                                                          nullptr);
-        debug_code(debugCheckDimensionVec());
-        ;
+        if (alocateRange) {
+            range.emplace<ExprRefVec<InnerViewType>>().assign(requiredSize,
+                                                              nullptr);
+            debug_code(debugCheckDimensionVec());
+        }
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -147,13 +161,20 @@ struct FunctionView : public ExprInterface<FunctionView>,
         auto& range = getRange<InnerViewType>();
         debug_code(assert(index < range.size()));
         cachedHashTotal.applyIfValid([&](auto& value) {
-            value -= this->calcMemberHash(index, range[index]);
+            if (range[index]) {
+                value -= this->calcMemberHash(index, range[index]);
+            }
         });
         range[index] = member;
-        cachedHashTotal.applyIfValid([&](auto& value) {
-            value += this->calcMemberHash(index, range[index]);
-        });
+        if (member->appearsDefined()) {
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                value += this->calcMemberHash(index, range[index]);
+            });
+        } else {
+            numberUndefined++;
+        }
     }
+
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline lib::optional<HashType> notifyPossibleImageChange(UInt index) {
         debug_code(assert(index < rangeSize()));
@@ -278,6 +299,35 @@ struct FunctionView : public ExprInterface<FunctionView>,
                 membersImpl.clear();
             },
             range);
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void defineMemberAndNotify(UInt index) {
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            value +=
+                this->calcMemberHash(index, getMembers<InnerViewType>()[index]);
+        });
+        debug_code(assert(numberUndefined > 0));
+        numberUndefined--;
+        if (numberUndefined == 0) {
+            this->setAppearsDefined(true);
+        }
+        notifyMemberDefined(index);
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void undefineMemberAndNotify(UInt index) {
+        checkNotUsingCachedHash();
+        undefineMemberAndNotify<InnerViewType>(index, HashType(0));
+    }
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void undefineMemberAndNotify(UInt index,
+                                        HashType hashOfPossibleChange) {
+        cachedHashTotal.applyIfValid(
+            [&](auto& value) { value -= hashOfPossibleChange; });
+        numberUndefined++;
+        this->setAppearsDefined(false);
+        notifyMemberUndefined(index);
     }
 };
 

@@ -7,12 +7,13 @@
 struct OpSetIntersect;
 template <>
 struct OperatorTrates<OpSetIntersect> {
-    template<bool isLeft>
+    template <bool isLeft>
     struct OperandTrigger;
     typedef OperandTrigger<true> LeftTrigger;
     typedef OperandTrigger<false> RightTrigger;
 };
-struct OpSetIntersect : public SimpleBinaryOperator<SetView, SetView, OpSetIntersect> {
+struct OpSetIntersect
+    : public SimpleBinaryOperator<SetView, SetView, OpSetIntersect> {
     using SimpleBinaryOperator<SetView, SetView,
                                OpSetIntersect>::SimpleBinaryOperator;
 

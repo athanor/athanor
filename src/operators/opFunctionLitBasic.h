@@ -7,12 +7,13 @@ struct OpFunctionLitBasic : public FunctionView {
     struct ExprTriggerBase {
         OpFunctionLitBasic* op;
         UInt index;
-        ExprTriggerBase(OpFunctionLitBasic* op, UInt index) : op(op), index(index) {}
+        ExprTriggerBase(OpFunctionLitBasic* op, UInt index)
+            : op(op), index(index) {}
     };
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
 
-
-    OpFunctionLitBasic(AnyDomainRef preImageDomain, AnyExprVec rangeIn) : FunctionView(std::move(preImageDomain), std::move(rangeIn)) {}
+    OpFunctionLitBasic(AnyDomainRef preImageDomain, AnyExprVec rangeIn)
+        : FunctionView(std::move(preImageDomain), std::move(rangeIn)) {}
     OpFunctionLitBasic() {}
     OpFunctionLitBasic(const OpFunctionLitBasic&) = delete;
     OpFunctionLitBasic(OpFunctionLitBasic&&) = delete;

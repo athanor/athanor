@@ -55,7 +55,7 @@ struct ExprTrigger
     void adapterHasBecomeUndefined() {
         op->template undefineMemberAndNotify<View>(index);
     }
-}; // namespace
+};  // namespace
 }  // namespace
 void OpSequenceLit::startTriggeringImpl() {
     if (exprTriggers.empty()) {

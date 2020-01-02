@@ -175,6 +175,12 @@ ParseResult parseOpTwoBars(json& operandExpr, ParsedModel& parsedModel) {
     auto& operand = expr->expr;
     return lib::visit(
         overloaded(
+            [&](ExprRef<IntView>& expr) -> ParseResult {
+                auto op = OpMaker<OpAbs>::make(expr);
+                op->setConstant(expr->isConstant());
+                return ParseResult(fakeIntDomain, op, false);
+            },
+
             [&](ExprRef<SetView>& set) -> ParseResult {
                 auto op = OpMaker<OpSetSize>::make(set);
                 op->setConstant(set->isConstant());

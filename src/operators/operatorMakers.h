@@ -305,4 +305,10 @@ struct OpMaker<OpFunctionLitBasic> {
         AnyDomainRef preImageDomain);
 };
 
+struct OpAbs;
+template <>
+struct OpMaker<OpAbs> {
+    static ExprRef<IntView> make(ExprRef<IntView> o);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

@@ -6,7 +6,7 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 void OpFunctionLitBasic::evaluateImpl() {
-        numberUndefined = 0;
+    numberUndefined = 0;
     lib::visit(
         [&](auto& members) {
             for (auto& member : members) {
@@ -47,9 +47,6 @@ struct ExprTrigger
             ->addTrigger(trigger);
         op->exprTriggers[index] = trigger;
     }
-
-
-
 
     void adapterHasBecomeDefined() {
         this->op->template defineMemberAndNotify<View>(this->index);
@@ -115,7 +112,7 @@ void OpFunctionLitBasic::stopTriggering() {
 }
 
 void OpFunctionLitBasic::updateVarViolationsImpl(const ViolationContext&,
-                                            ViolationContainer&) {}
+                                                 ViolationContainer&) {}
 
 ExprRef<FunctionView> OpFunctionLitBasic::deepCopyForUnrollImpl(
     const ExprRef<FunctionView>&, const AnyIterRef& iterator) const {
@@ -131,12 +128,14 @@ ExprRef<FunctionView> OpFunctionLitBasic::deepCopyForUnrollImpl(
         },
         range);
 
-    auto newOpFunctionLitBasic = make_shared<OpFunctionLitBasic>(fromDomain,move(newMembers));
+    auto newOpFunctionLitBasic =
+        make_shared<OpFunctionLitBasic>(fromDomain, move(newMembers));
     return newOpFunctionLitBasic;
 }
 
 std::ostream& OpFunctionLitBasic::dumpState(std::ostream& os) const {
-    os << "OpFunctionLitBasic(from " << fromDomain << "): numberUndefined=" << numberUndefined
+    os << "OpFunctionLitBasic(from " << fromDomain
+       << "): numberUndefined=" << numberUndefined
        << ", appearsDefined=" << this->appearsDefined() << ", range=(";
     lib::visit(
         [&](auto& members) {
@@ -156,7 +155,7 @@ std::ostream& OpFunctionLitBasic::dumpState(std::ostream& os) const {
 }
 
 void OpFunctionLitBasic::findAndReplaceSelf(const FindAndReplaceFunction& func,
-                                       PathExtension path) {
+                                            PathExtension path) {
     lib::visit(
         [&](auto& members) {
             for (auto& member : members) {
@@ -168,7 +167,7 @@ void OpFunctionLitBasic::findAndReplaceSelf(const FindAndReplaceFunction& func,
 
 pair<bool, ExprRef<FunctionView>> OpFunctionLitBasic::optimiseImpl(
     ExprRef<FunctionView>&, PathExtension path) {
-    auto newOp = make_shared<OpFunctionLitBasic>(fromDomain,range);
+    auto newOp = make_shared<OpFunctionLitBasic>(fromDomain, range);
     AnyExprRef newOpAsExpr = ExprRef<FunctionView>(newOp);
     bool optimised = false;
     lib::visit(
@@ -182,7 +181,9 @@ pair<bool, ExprRef<FunctionView>> OpFunctionLitBasic::optimiseImpl(
     return std::make_pair(optimised, newOp);
 }
 
-string OpFunctionLitBasic::getOpName() const { return toString("OpFunctionLitBasic(from ",  fromDomain,  ")"); }
+string OpFunctionLitBasic::getOpName() const {
+    return toString("OpFunctionLitBasic(from ", fromDomain, ")");
+}
 
 void OpFunctionLitBasic::debugSanityCheckImpl() const {
     lib::visit([&](auto& members) { recurseSanityChecks(members); }, range);
@@ -196,17 +197,23 @@ struct OpMaker;
 
 template <>
 struct OpMaker<OpFunctionLitBasic> {
-    template<typename RangeViewType>
-    static EnableIfViewAndReturn<RangeViewType, ExprRef<FunctionView>> make(AnyDomainRef preImageDomain);
+    template <typename RangeViewType>
+    static EnableIfViewAndReturn<RangeViewType, ExprRef<FunctionView>> make(
+        AnyDomainRef preImageDomain);
 };
 
-template<typename RangeViewType>
-EnableIfViewAndReturn<RangeViewType, ExprRef<FunctionView>> OpMaker<OpFunctionLitBasic>::make(AnyDomainRef preImageDomain) {
-    auto op =  make_shared<OpFunctionLitBasic>();
-    op->resetDimensions<RangeViewType>(preImageDomain, FunctionView::makeDimensionVecFromDomain(preImageDomain));
+template <typename RangeViewType>
+EnableIfViewAndReturn<RangeViewType, ExprRef<FunctionView>>
+OpMaker<OpFunctionLitBasic>::make(AnyDomainRef preImageDomain) {
+    auto op = make_shared<OpFunctionLitBasic>();
+    op->resetDimensions<RangeViewType>(
+        preImageDomain,
+        FunctionView::makeDimensionVecFromDomain(preImageDomain));
     return op;
 }
 
-#define opMakerInstantiator(name) template ExprRef<FunctionView> OpMaker<OpFunctionLitBasic>::make<name##View>(AnyDomainRef);
-buildForAllTypes(opMakerInstantiator,);
+#define opMakerInstantiator(name)  \
+    template ExprRef<FunctionView> \
+        OpMaker<OpFunctionLitBasic>::make<name##View>(AnyDomainRef);
+buildForAllTypes(opMakerInstantiator, );
 #undef opMakerInstantiator

@@ -96,8 +96,8 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
                 changingMembersImpl.emplace_back(
                     val.member<InnerValueType>(indexToChange));
                 NeighbourhoodParams innerNhParams(
-                    changeAccepted, parentCheck, 1, changingMembers,
-                    params.stats, vioContainerAtThisLevel);
+                    changeAccepted, parentCheck, params.parentCheckTryLimit,
+                    changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMemberChange<InnerValueType>(indexToChange, oldHash,
@@ -171,8 +171,8 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain, const InnerDomainPtrType,
                         val.member<InnerValueType>(indexToChange));
                 }
                 NeighbourhoodParams innerNhParams(
-                    changeAccepted, parentCheck, 1, changingMembers,
-                    params.stats, vioContainerAtThisLevel);
+                    changeAccepted, parentCheck, params.parentCheckTryLimit,
+                    changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMembersChange<InnerValueType>(

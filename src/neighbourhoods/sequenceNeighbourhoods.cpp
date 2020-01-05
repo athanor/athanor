@@ -61,10 +61,11 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
     generateNeighbourhoods(1, domain.inner, innerDomainNeighbourhoods);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
+    UInt innerDomainSize = getDomainSize(domain.inner);
     for (auto& innerNh : innerDomainNeighbourhoods) {
         neighbourhoods.emplace_back(
             "SequenceLiftSingle_" + innerNh.name, numberValsRequired,
-            [innerNhApply{std::move(innerNh.apply)}](
+            [innerDomainSize, innerNhApply{std::move(innerNh.apply)}](
                 NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<SequenceValue>().front());
                 if (val.numberElements() == 0) {
@@ -111,9 +112,13 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                     changingMembers.emplace<ValRefVec<InnerValueType>>();
                 changingMembersImpl.emplace_back(
                     val.member<InnerValueType>(indexToChange));
-
+                int tryLimit = (val.injective)
+                                   ? calcNumberInsertionAttempts(
+                                         val.numberElements(), innerDomainSize)
+                                   : 1;
                 NeighbourhoodParams innerNhParams(
-                    changeAccepted, parentCheck, 1, changingMembers,
+                    changeAccepted, parentCheck,
+                    tryLimit * params.parentCheckTryLimit, changingMembers,
                     params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {

@@ -344,7 +344,8 @@ void setLiftSingleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck,
                     calcNumberInsertionAttempts(val.numberElements(),
-                                                innerDomainSize),
+                                                innerDomainSize) *
+                        params.parentCheckTryLimit,
                     changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
@@ -436,7 +437,8 @@ void setLiftMultipleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck,
                     calcNumberInsertionAttempts(val.numberElements(),
-                                                innerDomainSize),
+                                                innerDomainSize) *
+                        params.parentCheckTryLimit,
                     changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {

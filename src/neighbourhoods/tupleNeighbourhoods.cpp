@@ -126,8 +126,8 @@ void tupleLiftSingleGenImpl(const TupleDomain& domain,
                 changingMembersImpl.emplace_back(
                     val.member<InnerValueType>(indexToChange));
                 NeighbourhoodParams innerNhParams(
-                    changeAccepted, parentCheck, 1, changingMembers,
-                    params.stats, vioContainerAtThisLevel);
+                    changeAccepted, parentCheck, params.parentCheckTryLimit,
+                    changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMemberChange<InnerValueType>(indexToChange,

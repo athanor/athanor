@@ -263,7 +263,7 @@ class ExplorationUsingRandomWalk {
         runImpl(
             state, [](State& state) { return state.model.getViolation(); },
             [](State& state) { return state.model.getViolation() == 0; });
-        randomWalkStrategy.allowViolations = false;
+//        randomWalkStrategy.allowViolations = false;
         runImpl(
             state, [](State& state) { return state.model.getObjective(); },
             [](State&) { return false; });

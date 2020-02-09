@@ -41,7 +41,8 @@ string makeMessageOnFiles(const bool essenceOrParam) {
 
 auto& inputGroup =
     argParser.makePrintGroup("input",
-                             "Supplying problem specification file, parameter file, random seed, path to conjure...");
+                             "Supplying problem specification file, parameter "
+                             "file, random seed, path to conjure...");
 
 auto& specFlag = inputGroup.add<ComplexFlag>(
     "--spec", Policy::MANDATORY, "Precedes essence specification file.");
@@ -201,7 +202,7 @@ enum ExploreStrategyChoice {
 
 auto& searchStrategiesGroup = argParser.makePrintGroup(
     "strategies", "Selecting search and neighbourhood selection strategies...");
-enum SelectionStrategyChoice { RANDOM, UCB, UCB_WITH_TRIGGER, INTERACTIVE };
+enum SelectionStrategyChoice { RANDOM, UCB, INTERACTIVE };
 
 ImproveStrategyChoice improveStrategyChoice = HILL_CLIMBING;
 ExploreStrategyChoice exploreStrategyChoice = RANDOM_WALK;
@@ -265,12 +266,6 @@ auto& ucbFlag = selectionStratGroup.add<Flag>(
     "Upper confidence bound, a multiarmed bandet method for learning which "
     "neighbourhoods are best performing.",
     [](auto&&) { selectionStrategyChoice = UCB; });
-
-auto& ucbWithTriggerFlag = selectionStratGroup.add<Flag>(
-    "ucbWithTrigger",
-    "Experimental, like flag \"ucb\" but cost measurements include trigger "
-    "counts.",
-    [](auto&&) { selectionStrategyChoice = UCB_WITH_TRIGGER; });
 
 auto& interactiveFlag = selectionStratGroup.add<Flag>(
     "i", "interactive, Prompt user for neighbourhood to select.",
@@ -409,15 +404,8 @@ void runSearch(State& state) {
             return;
         }
         case UCB: {
-            auto ucb = make_shared<UcbWithMinorNodeCount>(
-                state, DEFAULT_UCB_EXPLORATION_BIAS);
-            constructStratAndRun(state, ucb);
-            saveUcbResults(state, ucb);
-            return;
-        }
-        case UCB_WITH_TRIGGER: {
-            auto ucb = make_shared<UcbWithTriggerCount>(
-                state, DEFAULT_UCB_EXPLORATION_BIAS);
+            auto ucb = make_shared<UcbNeighbourhoodSelector>(
+                state, DEFAULT_UCB_EXPLORATION_BIAS, true, false);
             constructStratAndRun(state, ucb);
             saveUcbResults(state, ucb);
             return;

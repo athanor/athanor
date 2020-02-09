@@ -82,72 +82,20 @@ class RandomNeighbourhood {
     }
 };
 
-class UcbWithTriggerCount : public UcbSelector<UcbWithTriggerCount> {
+class UcbNeighbourhoodSelector : public UcbSelector<UcbNeighbourhoodSelector> {
     const State& state;
+    bool includeMinorNodeCount;
+    bool includeTriggerEventCount;
 
    public:
-    UcbWithTriggerCount(const State& state, double ucbExplorationBias)
-        : UcbSelector<UcbWithTriggerCount>(ucbExplorationBias), state(state) {}
-
-    bool optimising() const {
-        return state.model.optimiseMode != OptimiseMode::NONE &&
-               state.model.getViolation() == 0;
-    }
-    const NeighbourhoodStats& nhStats(size_t i) const {
-        return state.stats.neighbourhoodStats[i];
-    }
-
-    inline double reward(size_t i) const {
-        auto& s = nhStats(i);
-        return (optimising()) ? s.numberObjImprovements
-                              : s.numberVioImprovements;
-    }
-
-    inline double individualCost(size_t i) const {
-        auto& s = nhStats(i);
-        double penalty = 0;
-        if (s.minorNodeCount > s.triggerEventCount) {
-            UInt64 minorNodeCount =
-                std::max(state.stats.minorNodeCount, ((UInt64)1));
-            double penaltyRatio = ((double)triggerEventCount) / minorNodeCount;
-            penalty = s.minorNodeCount * penaltyRatio;
-        }
-        UInt64 vioCost = s.vioMinorNodeCount + s.vioTriggerEventCount;
-        UInt64 cost = s.minorNodeCount + s.triggerEventCount;
-        return (optimising()) ? (cost + penalty) - vioCost : vioCost + penalty;
-    }
-    inline double totalCost() {
-        double total = 0;
-        for (size_t i = 0; i < numberOptions(); i++) {
-            total += individualCost(i);
-        }
-        return total;
-    }
-    inline bool wasActivated(size_t i) const {
-        auto& s = nhStats(i);
-        return (optimising()) ? s.numberActivations - s.numberVioActivations > 0
-                              : s.numberVioActivations > 0;
-    }
-    inline size_t numberOptions() {
-        return state.stats.neighbourhoodStats.size();
-    }
-    template <typename ParentStrategy>
-    inline void run(State& state, ParentStrategy&& parentStrategy) {
-        size_t chosenNeighbourhood = next();
-
-        state.runNeighbourhood(chosenNeighbourhood, [&](const auto& result) {
-            return parentStrategy(result);
-        });
-    }
-};
-
-class UcbWithMinorNodeCount : public UcbSelector<UcbWithMinorNodeCount> {
-    const State& state;
-
-   public:
-    UcbWithMinorNodeCount(const State& state, double ucbExplorationBias)
-        : UcbSelector<UcbWithMinorNodeCount>(ucbExplorationBias),
-          state(state) {}
+    UcbNeighbourhoodSelector(const State& state,
+                                      double ucbExplorationBias,
+                                      bool includeMinorNodeCount,
+                                      bool includeTriggerEventCount)
+        : UcbSelector<UcbNeighbourhoodSelector>(ucbExplorationBias),
+          state(state),
+          includeMinorNodeCount(includeMinorNodeCount),
+          includeTriggerEventCount(includeTriggerEventCount) {}
 
     bool optimising() {
         return state.model.optimiseMode != OptimiseMode::NONE &&
@@ -164,13 +112,22 @@ class UcbWithMinorNodeCount : public UcbSelector<UcbWithMinorNodeCount> {
     }
     inline double individualCost(size_t i) {
         auto& s = nhStats(i);
-        return (optimising()) ? s.minorNodeCount - s.vioMinorNodeCount
-                              : s.vioMinorNodeCount;
+        UInt64 cost = s.numberActivations, vioCost = s.numberVioActivations;
+        cost += int(includeMinorNodeCount) * s.minorNodeCount;
+        vioCost += int(includeMinorNodeCount) * s.vioMinorNodeCount;
+        cost += int(includeTriggerEventCount) * s.triggerEventCount;
+        vioCost += int(includeTriggerEventCount) * s.vioTriggerEventCount;
+        return (optimising()) ? cost - vioCost : vioCost;
     }
     inline double totalCost() {
-        return (optimising())
-                   ? state.stats.minorNodeCount - state.stats.vioMinorNodeCount
-                   : state.stats.vioMinorNodeCount;
+        UInt64 cost = state.stats.numberIterations,
+               vioCost = state.stats.numberVioIterations;
+        cost += (includeMinorNodeCount)*state.stats.minorNodeCount;
+        vioCost += int(includeMinorNodeCount) * state.stats.vioMinorNodeCount;
+        cost += int(includeTriggerEventCount) * triggerEventCount;
+        vioCost +=
+            int(includeTriggerEventCount) * state.stats.vioTriggerEventCount;
+        return (optimising()) ? cost - vioCost : vioCost;
     }
     inline bool wasActivated(size_t i) {
         auto& s = nhStats(i);

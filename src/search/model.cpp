@@ -5,7 +5,7 @@
 #ifdef WASM_TARGET
 #include <emscripten/bind.h>
 #endif
-
+extern bool noPrintSolutions;
 using namespace std;
 void ModelBuilder::createNeighbourhoods() {
     for (size_t i = 0; i < model.variables.size(); ++i) {
@@ -167,7 +167,10 @@ void printUnnamedType(ostream& os, const EnumDomain& domain) {
 extern string bestSolution;
 extern bool saveBestSolution;
 ostringstream bestSolutionStream;
-ostream& getBestSolutionStream() {
+ostream& initSolutionStream() {
+    if (!noPrintSolutions) {
+        cout << "solution start\n";
+    }
     if (saveBestSolution) {
         bestSolutionStream.str("");
         bestSolutionStream.clear();
@@ -177,23 +180,32 @@ ostream& getBestSolutionStream() {
     }
 }
 
-void dumpSolution() {
+void closeSolutionStream() {
     if (saveBestSolution) {
         bestSolution = bestSolutionStream.str();
-        cout << bestSolution;
+        if (!noPrintSolutions) {
+            cout << bestSolution;
+        }
+    }
+    if (!noPrintSolutions) {
+        std::cout << "solution end\n";
     }
 }
 
-void Model::printVariables() const {
+void Model::tryPrintVariables() const {
+    if (noPrintSolutions && !saveBestSolution) {
+        return;
+    }
 #ifdef WASM_TARGET
     using namespace emscripten;
     ostringstream os;
 #define varName(x) "<var>" << x << "</var>"
     os << "<code>";
 #else
-    auto& os = getBestSolutionStream();
+    auto& os = initSolutionStream();
 #define varName(x) x
 #endif
+
     for (auto& domain : unnamedTypes) {
         os << "letting " << varName(domain->domainName) << " be new type enum ";
         printUnnamedType(os, *domain);
@@ -224,7 +236,7 @@ void Model::printVariables() const {
     os << "</code>";
     val::global().call<void>("printSolution", os.str());
 #endif
-    dumpSolution();
+    closeSolutionStream();
 }
 
 void Model::debugSanityCheck() const {

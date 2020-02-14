@@ -36,7 +36,7 @@ struct Model {
     Model() { lib::get<ExprRef<IntView>>(objective)->view()->value = 0; }
 
    public:
-    void printVariables() const;
+    void tryPrintVariables() const;
     void debugSanityCheck() const;
 
    public:

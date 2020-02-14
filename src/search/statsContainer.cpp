@@ -238,11 +238,9 @@ void StatsContainer::printCurrentState(Model& model) {
         cout << (*this) << "\nTrigger event count " << triggerEventCount
              << "\n\n";
     }
-    if (!noPrintSolutions && lastViolation == 0) {
-        cout << "solution start\n";
-        model.printVariables();
+    if (lastViolation == 0) {
+        model.tryPrintVariables();
         printStatsToWebApp(*this);
-        cout << "solution end\n";
     }
     debug_code(if (debugLogAllowed) {
         debug_log("CSP state:");

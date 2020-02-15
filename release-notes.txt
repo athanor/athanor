@@ -1,9 +1,1 @@
-Several scalability optimisations to quantifier:
-
-Expressions  that use sequence indexing to quantify over adjacent pairs/tripples/n-tuples of elements from a sequence are optimised to use the substring quantifier.
-
-The index member of the tuples yielded when quantifying over sequences are not updated if they are not used.
-
-Random generation of values used in initial variable assignements and in neighbourhoods now make use of a resource limit, allowing for the instantiation of deeply nested types such as set of sequence of partition of set of ...
-
-Usage info is better printed, separated into groups accessed with --help group_name.
+minor bug fixes and new operators.

@@ -8,7 +8,7 @@
 #include "search/solver.h"
 #include "search/statsContainer.h"
 
-UInt64 DEFAULT_PEAK_ITERATIONS = 5000;
+extern UInt64 improveStratPeakIterations;
 
 template <typename Integer>
 class ExponentialIncrementer {
@@ -34,7 +34,7 @@ class ExponentialIncrementer {
 template <typename Strategy>
 class HillClimbing {
     std::shared_ptr<Strategy> strategy;
-    const UInt64 allowedIterationsAtPeak = DEFAULT_PEAK_ITERATIONS;
+    const UInt64 allowedIterationsAtPeak = improveStratPeakIterations;
 
    public:
     HillClimbing(std::shared_ptr<Strategy> strategy)
@@ -81,6 +81,107 @@ class HillClimbing {
 template <typename Strategy>
 auto makeHillClimbing(std::shared_ptr<Strategy> strategy) {
     return std::make_shared<HillClimbing<Strategy>>(std::move(strategy));
+}
+
+template <typename Strategy>
+class LateAcceptanceHillClimbing {
+    std::shared_ptr<Strategy> strategy;
+    const UInt64 allowedIterationsAtPeak = improveStratPeakIterations;
+    std::deque<Objective> objHistory;
+    std::deque<UInt> vioHistory;
+    size_t queueSize;
+
+   public:
+    LateAcceptanceHillClimbing(std::shared_ptr<Strategy> strategy,
+                               size_t queueSize)
+        : strategy(std::move(strategy)), queueSize(queueSize) {}
+
+    void reset() {}
+    void increaseTerminationLimit() {}
+
+    void resetTerminationLimit() {}
+    template <typename T>
+    void addToQueue(std::deque<T>& queue, T value) {
+        if (queue.size() == queueSize) {
+            queue.pop_front();
+        }
+        queue.emplace_back(value);
+    }
+    void run(State& state, bool isOuterMostStrategy) {
+        objHistory.clear();
+        vioHistory.clear();
+        UInt64 iterationsAtPeak = 0;
+        if (state.model.getViolation() > 0) {
+            vioHistory.emplace_back(state.model.getViolation());
+        } else {
+            objHistory.emplace_back(state.model.getObjective());
+        }
+        Objective bestObjective = state.model.getObjective();
+        UInt bestViolation = state.model.getViolation();
+        while (true) {
+            bool allowed = false, improvesOnBest = false;
+            strategy->run(state, [&](const auto& result) {
+                if (result.foundAssignment) {
+                    if (result.statsMarkPoint.lastViolation != 0) {
+                        allowed =
+                            result.model.getViolation() <= vioHistory.front() ||
+                            (vioHistory.front() < vioHistory.back() &&
+                             result.getDeltaViolation() < 0);
+                        improvesOnBest =
+                            result.model.getViolation() < bestViolation;
+
+                        if (result.model.getViolation() < vioHistory.front()) {
+                            // strict improvement
+                            addToQueue(vioHistory, state.model.getViolation());
+                        }
+                        if (improvesOnBest) {
+                            bestViolation = result.model.getViolation();
+                        }
+                        if (result.statsMarkPoint.lastViolation != 0 &&
+                            result.model.getViolation() == 0) {
+                            objHistory = {state.model.getObjective()};
+                        }
+                    } else if (result.model.getViolation() == 0) {
+                        // last violation was 0, current violation is 0, check
+                        // objective:
+                        allowed =
+                            result.model.getObjective() <= objHistory.front() ||
+                            (objHistory.front() < objHistory.back() &&
+                             result.objectiveBetterOrEqual());
+                        improvesOnBest =
+                            result.model.getObjective() < bestObjective;
+                        if (result.model.getObjective() < objHistory.front()) {
+                            // strict improvement
+                            addToQueue(objHistory, state.model.getObjective());
+                        }
+                        if (improvesOnBest) {
+                            bestObjective = result.model.getObjective();
+                        }
+                    }
+                }
+                return allowed;
+            });
+
+            if (isOuterMostStrategy) {
+                continue;
+            }
+            if (improvesOnBest) {
+                iterationsAtPeak = 0;
+            } else {
+                ++iterationsAtPeak;
+                if (iterationsAtPeak > allowedIterationsAtPeak) {
+                    break;
+                }
+            }
+        }
+    }
+};
+
+template <typename Strategy>
+auto makeLateAcceptanceHillClimbing(std::shared_ptr<Strategy> strategy,
+                                    size_t queueSize) {
+    return std::make_shared<LateAcceptanceHillClimbing<Strategy>>(
+        std::move(strategy), queueSize);
 }
 
 class RandomWalk {
@@ -154,7 +255,7 @@ class ExplorationUsingViolationBackOff {
             });
             if (!allowed) {
                 ++iterationsWithoutChange;
-                if (iterationsWithoutChange % DEFAULT_PEAK_ITERATIONS == 0) {
+                if (iterationsWithoutChange % improveStratPeakIterations == 0) {
                     violationBackOff.increment();
                     iterationsWithoutChange = 0;
                 }
@@ -186,7 +287,7 @@ class ExplorationUsingViolationBackOff {
             });
             if (!allowed) {
                 ++iterationsWithoutChange;
-                if (iterationsWithoutChange == DEFAULT_PEAK_ITERATIONS) {
+                if (iterationsWithoutChange == improveStratPeakIterations) {
                     return false;
                 }
             }
@@ -263,7 +364,7 @@ class ExplorationUsingRandomWalk {
         runImpl(
             state, [](State& state) { return state.model.getViolation(); },
             [](State& state) { return state.model.getViolation() == 0; });
-//        randomWalkStrategy.allowViolations = false;
+        //        randomWalkStrategy.allowViolations = false;
         runImpl(
             state, [](State& state) { return state.model.getObjective(); },
             [](State&) { return false; });

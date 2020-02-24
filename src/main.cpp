@@ -192,23 +192,29 @@ auto& saveUcbArg =
         .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY,
                             "File to save results to.");
 
-enum ImproveStrategyChoice { HILL_CLIMBING, TEST_CLIMB };
+enum ImproveStrategyChoice {
+    HILL_CLIMBING,
+    TEST_CLIMB,
+    LATE_ACCEPTANCE_HILL_CLIMBING
+};
 enum ExploreStrategyChoice {
     VIOLATION_BACKOFF,
     RANDOM_WALK,
     NO_EXPLORE,
     TEST_EXPLORE
 };
-
-auto& searchStrategiesGroup = argParser.makePrintGroup(
-    "strategies", "Selecting search and neighbourhood selection strategies...");
 enum SelectionStrategyChoice { RANDOM, UCB, INTERACTIVE };
 
 ImproveStrategyChoice improveStrategyChoice = HILL_CLIMBING;
 ExploreStrategyChoice exploreStrategyChoice = RANDOM_WALK;
 SelectionStrategyChoice selectionStrategyChoice = UCB;
 
+size_t DEFAULT_LAHC_QUEUE_SIZE = 100;
+UInt64 improveStratPeakIterations = 5000;
 double DEFAULT_UCB_EXPLORATION_BIAS = 1;
+
+auto& searchStrategiesGroup = argParser.makePrintGroup(
+    "strategies", "Selecting search and neighbourhood selection strategies...");
 
 auto& improveStratGroup =
     searchStrategiesGroup
@@ -221,10 +227,35 @@ auto& hillClimbingFlag = improveStratGroup.add<Flag>(
     "hc", "Hill climbing strategy.",
     [](auto&&) { improveStrategyChoice = HILL_CLIMBING; });
 
+auto& lateAcceptanceHillClimbingFlag = improveStratGroup.add<ComplexFlag>(
+    "lahc", "Late acceptance hill climbing strategy.",
+    [](auto&&) { improveStrategyChoice = LATE_ACCEPTANCE_HILL_CLIMBING; });
+
+auto& queueSizeFlag = lateAcceptanceHillClimbingFlag.add<ComplexFlag>(
+    "--queue-size", Policy::OPTIONAL,
+    "Set the queue size for the late acceptance hill climbing search.");
+
+auto& queueSizeArg =
+    queueSizeFlag.add<Arg<size_t>>("integer", Policy::MANDATORY, "");
+
 auto& testClimbFlag = improveStratGroup.add<Flag>(
     "test", "Test strategy for developers, use at your own risk.",
     [](auto&&) { improveStrategyChoice = TEST_CLIMB; });
 
+auto& peakIterationsFlag = searchStrategiesGroup.add<ComplexFlag>(
+    "--improve-peak-iterations", Policy::OPTIONAL,
+    toString("Specify how many iterations the selected improve strategy may "
+             "spend without improvement before switching to the selected "
+             "explore strategy (default=",
+             improveStratPeakIterations,
+             ").  Note, this only has an effect when the explore strategy is "
+             "not set to none."));
+auto& peakIterationsArg = peakIterationsFlag.add<Arg<UInt64>>(
+    "integer", Policy::MANDATORY, "",
+    chain(Converter<UInt64>(), [](UInt64 value) {
+        improveStratPeakIterations = value;
+        return value;
+    }));
 auto& exploreStratGroup =
     searchStrategiesGroup
         .add<ComplexFlag>("--explore", Policy::OPTIONAL,
@@ -261,11 +292,19 @@ auto& randomFlag = selectionStratGroup.add<Flag>(
     "r", "random, select neighbourhoods randomly.",
     [](auto&&) { selectionStrategyChoice = RANDOM; });
 
-auto& ucbFlag = selectionStratGroup.add<Flag>(
+auto& ucbFlag = selectionStratGroup.add<ComplexFlag>(
     "ucb",
     "Upper confidence bound, a multiarmed bandet method for learning which "
     "neighbourhoods are best performing.",
     [](auto&&) { selectionStrategyChoice = UCB; });
+
+auto& ucbExploreFlag = ucbFlag.add<ComplexFlag>(
+    "--explore-bias", Policy::OPTIONAL,
+    "Affects how much exploration the UCB selector will bias towards (higher "
+    "means  more exploration of other neighbourhoods, lower means more "
+    "exploitation of better performing neighbourhoods).");
+auto& ucbExploreArg =
+    ucbExploreFlag.add<Arg<double>>("float", Policy::MANDATORY, "");
 
 auto& interactiveFlag = selectionStratGroup.add<Flag>(
     "i", "interactive, Prompt user for neighbourhood to select.",
@@ -371,6 +410,15 @@ void constructStratAndRun(State& state, SelectionStrategy&& nhSelection) {
                                      nhSelection);
             return;
         }
+        case LATE_ACCEPTANCE_HILL_CLIMBING: {
+            size_t queueSize =
+                (queueSizeArg) ? queueSizeArg.get() : DEFAULT_LAHC_QUEUE_SIZE;
+            constructStratAndRunImpl(
+                state, makeLateAcceptanceHillClimbing(nhSelection, queueSize),
+                nhSelection);
+            return;
+        }
+
         case TEST_CLIMB: {
             constructStratAndRunImpl(state, makeTestClimb(nhSelection),
                                      nhSelection);
@@ -404,8 +452,10 @@ void runSearch(State& state) {
             return;
         }
         case UCB: {
-            auto ucb = make_shared<UcbNeighbourhoodSelector>(
-                state, DEFAULT_UCB_EXPLORATION_BIAS, true, false);
+            double exploreBias = (ucbExploreArg) ? ucbExploreArg.get()
+                                                 : DEFAULT_UCB_EXPLORATION_BIAS;
+            auto ucb = make_shared<UcbNeighbourhoodSelector>(state, exploreBias,
+                                                             true, false);
             constructStratAndRun(state, ucb);
             saveUcbResults(state, ucb);
             return;

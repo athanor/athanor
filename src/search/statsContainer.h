@@ -52,6 +52,7 @@ struct NeighbourhoodResult {
 struct NeighbourhoodStats {
     std::string name;
     UInt64 numberActivations = 0;
+    UInt64 numberAttempts = 0;
     UInt64 minorNodeCount = 0;
     UInt64 triggerEventCount = 0;
     double totalRealTime = 0;
@@ -116,7 +117,7 @@ struct StatsContainer {
 
     void initialSolution(Model& model);
     void checkForBestSolution(bool vioImproved, bool objImproved, Model& model);
-    void reportResult(bool solutionAccepted, const NeighbourhoodResult& result);
+    void reportResult(bool solutionAccepted, const NeighbourhoodResult& result, int numberAttemptss);
     void printCurrentState(Model& model);
     friend std::ostream& operator<<(std::ostream& os,
                                     const StatsContainer& stats);

@@ -139,12 +139,13 @@ void printStatsToWebApp(const StatsContainer& stats) {
 }
 
 void StatsContainer::reportResult(bool solutionAccepted,
-                                  const NeighbourhoodResult& result) {
+                                  const NeighbourhoodResult& result, int numberAttempts) {
     UInt64 minorNodeCountDiff =
         minorNodeCount - result.statsMarkPoint.minorNodeCount;
     UInt64 triggerEventCountDiff =
         triggerEventCount - result.statsMarkPoint.triggerEventCount;
     ++numberIterations;
+    neighbourhoodStats[result.neighbourhoodIndex].numberAttempts += numberAttempts;
     ++neighbourhoodStats[result.neighbourhoodIndex].numberActivations;
     neighbourhoodStats[result.neighbourhoodIndex].minorNodeCount +=
         minorNodeCountDiff;
@@ -271,12 +272,13 @@ ostream& operator<<(ostream& os, const StatsContainer& stats) {
 }
 
 void StatsContainer::printNeighbourhoodStats(std::ostream& os) const {
-    csvRow(os, "name", "activations", "objImprovements",
+    csvRow(os, "name", "activations", "attempts", "attempts_average", "objImprovements",
            "objImprovementsAverage", "vioImprovements",
            "vioImprovementsAverage", "minorNodes", "minorNodesAverage",
            "triggerEvents", "triggerEventsAverage", "realTime",
            "realTimeAverage");
     for (auto& s : neighbourhoodStats) {
+    double averageAttempts = (s.numberAttempts == 0) ? 0 : ((double)s.numberAttempts)/s.numberActivations;
         double averageObjImprovements =
             (s.numberObjImprovements == 0)
                 ? 0
@@ -286,7 +288,7 @@ void StatsContainer::printNeighbourhoodStats(std::ostream& os) const {
             (s.numberVioImprovements == 0)
                 ? 0
                 : ((double)s.numberVioImprovements) / s.numberVioActivations;
-        csvRow(os, s.name, s.numberActivations, s.numberObjImprovements,
+        csvRow(os, s.name, s.numberActivations, s.numberAttempts, averageAttempts, s.numberObjImprovements,
                averageObjImprovements, s.numberVioImprovements,
                averageVioImprovements, s.minorNodeCount,
                s.getAverage(s.minorNodeCount), s.triggerEventCount,

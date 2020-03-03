@@ -53,6 +53,8 @@ class State {
         debug_neighbourhood_action(
             "Applying neighbourhood: " << neighbourhood.name << ":");
         auto& var = model.variables[model.neighbourhoodVarMapping[nhIndex]];
+        static const int attemptsPerNeighbourhood = 30;
+        size_t numberAttempts = 0;
         auto statsMarkPoint = stats.getMarkPoint();
         bool solutionAccepted = false, changeMade = false;
         AcceptanceCallBack callback = [&]() {
@@ -61,15 +63,27 @@ class State {
                 model.debugSanityCheck();
             }
             changeMade = true;
-            solutionAccepted = strategy(
-                NeighbourhoodResult(model, nhIndex, true, statsMarkPoint));
+            NeighbourhoodResult result(model, nhIndex, true, statsMarkPoint);
+            bool solutionBetterThanActive =
+                (result.statsMarkPoint.lastViolation != 0)
+                    ? result.getDeltaViolation() < 0
+                    : result.objectiveStrictlyBetter();
+            solutionAccepted = false;
+            if (solutionBetterThanActive ||
+                numberAttempts == attemptsPerNeighbourhood) {
+                solutionAccepted = strategy(result);
+            }
             return solutionAccepted;
         };
         ParentCheckCallBack alwaysTrueFunc(alwaysTrue);
         auto changingVariables = makeVecFrom(var.second);
         NeighbourhoodParams params(callback, alwaysTrueFunc, 1,
                                    changingVariables, stats, vioContainer);
-        neighbourhood.apply(params);
+        do {
+            ++numberAttempts;
+            neighbourhood.apply(params);
+        } while (!solutionAccepted &&
+                 numberAttempts < attemptsPerNeighbourhood);
         if (runSanityChecks && !solutionAccepted &&
             stats.numberIterations % sanityCheckInterval == 0) {
             model.debugSanityCheck();
@@ -82,7 +96,7 @@ class State {
             // tell strategy that no new assignment found
             strategy(nhResult);
         }
-        stats.reportResult(solutionAccepted, nhResult);
+        stats.reportResult(solutionAccepted, nhResult, numberAttempts);
         totalTimeInNeighbourhoods +=
             (stats.getRealTime() - nhResult.statsMarkPoint.realTime);
     }

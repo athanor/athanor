@@ -66,8 +66,8 @@ class State {
             NeighbourhoodResult result(model, nhIndex, true, statsMarkPoint);
             bool solutionBetterThanActive =
                 (result.statsMarkPoint.lastViolation != 0)
-                    ? result.getDeltaViolation() < 0
-                    : result.objectiveStrictlyBetter();
+                    ? result.getDeltaViolation() <= 0
+                    : result.objectiveBetterOrEqual();
             solutionAccepted = false;
             if (solutionBetterThanActive ||
                 numberAttempts == attemptsPerNeighbourhood) {

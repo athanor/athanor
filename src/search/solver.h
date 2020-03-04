@@ -41,7 +41,7 @@ class State {
     }
 
     template <typename ParentStrategy>
-    void runNeighbourhood(size_t nhIndex, ParentStrategy&& strategy) {
+    void runNeighbourhood(size_t nhIndex, bool useFirstImprovement, ParentStrategy&& strategy) {
         testForTermination();
         Neighbourhood& neighbourhood = model.neighbourhoods[nhIndex];
         debug_code(if (debugLogAllowed) {
@@ -53,7 +53,7 @@ class State {
         debug_neighbourhood_action(
             "Applying neighbourhood: " << neighbourhood.name << ":");
         auto& var = model.variables[model.neighbourhoodVarMapping[nhIndex]];
-        static const int attemptsPerNeighbourhood = 30;
+        const int attemptsPerNeighbourhood = (useFirstImprovement) ? 50 : 1;
         size_t numberAttempts = 0;
         auto statsMarkPoint = stats.getMarkPoint();
         bool solutionAccepted = false, changeMade = false;

@@ -37,7 +37,7 @@ class InteractiveNeighbourhoodSelector {
                 continue;
             }
             bool accepted = false;
-            state.runNeighbourhood(input - 1, [&](const auto& result) {
+            state.runNeighbourhood(input - 1, false, [&](const auto& result) {
                 accepted = parentStrategy(result);
                 return accepted;
             });
@@ -56,7 +56,7 @@ class RandomNeighbourhood {
     template <typename ParentStrategy>
     inline void run(State& state, ParentStrategy&& parentStrategy) {
         state.runNeighbourhood(
-            nextNeighbourhood(state),
+            nextNeighbourhood(state), false,
             [&](const auto& result) { return parentStrategy(result); });
     }
     inline size_t nextNeighbourhood(const State& state) {
@@ -141,7 +141,7 @@ class UcbNeighbourhoodSelector : public UcbSelector<UcbNeighbourhoodSelector> {
     inline void run(State& state, ParentStrategy&& parentStrategy) {
         size_t chosenNeighbourhood = next();
 
-        state.runNeighbourhood(chosenNeighbourhood, [&](const auto& result) {
+        state.runNeighbourhood(chosenNeighbourhood, true, [&](const auto& result) {
             return parentStrategy(result);
         });
     }

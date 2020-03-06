@@ -163,7 +163,31 @@ optional<AnyDomainRef> tryParseDomain(json& domainExpr,
          {"DomainReference", parseDomainReference}},
         domainExpr, parsedModel);
 }
+
+optional<ParseResult> tryParseSpecialConstraint(json& operandsExpr,
+                                                ParsedModel& parsedModel) {
+    if (operandsExpr[0].count("Reference") &&
+        operandsExpr[0]["Reference"][0]["Name"] == "amplify") {
+        cout << "[warning] treating \"amplify\" as a special athanor keyword.\n";
+        auto& args = operandsExpr[1][0]["AbstractLiteral"]["AbsLitTuple"];
+        auto boolConstraint = expect<BoolView>(
+            parseExpr(args[0], parsedModel).expr,
+            [&](auto&) { cerr << "Whilst parsing amplify.\n"; });
+        Int multiplier =
+            parseExprAsInt(args[1], parsedModel, "whilst parsing amplify.");
+        return ParseResult(
+            fakeBoolDomain,
+            OpMaker<OpAmplifyConstraint>::make(boolConstraint, multiplier),
+            false);
+    }
+    return nullopt;
+}
 ParseResult parseOpRelationProj(json& operandsExpr, ParsedModel& parsedModel) {
+    optional<ParseResult> parseSpecialConstraint =
+        tryParseSpecialConstraint(operandsExpr, parsedModel);
+    if (parseSpecialConstraint) {
+        return *parseSpecialConstraint;
+    }
     auto leftOperand = parseExpr(operandsExpr[0], parsedModel);
     return lib::visit(
         overloaded(

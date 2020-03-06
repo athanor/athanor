@@ -311,4 +311,10 @@ struct OpMaker<OpAbs> {
     static ExprRef<IntView> make(ExprRef<IntView> o);
 };
 
+struct OpAmplifyConstraint;
+template <>
+struct OpMaker<OpAmplifyConstraint> {
+    static ExprRef<BoolView> make(ExprRef<BoolView> o, UInt64 multiplier);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

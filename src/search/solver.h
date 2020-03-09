@@ -67,7 +67,7 @@ class State {
             bool solutionBetterThanActive =
                 (result.statsMarkPoint.lastViolation != 0)
                     ? result.getDeltaViolation() <= 0
-                    : result.objectiveBetterOrEqual();
+                    : result.model.getViolation() == 0 && result.objectiveBetterOrEqual();
             solutionAccepted = false;
             if (solutionBetterThanActive ||
                 numberAttempts == attemptsPerNeighbourhood) {

@@ -102,6 +102,7 @@ class LateAcceptanceHillClimbing {
     void resetTerminationLimit() {}
     template <typename T>
     void addToQueue(std::deque<T>& queue, T value) {
+        static int i = 0;
         if (queue.size() == queueSize) {
             queue.pop_front();
         }
@@ -125,15 +126,13 @@ class LateAcceptanceHillClimbing {
                     if (result.statsMarkPoint.lastViolation != 0) {
                         allowed =
                             result.model.getViolation() <= vioHistory.front() ||
-                            (vioHistory.front() < vioHistory.back() &&
-                             result.getDeltaViolation() < 0);
+                            result.model.getViolation() <= vioHistory.back();
                         improvesOnBest =
                             result.model.getViolation() < bestViolation;
-
-                        if (result.model.getViolation() < vioHistory.front()) {
-                            // strict improvement
+                        if (allowed) {
                             addToQueue(vioHistory, state.model.getViolation());
                         }
+
                         if (improvesOnBest) {
                             bestViolation = result.model.getViolation();
                         }
@@ -146,14 +145,13 @@ class LateAcceptanceHillClimbing {
                         // objective:
                         allowed =
                             result.model.getObjective() <= objHistory.front() ||
-                            (objHistory.front() < objHistory.back() &&
-                             result.objectiveBetterOrEqual());
+                            result.model.getObjective() <= objHistory.back();
                         improvesOnBest =
                             result.model.getObjective() < bestObjective;
-                        if (result.model.getObjective() < objHistory.front()) {
-                            // strict improvement
+                        if (allowed) {
                             addToQueue(objHistory, state.model.getObjective());
                         }
+
                         if (improvesOnBest) {
                             bestObjective = result.model.getObjective();
                         }

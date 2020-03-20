@@ -6,6 +6,7 @@
 #include <iterator>
 #include "search/endOfSearchException.h"
 #include "search/model.h"
+#include "search/searchStrategies.h"
 #include "search/statsContainer.h"
 #include "triggers/allTriggers.h"
 void signalEndOfSearch();
@@ -170,7 +171,6 @@ inline void evaluateAndStartTriggeringDefinedExpressions(State& state) {
     }
 }
 
-template <typename SearchStrategy>
 void search(std::shared_ptr<SearchStrategy>& searchStrategy, State& state) {
     triggerEventCount = 0;
     std::cout << "Neighbourhoods (" << state.model.neighbourhoods.size()

@@ -8,8 +8,9 @@
 #include "common/common.h"
 #include "gitRevision.h"
 #include "parsing/jsonModelParser.h"
+#include "search/exploreStrategies.h"
+#include "search/improveStrategies.h"
 #include "search/neighbourhoodSelectionStrategies.h"
-#include "search/searchStrategies.h"
 #include "search/solver.h"
 #include "utils/getExecPath.h"
 #include "utils/hashUtils.h"
@@ -373,56 +374,29 @@ debug_code(bool debugLogAllowed = true;
                "but keeping assertions switched on.",
                [](auto&) { debugLogAllowed = false; }););
 
-template <typename ImproveStrategy, typename SelectionStrategy>
-void constructStratAndRunImpl(State& state, ImproveStrategy&& improve,
-                              SelectionStrategy&& nhSelection) {
+std::shared_ptr<SearchStrategy> makeExploreStrategy(
+    std::shared_ptr<SearchStrategy> improve) {
     switch (exploreStrategyChoice) {
-        case VIOLATION_BACKOFF: {
-            auto strategy =
-                makeExplorationUsingViolationBackOff(improve, nhSelection);
-            search(strategy, state);
-            return;
-        }
-        case RANDOM_WALK: {
-            auto strategy = makeExplorationUsingRandomWalk(improve);
-            search(strategy, state);
-            return;
-        }
-        case NO_EXPLORE: {
-            search(improve, state);
-            return;
-        }
-        case TEST_EXPLORE: {
-            auto strategy = makeTestExploration(improve);
-            search(strategy, state);
-            return;
-        }
+        case VIOLATION_BACKOFF:
+            return make_shared<ExplorationUsingViolationBackOff>(improve);
+        case RANDOM_WALK:
+            return make_shared<ExplorationUsingRandomWalk>(improve);
+        case NO_EXPLORE:
+            return improve;
         default:
             myAbort();
     }
 }
 
-template <typename SelectionStrategy>
-void constructStratAndRun(State& state, SelectionStrategy&& nhSelection) {
+std::shared_ptr<SearchStrategy> makeImproveStrategy(
+    std::shared_ptr<NeighbourhoodSelectionStrategy> selector) {
     switch (improveStrategyChoice) {
-        case HILL_CLIMBING: {
-            constructStratAndRunImpl(state, makeHillClimbing(nhSelection),
-                                     nhSelection);
-            return;
-        }
+        case HILL_CLIMBING:
+            return make_shared<HillClimbing>(selector);
         case LATE_ACCEPTANCE_HILL_CLIMBING: {
             size_t queueSize =
                 (queueSizeArg) ? queueSizeArg.get() : DEFAULT_LAHC_QUEUE_SIZE;
-            constructStratAndRunImpl(
-                state, makeLateAcceptanceHillClimbing(nhSelection, queueSize),
-                nhSelection);
-            return;
-        }
-
-        case TEST_CLIMB: {
-            constructStratAndRunImpl(state, makeTestClimb(nhSelection),
-                                     nhSelection);
-            return;
+            return make_shared<LateAcceptanceHillClimbing>(selector, queueSize);
         }
         default:
             myAbort();
@@ -445,27 +419,24 @@ void saveUcbResults(const State& state, const T& ucb) {
             ucb->ucbValue(ucb->reward(i), totalCost, ucb->individualCost(i)));
     }
 }
-void runSearch(State& state) {
+
+std::shared_ptr<NeighbourhoodSelectionStrategy>
+makeNeighbourhoodSelectionStrategy(State& state) {
     switch (selectionStrategyChoice) {
-        case RANDOM: {
-            constructStratAndRun(state, make_shared<RandomNeighbourhood>());
-            return;
-        }
+        case RANDOM:
+            return make_shared<RandomNeighbourhood>();
+
         case UCB: {
             double exploreBias = (ucbExploreArg) ? ucbExploreArg.get()
                                                  : DEFAULT_UCB_EXPLORATION_BIAS;
             auto ucb = make_shared<UcbNeighbourhoodSelector>(state, exploreBias,
                                                              true, false);
-            constructStratAndRun(state, ucb);
-            saveUcbResults(state, ucb);
-            return;
+            return ucb;
         }
 
-        case INTERACTIVE: {
-            constructStratAndRun(
-                state, make_shared<InteractiveNeighbourhoodSelector>());
-            return;
-        }
+        case INTERACTIVE:
+            return make_shared<InteractiveNeighbourhoodSelector>();
+
         default:
             myAbort();
     }
@@ -520,9 +491,9 @@ string findConjure() {
     } else if (runCommand("conjure").first == 0) {
         return "conjure";
     } else {
-        myCerr
-            << "Error: conjure not found next to athanor executable directory "
-               "nor found in path.\n";
+        myCerr << "Error: conjure not found next to athanor executable "
+                  "directory "
+                  "nor found in path.\n";
         myExit(1);
     }
 }
@@ -625,9 +596,16 @@ int main(const int argc, const char** argv) {
         state.disableVarViolations = disableVioBiasFlag;
         setSignalsAndHandlers();
 
-        runSearch(state);
+        auto nhSelection = makeNeighbourhoodSelectionStrategy(state);
+        auto improve = makeImproveStrategy(nhSelection);
+        auto explore = makeExploreStrategy(improve);
+        search(explore, state);
         if (saveBestSolution) {
             bestSolutionFileArg.get() << bestSolution;
+        }
+        if (selectionStrategyChoice == UCB) {
+            saveUcbResults(state, static_pointer_cast<UcbNeighbourhoodSelector>(
+                                      nhSelection));
         }
         printFinalStats(state);
     } catch (nlohmann::detail::exception& e) {

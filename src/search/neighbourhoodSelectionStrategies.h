@@ -11,10 +11,15 @@
 #include "search/ucbSelector.h"
 #include "utils/random.h"
 void signalEndOfSearch();
-class InteractiveNeighbourhoodSelector {
+
+class NeighbourhoodSelectionStrategy {
    public:
-    template <typename ParentStrategy>
-    inline void run(State& state, ParentStrategy&& parentStrategy) {
+    virtual size_t nextNeighbourhood(const State& state) = 0;
+    virtual ~NeighbourhoodSelectionStrategy() {}
+};
+class InteractiveNeighbourhoodSelector : public NeighbourhoodSelectionStrategy {
+   public:
+    inline size_t nextNeighbourhood(const State& state) {
         while (true) {
             std::cout << "select a neighbourhood, choices are:\n";
             for (size_t i = 0; i < state.model.neighbourhoods.size(); i++) {
@@ -36,29 +41,13 @@ class InteractiveNeighbourhoodSelector {
                 std::cout << "Error: integer out of range.\n";
                 continue;
             }
-            bool accepted = false;
-            state.runNeighbourhood(input - 1, [&](const auto& result) {
-                accepted = parentStrategy(result);
-                return accepted;
-            });
-            if (accepted) {
-                std::cout << "change accepted\n";
-            } else {
-                std::cout << "change rejected\n";
-            }
-            break;
+            return input - 1;
         }
     }
 };
 
-class RandomNeighbourhood {
+class RandomNeighbourhood : public NeighbourhoodSelectionStrategy {
    public:
-    template <typename ParentStrategy>
-    inline void run(State& state, ParentStrategy&& parentStrategy) {
-        state.runNeighbourhood(
-            nextNeighbourhood(state),
-            [&](const auto& result) { return parentStrategy(result); });
-    }
     inline size_t nextNeighbourhood(const State& state) {
         if (state.vioContainer.getTotalViolation() == 0) {
             return globalRandom<size_t>(0,
@@ -82,16 +71,16 @@ class RandomNeighbourhood {
     }
 };
 
-class UcbNeighbourhoodSelector : public UcbSelector<UcbNeighbourhoodSelector> {
+class UcbNeighbourhoodSelector : public UcbSelector<UcbNeighbourhoodSelector>,
+                                 public NeighbourhoodSelectionStrategy {
     const State& state;
     bool includeMinorNodeCount;
     bool includeTriggerEventCount;
 
    public:
-    UcbNeighbourhoodSelector(const State& state,
-                                      double ucbExplorationBias,
-                                      bool includeMinorNodeCount,
-                                      bool includeTriggerEventCount)
+    UcbNeighbourhoodSelector(const State& state, double ucbExplorationBias,
+                             bool includeMinorNodeCount,
+                             bool includeTriggerEventCount)
         : UcbSelector<UcbNeighbourhoodSelector>(ucbExplorationBias),
           state(state),
           includeMinorNodeCount(includeMinorNodeCount),
@@ -137,14 +126,8 @@ class UcbNeighbourhoodSelector : public UcbSelector<UcbNeighbourhoodSelector> {
     inline size_t numberOptions() {
         return state.stats.neighbourhoodStats.size();
     }
-    template <typename ParentStrategy>
-    inline void run(State& state, ParentStrategy&& parentStrategy) {
-        size_t chosenNeighbourhood = next();
 
-        state.runNeighbourhood(chosenNeighbourhood, [&](const auto& result) {
-            return parentStrategy(result);
-        });
-    }
+    inline size_t nextNeighbourhood(const State&) { return next(); }
 };
 
 #endif /* SRC_SEARCH_NEIGHBOURHOODSELECTIONSTRATEGIES_H_ */

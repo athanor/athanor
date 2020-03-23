@@ -195,14 +195,12 @@ auto& saveUcbArg =
 
 enum ImproveStrategyChoice {
     HILL_CLIMBING,
-    TEST_CLIMB,
     LATE_ACCEPTANCE_HILL_CLIMBING
 };
 enum ExploreStrategyChoice {
     VIOLATION_BACKOFF,
     RANDOM_WALK,
     NO_EXPLORE,
-    TEST_EXPLORE
 };
 enum SelectionStrategyChoice { RANDOM, UCB, INTERACTIVE };
 
@@ -239,9 +237,6 @@ auto& queueSizeFlag = lateAcceptanceHillClimbingFlag.add<ComplexFlag>(
 auto& queueSizeArg =
     queueSizeFlag.add<Arg<size_t>>("integer", Policy::MANDATORY, "");
 
-auto& testClimbFlag = improveStratGroup.add<Flag>(
-    "test", "Test strategy for developers, use at your own risk.",
-    [](auto&&) { improveStrategyChoice = TEST_CLIMB; });
 
 auto& peakIterationsFlag = searchStrategiesGroup.add<ComplexFlag>(
     "--improve-peak-iterations", Policy::OPTIONAL,
@@ -278,9 +273,6 @@ auto& noExploreFlag = exploreStratGroup.add<Flag>(
     "strategy.",
     [](auto&&) { exploreStrategyChoice = NO_EXPLORE; });
 
-auto& testExploreFlag = exploreStratGroup.add<Flag>(
-    "test", "Test exploration strategy for developers, use at your own risk.",
-    [](auto&&) { exploreStrategyChoice = TEST_EXPLORE; });
 
 auto& selectionStratGroup =
     searchStrategiesGroup

@@ -72,8 +72,10 @@ UInt64 truncatedMurmurHash3(char* input, size_t inputSize) {
     return result[0] ^ result[1];
 }
 
+extern bool useShaHashing;
 HashType mix(char* input, size_t inputSize) {
-    return HashType(truncatedMurmurHash3(input, inputSize));
+    return (!useShaHashing) ? HashType(truncatedMurmurHash3(input, inputSize))
+                            : HashType(truncatedSha256(input, inputSize));
 }
 
 HashType mix(const HashType& val) {

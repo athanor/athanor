@@ -323,6 +323,14 @@ auto& disableDefinedExprsFlag =
                        "the variables that they define through equality.  "
                        "This does not include top level equalities.",
                        [](auto&) { allowForwardingOfDefiningExprs = false; });
+extern bool useShaHashing;
+bool useShaHashing = false;
+auto& useStrongHashingFlag = devGroup.add<Flag>(
+    "--use-strong-hashing", Policy::OPTIONAL,
+    "Use a slower but stronger hashing algorithm (currently SHA256).  This has "
+    "a varying effect on performance depending on problem complexity.",
+    [](auto&) { useShaHashing = true; });
+
 void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);
 void sigAlarmHandler(int);

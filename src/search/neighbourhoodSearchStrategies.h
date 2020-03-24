@@ -1,10 +1,9 @@
 
 #ifndef SRC_SEARCH_NEIGHBOURHOODSEARCHSTRATEGIES_H_
 #define SRC_SEARCH_NEIGHBOURHOODSEARCHSTRATEGIES_H_
-#include "search/statsContainer.h"
 #include "search/solver.h"
+#include "search/statsContainer.h"
 class NeighbourhoodSearchStrategy {
-
    public:
     typedef std::function<bool(const NeighbourhoodResult&)> Callback;
     virtual ~NeighbourhoodSearchStrategy() {}
@@ -22,10 +21,9 @@ class FirstAtLeastEqual : public NeighbourhoodSearchStrategy {
     size_t maxNumberAttempts;
 
    public:
-    FirstAtLeastEqual(size_t maxNumberAttempts) :
-    maxNumberAttempts(maxNumberAttempts) {}
-    void search(
-        State& state, size_t neighbourhood, Callback callback) {
+    FirstAtLeastEqual(size_t maxNumberAttempts)
+        : maxNumberAttempts(maxNumberAttempts) {}
+    void search(State& state, size_t neighbourhood, Callback callback) {
         size_t attempts = 0;
         while (attempts < maxNumberAttempts) {
             ++attempts;
@@ -40,8 +38,6 @@ class FirstAtLeastEqual : public NeighbourhoodSearchStrategy {
                 return false;
             });
         }
-//should not reach here
-        shouldNotBeCalledPanic;
     }
 };
 

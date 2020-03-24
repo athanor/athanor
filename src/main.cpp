@@ -199,10 +199,12 @@ enum ExploreStrategyChoice {
     RANDOM_WALK,
     NO_EXPLORE,
 };
+enum NhSearchStrategyChoice { APPLY_ONCE, FIRST_AT_LEAST_EQUAL };
 enum SelectionStrategyChoice { RANDOM, UCB, INTERACTIVE };
 
 ImproveStrategyChoice improveStrategyChoice = HILL_CLIMBING;
 ExploreStrategyChoice exploreStrategyChoice = RANDOM_WALK;
+NhSearchStrategyChoice nhSearchStrategyChoice = APPLY_ONCE;
 SelectionStrategyChoice selectionStrategyChoice = UCB;
 
 size_t DEFAULT_LAHC_QUEUE_SIZE = 100;
@@ -268,6 +270,36 @@ auto& noExploreFlag = exploreStratGroup.add<Flag>(
     "Do not use an exploration strategy, only use the specified improve "
     "strategy.",
     [](auto&&) { exploreStrategyChoice = NO_EXPLORE; });
+
+auto& nhSearchStratGroup =
+    searchStrategiesGroup
+        .add<ComplexFlag>("--nh-search", Policy::OPTIONAL,
+                          "Specify the strategy used to search a "
+                          "neighbourhood. (default=ao).")
+        .makeExclusiveGroup(Policy::MANDATORY);
+
+auto& applyOnceFlag = nhSearchStratGroup.add<Flag>(
+    "ao",
+    "Apply once, after choosing a neighbourhood operator, apply it once "
+    "randomly before letting letting the improve strategy decide whether or "
+    "not to accept the change.",
+    [](auto&&) { nhSearchStrategyChoice = APPLY_ONCE; });
+size_t DEFAULT_FIRST_AT_LEAST_EQUAL_ITERATIONS = 30;
+auto& firstAtLeastEqualFlag = nhSearchStratGroup.add<ComplexFlag>(
+    "fale",
+    toString(
+        "Spend some iterations (default=",
+        DEFAULT_FIRST_AT_LEAST_EQUAL_ITERATIONS,
+        ") searching for a solution at least as good as the current active "
+        "solution before passing to the improve strategy to decide."),
+    [](auto&&) { nhSearchStrategyChoice = FIRST_AT_LEAST_EQUAL; });
+
+auto& firstAtLeastEqualIterationsArg =
+    firstAtLeastEqualFlag
+        .add<ComplexFlag>("--number-attempts", Policy::OPTIONAL,
+                          "Specify how many iterations to spend for each run "
+                          "of the fale strategy.")
+        .add<Arg<size_t>>("", Policy::MANDATORY, "");
 
 auto& selectionStratGroup =
     searchStrategiesGroup
@@ -384,15 +416,31 @@ std::shared_ptr<SearchStrategy> makeExploreStrategy(
 }
 
 std::shared_ptr<SearchStrategy> makeImproveStrategy(
-    std::shared_ptr<NeighbourhoodSelectionStrategy> selector) {
+    std::shared_ptr<NeighbourhoodSelectionStrategy> selector,
+    std::shared_ptr<NeighbourhoodSearchStrategy> searcher) {
     switch (improveStrategyChoice) {
         case HILL_CLIMBING:
-            return make_shared<HillClimbing>(selector,
-                                             make_shared<ApplyOnce>());
+            return make_shared<HillClimbing>(selector, searcher);
         case LATE_ACCEPTANCE_HILL_CLIMBING: {
             size_t queueSize =
                 (queueSizeArg) ? queueSizeArg.get() : DEFAULT_LAHC_QUEUE_SIZE;
-            return make_shared<LateAcceptanceHillClimbing>(selector, queueSize);
+            return make_shared<LateAcceptanceHillClimbing>(selector, searcher,
+                                                           queueSize);
+        }
+        default:
+            myAbort();
+    }
+}
+
+std::shared_ptr<NeighbourhoodSearchStrategy> makeNeighbourhoodSearchStrategy() {
+    switch (nhSearchStrategyChoice) {
+        case APPLY_ONCE:
+            return make_shared<ApplyOnce>();
+        case FIRST_AT_LEAST_EQUAL: {
+            size_t iterations = (firstAtLeastEqualIterationsArg)
+                                    ? firstAtLeastEqualIterationsArg.get()
+                                    : DEFAULT_FIRST_AT_LEAST_EQUAL_ITERATIONS;
+            return make_shared<FirstAtLeastEqual>(iterations);
         }
         default:
             myAbort();
@@ -593,7 +641,8 @@ int main(const int argc, const char** argv) {
         setSignalsAndHandlers();
 
         auto nhSelection = makeNeighbourhoodSelectionStrategy(state);
-        auto improve = makeImproveStrategy(nhSelection);
+        auto nhSearch = makeNeighbourhoodSearchStrategy();
+        auto improve = makeImproveStrategy(nhSelection, nhSearch);
         auto explore = makeExploreStrategy(improve);
         search(explore, state);
         if (saveBestSolution) {

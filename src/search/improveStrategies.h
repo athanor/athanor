@@ -78,7 +78,8 @@ class HillClimbing : public SearchStrategy {
 };
 
 class LateAcceptanceHillClimbing : public SearchStrategy {
-    std::shared_ptr<NeighbourhoodSelectionStrategy> strategy;
+    std::shared_ptr<NeighbourhoodSelectionStrategy> selector;
+    std::shared_ptr<NeighbourhoodSearchStrategy> searcher;
     const UInt64 allowedIterationsAtPeak = improveStratPeakIterations;
     std::deque<Objective> objHistory;
     std::deque<UInt> vioHistory;
@@ -86,9 +87,11 @@ class LateAcceptanceHillClimbing : public SearchStrategy {
 
    public:
     LateAcceptanceHillClimbing(
-        std::shared_ptr<NeighbourhoodSelectionStrategy> strategy,
-        size_t queueSize)
-        : strategy(std::move(strategy)), queueSize(queueSize) {}
+        std::shared_ptr<NeighbourhoodSelectionStrategy> selector,
+        std::shared_ptr<NeighbourhoodSearchStrategy> searcher, size_t queueSize)
+        : selector(std::move(selector)),
+          searcher(std::move(searcher)),
+          queueSize(queueSize) {}
 
     template <typename T>
     void addToQueue(std::deque<T>& queue, T value) {
@@ -110,8 +113,10 @@ class LateAcceptanceHillClimbing : public SearchStrategy {
         UInt bestViolation = state.model.getViolation();
         while (true) {
             bool allowed = false, improvesOnBest = false;
-            state.runNeighbourhood(
-                strategy->nextNeighbourhood(state), [&](const auto& result) {
+
+            searcher->search(
+                state, selector->nextNeighbourhood(state),
+                [&](const auto& result) {
                     if (result.foundAssignment) {
                         if (result.statsMarkPoint.lastViolation != 0) {
                             allowed = result.model.getViolation() <=

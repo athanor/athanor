@@ -4,6 +4,7 @@
 #include <cmath>
 #include <deque>
 #include "search/model.h"
+#include "search/neighbourhoodSearchStrategies.h"
 #include "search/neighbourhoodSelectionStrategies.h"
 #include "search/searchStrategies.h"
 #include "search/solver.h"
@@ -32,19 +33,22 @@ class ExponentialIncrementer {
     }
 };
 class HillClimbing : public SearchStrategy {
-    std::shared_ptr<NeighbourhoodSelectionStrategy> strategy;
+    std::shared_ptr<NeighbourhoodSelectionStrategy> selector;
+    std::shared_ptr<NeighbourhoodSearchStrategy> searcher;
     const UInt64 allowedIterationsAtPeak = improveStratPeakIterations;
 
    public:
-    HillClimbing(std::shared_ptr<NeighbourhoodSelectionStrategy> strategy)
-        : strategy(std::move(strategy)) {}
+    HillClimbing(std::shared_ptr<NeighbourhoodSelectionStrategy> selector,
+                 std::shared_ptr<NeighbourhoodSearchStrategy> searcher)
+        : selector(std::move(selector)), searcher(std::move(searcher)) {}
 
     void run(State& state, bool isOuterMostStrategy) {
         UInt64 iterationsAtPeak = 0;
         while (true) {
             bool allowed = false, strictImprovement = false;
-            state.runNeighbourhood(
-                strategy->nextNeighbourhood(state), [&](const auto& result) {
+            searcher->search(
+                state, selector->nextNeighbourhood(state),
+                [&](const auto& result) {
                     if (result.foundAssignment) {
                         if (result.statsMarkPoint.lastViolation != 0) {
                             allowed = result.getDeltaViolation() <= 0;

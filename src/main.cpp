@@ -193,10 +193,7 @@ auto& saveUcbArg =
         .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY,
                             "File to save results to.");
 
-enum ImproveStrategyChoice {
-    HILL_CLIMBING,
-    LATE_ACCEPTANCE_HILL_CLIMBING
-};
+enum ImproveStrategyChoice { HILL_CLIMBING, LATE_ACCEPTANCE_HILL_CLIMBING };
 enum ExploreStrategyChoice {
     VIOLATION_BACKOFF,
     RANDOM_WALK,
@@ -237,7 +234,6 @@ auto& queueSizeFlag = lateAcceptanceHillClimbingFlag.add<ComplexFlag>(
 auto& queueSizeArg =
     queueSizeFlag.add<Arg<size_t>>("integer", Policy::MANDATORY, "");
 
-
 auto& peakIterationsFlag = searchStrategiesGroup.add<ComplexFlag>(
     "--improve-peak-iterations", Policy::OPTIONAL,
     toString("Specify how many iterations the selected improve strategy may "
@@ -272,7 +268,6 @@ auto& noExploreFlag = exploreStratGroup.add<Flag>(
     "Do not use an exploration strategy, only use the specified improve "
     "strategy.",
     [](auto&&) { exploreStrategyChoice = NO_EXPLORE; });
-
 
 auto& selectionStratGroup =
     searchStrategiesGroup
@@ -392,7 +387,8 @@ std::shared_ptr<SearchStrategy> makeImproveStrategy(
     std::shared_ptr<NeighbourhoodSelectionStrategy> selector) {
     switch (improveStrategyChoice) {
         case HILL_CLIMBING:
-            return make_shared<HillClimbing>(selector);
+            return make_shared<HillClimbing>(selector,
+                                             make_shared<ApplyOnce>());
         case LATE_ACCEPTANCE_HILL_CLIMBING: {
             size_t queueSize =
                 (queueSizeArg) ? queueSizeArg.get() : DEFAULT_LAHC_QUEUE_SIZE;

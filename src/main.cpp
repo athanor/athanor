@@ -326,6 +326,13 @@ auto& ucbExploreFlag = ucbFlag.add<ComplexFlag>(
 auto& ucbExploreArg =
     ucbExploreFlag.add<Arg<double>>("float", Policy::MANDATORY, "");
 
+auto& disableUcbCostFlag =
+    ucbFlag.add<Flag>("--disable-ucb-cost", Policy::OPTIONAL,
+                      "A heuristic for the cost of a neighbourhood is used "
+                      "which affects the exploration bias.  This flag disables "
+                      "the cost heuristic reducing the cost factor to simply "
+                      "the number of times the neighbourhood was activated.");
+
 auto& interactiveFlag = selectionStratGroup.add<Flag>(
     "i", "interactive, Prompt user for neighbourhood to select.",
     [](auto&&) { selectionStrategyChoice = INTERACTIVE; });
@@ -473,8 +480,8 @@ makeNeighbourhoodSelectionStrategy(State& state) {
         case UCB: {
             double exploreBias = (ucbExploreArg) ? ucbExploreArg.get()
                                                  : DEFAULT_UCB_EXPLORATION_BIAS;
-            auto ucb = make_shared<UcbNeighbourhoodSelector>(state, exploreBias,
-                                                             true, false);
+            auto ucb = make_shared<UcbNeighbourhoodSelector>(
+                state, exploreBias, !disableUcbCostFlag.parsed(), false);
             return ucb;
         }
 

@@ -549,6 +549,16 @@ string findConjure() {
     }
 }
 
+string findCorrectJsonFlagForConjure(const string& conjurePath) {
+    string conjureResponse =
+        runCommand(conjurePath, "pretty", "--output-format", "astjson").second;
+    if (conjureResponse.find("Could not read \"astjson\"") != string::npos) {
+        return "json";
+    } else {
+        return "astjson";
+    }
+}
+
 bool endsWith(const string& fullString, const string& ending) {
     if (fullString.length() >= ending.length()) {
         return (0 == fullString.compare(fullString.length() - ending.length(),
@@ -559,7 +569,8 @@ bool endsWith(const string& fullString, const string& ending) {
 }
 
 nlohmann::json parseJson(const string& file, bool useConjure,
-                         const string& conjurePath, bool specFile) {
+                         const string& conjurePath,
+                         const string& jsonConjureFlag, bool specFile) {
     if (useConjure) {
         cout << "Using conjure to translate "
              << (specFile ? "essence" : "param") << " file\n";
@@ -571,8 +582,8 @@ nlohmann::json parseJson(const string& file, bool useConjure,
             myExit(1);
         }
 
-        result =
-            runCommand(conjurePath, "pretty", file, "--output-format", "json");
+        result = runCommand(conjurePath, "pretty", file, "--output-format",
+                            jsonConjureFlag);
         if (result.first == 0) {
             return nlohmann::json::parse(
                 find(result.second.begin(), result.second.end(), '{'),
@@ -594,18 +605,21 @@ static vector<nlohmann::json> getInputs() {
     string conjurePath;
     chrono::high_resolution_clock::time_point startTime =
         chrono::high_resolution_clock::now();
+    string jsonConjureFlag;
     if (endsWith(specArg.get(), ".essence") ||
         endsWith(paramArg.get(), ".param")) {
         conjurePath = findConjure();
+        jsonConjureFlag = findCorrectJsonFlagForConjure(conjurePath);
     }
     vector<nlohmann::json> jsons;
-    jsons.emplace_back(parseJson(
-        specArg.get(), endsWith(specArg.get(), ".essence"), conjurePath, true));
+    jsons.emplace_back(parseJson(specArg.get(),
+                                 endsWith(specArg.get(), ".essence"),
+                                 conjurePath, jsonConjureFlag, true));
     if (paramArg) {
         jsons.insert(
             jsons.begin(),
             parseJson(paramArg.get(), endsWith(paramArg.get(), ".param"),
-                      conjurePath, false));
+                      conjurePath, jsonConjureFlag, false));
     }
     chrono::high_resolution_clock::time_point endTime =
         chrono::high_resolution_clock::now();

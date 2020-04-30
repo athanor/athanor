@@ -139,54 +139,81 @@ class ExplorationUsingViolationBackOff : public SearchStrategy {
         }
     }
 };
-
-class ExplorationUsingRandomWalk : public SearchStrategy {
+template <typename Quality, typename QualityFunc>
+class ExplorationUsingRandomWalkImpl {
     static constexpr UInt64 MAX_NUMBER_RANDOM_MOVES = 500;
     static constexpr double baseValue = 10;
     static constexpr double multiplier = 1.3;
     std::shared_ptr<SearchStrategy> climbStrategy;
     RandomWalk randomWalkStrategy = RandomWalk(false);
+    ExponentialIncrementer<UInt64> numberRandomMoves =
+        ExponentialIncrementer<UInt64>(baseValue, multiplier);
+    QualityFunc qualityFunc;
+    Quality bestQuality;
+
+   public:
+    ExplorationUsingRandomWalkImpl(
+        std::shared_ptr<SearchStrategy> climbStrategy, State& state,
+        QualityFunc qualityFunc)
+        : climbStrategy(std::move(climbStrategy)),
+          qualityFunc(std::move(qualityFunc)),
+          bestQuality(this->qualityFunc(state)) {
+        randomWalkStrategy.allowViolations = true;
+    }
+
+    bool exploreAndClimb(State& state) {
+        Quality lastQuality = qualityFunc(state);
+        randomWalkStrategy.numberMovesToTake = numberRandomMoves.getValue();
+        randomWalkStrategy.run(state, false);
+        if (numberRandomMoves.getValue() > MAX_NUMBER_RANDOM_MOVES) {
+            // reset
+            bestQuality = qualityFunc(state);
+            numberRandomMoves.reset(baseValue, multiplier);
+        }
+        climbStrategy->run(state, false);
+        if (qualityFunc(state) < bestQuality) {
+            // smaller is better
+            bestQuality = qualityFunc(state);
+            numberRandomMoves.reset(baseValue, multiplier);
+        } else {
+            numberRandomMoves.increment();
+        }
+        return qualityFunc(state) < lastQuality;
+    }
+};
+template <typename Quality, typename QualityFunc>
+auto makeExplorationUsingRandomWalkImpl(
+    std::shared_ptr<SearchStrategy> climbStrategy, State& state,
+    QualityFunc qualityFunc) {
+    return ExplorationUsingRandomWalkImpl<Quality, QualityFunc>(
+        climbStrategy, state, std::move(qualityFunc));
+}
+class ExplorationUsingRandomWalk : public SearchStrategy {
+    std::shared_ptr<SearchStrategy> climbStrategy;
 
    public:
     ExplorationUsingRandomWalk(std::shared_ptr<SearchStrategy> climbStrategy)
         : climbStrategy(std::move(climbStrategy)) {}
-    template <typename Func1, typename Func2>
-    void runImpl(State& state, Func1&& quality, Func2&& finished) {
-        auto bestQuality = quality(state);
-        ExponentialIncrementer<UInt64> numberRandomMoves(baseValue, multiplier);
-        while (true) {
-            climbStrategy->run(state, false);
-            if (finished(state)) {
-                return;
-            }
 
-            if (quality(state) < bestQuality) {
-                // smaller is better
-                bestQuality = quality(state);
-                numberRandomMoves.reset(baseValue, multiplier);
-            } else {
-                numberRandomMoves.increment();
+    void run(State& state, bool) {
+        climbStrategy->run(state, false);
+        {
+            auto explorer = makeExplorationUsingRandomWalkImpl<UInt>(
+                climbStrategy, state,
+                [](State& state) { return state.model.getViolation(); });
+            while (state.model.getViolation() > 0) {
+                explorer.exploreAndClimb(state);
             }
-            randomWalkStrategy.numberMovesToTake = numberRandomMoves.getValue();
-            randomWalkStrategy.run(state, false);
-            if (numberRandomMoves.getValue() > MAX_NUMBER_RANDOM_MOVES) {
-                // reset
-                bestQuality = quality(state);
-                numberRandomMoves.reset(baseValue, multiplier);
+        }
+
+        {
+            auto explorer = makeExplorationUsingRandomWalkImpl<Objective>(
+                climbStrategy, state,
+                [](State& state) { return state.model.getObjective(); });
+            while (true) {
+                explorer.exploreAndClimb(state);
             }
         }
     }
-
-    void run(State& state, bool) {
-        randomWalkStrategy.allowViolations = true;
-        runImpl(
-            state, [](State& state) { return state.model.getViolation(); },
-            [](State& state) { return state.model.getViolation() == 0; });
-        //        randomWalkStrategy.allowViolations = false;
-        runImpl(
-            state, [](State& state) { return state.model.getObjective(); },
-            [](State&) { return false; });
-    }
 };
-
 #endif /* SRC_SEARCH_EXPLORESTRATEGIES_H_ */

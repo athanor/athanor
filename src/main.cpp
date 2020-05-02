@@ -197,6 +197,7 @@ enum ImproveStrategyChoice { HILL_CLIMBING, LATE_ACCEPTANCE_HILL_CLIMBING };
 enum ExploreStrategyChoice {
     VIOLATION_BACKOFF,
     RANDOM_WALK,
+    AUTO_EXPLORE,
     NO_EXPLORE,
 };
 enum NhSearchStrategyChoice { APPLY_ONCE, FIRST_AT_LEAST_EQUAL };
@@ -264,6 +265,10 @@ auto& randomWalkFlag = exploreStratGroup.add<Flag>(
 auto& vioBackOffFlag = exploreStratGroup.add<Flag>(
     "vb", "Violation backoff.",
     [](auto&&) { exploreStrategyChoice = VIOLATION_BACKOFF; });
+
+auto& autoExploreFlag = exploreStratGroup.add<Flag>(
+    "auto", "Automatic online learning of the better performing exploration.",
+    [](auto&&) { exploreStrategyChoice = AUTO_EXPLORE; });
 
 auto& noExploreFlag = exploreStratGroup.add<Flag>(
     "none",
@@ -415,6 +420,8 @@ std::shared_ptr<SearchStrategy> makeExploreStrategy(
             return make_shared<ExplorationUsingViolationBackOff>(improve);
         case RANDOM_WALK:
             return make_shared<ExplorationUsingRandomWalk>(improve);
+        case AUTO_EXPLORE:
+            return make_shared<ExplorationUsingAuto>(improve);
         case NO_EXPLORE:
             return improve;
         default:
@@ -673,6 +680,7 @@ int main(const int argc, const char** argv) {
             saveUcbResults(state, static_pointer_cast<UcbNeighbourhoodSelector>(
                                       nhSelection));
         }
+        explore->printAdditionalStats(cout);
         printFinalStats(state);
     } catch (nlohmann::detail::exception& e) {
         myCerr << "Error parsing JSON: " << e.what() << endl;

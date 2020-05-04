@@ -10,7 +10,7 @@
 #include "search/solver.h"
 #include "search/statsContainer.h"
 
-#define EXPLORE_LOG 1
+//#define EXPLORE_LOG 1
 #ifdef EXPLORE_LOG
 #define log_explore(x) \
     std::cout << state.stats.getRealTime() << " " << x << std::endl

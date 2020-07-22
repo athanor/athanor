@@ -216,15 +216,8 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
     // track best violation
     if (vioImproved) {
         bestViolation = lastViolation;
-    }
-
-    // track best objective
-    // either the best violation is at 0, in which case the most recent
-    // violation must be 0 and the objective has improved, or the best violation
-    // is still not 0, in which case, an improvement to the violation is an
-    // improvement to the objective.
-    if ((bestViolation == 0 && lastViolation == 0 && objImproved) ||
-        (bestViolation != 0 && vioImproved)) {
+        bestObjective = lastObjective;
+    } else if(bestViolation == 0 && lastViolation == 0 && objImproved) {
         bestObjective = lastObjective;
     }
 

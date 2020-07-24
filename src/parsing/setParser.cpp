@@ -36,7 +36,7 @@ ParseResult parseOpSetLit(json& setExpr, ParsedModel& parsedModel) {
     auto set = OpMaker<OpSetLit>::make(move(result.exprs));
     set->setConstant(result.allConstant);
     auto domain =
-        make_shared<SetDomain>(exactSize(numberElements), result.domain);
+        make_shared<SetDomain>(maxSize(numberElements), result.domain);
     return ParseResult(domain, set, result.hasEmptyType);
 }
 

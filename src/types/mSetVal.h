@@ -2,6 +2,7 @@
 #define SRC_TYPES_MSETVAL_H_
 #include <unordered_map>
 #include <vector>
+
 #include "base/base.h"
 #include "common/common.h"
 #include "types/mSet.h"
@@ -110,62 +111,56 @@ struct MSetValue : public MSetView, public ValBase {
             MSetView::addMember<InnerViewType>(removedMember.asExpr());
             auto& members = getMembers<InnerViewType>();
             std::swap(members[index], members.back());
+            std::swap(indexHashMap[index], indexHashMap.back());
             debug_code(standardSanityChecksForThisType());
             debug_code(debugSanityCheck());
             return std::make_pair(false, ValRef<InnerValueType>(nullptr));
         }
     }
 
-    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline lib::optional<HashType> notifyPossibleMemberChange(UInt index) {
-        return MSetView::notifyPossibleMemberChange<
-            typename AssociatedViewType<InnerValueType>::type>(index);
-    }
-
-    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline void notifyPossibleMembersChange(const std::vector<UInt>& indices,
-                                            std::vector<HashType>& hashes) {
-        MSetView::notifyPossibleMembersChange<
-            typename AssociatedViewType<InnerValueType>::type>(indices, hashes);
-    }
-
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline std::pair<bool, lib::optional<HashType>> tryMemberChange(
-        size_t index, lib::optional<HashType> oldHash, Func&& func) {
+    inline bool tryMemberChange(size_t index, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        auto newHash = memberChanged<InnerViewType>(oldHash, index);
+        debug_code(assert(index < indexHashMap.size()));
+        auto oldHash = indexHashMap[index];
+        memberChanged<InnerViewType>(index);
         if (func()) {
             MSetView::notifyMemberChanged(index);
-            return std::make_pair(true, newHash);
+            return true;
         } else {
-            cachedHashTotal.applyIfValid([&](auto& value) {
-                if (oldHash && oldHash != newHash) {
-                    value -= mix(*newHash);
-                    value += mix(*oldHash);
-                }
-            });
-            return std::make_pair(false, oldHash);
+            auto newHash = indexHashMap[index];
+            if (oldHash != newHash) {
+                indexHashMap[index] = oldHash;
+                removeHash(newHash);
+                addHash(oldHash);
+            }
+            return false;
         }
     }
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
     inline bool tryMembersChange(const std::vector<UInt>& indices,
-                                 std::vector<HashType>& hashes, Func&& func) {
+                                 Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        SimpleCache<HashType> cachedHashTotalBackup;
-        cachedHashTotal.applyIfValid(
-            [&](const auto& value) { cachedHashTotalBackup.set(value); });
-        membersChanged<InnerViewType>(hashes, indices);
+        std::vector<HashType> oldHashes;
+        for (auto& index : indices) {
+            oldHashes.emplace_back(indexHashMap[index]);
+        }
+        membersChanged<InnerViewType>(indices);
         if (func()) {
             MSetView::notifyMembersChanged(indices);
             return true;
         } else {
-            cachedHashTotal.applyIfValid([&](auto& value) {
-                cachedHashTotalBackup.applyIfValid(
-                    [&](auto& valueBackup) { value = valueBackup; });
-            });
+            for (size_t i = 0; i < indices.size(); i++) {
+                auto index = indices[i];
+                auto oldHash = oldHashes[i];
+                auto newHash = indexHashMap[index];
+                indexHashMap[index] = oldHash;
+                removeHash(newHash);
+                addHash(oldHash);
+            }
             return false;
         }
     }

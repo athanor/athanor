@@ -1,5 +1,6 @@
 #include <cmath>
 #include <random>
+
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
 #include "types/mSetVal.h"
@@ -71,23 +72,14 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
                     params.vioContainer.childViolations(val.id);
                 UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
                     val.numberElements() - 1);
-                auto oldHash = val.notifyPossibleMemberChange<InnerValueType>(
-                    indexToChange);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
-                    auto statusHashPair = val.tryMemberChange<InnerValueType>(
-                        indexToChange, oldHash,
+                    return val.tryMemberChange<InnerValueType>(
+                        indexToChange,
                         [&]() { return params.parentCheck(params.vals); });
-                    oldHash = statusHashPair.second;
-                    return statusHashPair.first;
                 };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
-                    if (requiresRevert) {
-                        oldHash =
-                            val.notifyPossibleMemberChange<InnerValueType>(
-                                indexToChange);
-                    }
                     return !requiresRevert;
                 };
                 AnyValVec changingMembers;
@@ -100,7 +92,7 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
                     changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
-                    val.tryMemberChange<InnerValueType>(indexToChange, oldHash,
+                    val.tryMemberChange<InnerValueType>(indexToChange,
                                                         [&]() { return true; });
                 }
             });
@@ -146,21 +138,14 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain, const InnerDomainPtrType,
                     vioContainerAtThisLevel.selectRandomVars(
                         val.numberElements() - 1, innerNhNumberValsRequired);
                 debug_log(indicesToChange);
-                std::vector<HashType> oldHashes;
-                val.notifyPossibleMembersChange<InnerValueType>(indicesToChange,
-                                                                oldHashes);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
                     return val.tryMembersChange<InnerValueType>(
-                        indicesToChange, oldHashes,
+                        indicesToChange,
                         [&]() { return params.parentCheck(params.vals); });
                 };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
-                    if (requiresRevert) {
-                        val.notifyPossibleMembersChange<InnerValueType>(
-                            indicesToChange, oldHashes);
-                    }
                     return !requiresRevert;
                 };
                 AnyValVec changingMembers;
@@ -176,7 +161,7 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain, const InnerDomainPtrType,
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMembersChange<InnerValueType>(
-                        indicesToChange, oldHashes, [&]() { return true; });
+                        indicesToChange, [&]() { return true; });
                 }
             });
     }

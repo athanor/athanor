@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cassert>
+
 #include "common/common.h"
 #include "types/mSetVal.h"
 #include "utils/ignoreUnused.h"
@@ -7,19 +8,7 @@ using namespace std;
 
 template <>
 HashType getValueHash<MSetView>(const MSetView& val) {
-    return val.cachedHashTotal.getOrSet([&]() {
-        return lib::visit(
-            [&](auto& membersImpl) {
-                HashType total(0);
-                for (auto& member : membersImpl) {
-                    total +=
-                        mix(getValueHash(member->getViewIfDefined().checkedGet(
-                            NO_MSET_UNDEFINED_MEMBERS)));
-                }
-                return total;
-            },
-            val.members);
-    });
+    return val.cachedHashTotal;
 }
 
 template <>
@@ -219,20 +208,24 @@ void MSetValue::printVarBases() {
 
 void MSetView::standardSanityChecksForThisType() const {
     HashType checkCachedHashTotal(0);
+    HashMap<HashType, UInt> checkMemberCounts;
     lib::visit(
         [&](auto& members) {
-            for (auto& member : members) {
+            for (size_t i = 0; i < members.size(); i++) {
+                auto& member = members[i];
                 auto viewOption = member->getViewIfDefined();
                 sanityCheck(viewOption, NO_MSET_UNDEFINED_MEMBERS);
                 auto& view = *viewOption;
-                if (cachedHashTotal.isValid()) {
-                    HashType hash = getValueHash(view);
-                    checkCachedHashTotal += mix(hash);
-                }
+                sanityCheck(i < indexHashMap.size(),
+                            "indexHashMap has wrong size.");
+                HashType hash = getValueHash(view);
+                sanityEqualsCheck(hash, indexHashMap[i]);
+                checkCachedHashTotal += mix(hash);
+                ++checkMemberCounts[hash];
             }
-            cachedHashTotal.applyIfValid([&](const auto& value) {
-                sanityEqualsCheck(checkCachedHashTotal, value);
-            });
+            sanityEqualsCheck(checkCachedHashTotal, cachedHashTotal);
+            sanityEqualsCheck(memberCounts, checkMemberCounts);
+            sanityEqualsCheck(members.size(), indexHashMap.size());
         },
         members);
 }
@@ -260,6 +253,5 @@ AnyExprVec& MSetValue::getChildrenOperands() { return members; }
 
 template <>
 size_t getResourceLowerBound<MSetDomain>(const MSetDomain& domain) {
-    return domain.sizeAttr.minSize * getResourceLowerBound(domain.inner) +
-           1;
+    return domain.sizeAttr.minSize * getResourceLowerBound(domain.inner) + 1;
 }

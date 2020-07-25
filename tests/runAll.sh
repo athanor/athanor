@@ -3,16 +3,17 @@
 # to pass a bash expansion filter for filtering instances, like you would pass to ls, then use --filter pattern
 #to run sanity checks every n iterations instead of all iterations, pass --sanity-check-intervals n 
 
+#default: ./runAll.sh --sanity-check-intervals 100 --use-release-build
 pushd $(dirname "$0") > /dev/null
 trap "popd > /dev/null" EXIT
 
 
-useReleaseBuild=0
+useReleaseBuild=1
 dumpFilesOnError=0
 numberHeadTailSolutions=15
 instanceFilter='instances/*.essence'
 skip=0
-sanityCheckIntervals=1
+sanityCheckIntervals=100
 while (($# > 0)) ; do
     flag="$1"
     if [[ "$flag" == "--use-release-build" ]] ; then

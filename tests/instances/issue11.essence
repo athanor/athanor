@@ -1,0 +1,5 @@
+$testing:numberIterations=0
+$added because of issue #11
+
+letting s be {1,1}
+find i : int(1)

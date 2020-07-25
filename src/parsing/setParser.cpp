@@ -1,4 +1,5 @@
 #include <algorithm>
+
 #include "parsing/parserCommon.h"
 #include "types/allVals.h"
 using namespace std;
@@ -10,6 +11,17 @@ shared_ptr<SetDomain> parseDomainSet(json& setDomainExpr,
     SizeAttr sizeAttr = parseSizeAttr(setDomainExpr[1], parsedModel);
     return make_shared<SetDomain>(sizeAttr,
                                   parseDomain(setDomainExpr[2], parsedModel));
+}
+
+shared_ptr<TupleDomain> parseDomainTuple(json& tupleDomainExpr,
+                                         ParsedModel& parsedModel);
+shared_ptr<SetDomain> parseDomainRelation(json& relationDomainExpr,
+                                          ParsedModel& parsedModel) {
+    SizeAttr sizeAttr = parseSizeAttr(relationDomainExpr[1][0], parsedModel);
+    auto domain = make_shared<SetDomain>(
+        sizeAttr, parseDomainTuple(relationDomainExpr[2], parsedModel));
+    domain->isRelation = true;
+    return domain;
 }
 
 ParseResult parseOpPowerSet(json& powerSetExpr, ParsedModel& parsedModel) {

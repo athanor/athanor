@@ -33,7 +33,7 @@ ostream& prettyPrint<SetView>(ostream& os, const SetView& v) {
 template <>
 ostream& prettyPrint<SetView>(ostream& os, const SetDomain& domain,
                               const SetView& v) {
-    os << "{";
+    os << ((domain.isRelation)? "relation (" : "{");
     lib::visit(
         [&](auto& membersImpl) {
             typedef
@@ -51,7 +51,7 @@ ostream& prettyPrint<SetView>(ostream& os, const SetDomain& domain,
             }
         },
         v.members);
-    os << "}";
+    os << ((domain.isRelation) ? ")" : "}");
     return os;
 }
 

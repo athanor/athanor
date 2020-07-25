@@ -19,7 +19,7 @@ HashType getValueHash<TupleView>(const TupleView& val) {
 
 template <>
 ostream& prettyPrint<TupleView>(ostream& os, const TupleView& v) {
-    os << "tuple(";
+    os << "(";
     bool first = true;
     for (auto& member : v.members) {
         if (first) {
@@ -37,7 +37,7 @@ ostream& prettyPrint<TupleView>(ostream& os, const TupleView& v) {
 template <>
 ostream& prettyPrint<TupleView>(ostream& os, const TupleDomain& domain,
                                 const TupleView& v) {
-    os << ((domain.isRecord) ? "record {" : "tuple (");
+    os << ((domain.isRecord) ? "record {" : "(");
     for (size_t i = 0; i < v.members.size(); i++) {
         if (i != 0) {
             os << ",";

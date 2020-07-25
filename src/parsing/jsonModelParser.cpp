@@ -1,10 +1,12 @@
 
 #include "parsing/jsonModelParser.h"
+
 #include <functional>
 #include <iostream>
 #include <json.hpp>
 #include <unordered_map>
 #include <utility>
+
 #include "common/common.h"
 #include "operators/operatorMakers.h"
 #include "parsing/jsonModelParser.h"
@@ -43,6 +45,8 @@ void handleUnnamedTypeDeclaration(json& enumDeclExpr, ParsedModel& parsedModel);
 shared_ptr<BoolDomain> parseDomainBool(json&, ParsedModel&);
 shared_ptr<SetDomain> parseDomainSet(json& setDomainExpr,
                                      ParsedModel& parsedModel);
+shared_ptr<SetDomain> parseDomainRelation(json& relationDomainExpr,
+                                          ParsedModel& parsedModel);
 shared_ptr<MSetDomain> parseDomainMSet(json& mSetDomainExpr,
                                        ParsedModel& parsedModel);
 shared_ptr<SequenceDomain> parseDomainSequence(json& sequenceDomainExpr,
@@ -153,6 +157,7 @@ optional<AnyDomainRef> tryParseDomain(json& domainExpr,
          {"DomainEnum", parseDomainEnum},
          {"DomainBool", parseDomainBool},
          {"DomainSet", parseDomainSet},
+         {"DomainRelation", parseDomainRelation},
          {"DomainMSet", parseDomainMSet},
          {"DomainSequence", parseDomainSequence},
          {"DomainMatrix", parseDomainMatrix},
@@ -168,7 +173,8 @@ optional<ParseResult> tryParseSpecialConstraint(json& operandsExpr,
                                                 ParsedModel& parsedModel) {
     if (operandsExpr[0].count("Reference") &&
         operandsExpr[0]["Reference"][0]["Name"] == "amplify") {
-        cout << "[warning] treating \"amplify\" as a special athanor keyword.\n";
+        cout
+            << "[warning] treating \"amplify\" as a special athanor keyword.\n";
         auto& args = operandsExpr[1][0]["AbstractLiteral"]["AbsLitTuple"];
         auto boolConstraint = expect<BoolView>(
             parseExpr(args[0], parsedModel).expr,

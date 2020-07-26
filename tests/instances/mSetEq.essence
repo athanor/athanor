@@ -1,0 +1,7 @@
+$testing:numberIterations=100000
+
+
+find s,t,u,v : mset (minSize 50, maxSize 100) of int(1..200)
+such that s = t
+such that u = v
+such that v = t

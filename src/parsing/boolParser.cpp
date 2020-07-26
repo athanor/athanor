@@ -48,7 +48,6 @@ ParseResult parseOpIn(json& inExpr, ParsedModel& parsedModel) {
     return ParseResult(fakeBoolDomain, op, false);
 }
 
-
 ParseResult parseOpSubsetEq(json& operandsExpr, ParsedModel& parsedModel) {
     AnyExprRef leftAnyExpr = parseExpr(operandsExpr[0], parsedModel).expr;
     AnyExprRef rightAnyExpr = parseExpr(operandsExpr[1], parsedModel).expr;
@@ -93,8 +92,6 @@ ParseResult parseOpSubsetEq(json& operandsExpr, ParsedModel& parsedModel) {
         },
         leftAnyExpr);
 }
-
-
 
 ParseResult parseOpAllDiff(json& operandExpr, ParsedModel& parsedModel) {
     ParseResult parsedOperandExpr =
@@ -141,6 +138,35 @@ ParseResult parseOpEq(json& operandsExpr, ParsedModel& parsedModel) {
                     op->setConstant(constant);
                     return ParseResult(fakeBoolDomain, op, false);
                 },
+
+                [&](ExprRef<SetView>& left, auto&&) {
+                    auto subset1 = OpMaker<OpSubsetEq>::make(left, right);
+                    auto subset2 = OpMaker<OpSubsetEq>::make(right, left);
+                    subset1->setConstant(constant);
+                    subset2->setConstant(constant);
+                    auto sequence = OpMaker<OpSequenceLit>::make(
+                        ExprRefVec<BoolView>({subset1, subset2}));
+                    sequence->setConstant(constant);
+                    auto op = OpMaker<OpAnd>::make(sequence);
+                    op->setConstant(constant);
+
+                    return ParseResult(fakeBoolDomain, op, false);
+                },
+
+                [&](ExprRef<MSetView>& left, auto&&) {
+                    auto subset1 = OpMaker<OpMsetSubsetEq>::make(left, right);
+                    auto subset2 = OpMaker<OpMsetSubsetEq>::make(right, left);
+                    subset1->setConstant(constant);
+                    subset2->setConstant(constant);
+                    auto sequence = OpMaker<OpSequenceLit>::make(
+                        ExprRefVec<BoolView>({subset1, subset2}));
+                    sequence->setConstant(constant);
+                    auto op = OpMaker<OpAnd>::make(sequence);
+                    op->setConstant(constant);
+
+                    return ParseResult(fakeBoolDomain, op, false);
+                },
+
                 [&](auto&& left, auto &&) -> ParseResult {
                     myCerr << "Error, not yet handling OpEq "
                               "with operands of "

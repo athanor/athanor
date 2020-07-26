@@ -10,16 +10,39 @@ static const char* NO_UNDEFINED_IN_SUBMSET =
     "OpSubSet does not yet handle all the cases where mSets become undefined.  "
     "Especially if returned views are undefined\n";
 
-UInt excess(UInt leftCount, UInt rightCount) {
+UInt calcExcess(UInt leftCount, UInt rightCount) {
     return (leftCount > rightCount) ? leftCount - rightCount : 0;
 }
+void updateViolation(OpMsetSubsetEq* op, HashType hash) {
+    // get old excess
+    auto iter = op->hashExcesses.find(hash);
+    auto oldExcess = (iter != op->hashExcesses.end()) ? iter->second : 0;
+    // calc new excess
+    auto leftCount =
+        op->left->view().checkedGet(NO_UNDEFINED_IN_SUBMSET).memberCount(hash);
+    auto rightCount =
+        op->right->view().checkedGet(NO_UNDEFINED_IN_SUBMSET).memberCount(hash);
+    auto newExcess = calcExcess(leftCount, rightCount);
+    op->hashExcesses[hash] = newExcess;
+    if (newExcess == 0) {
+        op->hashExcesses.erase(hash);
+    }
+    Int diff = static_cast<Int>(newExcess) - static_cast<Int>(oldExcess);
+    op->violation += diff;
+}
+
 void OpMsetSubsetEq::reevaluateImpl(MSetView& leftView, MSetView& rightView,
                                     bool, bool) {
     violation = 0;
+    hashExcesses.clear();
     for (auto& hashCountPair : leftView.memberCounts) {
         auto leftCount = hashCountPair.second;
         auto rightCount = rightView.memberCount(hashCountPair.first);
-        violation += excess(leftCount, rightCount);
+        UInt excess = calcExcess(leftCount, rightCount);
+        if (excess > 0) {
+            hashExcesses[hashCountPair.first] = excess;
+            violation += excess;
+        }
     }
 }
 namespace {
@@ -37,52 +60,25 @@ HashType getHashForceDefined(const AnyExprRef& expr) {
 }
 
 }  // namespace
-// returns a pair, old excess count, new excess count.
-// excess means the number of memebrs in left that are not in right with the
-// given hash.
+
 struct OperatorTrates<OpMsetSubsetEq>::LeftTrigger : public MSetTrigger {
    public:
     OpMsetSubsetEq* op;
 
    public:
     LeftTrigger(OpMsetSubsetEq* op) : op(op) {}
-    inline void valueRemovedImpl(HashType hash, bool trigger) {
-        auto leftCount = op->left->view()
-                             .checkedGet(NO_UNDEFINED_IN_SUBMSET)
-                             .memberCount(hash);
-        auto rightCount = op->right->view()
-                              .checkedGet(NO_UNDEFINED_IN_SUBMSET)
-                              .memberCount(hash);
-        auto oldExcess = excess(leftCount + 1, rightCount);
-        auto newExcess = excess(leftCount, rightCount);
-
-        op->changeValue([&]() {
-            op->violation -= oldExcess;
-            op->violation += newExcess;
-            return trigger;
-        });
-    }
     void valueRemoved(UInt, const AnyExprRef& member) {
-        valueRemovedImpl(getHashForceDefined(member), true);
-    }
-    inline void valueAddedImpl(HashType hash, bool triggering) {
-        auto leftCount = op->left->view()
-                             .checkedGet(NO_UNDEFINED_IN_SUBMSET)
-                             .memberCount(hash);
-        auto rightCount = op->right->view()
-                              .checkedGet(NO_UNDEFINED_IN_SUBMSET)
-                              .memberCount(hash);
-        auto oldExcess = excess(leftCount - 1, rightCount);
-        auto newExcess = excess(leftCount, rightCount);
-
         op->changeValue([&]() {
-            op->violation -= oldExcess;
-            op->violation += newExcess;
-            return triggering;
+            updateViolation(op, getHashForceDefined(member));
+            return true;
         });
     }
+
     void valueAdded(const AnyExprRef& member) final {
-        valueAddedImpl(getHashForceDefined(member), true);
+        op->changeValue([&]() {
+            updateViolation(op, getHashForceDefined(member));
+            return true;
+        });
     }
     inline void valueChanged() final {
         op->changeValue([&]() {
@@ -98,8 +94,8 @@ struct OperatorTrates<OpMsetSubsetEq>::LeftTrigger : public MSetTrigger {
             op->left->getViewIfDefined().checkedGet(NO_UNDEFINED_IN_SUBMSET);
         HashType newHash = leftView.indexHashMap[index];
         op->changeValue([&]() {
-            valueRemovedImpl(oldHash, false);
-            valueAddedImpl(newHash, false);
+            updateViolation(op, oldHash);
+            updateViolation(op, newHash);
             return true;
         });
     }
@@ -108,13 +104,13 @@ struct OperatorTrates<OpMsetSubsetEq>::LeftTrigger : public MSetTrigger {
         const std::vector<HashType>& oldHashes) final {
         op->changeValue([&]() {
             for (HashType hash : oldHashes) {
-                valueRemovedImpl(hash, false);
+                updateViolation(op, hash);
             }
             auto& indexHashMap = op->left->view()
                                      .checkedGet(NO_UNDEFINED_IN_SUBMSET)
                                      .indexHashMap;
             for (UInt index : indices) {
-                valueAddedImpl(indexHashMap[index], false);
+                updateViolation(op, indexHashMap[index]);
             }
             return true;
         });
@@ -134,45 +130,18 @@ struct OperatorTrates<OpMsetSubsetEq>::LeftTrigger : public MSetTrigger {
 struct OperatorTrates<OpMsetSubsetEq>::RightTrigger : public MSetTrigger {
     OpMsetSubsetEq* op;
     RightTrigger(OpMsetSubsetEq* op) : op(op) {}
-    inline void valueRemovedImpl(HashType hash, bool triggering) {
-        auto leftCount = op->left->view()
-                             .checkedGet(NO_UNDEFINED_IN_SUBMSET)
-                             .memberCount(hash);
-        auto rightCount = op->right->view()
-                              .checkedGet(NO_UNDEFINED_IN_SUBMSET)
-                              .memberCount(hash);
-        auto oldExcess = excess(leftCount, rightCount + 1);
-        auto newExcess = excess(leftCount, rightCount);
-
-        op->changeValue([&]() {
-            op->violation -= oldExcess;
-            op->violation += newExcess;
-            return triggering;
-        });
-    }
     void valueRemoved(UInt, const AnyExprRef& member) {
-        valueRemovedImpl(getHashForceDefined(member), true);
-    }
-
-    inline void valueAddedImpl(HashType hash, bool triggering) {
-        auto leftCount = op->left->view()
-                             .checkedGet(NO_UNDEFINED_IN_SUBMSET)
-                             .memberCount(hash);
-        auto rightCount = op->right->view()
-                              .checkedGet(NO_UNDEFINED_IN_SUBMSET)
-                              .memberCount(hash);
-        auto oldExcess = excess(leftCount, rightCount - 1);
-        auto newExcess = excess(leftCount, rightCount);
-
         op->changeValue([&]() {
-            op->violation -= oldExcess;
-            op->violation += newExcess;
-            return triggering;
+            updateViolation(op, getHashForceDefined(member));
+            return true;
         });
     }
 
     void valueAdded(const AnyExprRef& member) final {
-        valueAddedImpl(getHashForceDefined(member), true);
+        op->changeValue([&]() {
+            updateViolation(op, getHashForceDefined(member));
+            return true;
+        });
     }
 
     inline void valueChanged() final {
@@ -189,8 +158,8 @@ struct OperatorTrates<OpMsetSubsetEq>::RightTrigger : public MSetTrigger {
         auto& rightView = op->right->view().checkedGet(NO_UNDEFINED_IN_SUBMSET);
         HashType newHash = rightView.indexHashMap[index];
         op->changeValue([&]() {
-            valueRemovedImpl(oldHash, false);
-            valueAddedImpl(newHash, false);
+            updateViolation(op, oldHash);
+            updateViolation(op, newHash);
             return true;
         });
     }
@@ -200,15 +169,14 @@ struct OperatorTrates<OpMsetSubsetEq>::RightTrigger : public MSetTrigger {
         const std::vector<HashType>& oldHashes) final {
         op->changeValue([&]() {
             for (HashType hash : oldHashes) {
-                valueRemovedImpl(hash, false);
+                updateViolation(op, hash);
             }
             auto& indexHashMap = op->right->view()
                                      .checkedGet(NO_UNDEFINED_IN_SUBMSET)
                                      .indexHashMap;
             for (UInt index : indices) {
-                valueAddedImpl(indexHashMap[index], false);
+                updateViolation(op, indexHashMap[index]);
             }
-
             return true;
         });
     }

@@ -1,0 +1,6 @@
+$testing:numberIterations=1000
+
+
+find m : mset (maxSize 20) of int(1..5)
+such that mset(1,1,1,2,2,3,4,4,4,4,5,5) subsetEq  m
+such that m subsetEq mset(1,1,1,1,2,2,3,4,4,4,4,5,5,10,2,2,2,20,15)

@@ -73,7 +73,9 @@ ParseResult parseOpSequenceLit(json&, ParsedModel&);
 ParseResult parseOpMSetLit(json&, ParsedModel&);
 ParseResult parseOpIn(json& inExpr, ParsedModel& parsedModel);
 ParseResult parseOpNot(json&, ParsedModel&);
-ParseResult parseOpSubsetEq(json& subsetExpr, ParsedModel& parsedModel);
+ParseResult bsetEq(json& subsetExpr, ParsedModel& parsedModel);
+ParseResult parseOpSubset(json& operandsExpr, ParsedModel& parsedModel);
+ParseResult parseOpSubsetEq(json& operandsExpr, ParsedModel& parsedModel);
 ParseResult parseOpIntersect(json& intersectExpr, ParsedModel& parsedModel);
 ParseResult parseOpAllDiff(json& operandExpr, ParsedModel& parsedModel);
 ParseResult parseOpPowerSet(json& powerSetExpr, ParsedModel& parsedModel);
@@ -398,6 +400,7 @@ optional<ParseResult> tryParseExpr(json& essenceExpr,
              {"MkOpTwoBars", parseOpTwoBars},
              {"MkOpPowerSet", parseOpPowerSet},
              {"MkOpSubsetEq", parseOpSubsetEq},
+             {"MkOpSubset", parseOpSubset},
              {"MkOpAnd", parseSequenceFoldingOp<OpAnd, BoolView>},
              {"MkOpOr", parseSequenceFoldingOp<OpOr, BoolView>},
              {"MkOpSum", parseSequenceFoldingOp<OpSum, IntView>},

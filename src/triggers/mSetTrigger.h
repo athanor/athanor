@@ -6,8 +6,8 @@ struct MSetTrigger : public virtual TriggerBase {
     virtual void valueRemoved(UInt indexOfRemovedValue,
                               const AnyExprRef& removedExpr) = 0;
     virtual void valueAdded(const AnyExprRef& member) = 0;
-    virtual void memberValueChanged(UInt index) = 0;
-    virtual void memberValuesChanged(const std::vector<UInt>& indices) = 0;
+    virtual void memberValueChanged(UInt index, HashType oldHash) = 0;
+    virtual void memberValuesChanged(const std::vector<UInt>& indices, const std::vector<HashType>& oldHashes) = 0;
 };
 
 template <>
@@ -32,12 +32,12 @@ struct TriggerContainer<MSetView>
                       triggers);
     }
 
-    inline void notifyMemberChanged(size_t index) {
-        visitTriggers([&](auto& t) { t->memberValueChanged(index); }, triggers);
+    inline void notifyMemberChanged(size_t index, HashType oldHash) {
+        visitTriggers([&](auto& t) { t->memberValueChanged(index, oldHash); }, triggers);
     }
 
-    inline void notifyMembersChanged(const std::vector<UInt>& indices) {
-        visitTriggers([&](auto& t) { t->memberValuesChanged(indices); },
+    inline void notifyMembersChanged(const std::vector<UInt>& indices, const std::vector<HashType>& oldHashes) {
+        visitTriggers([&](auto& t) { t->memberValuesChanged(indices, oldHashes); },
                       triggers);
     }
 };
@@ -51,12 +51,12 @@ struct ChangeTriggerAdapter<MSetTrigger, Child>
     }
     void valueAdded(const AnyExprRef&) override { this->forwardValueChanged(); }
 
-    void memberValueChanged(UInt) override { this->forwardValueChanged(); }
+    void memberValueChanged(UInt, HashType) override { this->forwardValueChanged(); }
 
     inline void memberReplaced(UInt, const AnyExprRef&) override {
         this->forwardValueChanged();
     }
-    void memberValuesChanged(const std::vector<UInt>&) override {
+    void memberValuesChanged(const std::vector<UInt>&, const std::vector<HashType>&) override {
         this->forwardValueChanged();
     }
 };
@@ -76,9 +76,9 @@ struct ForwardingTrigger<MSetTrigger, Op, Child>
         }
     }
 
-    void memberValueChanged(UInt index) override {
+    void memberValueChanged(UInt index, HashType oldHash) override {
         if (this->op->allowForwardingOfTrigger()) {
-            this->op->notifyMemberChanged(index);
+            this->op->notifyMemberChanged(index, oldHash);
         }
     }
 
@@ -88,9 +88,9 @@ struct ForwardingTrigger<MSetTrigger, Op, Child>
         }
     }
 
-    void memberValuesChanged(const std::vector<UInt>& indices) override {
+    void memberValuesChanged(const std::vector<UInt>& indices, const std::vector<HashType>& oldHashes) override {
         if (this->op->allowForwardingOfTrigger()) {
-            this->op->notifyMembersChanged(indices);
+            this->op->notifyMembersChanged(indices, oldHashes);
         }
     }
 };

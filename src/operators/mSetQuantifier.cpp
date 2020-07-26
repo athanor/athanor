@@ -38,8 +38,9 @@ struct ContainerTrigger<MSetView> : public MSetTrigger {
             oldMember);
     }
 
-    void memberValueChanged(UInt) final{};
-    void memberValuesChanged(const std::vector<UInt>&) final{};
+    void memberValueChanged(UInt, HashType) final{};
+    void memberValuesChanged(const std::vector<UInt>&,
+                             const std::vector<HashType>&) final{};
 
     void valueChanged() {
         while (op->numberUnrolled() != 0) {

@@ -48,21 +48,53 @@ ParseResult parseOpIn(json& inExpr, ParsedModel& parsedModel) {
     return ParseResult(fakeBoolDomain, op, false);
 }
 
-ParseResult parseOpSubsetEq(json& subsetExpr, ParsedModel& parsedModel) {
-    string errorMessage =
-        "Expected set returning expression within Op "
-        "subset: ";
-    ExprRef<SetView> left = expect<SetView>(
-        parseExpr(subsetExpr[0], parsedModel).expr,
-        [&](auto&&) { myCerr << errorMessage << subsetExpr[0]; });
-    ExprRef<SetView> right = expect<SetView>(
-        parseExpr(subsetExpr[1], parsedModel).expr,
-        [&](auto&&) { myCerr << errorMessage << subsetExpr[1]; });
-    bool constant = left->isConstant() && right->isConstant();
-    auto op = OpMaker<OpSubsetEq>::make(move(left), move(right));
-    op->setConstant(constant);
-    return ParseResult(fakeBoolDomain, op, false);
+
+ParseResult parseOpSubsetEq(json& operandsExpr, ParsedModel& parsedModel) {
+    AnyExprRef leftAnyExpr = parseExpr(operandsExpr[0], parsedModel).expr;
+    AnyExprRef rightAnyExpr = parseExpr(operandsExpr[1], parsedModel).expr;
+    return lib::visit(
+        [&](auto& left) -> ParseResult {
+            auto errorHandler = [&](auto&&) {
+                myCerr << "Expected right operand to be of "
+                          "same type as left, "
+                          "i.e. "
+                       << TypeAsString<typename AssociatedValueType<viewType(
+                              left)>::type>::value
+                       << endl;
+            };
+            auto right = expect<viewType(left)>(rightAnyExpr, errorHandler);
+
+            // adding fake template args to stop functions from being compiled
+            // until invoked
+            bool constant = left->isConstant() && right->isConstant();
+            return overloaded(
+                [&](ExprRef<SetView>& left, auto&&) {
+                    auto op = OpMaker<OpSubsetEq>::make(left, right);
+                    op->setConstant(constant);
+                    return ParseResult(fakeBoolDomain, op, false);
+                },
+
+                [&](ExprRef<MSetView>& left, auto&&) {
+                    auto op = OpMaker<OpMsetSubsetEq>::make(left, right);
+                    op->setConstant(constant);
+                    return ParseResult(fakeBoolDomain, op, false);
+                },
+                [&](auto&& left, auto &&) -> ParseResult {
+                    myCerr << "Error, not yet handling OpSubsetEq "
+                              "with operands of "
+                              "type "
+                           << TypeAsString<typename AssociatedValueType<
+                                  viewType(left)>::type>::value
+                           << ": " << operandsExpr << endl;
+                    myAbort();
+                })(left, 0);
+            // 0 is a fake arg put there to match the auto parameter to the
+            // above lambdas
+        },
+        leftAnyExpr);
 }
+
+
 
 ParseResult parseOpAllDiff(json& operandExpr, ParsedModel& parsedModel) {
     ParseResult parsedOperandExpr =

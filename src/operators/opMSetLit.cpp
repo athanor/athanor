@@ -1,6 +1,8 @@
 #include "operators/opMSetLit.h"
+
 #include <cassert>
 #include <cstdlib>
+
 #include "operators/simpleOperator.hpp"
 #include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"
@@ -8,12 +10,16 @@ using namespace std;
 void OpMSetLit::evaluateImpl() {
     lib::visit(
         [&](auto& members) {
-            for (auto& member : members) {
+            auto tempMembers = move(members);
+            members = {};
+            for (auto& member : tempMembers) {
                 member->evaluate();
+
                 if (!member->appearsDefined()) {
                     myCerr << NO_MSET_UNDEFINED_MEMBERS;
                     myAbort();
                 }
+                this->addMember(member);
             }
         },
         members);
@@ -34,7 +40,9 @@ struct ExprTrigger
         : ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>(
               op->getMembers<View>()[index]),
           ExprTriggerBase(op, index) {}
-    void adapterValueChanged() { this->op->notifyMemberChanged(this->index); }
+    void adapterValueChanged() {
+        this->op->template memberChangedAndNotify<View>(this->index);
+    }
 
     void reattachTrigger() final {
         deleteTrigger(static_pointer_cast<ExprTrigger<TriggerType>>(

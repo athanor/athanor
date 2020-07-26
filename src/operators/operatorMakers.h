@@ -317,4 +317,10 @@ struct OpMaker<OpAmplifyConstraint> {
     static ExprRef<BoolView> make(ExprRef<BoolView> o, UInt64 multiplier);
 };
 
+struct OpMsetSubsetEq;
+template <>
+struct OpMaker<OpMsetSubsetEq> {
+    static ExprRef<BoolView> make(ExprRef<MSetView> l, ExprRef<MSetView> r);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

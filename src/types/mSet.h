@@ -24,7 +24,7 @@ struct MSetView : public ExprInterface<MSetView>,
     MSetView() {}
     MSetView(AnyExprVec members) : members(std::move(members)) {}
 
-   protected:
+   public:
     void addHash(HashType hash) {
         memberCounts[hash] += 1;
         cachedHashTotal += mix(hash);
@@ -38,6 +38,15 @@ struct MSetView : public ExprInterface<MSetView>,
         }
         cachedHashTotal -= mix(hash);
     }
+
+    UInt memberCount(HashType hash) {
+        auto iter = memberCounts.find(hash);
+        if (iter != memberCounts.end()) {
+            return iter->second;
+        }
+        return 0;
+    }
+
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void addMember(const ExprRef<InnerViewType>& member) {
         auto& members = getMembers<InnerViewType>();
@@ -110,8 +119,9 @@ struct MSetView : public ExprInterface<MSetView>,
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void memberChangedAndNotify(size_t index) {
+        HashType oldHash = indexHashMap[index];
         memberChanged<InnerViewType>(index);
-        notifyMemberChanged(index);
+        notifyMemberChanged(index,oldHash);
     }
     virtual inline AnyExprVec& getChildrenOperands() { shouldNotBeCalledPanic; }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

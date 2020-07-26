@@ -126,7 +126,7 @@ struct MSetValue : public MSetView, public ValBase {
         auto oldHash = indexHashMap[index];
         memberChanged<InnerViewType>(index);
         if (func()) {
-            MSetView::notifyMemberChanged(index);
+            MSetView::notifyMemberChanged(index, oldHash);
             return true;
         } else {
             auto newHash = indexHashMap[index];
@@ -150,7 +150,7 @@ struct MSetValue : public MSetView, public ValBase {
         }
         membersChanged<InnerViewType>(indices);
         if (func()) {
-            MSetView::notifyMembersChanged(indices);
+            MSetView::notifyMembersChanged(indices, oldHashes);
             return true;
         } else {
             for (size_t i = 0; i < indices.size(); i++) {

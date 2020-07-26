@@ -13,7 +13,7 @@
 struct SetDomain {
     SizeAttr sizeAttr;
     AnyDomainRef inner;
-    bool isRelation;
+    bool isRelation = false;
     
     template <typename DomainType>
     SetDomain(SizeAttr sizeAttr, DomainType&& inner)

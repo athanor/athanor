@@ -4,18 +4,22 @@
 #include "operators/opSetIndexInternal.h"
 #include "operators/simpleOperator.hpp"
 #include "triggers/allTriggers.h"
+#include "types/function.h"
 #include "utils/ignoreUnused.h"
 using namespace std;
-
-ostream& operator<<(std::ostream& os, const OpSetLit::OperandGroup& og) {
+template <typename OperandView>
+ostream& operator<<(std::ostream& os,
+                    const typename OpSetLit<OperandView>::OperandGroup& og) {
     return os << "og(focus=" << og.focusOperand
               << ",setIndex=" << og.focusOperandSetIndex
               << ",operands=" << og.operands << ")" << endl;
 }
 
-template <typename View>
-void OpSetLit::addOperandValue(size_t index, bool insert) {
-    auto& expr = getOperands<View>()[index];
+template <typename OperandView>
+template <typename InnerViewType>
+void OpSetLit<OperandView>::addOperandValue(ExprRefVec<InnerViewType>& operands,
+                                            size_t index, bool insert) {
+    auto& expr = operands[index];
     HashType hash =
         getValueHash(expr->view().checkedGet(NO_SET_UNDEFINED_MEMBERS));
     auto& og = hashIndicesMap[hash];
@@ -29,57 +33,64 @@ void OpSetLit::addOperandValue(size_t index, bool insert) {
     if (!og.active || og.operands.size() == 1) {
         og.active = true;
         og.focusOperand = index;
-        addMemberAndNotify(expr);
-        og.focusOperandSetIndex = numberElements() - 1;
+        this->addMemberAndNotify(expr);
+        og.focusOperandSetIndex = this->numberElements() - 1;
     }
 }
 
-template <typename View>
-void OpSetLit::removeMemberFromSet(const HashType& hash,
-                                   OpSetLit::OperandGroup& operandGroup) {
+template <typename OperandView>
+template <typename InnerViewType>
+void OpSetLit<OperandView>::removeMemberFromSet(
+    const HashType&, OpSetLit<OperandView>::OperandGroup& operandGroup) {
     UInt setIndex = operandGroup.focusOperandSetIndex;
 
-    removeMemberAndNotify<View>(setIndex);
-    if (setIndex < numberElements()) {
+    this->template removeMemberAndNotify<InnerViewType>(setIndex);
+    if (setIndex < this->numberElements()) {
         // by deleting an element from the set, another member was moved.
         // Must tell that operand that its location in the set has changed
-        hashIndicesMap[indexHashMap[setIndex]].focusOperandSetIndex = setIndex;
+        hashIndicesMap[this->indexHashMap[setIndex]].focusOperandSetIndex =
+            setIndex;
     }
 }
 
-template <typename View>
-void OpSetLit::addReplacementToSet(OpSetLit::OperandGroup& og) {
+template <typename OperandView>
+template <typename InnerViewType>
+void OpSetLit<OperandView>::addReplacementToSet(
+    ExprRefVec<InnerViewType>& operands,
+    OpSetLit<OperandView>::OperandGroup& og) {
     // search for an operand who's value has not changed.
     // It shall be made the replacement operand for this set.
     // If no operands have the same value, disable this operand group
     // temperarily.
-    auto unchangedOperand =
-        find_if(begin(og.operands), end(og.operands),
-                [&](auto& o) { return hashNotChanged<View>(o); });
+    auto unchangedOperand = find_if(
+        begin(og.operands), end(og.operands),
+        [&](auto& o) { return hashNotChanged<InnerViewType>(operands, o); });
     if (unchangedOperand != og.operands.end()) {
         og.focusOperand = *unchangedOperand;
-        addMemberAndNotify(getOperands<View>()[og.focusOperand]);
-        og.focusOperandSetIndex = numberElements() - 1;
+        this->addMemberAndNotify(operands[og.focusOperand]);
+        og.focusOperandSetIndex = this->numberElements() - 1;
     } else {
         og.active = false;
     }
 }
 
-template <typename View>
-void OpSetLit::removeOperandValue(size_t index, HashType hash) {
+template <typename OperandView>
+template <typename InnerViewType>
+void OpSetLit<OperandView>::removeOperandValue(
+    ExprRefVec<InnerViewType>& operands, size_t index, HashType hash) {
     auto iter = hashIndicesMap.find(hash);
     debug_code(assert(iter != hashIndicesMap.end()));
     auto& operandGroup = iter->second;
     debug_code(assert(operandGroup.operands.count(index)));
     operandGroup.operands.erase(index);
     if (operandGroup.active && operandGroup.focusOperand == index) {
-        removeMemberFromSet<View>(hash, operandGroup);
+        removeMemberFromSet<InnerViewType>(hash, operandGroup);
         // If another operand had the same value, it can be used in place of
         // the one just deleted.  The problem is that each of the operands'
         // values might have changed.  So we filter for operands that have not
         // changed.  if no operands remain the same value, we temperarily
         // disable this operand group.
-        addReplacementToSet<View>(operandGroup);
+        addReplacementToSet(operands, operandGroup);
     }
 
     if (operandGroup.operands.empty()) {
@@ -87,19 +98,30 @@ void OpSetLit::removeOperandValue(size_t index, HashType hash) {
     }
 }
 
-template <typename View>
-bool OpSetLit::hashNotChanged(UInt index) {
-    debug_code(assert(index < getOperands<View>().size()));
+template <typename OperandView>
+template <typename InnerViewType>
+bool OpSetLit<OperandView>::hashNotChanged(ExprRefVec<InnerViewType>& operands,
+                                           UInt index) {
+    debug_code(assert(index < operands.size()));
     HashType operandHash =
-        getValueHash(getOperands<View>()[index]->getViewIfDefined().checkedGet(
+        getValueHash(operands[index]->getViewIfDefined().checkedGet(
             NO_SET_UNDEFINED_MEMBERS));
     return cachedOperandHashes.get(index) == operandHash;
 }
-void OpSetLit::evaluateImpl() {
-    debug_code(assert(exprTriggers.empty()));
+
+AnyExprVec& getMembersFromOperand(FunctionView& function) {
+    return function.range;
+}
+
+template <typename OperandView>
+void OpSetLit<OperandView>::reevaluateImpl(OperandView& operand) {
+    auto& operands = getMembersFromOperand(operand);
+    hashIndicesMap.clear();
+    cachedOperandHashes.clear();
+
     lib::visit(
         [&](auto& operands) {
-            this->members.emplace<ExprRefVec<viewType(operands)>>();
+            this->members.template emplace<ExprRefVec<viewType(operands)>>();
             for (size_t i = 0; i < operands.size(); i++) {
                 auto& operand = operands[i];
                 operand->evaluate();
@@ -107,182 +129,90 @@ void OpSetLit::evaluateImpl() {
                     myCerr << NO_SET_UNDEFINED_MEMBERS;
                     myAbort();
                 }
-                addOperandValue<viewType(operands)>(i, true);
+                addOperandValue<viewType(operands)>(operands, i, true);
             }
         },
         operands);
     this->setAppearsDefined(true);
 }
 
-namespace {
-template <typename TriggerType>
-struct ExprTrigger
-    : public ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>,
-      public OpSetLit::ExprTriggerBase {
-    typedef typename AssociatedViewType<TriggerType>::type View;
+struct OperatorTrates<OpSetLit<FunctionView>>::OperandTrigger
+    : public FunctionTrigger {
+    OpSetLit<FunctionView>* op;
 
-    using ExprTriggerBase::index;
-    using ExprTriggerBase::op;
+    OperandTrigger(OpSetLit<FunctionView>* op) : op(op) {}
+    void valueChanged() final {
+        op->reevaluate();
+        op->notifyEntireValueChanged();
+    }
+    void hasBecomeUndefined() final { todoImpl(); }
+    void hasBecomeDefined() final { todoImpl(); }
+    void memberHasBecomeUndefined(UInt) final { todoImpl(); }
+    void memberHasBecomeDefined(UInt) final { todoImpl(); }
 
-    ExprTrigger(OpSetLit* op, UInt index)
-        : ChangeTriggerAdapter<TriggerType, ExprTrigger<TriggerType>>(
-              lib::get<ExprRefVec<View>>(op->operands)[index]),
-          ExprTriggerBase(op, index) {}
-    ExprRef<View>& getTriggeringOperand() {
-        return lib::get<ExprRefVec<View>>(op->operands)[this->index];
+    void imageChanged(UInt index) final {
+        auto& view = op->operand->view().checkedGet(NO_SET_UNDEFINED_MEMBERS);
+        mpark::visit(
+            [&](auto& operands) {
+                op->removeOperandValue(operands, index,
+                                       op->cachedOperandHashes.get(index));
+                op->addOperandValue(operands, index);
+            },
+            getMembersFromOperand(view));
     }
-    void adapterValueChanged() {
-        op->removeOperandValue<View>(index, op->cachedOperandHashes.get(index));
-        op->addOperandValue<View>(index);
+    void imageChanged(const std::vector<UInt>& indices) {
+        for (auto index : indices) {
+            this->imageChanged(index);
+        }
     }
+    void memberReplaced(UInt index, const AnyExprRef&) final {
+        imageChanged(index);
+    }
+    void imageSwap(UInt index1, UInt index2) { todoImpl(index1, index2); }
 
     void reattachTrigger() final {
-        deleteTrigger(static_pointer_cast<ExprTrigger<TriggerType>>(
-            op->exprTriggers[index]));
-        auto trigger = make_shared<ExprTrigger<TriggerType>>(op, index);
-        op->getMembers<View>()[index]->addTrigger(trigger);
-        op->exprTriggers[index] = trigger;
+        deleteTrigger(op->operandTrigger);
+        auto trigger =
+            make_shared<OperatorTrates<OpSetLit<FunctionView>>::OperandTrigger>(
+                op);
+        op->operand->addTrigger(trigger);
+        op->operandTrigger = trigger;
     }
-
-    void adapterHasBecomeDefined() { todoImpl(); }
-    void adapterHasBecomeUndefined() { todoImpl(); }
 };
-}  // namespace
 
-void OpSetLit::startTriggeringImpl() {
-    if (exprTriggers.empty()) {
-        lib::visit(
-            [&](auto& operands) {
-                typedef typename AssociatedTriggerType<viewType(operands)>::type
-                    TriggerType;
-                for (size_t i = 0; i < operands.size(); i++) {
-                    auto trigger =
-                        make_shared<ExprTrigger<TriggerType>>(this, i);
-                    operands[i]->addTrigger(trigger);
-                    exprTriggers.emplace_back(move(trigger));
-                    operands[i]->startTriggering();
-                }
-            },
-            operands);
-    }
+template <typename OperandView>
+void OpSetLit<OperandView>::updateVarViolationsImpl(
+    const ViolationContext& context, ViolationContainer& container) {
+    this->operand->updateVarViolations(context, container);
 }
 
-void OpSetLit::stopTriggeringOnChildren() {
-    if (!exprTriggers.empty()) {
-        lib::visit(
-            [&](auto& operands) {
-                typedef typename AssociatedTriggerType<viewType(operands)>::type
-                    TriggerType;
-                for (auto& trigger : exprTriggers) {
-                    deleteTrigger(
-                        static_pointer_cast<ExprTrigger<TriggerType>>(trigger));
-                }
-                exprTriggers.clear();
-            },
-            operands);
-    }
-}
+template <typename OperandView>
+void OpSetLit<OperandView>::copy(OpSetLit<OperandView>&) const {}
 
-void OpSetLit::stopTriggering() {
-    if (!exprTriggers.empty()) {
-        stopTriggeringOnChildren();
-        lib::visit(
-            [&](auto& operands) {
-                for (auto& operand : operands) {
-                    operand->stopTriggering();
-                }
-            },
-            operands);
-    }
-}
-
-void OpSetLit::updateVarViolationsImpl(const ViolationContext& context,
-                                       ViolationContainer& container) {
-    lib::visit(
-        [&](auto& operands) {
-            for (auto& operand : operands) {
-                operand->updateVarViolations(context, container);
-            }
-        },
-        operands);
-}
-
-ExprRef<SetView> OpSetLit::deepCopyForUnrollImpl(
-    const ExprRef<SetView>&, const AnyIterRef& iterator) const {
-    return lib::visit(
-        [&](auto& operands) {
-            ExprRefVec<viewType(operands)> newOperands;
-            ExprRefVec<viewType(operands)> newSetMembers(numberElements(),
-                                                         nullptr);
-
-            for (auto& operand : operands) {
-                newOperands.emplace_back(
-                    operand->deepCopyForUnroll(operand, iterator));
-            }
-            auto newOpSetLit = make_shared<OpSetLit>(move(newOperands));
-            return newOpSetLit;
-        },
-        operands);
-}
-
-std::ostream& OpSetLit::dumpState(std::ostream& os) const {
-    os << "OpSetLit: SetView=";
+template <typename OperandView>
+std::ostream& OpSetLit<OperandView>::dumpState(std::ostream& os) const {
+    os << "OpSetLit<OperandView>: SetView=";
     prettyPrint(os, this->view());
-    os << "\noperands=[";
-    lib::visit(
-        [&](auto& operands) {
-            bool first = true;
-            for (const auto& operand : operands) {
-                if (first) {
-                    first = false;
-                } else {
-                    os << ",\n";
-                }
-                operand->dumpState(os);
-            }
-        },
-        operands);
-    os << "]";
-    return os;
+    os << "\noperand=[";
+    return this->operand->dumpState(os) << endl;
 }
 
-void OpSetLit::findAndReplaceSelf(const FindAndReplaceFunction& func,
-                                  PathExtension path) {
-    lib::visit(
-        [&](auto& operands) {
-            for (auto& operand : operands) {
-                operand = findAndReplace(operand, func, path);
-            }
-        },
-        operands);
+template <typename OperandView>
+string OpSetLit<OperandView>::getOpName() const {
+    return toString(
+        "OpSetLit<",
+        TypeAsString<typename AssociatedValueType<OperandView>::type>::value,
+        ">");
 }
 
-pair<bool, ExprRef<SetView>> OpSetLit::optimiseImpl(ExprRef<SetView>&,
-                                                    PathExtension path) {
-    auto newOp = std::make_shared<OpSetLit>(operands);
-    AnyExprRef newOpAsExpr = ExprRef<SetView>(newOp);
-    bool optimised = false;
+template <typename OperandView>
+void OpSetLit<OperandView>::debugSanityCheckImpl() const {
+    this->operand->debugSanityCheck();
+    this->standardSanityChecksForThisType();
+    sanityCheck(this->operand->getViewIfDefined().hasValue(),
+                "should be defined.");
     lib::visit(
         [&](auto& operands) {
-            for (auto& operand : operands) {
-                optimised |= optimise(newOpAsExpr, operand, path);
-            }
-        },
-        newOp->operands);
-
-    return std::make_pair(optimised, newOp);
-}
-
-string OpSetLit::getOpName() const { return "OpSetLit"; }
-
-void OpSetLit::debugSanityCheckImpl() const {
-    lib::visit(
-        [&](auto& operands) {
-            for (auto& o : operands) {
-                o->debugSanityCheck();
-            }
-            standardSanityChecksForThisType();
-
             for (size_t i = 0; i < operands.size(); i++) {
                 auto& operand = operands[i];
                 auto view = operand->getViewIfDefined();
@@ -301,34 +231,40 @@ void OpSetLit::debugSanityCheckImpl() const {
                                      i));
             }
 
-            for (const auto& hashIndicesPair : hashIndicesMap) {
+            for (const auto& hashIndicesPair : this->hashIndicesMap) {
                 HashType hash = hashIndicesPair.first;
                 auto& og = hashIndicesPair.second;
                 sanityCheck(og.active,
                             "There should not be any inactive operands.");
                 sanityCheck(og.operands.count(og.focusOperand),
                             "focus operand not in operand group.");
-                sanityEqualsCheck(hash,
-                                  indexHashMap.at(og.focusOperandSetIndex));
+                sanityEqualsCheck(
+                    hash, this->indexHashMap.at(og.focusOperandSetIndex));
                 for (UInt index : og.operands) {
                     HashType hash2 = cachedOperandHashes.get(index);
                     sanityEqualsCheck(hash, hash2);
                 }
             }
         },
-        operands);
+        getMembersFromOperand(this->operand->getViewIfDefined().get()));
 }
 
 template <typename Op>
 struct OpMaker;
 
 template <>
-struct OpMaker<OpSetLit> {
-    static ExprRef<SetView> make(AnyExprVec operands);
+struct OpMaker<OpSetLit<FunctionView>> {
+    static ExprRef<SetView> make(ExprRef<FunctionView> o);
 };
 
-ExprRef<SetView> OpMaker<OpSetLit>::make(AnyExprVec o) {
-    return make_shared<OpSetLit>(move(o));
+ExprRef<SetView> OpMaker<OpSetLit<FunctionView>>::make(
+    ExprRef<FunctionView> o) {
+    return make_shared<OpSetLit<FunctionView>>(move(o));
+}
+template <typename OperandView>
+AnyExprVec& OpSetLit<OperandView>::getChildrenOperands() {
+    return getMembersFromOperand(this->operand->view().checkedGet(
+        "Could not get operands for OpSetLit"));
 }
 
-AnyExprVec& OpSetLit::getChildrenOperands() { return operands; }
+template struct OpSetLit<FunctionView>;

@@ -2,15 +2,23 @@
 #define SRC_OPERATORS_OPSETLIT_H_
 #include "base/base.h"
 #include "operators/previousValueCache.h"
+#include "operators/simpleOperator.hpp"
 #include "types/set.h"
 #include "utils/fastIterableIntSet.h"
 
-struct OpSetLit : public SetView {
-    struct ExprTriggerBase {
-        OpSetLit* op;
-        UInt index;
-        ExprTriggerBase(OpSetLit* op, UInt index) : op(op), index(index) {}
-    };
+template <typename OperandView>
+struct OpSetLit;
+
+template <>
+struct OperatorTrates<OpSetLit<FunctionView>> {
+    struct OperandTrigger;
+};
+
+template <typename OperandView>
+struct OpSetLit
+    : public SimpleUnaryOperator<SetView, OperandView, OpSetLit<OperandView>> {
+    using SimpleUnaryOperator<SetView, OperandView,
+                              OpSetLit<OperandView>>::SimpleUnaryOperator;
     /*class for storing information on each value (hash) h.*/
     struct OperandGroup {
         bool active = true;  // This value is being used in the set.
@@ -22,49 +30,35 @@ struct OpSetLit : public SetView {
                                     // view members
         HashSet<UInt> operands;     // all operands with hash h
     };
-    AnyExprVec operands;
     HashMap<HashType, OperandGroup> hashIndicesMap;
     PreviousValueCache<HashType>
         cachedOperandHashes;  // map from operand index to hash.
 
-    std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
-    OpSetLit(AnyExprVec operands) : operands(std::move(operands)) {}
-    OpSetLit(const OpSetLit&) = delete;
-    OpSetLit(OpSetLit&&) = delete;
-    ~OpSetLit() { this->stopTriggeringOnChildren(); }
-
-    void evaluateImpl() final;
-    void startTriggeringImpl() final;
-    void stopTriggering() final;
-    void stopTriggeringOnChildren();
+    void reevaluateImpl(OperandView& operandView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
-                                 ViolationContainer&) final;
-    ExprRef<SetView> deepCopyForUnrollImpl(
-        const ExprRef<SetView>&, const AnyIterRef& iterator) const final;
+                                 ViolationContainer& vioContainer) final;
+    void copy(OpSetLit<OperandView>& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
-    std::pair<bool, ExprRef<SetView>> optimiseImpl(ExprRef<SetView>&,
-                                                   PathExtension path) final;
-    void assertValidHashes();
-    template <typename View>
-    ExprRefVec<View>& getOperands() {
-        return lib::get<ExprRefVec<View>>(operands);
-    }
-    template <typename InnerViewType>
-    void removeMemberFromSet(const HashType& hash,
-                             OpSetLit::OperandGroup& operandGroup);
-    template <typename View>
-    void addReplacementToSet(OperandGroup& og);
-
-    template <typename InnerViewType>
-    bool hashNotChanged(UInt index);
-    template <typename View>
-    void removeOperandValue(size_t index, HashType hash);
-    template <typename View>
-    void addOperandValue(size_t index, bool insert = false);
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
+    void assertValidHashes();
+
+    template <typename InnerViewType>
+    void removeMemberFromSet(const HashType& hash,
+                             OpSetLit<OperandView>::OperandGroup& operandGroup);
+    template <typename InnerViewType>
+    void addReplacementToSet(ExprRefVec<InnerViewType>& operands,
+                             OperandGroup& og);
+
+    template <typename InnerViewType>
+    bool hashNotChanged(ExprRefVec<InnerViewType>& operands, UInt index);
+    template <typename InnerViewType>
+    void removeOperandValue(ExprRefVec<InnerViewType>& operands, size_t index,
+                            HashType hash);
+    template <typename InnerViewType>
+    void addOperandValue(ExprRefVec<InnerViewType>& operands, size_t index,
+                         bool insert = false);
+
     AnyExprVec& getChildrenOperands() final;
 };
-
 #endif /* SRC_OPERATORS_OPSETLIT_H_ */

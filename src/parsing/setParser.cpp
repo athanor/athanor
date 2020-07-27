@@ -42,13 +42,39 @@ ParseResult parseOpPowerSet(json& powerSetExpr, ParsedModel& parsedModel) {
         op, parsedExpr.hasEmptyType);
 }
 
+ExprRef<FunctionView> makeBasicFunctionLitFrom(MultiParseResult
+                                               result) {
+    size_t numberElements = result.numberElements();
+    return lib::visit(
+        [&](auto& domain) {
+            typedef typename BaseType<decltype(domain)>::element_type Domain;
+            typedef typename AssociatedViewType<Domain>::type View;
+            auto preImageDomain = make_shared<IntDomain>(
+                vector<pair<Int, Int>>({{0, numberElements - 1}}));
+            auto function =
+                OpMaker<OpFunctionLitBasic>::make<View>(preImageDomain);
+            auto& functionView = *function->view();
+            functionView.range = move(result.exprs);
+            function->setConstant(result.allConstant);
+        return function;
+        },
+        result.domain);
+}
+
 ParseResult parseOpSetLit(json& setExpr, ParsedModel& parsedModel) {
     auto result = parseAllAsSameType(setExpr, parsedModel);
     size_t numberElements = result.numberElements();
-    auto set = OpMaker<OpSetLit>::make(move(result.exprs));
-    set->setConstant(result.allConstant);
+    bool allConstant = result.allConstant;
+    auto innerDomain = result.domain;
+    // OpSetLit is designed to build a set from another container of members,
+    // such as function or sequence.  Here, we put members in a function lit and
+    // give as operand to OpSetLit.
+
+    auto function = makeBasicFunctionLitFrom(move(result));
+    auto set = OpMaker<OpSetLit<FunctionView>>::make(function);
+    set->setConstant(allConstant);
     auto domain =
-        make_shared<SetDomain>(maxSize(numberElements), result.domain);
+        make_shared<SetDomain>(maxSize(numberElements), innerDomain);
     return ParseResult(domain, set, result.hasEmptyType);
 }
 

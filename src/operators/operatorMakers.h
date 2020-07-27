@@ -197,10 +197,12 @@ template <>
 struct OpMaker<OpMinus> {
     static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
+
+template <typename OperandView>
 struct OpSetLit;
 template <>
-struct OpMaker<OpSetLit> {
-    static ExprRef<SetView> make(AnyExprVec operands);
+struct OpMaker<OpSetLit<FunctionView>> {
+    static ExprRef<SetView> make(ExprRef<FunctionView> o);
 };
 
 struct OpPowerSet;

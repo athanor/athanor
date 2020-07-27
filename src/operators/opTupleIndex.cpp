@@ -103,6 +103,7 @@ struct OpTupleIndex<TupleMemberViewType>::TupleOperandTrigger
     OpTupleIndex<TupleMemberViewType>* op;
     TupleOperandTrigger(OpTupleIndex<TupleMemberViewType>* op) : op(op) {}
     void memberReplaced(UInt index, const AnyExprRef&) final {
+        ignoreUnused(index);
         debug_code(assert(index == op->indexOperand));
         op->reattachTupleMemberTrigger();
         op->notifyEntireValueChanged();

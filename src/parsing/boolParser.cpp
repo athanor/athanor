@@ -292,7 +292,7 @@ ParseResult parseOpTogether(json& operandsExpr, ParsedModel& parsedModel) {
                       "its second "
                       "parameter.\n";
         });
-    auto setLit = getAs<OpSetLit>(set);
+    auto setLit = getAs<OpSetLit<FunctionView>>(set);
     if (!setLit) {
         myCerr << UNSUPPORTED_MESSAGE << endl;
         myAbort();
@@ -313,7 +313,7 @@ ParseResult parseOpTogether(json& operandsExpr, ParsedModel& parsedModel) {
             op->setConstant(constant);
             return ParseResult(fakeBoolDomain, op, false);
         },
-        setLit->operands);
+        setLit->getChildrenOperands());
 }
 
 template <bool flipped>

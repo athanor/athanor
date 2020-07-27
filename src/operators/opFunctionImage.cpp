@@ -177,6 +177,8 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
         // ignore, already triggering on member
     }
     void memberReplaced(UInt index, const AnyExprRef&) final {
+        ignoreUnused(index);
+        debug_code(assert((Int)index == op->cachedIndex));
         debug_code(assert((Int)index == op->cachedIndex));
         op->reattachFunctionMemberTrigger();
         op->notifyEntireValueChanged();

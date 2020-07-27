@@ -151,6 +151,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
     }
     void memberReplaced(UInt index, const AnyExprRef&) final {
         debug_code(assert((Int)index == op->cachedIndex));
+        ignoreUnused(index);
         op->reattachSequenceMemberTrigger();
         op->notifyEntireValueChanged();
     }

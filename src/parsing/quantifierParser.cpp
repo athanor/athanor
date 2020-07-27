@@ -623,11 +623,7 @@ ParseResult parseSubsetQuantifier(json& comprExpr,
         comprExpr[1][generatorIndex]["Generator"]["GenInExpr"][0]);
     vector<shared_ptr<Quantifier<SetView>>> quantifiers = lib::visit(
         [&](auto& innerDomain) {
-            typedef typename BaseType<decltype(innerDomain)>::element_type
-                InnerDomainType;
-            typedef typename AssociatedViewType<InnerDomainType>::type
-                InnerViewType;
-            vector<shared_ptr<Quantifier<SetView>>> quantifiers =
+                        vector<shared_ptr<Quantifier<SetView>>> quantifiers =
                 makeNestedQuantifiers(container, innerDomain,
                                       quantifierVariables, parsedModel);
             addConditionsToQuantifier(comprExpr, quantifiers.back(),

@@ -204,7 +204,7 @@ enum NhSearchStrategyChoice { APPLY_ONCE, FIRST_AT_LEAST_EQUAL };
 enum SelectionStrategyChoice { RANDOM, UCB, INTERACTIVE };
 
 ImproveStrategyChoice improveStrategyChoice = HILL_CLIMBING;
-ExploreStrategyChoice exploreStrategyChoice = RANDOM_WALK;
+ExploreStrategyChoice exploreStrategyChoice = AUTO_EXPLORE;
 NhSearchStrategyChoice nhSearchStrategyChoice = APPLY_ONCE;
 SelectionStrategyChoice selectionStrategyChoice = UCB;
 
@@ -256,7 +256,7 @@ auto& exploreStratGroup =
         .add<ComplexFlag>("--explore", Policy::OPTIONAL,
                           "Specify the strategy used to explore when the "
                           "improve strategy fails to improve on an assignment. "
-                          "(default=rw).")
+                          "(default=auto).")
         .makeExclusiveGroup(Policy::MANDATORY);
 
 auto& randomWalkFlag = exploreStratGroup.add<Flag>(

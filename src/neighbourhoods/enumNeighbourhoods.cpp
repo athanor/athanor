@@ -1,5 +1,6 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/solver.h"
 #include "search/statsContainer.h"
 #include "types/enumVal.h"
 #include "utils/random.h"
@@ -35,7 +36,7 @@ void enumAssignRandomGen(const EnumDomain& domain, int numberValsRequired,
             do {
                 success = val.changeValue([&]() {
                     val.value = getRandomValueInDomain(domain);
-                    ++params.stats.minorNodeCount;
+                    ++params.state.stats.minorNodeCount;
                     if (params.parentCheck(params.vals)) {
                         return true;
                     } else {

@@ -9,7 +9,7 @@
 #include "search/violationContainer.h"
 
 #define debug_neighbourhood_action(x) debug_log(x)
-struct StatsContainer;
+class State;
 typedef std::function<bool()> AcceptanceCallBack;
 
 typedef std::function<bool(const AnyValVec& newValue)> ParentCheckCallBack;
@@ -19,7 +19,7 @@ struct NeighbourhoodParams {
     const ParentCheckCallBack& parentCheck;
     const int parentCheckTryLimit;
     AnyValVec& vals;
-    StatsContainer& stats;
+    State& state;
     ViolationContainer& vioContainer;
     std::vector<ViolationContainer*>
         vioContainers;  // only for neighbourhoods who require multiple vars
@@ -27,12 +27,12 @@ struct NeighbourhoodParams {
     NeighbourhoodParams(const AcceptanceCallBack& changeAccepted,
                         const ParentCheckCallBack& parentCheck,
                         const int parentCheckTryLimit, AnyValVec& vals,
-                        StatsContainer& stats, ViolationContainer& vioContainer)
+                        State& state, ViolationContainer& vioContainer)
         : changeAccepted(changeAccepted),
           parentCheck(parentCheck),
           parentCheckTryLimit(parentCheckTryLimit),
           vals(vals),
-          stats(stats),
+          state(state),
           vioContainer(vioContainer) {}
 
     template <typename Val>

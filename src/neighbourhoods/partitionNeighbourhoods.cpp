@@ -1,6 +1,7 @@
 #include <cmath>
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/solver.h"
 #include "search/statsContainer.h"
 #include "types/partitionVal.h"
 #include "utils/random.h"
@@ -75,7 +76,7 @@ void partitionContainingPartsSwapGenImpl(
             bool success;
             UInt index1, index2;
             do {
-                ++params.stats.minorNodeCount;
+                ++params.state.stats.minorNodeCount;
 
                 index1 = vioContainerAtThisLevel.selectRandomVar(
                     domain.numberElements - 1);
@@ -137,7 +138,8 @@ void partitionAssignRandomGen(const PartitionDomain& domain,
                 auto resource = allocator.requestLargerResource();
                 success =
                     assignRandomValueInDomain(domain, *newValue, resource);
-                params.stats.minorNodeCount += resource.getResourceConsumed();
+                params.state.stats.minorNodeCount +=
+                    resource.getResourceConsumed();
                 success = success && val.tryAssignNewValue(*newValue, [&]() {
                     return params.parentCheck(params.vals);
                 });

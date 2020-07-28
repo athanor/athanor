@@ -1,6 +1,7 @@
 #include <cmath>
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/solver.h"
 #include "search/statsContainer.h"
 #include "types/sequenceVal.h"
 #include "utils/random.h"
@@ -69,7 +70,7 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                 NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<SequenceValue>().front());
                 if (val.numberElements() == 0) {
-                    ++params.stats.minorNodeCount;
+                    ++params.state.stats.minorNodeCount;
                     return;
                 }
                 auto& vioContainerAtThisLevel =
@@ -119,7 +120,7 @@ void sequenceLiftSingleGenImpl(const SequenceDomain& domain,
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck,
                     tryLimit * params.parentCheckTryLimit, changingMembers,
-                    params.stats, vioContainerAtThisLevel);
+                    params.state, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.trySubsequenceChange<InnerValueType>(
@@ -157,7 +158,7 @@ struct SequenceAdd
     }
     void apply(NeighbourhoodParams& params, SequenceValue& val) {
         if (val.numberElements() == domain.sizeAttr.maxSize) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         auto newMember = constructValueFromDomain(innerDomain);
@@ -171,7 +172,7 @@ struct SequenceAdd
             auto resource = allocator.requestLargerResource();
             success =
                 assignRandomValueInDomain(innerDomain, *newMember, resource);
-            params.stats.minorNodeCount += resource.getResourceConsumed();
+            params.state.stats.minorNodeCount += resource.getResourceConsumed();
             indexOfNewMember = globalRandom<UInt>(0, val.numberElements());
             success =
                 success && val.tryAddMember(indexOfNewMember, newMember, [&]() {
@@ -211,7 +212,7 @@ struct SequenceRemove
     }
     void apply(NeighbourhoodParams& params, SequenceValue& val) {
         if (val.numberElements() == domain.sizeAttr.minSize) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         size_t indexToRemove;
@@ -221,7 +222,7 @@ struct SequenceRemove
         debug_neighbourhood_action("Looking for value to remove");
 
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             indexToRemove = globalRandom<size_t>(0, val.numberElements() - 1);
             std::pair<bool, ValRef<InnerValueType>> removeStatus =
                 val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
@@ -355,7 +356,7 @@ struct SequenceRelaxSub
 
     void apply(NeighbourhoodParams& params, SequenceValue& val) {
         if (val.numberElements() < 2) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -388,7 +389,7 @@ struct SequenceRelaxSub
 
             success = assignNewValues(innerDomain, val, oldHashes, newValues,
                                       resource);
-            params.stats.minorNodeCount += resource.getResourceConsumed();
+            params.state.stats.minorNodeCount += resource.getResourceConsumed();
             if (!success) {
                 continue;
             }
@@ -451,7 +452,7 @@ struct SequenceReverseSub
     static bool matches(const SequenceDomain&) { return true; }
     void apply(NeighbourhoodParams& params, SequenceValue& val) {
         if (val.numberElements() < 2) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -464,7 +465,7 @@ struct SequenceReverseSub
         do {
             index1 = globalRandom<UInt>(0, val.numberElements() - 2);
             index2 = globalRandom<UInt>(index1 + 1, val.numberElements() - 1);
-            params.stats.minorNodeCount +=
+            params.state.stats.minorNodeCount +=
                 (index2 - index1) / 2 + ((index2 - index1) % 2 != 0);
             success = val.trySubsequenceReverse<InnerValueType>(
                 index1, index2,
@@ -510,7 +511,7 @@ struct SequenceShuffleSub
 
     void apply(NeighbourhoodParams& params, SequenceValue& val) {
         if (val.numberElements() < 2) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -526,7 +527,7 @@ struct SequenceShuffleSub
             index2 = globalRandom<UInt>(index1 + 1, val.numberElements() - 1);
             generateSwap((index2 - index1) + 1, swaps);
 
-            params.stats.minorNodeCount += (index2 - index1) + 1;
+            params.state.stats.minorNodeCount += (index2 - index1) + 1;
             success = val.trySubsequenceShuffle<InnerValueType>(
                 index1, swaps,
                 [&]() { return params.parentCheck(params.vals); });
@@ -564,7 +565,7 @@ struct SequencePositionsSwap
     static bool matches(const SequenceDomain&) { return true; }
     void apply(NeighbourhoodParams& params, SequenceValue& val) {
         if (val.numberElements() < 2) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -576,7 +577,7 @@ struct SequencePositionsSwap
         bool success;
         UInt index1, index2;
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             index1 = vioContainerAtThisLevel.selectRandomVar(
                 val.numberElements() - 1);
             index2 = globalRandom<UInt>(0, val.numberElements() - 1);
@@ -624,7 +625,7 @@ struct SequenceMove
                SequenceValue& toVal) {
         if (fromVal.numberElements() == domain.sizeAttr.minSize ||
             toVal.numberElements() == domain.sizeAttr.maxSize) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -635,7 +636,7 @@ struct SequenceMove
         bool success = false;
         UInt indexToMove, destIndex;
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             indexToMove = globalRandom<UInt>(0, fromVal.numberElements() - 1);
             destIndex = globalRandom<UInt>(0, toVal.numberElements());
             auto memberToMove =
@@ -719,7 +720,7 @@ struct SequenceCrossover
     void apply(NeighbourhoodParams& params, SequenceValue& fromVal,
                SequenceValue& toVal) {
         if (fromVal.numberElements() == 0 || toVal.numberElements() == 0) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -740,7 +741,7 @@ struct SequenceCrossover
         std::vector<HashType> fromValMemberHashes, toValMemberHashes;
 
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             indexToCrossOver = globalRandom<UInt>(0, maxCrossOverIndex);
             member1 = fromVal.member<InnerValueType>(indexToCrossOver);
             member2 = toVal.member<InnerValueType>(indexToCrossOver);
@@ -805,7 +806,7 @@ struct SequenceAssignRandom
         do {
             auto resource = allocator.requestLargerResource();
             success = assignRandomValueInDomain(domain, *newValue, resource);
-            params.stats.minorNodeCount += resource.getResourceConsumed();
+            params.state.stats.minorNodeCount += resource.getResourceConsumed();
             success = success && val.tryAssignNewValue(*newValue, [&]() {
                 return params.parentCheck(params.vals);
             });

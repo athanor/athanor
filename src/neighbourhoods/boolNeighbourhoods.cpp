@@ -1,5 +1,6 @@
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/solver.h"
 #include "search/statsContainer.h"
 #include "types/boolVal.h"
 #include "utils/random.h"
@@ -33,7 +34,7 @@ void boolAssignRandomGen(const BoolDomain& domain, int numberValsRequired,
             do {
                 success = val.changeValue([&]() {
                     val.violation = getRandomValueInDomain(domain);
-                    ++params.stats.minorNodeCount;
+                    ++params.state.stats.minorNodeCount;
                     if (params.parentCheck(params.vals)) {
                         return true;
                     } else {

@@ -1,6 +1,7 @@
 #include "neighbourhoods/neighbourhoods.h"
 #include <cassert>
 #include <random>
+#include "search/solver.h"
 #include "search/statsContainer.h"
 using namespace std;
 UInt64 NeighbourhoodResourceTracker::remainingResource() {

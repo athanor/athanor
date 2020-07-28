@@ -1,6 +1,7 @@
 #include <cassert>
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/solver.h"
 #include "search/statsContainer.h"
 #include "search/ucbSelector.h"
 
@@ -67,9 +68,9 @@ Int getRandomValueInDomain(const IntDomain& domain, Int minValue,
 }
 
 template <>
-bool assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
-                                          IntValue& val,
-                                          NeighbourhoodResourceTracker& resource) {
+bool assignRandomValueInDomain<IntDomain>(
+    const IntDomain& domain, IntValue& val,
+    NeighbourhoodResourceTracker& resource) {
     if (!val.domain) {
         val.domain = &domain;
     }
@@ -78,7 +79,7 @@ bool assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
     }
     val.value = getRandomValueInDomain(domain);
     return true;
-    }
+}
 
 struct IntAssignRandom {
     StandardUcbSelector selector =
@@ -97,7 +98,7 @@ struct IntAssignRandom {
         bool success;
         size_t selectedOption;
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             success = val.changeValue([&]() {
                 if (varViolation == 0 || selector.next() == 0) {
                     selectedOption = 0;

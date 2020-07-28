@@ -1,6 +1,7 @@
 #include <cmath>
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/solver.h"
 #include "search/statsContainer.h"
 #include "types/setVal.h"
 #include "utils/random.h"
@@ -68,7 +69,7 @@ struct SetAdd : public NeighbourhoodFunc<SetDomain, 1, SetAdd<InnerDomain>> {
     }
     void apply(NeighbourhoodParams& params, SetValue& val) {
         if (val.numberElements() == domain.sizeAttr.maxSize) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         auto newMember = constructValueFromDomain(innerDomain);
@@ -83,7 +84,7 @@ struct SetAdd : public NeighbourhoodFunc<SetDomain, 1, SetAdd<InnerDomain>> {
             auto resource = resourceAllocator.requestLargerResource();
             success =
                 assignRandomValueInDomain(innerDomain, *newMember, resource);
-            params.stats.minorNodeCount += resource.getResourceConsumed();
+            params.state.stats.minorNodeCount += resource.getResourceConsumed();
             success = success && val.tryAddMember(newMember, [&]() {
                 return params.parentCheck(params.vals);
             });
@@ -94,6 +95,160 @@ struct SetAdd : public NeighbourhoodFunc<SetDomain, 1, SetAdd<InnerDomain>> {
             return;
         }
         debug_neighbourhood_action("Added value: " << newMember);
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            val.tryRemoveMember<InnerValueType>(val.numberElements() - 1,
+                                                []() { return true; });
+        }
+    }
+};
+
+template <typename InnerDomainType, typename Strategy,
+          typename InnerValueType =
+              typename AssociatedValueType<InnerDomainType>::type>
+void runInnerNeighbourhood(State& state, ValRef<InnerValueType> val,
+                           Neighbourhood& innerNeighbourhood,
+                           ParentCheckCallBack& parentCheck,
+                           Strategy&& strategy) {
+    debug_code(if (debugLogAllowed) {
+        debug_log("Before inner neighbourhood application, state is:");
+        state.stats.printCurrentState(state.model);
+    });
+    debug_neighbourhood_action(
+        "Applying inner neighbourhood: " << innerNeighbourhood.name << ":");
+    bool changeMade = false;
+    AcceptanceCallBack callback = [&]() {
+        changeMade = true;
+        return strategy();
+    };
+    AnyValVec nhVars(ValRefVec<InnerValueType>({val}));
+    NeighbourhoodParams params(callback, parentCheck, 1, nhVars, state,
+                               emptyViolations);
+    innerNeighbourhood.apply(params);
+    if (!changeMade) {
+        // tell strategy that no new assignment found
+        strategy();
+    }
+}
+
+template <
+    typename InnerDomain,
+    typename InnerValueType = typename AssociatedValueType<InnerDomain>::type>
+void innerSearch(NeighbourhoodParams& params, SetValue& val,
+                 size_t indexToChange,
+                 std::vector<Neighbourhood>& innerNeighbourhoods) {
+    auto innerVal = val.member<InnerValueType>(indexToChange);
+    // bring violation to 0
+    UInt lastViolation = params.state.model.getViolation();
+    UInt iterationsWithoutImprovement = 0;
+    while (lastViolation > 0 && iterationsWithoutImprovement <= 1000) {
+        size_t random = globalRandom<size_t>(0, innerNeighbourhoods.size() - 1);
+        Neighbourhood& neighbourhood = innerNeighbourhoods[random];
+        ParentCheckCallBack parentCheck = [&](const AnyValVec& newValue) {
+            HashType newHash = getValueHash(
+                lib::get<ValRefVec<InnerValueType>>(newValue).front());
+            if (val.hashIndexMap.count(newHash)) {
+                return false;
+            }
+            return val.tryMemberChange<InnerValueType>(indexToChange, [&]() {
+                return params.parentCheck(params.vals);
+            });
+        };
+
+        bool allowed = false;
+        runInnerNeighbourhood<InnerDomain>(
+            params.state, innerVal, neighbourhood, parentCheck, [&]() {
+                allowed = params.state.model.getViolation() <= lastViolation;
+                if (runSanityChecks) {
+                    params.state.model.debugSanityCheck();
+                }
+                return allowed;
+            });
+        UInt newViolation = params.state.model.getViolation();
+        if (newViolation < lastViolation) {
+            // strict improvment
+            iterationsWithoutImprovement = 0;
+            lastViolation = newViolation;
+        } else {
+            ++iterationsWithoutImprovement;
+        }
+        if (!allowed) {
+            val.tryMemberChange<InnerValueType>(indexToChange, [&]() {
+                return params.parentCheck(params.vals);
+            });
+        }
+        if (runSanityChecks) {
+            params.state.model.debugSanityCheck();
+        }
+    }
+}
+template <typename InnerDomain>
+struct SetAddWithSearch
+    : public NeighbourhoodFunc<SetDomain, 1, SetAddWithSearch<InnerDomain>> {
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    const SetDomain& domain;
+    const InnerDomain& innerDomain;
+    const UInt innerDomainSize;
+    std::vector<Neighbourhood>
+        innerNeighbourhoods;  // neighbourhoods for searching on new values
+                              // added to the set
+
+    SetAddWithSearch(const SetDomain& domain)
+        : domain(domain),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomainSize(getDomainSize(innerDomain)) {
+        generateNeighbourhoodsImpl(
+            1, lib::get<shared_ptr<InnerDomain>>(domain.inner),
+            innerNeighbourhoods);
+    }
+    static string getName() { return "SetAddWithSearch"; }
+    static bool matches(const SetDomain& domain) {
+        if (domain.sizeAttr.sizeType == SizeAttr::SizeAttrType::EXACT_SIZE) {
+            return false;
+        }
+        std::vector<Neighbourhood>
+            innerNeighbourhoodsTest;  // will be thrown away, just need to check
+                                      // that inner neighbourhoods can be
+                                      // generated
+        generateNeighbourhoodsImpl(
+            1, lib::get<shared_ptr<InnerDomain>>(domain.inner),
+            innerNeighbourhoodsTest);
+        return !innerNeighbourhoodsTest.empty();
+    }
+
+    void apply(NeighbourhoodParams& params, SetValue& val) {
+        if (val.numberElements() == domain.sizeAttr.maxSize) {
+            ++params.state.stats.minorNodeCount;
+            return;
+        }
+        auto newMember = constructValueFromDomain(innerDomain);
+        int numberTries = 0;
+        const int tryLimit =
+            params.parentCheckTryLimit *
+            calcNumberInsertionAttempts(val.numberElements(), innerDomainSize);
+        debug_neighbourhood_action("Looking for value to add");
+        bool success = false;
+        NeighbourhoodResourceAllocator resourceAllocator(innerDomain);
+        do {
+            auto resource = resourceAllocator.requestLargerResource();
+            success =
+                assignRandomValueInDomain(innerDomain, *newMember, resource);
+            params.state.stats.minorNodeCount += resource.getResourceConsumed();
+            success = success && val.tryAddMember(newMember, [&]() {
+                return params.parentCheck(params.vals);
+            });
+        } while (!success && ++numberTries < tryLimit);
+        if (!success) {
+            debug_neighbourhood_action(
+                "Couldn't find value, number tries=" << tryLimit);
+            return;
+        }
+        debug_neighbourhood_action("Added value: "
+                                   << newMember
+                                   << "\nNow starting search on inner type.");
+        innerSearch<InnerDomain>(params, val, val.numberElements() - 1,
+                                 innerNeighbourhoods);
         if (!params.changeAccepted()) {
             debug_neighbourhood_action("Change rejected");
             val.tryRemoveMember<InnerValueType>(val.numberElements() - 1,
@@ -119,7 +274,7 @@ struct SetCrossover
     void apply(NeighbourhoodParams& params, SetValue& fromVal,
                SetValue& toVal) {
         if (fromVal.numberElements() == 0 || toVal.numberElements() == 0) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -134,7 +289,7 @@ struct SetCrossover
         ValRef<InnerValueType> fromMemberToMove = nullptr,
                                toMemberToMove = nullptr;
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             fromIndexToMove =
                 globalRandom<UInt>(0, fromVal.numberElements() - 1);
             toIndexToMove = globalRandom<UInt>(0, toVal.numberElements() - 1);
@@ -207,7 +362,7 @@ struct SetMove : public NeighbourhoodFunc<SetDomain, 2, SetMove<InnerDomain>> {
                SetValue& toVal) {
         if (fromVal.numberElements() == domain.sizeAttr.minSize ||
             toVal.numberElements() == domain.sizeAttr.maxSize) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -217,7 +372,7 @@ struct SetMove : public NeighbourhoodFunc<SetDomain, 2, SetMove<InnerDomain>> {
         debug_neighbourhood_action("Looking for value to move");
         bool success = false;
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             UInt indexToMove =
                 globalRandom<UInt>(0, fromVal.numberElements() - 1);
             if (toVal.containsMember(
@@ -264,7 +419,7 @@ struct SetRemove
     }
     void apply(NeighbourhoodParams& params, SetValue& val) {
         if (val.numberElements() == domain.sizeAttr.minSize) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         size_t indexToRemove;
@@ -273,7 +428,7 @@ struct SetRemove
         bool success = false;
         debug_neighbourhood_action("Looking for value to remove");
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             indexToRemove = globalRandom<size_t>(0, val.numberElements() - 1);
             debug_log("trying to remove index " << indexToRemove << " from set "
                                                 << val.view());
@@ -313,7 +468,7 @@ void setLiftSingleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
              innerDomainSize](NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<SetValue>().front());
                 if (val.numberElements() == 0) {
-                    ++params.stats.minorNodeCount;
+                    ++params.state.stats.minorNodeCount;
                     return;
                 }
                 auto& vioContainerAtThisLevel =
@@ -346,7 +501,7 @@ void setLiftSingleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                     calcNumberInsertionAttempts(val.numberElements(),
                                                 innerDomainSize) *
                         params.parentCheckTryLimit,
-                    changingMembers, params.stats, vioContainerAtThisLevel);
+                    changingMembers, params.state, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMemberChange<InnerValueType>(indexToChange,
@@ -403,7 +558,7 @@ void setLiftMultipleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
              innerDomainSize](NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<SetValue>().front());
                 if (val.numberElements() < (size_t)innerNhNumberValsRequired) {
-                    ++params.stats.minorNodeCount;
+                    ++params.state.stats.minorNodeCount;
                     return;
                 }
                 auto& vioContainerAtThisLevel =
@@ -439,7 +594,7 @@ void setLiftMultipleGenImpl(const SetDomain& domain, const InnerDomainPtrType&,
                     calcNumberInsertionAttempts(val.numberElements(),
                                                 innerDomainSize) *
                         params.parentCheckTryLimit,
-                    changingMembers, params.stats, vioContainerAtThisLevel);
+                    changingMembers, params.state, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMembersChange<InnerValueType>(
@@ -489,7 +644,7 @@ struct SetAssignRandom
         do {
             auto resource = resourceAllocator.requestLargerResource();
             success = assignRandomValueInDomain(domain, *newValue, resource);
-            params.stats.minorNodeCount += resource.getResourceConsumed();
+            params.state.stats.minorNodeCount += resource.getResourceConsumed();
             success = success && val.tryAssignNewValue(*newValue, [&]() {
                 return params.parentCheck(params.vals);
             });
@@ -515,12 +670,13 @@ const AnyDomainRef getInner<SetDomain>(const SetDomain& domain) {
 }
 
 const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::value = {
-    {1, setLiftSingleGen},                             //
-    {1, setLiftMultipleGen},                           //
-    {1, generateForAllTypes<SetDomain, SetAdd>},       //
-    {1, generateForAllTypes<SetDomain, SetRemove>},    //
-    {2, generateForAllTypes<SetDomain, SetMove>},      //
-    {2, generateForAllTypes<SetDomain, SetCrossover>}  //
+    {1, setLiftSingleGen},                                  //
+    {1, setLiftMultipleGen},                                //
+    {1, generateForAllTypes<SetDomain, SetAdd>},            //
+    {1, generateForAllTypes<SetDomain, SetAddWithSearch>},  //
+    {1, generateForAllTypes<SetDomain, SetRemove>},         //
+    {2, generateForAllTypes<SetDomain, SetMove>},           //
+    {2, generateForAllTypes<SetDomain, SetCrossover>}       //
     //    {1, generateForAllTypes<SetDomain, SetAssignRandom>}  //
 };
 

@@ -2,6 +2,7 @@
 #include <random>
 
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/solver.h"
 #include "search/statsContainer.h"
 #include "types/mSetVal.h"
 #include "utils/random.h"
@@ -65,7 +66,7 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
                 NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<MSetValue>().front());
                 if (val.numberElements() == 0) {
-                    ++params.stats.minorNodeCount;
+                    ++params.state.stats.minorNodeCount;
                     return;
                 }
                 auto& vioContainerAtThisLevel =
@@ -89,7 +90,7 @@ void mSetLiftSingleGenImpl(const MSetDomain& domain, const InnerDomainPtrType&,
                     val.member<InnerValueType>(indexToChange));
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck, params.parentCheckTryLimit,
-                    changingMembers, params.stats, vioContainerAtThisLevel);
+                    changingMembers, params.state, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMemberChange<InnerValueType>(indexToChange,
@@ -129,7 +130,7 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain, const InnerDomainPtrType,
                 NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<MSetValue>().front());
                 if (val.numberElements() < (size_t)innerNhNumberValsRequired) {
-                    ++params.stats.minorNodeCount;
+                    ++params.state.stats.minorNodeCount;
                     return;
                 }
                 auto& vioContainerAtThisLevel =
@@ -157,7 +158,7 @@ void mSetLiftMultipleGenImpl(const MSetDomain& domain, const InnerDomainPtrType,
                 }
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck, params.parentCheckTryLimit,
-                    changingMembers, params.stats, vioContainerAtThisLevel);
+                    changingMembers, params.state, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMembersChange<InnerValueType>(
@@ -194,7 +195,7 @@ struct MSetAdd : public NeighbourhoodFunc<MSetDomain, 1, MSetAdd<InnerDomain>> {
     }
     void apply(NeighbourhoodParams& params, MSetValue& val) {
         if (val.numberElements() == domain.sizeAttr.maxSize) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         auto newMember = constructValueFromDomain(innerDomain);
@@ -209,7 +210,7 @@ struct MSetAdd : public NeighbourhoodFunc<MSetDomain, 1, MSetAdd<InnerDomain>> {
             auto resource = resourceAllocator.requestLargerResource();
             success =
                 assignRandomValueInDomain(innerDomain, *newMember, resource);
-            params.stats.minorNodeCount += resource.getResourceConsumed();
+            params.state.stats.minorNodeCount += resource.getResourceConsumed();
             success = success && val.tryAddMember(newMember, [&]() {
                 return params.parentCheck(params.vals);
             });
@@ -242,7 +243,7 @@ struct MSetRemove
     }
     void apply(NeighbourhoodParams& params, MSetValue& val) {
         if (val.numberElements() == domain.sizeAttr.minSize) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         size_t indexToRemove;
@@ -251,7 +252,7 @@ struct MSetRemove
         bool success;
         debug_neighbourhood_action("Looking for value to remove");
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             indexToRemove = globalRandom<size_t>(0, val.numberElements() - 1);
             std::pair<bool, ValRef<InnerValueType>> removeStatus =
                 val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
@@ -305,7 +306,7 @@ struct MSetAssignRandom
         do {
             auto resource = resourceAllocator.requestLargerResource();
             success = assignRandomValueInDomain(domain, *newValue, resource);
-            params.stats.minorNodeCount += resource.getResourceConsumed();
+            params.state.stats.minorNodeCount += resource.getResourceConsumed();
             success = success && val.tryAssignNewValue(*newValue, [&]() {
                 return params.parentCheck(params.vals);
             });

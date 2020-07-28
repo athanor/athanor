@@ -1,6 +1,7 @@
 #include <cmath>
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/solver.h"
 #include "search/statsContainer.h"
 #include "types/boolVal.h"
 #include "types/functionVal.h"
@@ -63,7 +64,7 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
                 NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<FunctionValue>().front());
                 if (val.rangeSize() == 0) {
-                    ++params.stats.minorNodeCount;
+                    ++params.state.stats.minorNodeCount;
                     return;
                 }
                 auto& vioContainerAtThisLevel =
@@ -95,7 +96,7 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
 
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck, params.parentCheckTryLimit,
-                    changingMembers, params.stats, vioContainerAtThisLevel);
+                    changingMembers, params.state, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryImageChange<InnerValueType>(indexToChange,
@@ -138,7 +139,7 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
                 NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<FunctionValue>().front());
                 if (val.rangeSize() < (size_t)innerNhNumberValsRequired) {
-                    ++params.stats.minorNodeCount;
+                    ++params.state.stats.minorNodeCount;
                     return;
                 }
                 auto& vioContainerAtThisLevel =
@@ -174,7 +175,7 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
                 }
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck, params.parentCheckTryLimit,
-                    changingMembers, params.stats, vioContainerAtThisLevel);
+                    changingMembers, params.state, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryImagesChange<InnerValueType>(
@@ -213,7 +214,7 @@ struct FunctionImagesSwap
     static bool matches(const FunctionDomain&) { return true; }
     void apply(NeighbourhoodParams& params, FunctionValue& val) {
         if (val.rangeSize() < 2) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -225,7 +226,7 @@ struct FunctionImagesSwap
         bool success;
         UInt index1, index2;
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             index1 =
                 vioContainerAtThisLevel.selectRandomVar(val.rangeSize() - 1);
             index2 = globalRandom<UInt>(0, val.rangeSize() - 1);
@@ -306,7 +307,7 @@ struct FunctionImagesSwapAlongAxis
         UInt index1, index2;
         do {
             success = false;
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             lib::optional<pair<UInt, UInt>> indicesToSwap =
                 getIndicesToSwap(val, vioContainerAtThisLevel);
             if (!indicesToSwap) {
@@ -385,7 +386,7 @@ struct FunctionUnifyImages
     static bool matches(const FunctionDomain&) { return true; }
     void apply(NeighbourhoodParams& params, FunctionValue& val) {
         if (val.rangeSize() < 2) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -402,8 +403,8 @@ struct FunctionUnifyImages
         ValueType valueBackup;
         lib::optional<HashType> previousMemberHash;
         do {
-            ++params.stats.minorNodeCount;
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             index1 =
                 vioContainerAtThisLevel.selectRandomVar(val.rangeSize() - 1);
             index2 = globalRandom<UInt>(0, val.rangeSize() - 1);
@@ -475,7 +476,7 @@ struct FunctionSplitImages
     static bool matches(const FunctionDomain&) { return true; }
     void apply(NeighbourhoodParams& params, FunctionValue& val) {
         if (val.rangeSize() < 2) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -492,7 +493,7 @@ struct FunctionSplitImages
         lib::optional<HashType> previousMemberHash;
         NeighbourhoodResourceAllocator allocator(innerDomain);
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             index1 =
                 vioContainerAtThisLevel.selectRandomVar(val.rangeSize() - 1);
             index2 = globalRandom<UInt>(0, val.rangeSize() - 1);
@@ -579,7 +580,7 @@ struct FunctionAssignRandom
         do {
             auto resource = allocator.requestLargerResource();
             success = assignRandomValueInDomain(domain, *newValue, resource);
-            params.stats.minorNodeCount += resource.getResourceConsumed();
+            params.state.stats.minorNodeCount += resource.getResourceConsumed();
 
             success = success && val.tryAssignNewValue(*newValue, [&]() {
                 return params.parentCheck(params.vals);
@@ -644,7 +645,7 @@ struct FunctionCrossover
     void apply(NeighbourhoodParams& params, FunctionValue& fromVal,
                FunctionValue& toVal) {
         if (fromVal.rangeSize() == 0 || toVal.rangeSize() == 0) {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             return;
         }
         int numberTries = 0;
@@ -656,7 +657,7 @@ struct FunctionCrossover
             min(fromVal.rangeSize(), toVal.rangeSize()) - 1;
         ValRef<InnerValueType> member1 = nullptr, member2 = nullptr;
         do {
-            ++params.stats.minorNodeCount;
+            ++params.state.stats.minorNodeCount;
             indexToCrossOver = globalRandom<UInt>(0, maxCrossOverIndex);
             member1 = fromVal.member<InnerValueType>(indexToCrossOver);
             member2 = toVal.member<InnerValueType>(indexToCrossOver);

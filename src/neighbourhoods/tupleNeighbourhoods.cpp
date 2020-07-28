@@ -1,6 +1,7 @@
 #include <cmath>
 #include <random>
 #include "neighbourhoods/neighbourhoods.h"
+#include "search/solver.h"
 #include "search/statsContainer.h"
 #include "types/tupleVal.h"
 #include "utils/random.h"
@@ -70,7 +71,8 @@ void tupleAssignRandomGen(const TupleDomain& domain, int numberValsRequired,
                 auto resource = allocator.requestLargerResource();
                 success =
                     assignRandomValueInDomain(domain, *newValue, resource);
-                params.stats.minorNodeCount += resource.getResourceConsumed();
+                params.state.stats.minorNodeCount +=
+                    resource.getResourceConsumed();
                 success = success && val.tryAssignNewValue(*newValue, [&]() {
                     return params.parentCheck(params.vals);
                 });
@@ -127,7 +129,7 @@ void tupleLiftSingleGenImpl(const TupleDomain& domain,
                     val.member<InnerValueType>(indexToChange));
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck, params.parentCheckTryLimit,
-                    changingMembers, params.stats, vioContainerAtThisLevel);
+                    changingMembers, params.state, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryMemberChange<InnerValueType>(indexToChange,
@@ -196,7 +198,7 @@ void tupleLiftSingleTwoVarsGenImpl(const TupleDomain& domain,
                     val2.member<InnerValueType>(indexToChange));
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck, params.parentCheckTryLimit,
-                    changingMembers, params.stats, vioContainerAtThisLevel);
+                    changingMembers, params.state, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val1.tryMemberChange<InnerValueType>(

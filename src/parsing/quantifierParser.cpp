@@ -140,26 +140,7 @@ void addLocalVarsToScopeFromPatternMatch(
             })(domain, expr);
     }
 }
-template <typename Domain, typename Quantifier>
-void handleAsPowerSet(json&, const shared_ptr<Domain>&, Quantifier&, bool,
-                      OpPowerSet&, vector<string>&, ParsedModel&) {
-    shouldNotBeCalledPanic;
-}
-template <typename Quantifier>
-void handleAsPowerSet(json& generatorExpr,
-                      const shared_ptr<SetDomain>& iterDomain,
-                      Quantifier& quantifier, bool containerHasEmptyType,
-                      OpPowerSet& powerSet,
-                      vector<string>& variablesAddedToScope,
-                      ParsedModel& parsedModel) {
-    auto iterRef = quantifier->template newIterRef<SetView>();
 
-    ExprRef<SetView> iter(iterRef);
-    addLocalVarsToScopeFromPatternMatch(generatorExpr[0], iterDomain, iter,
-                                        containerHasEmptyType, parsedModel,
-                                        variablesAddedToScope);
-    powerSet.sizeLimit = generatorExpr[0]["AbsPatSet"].size();
-}
 template <typename ContainerDomainType, typename Quantifier>
 void parseGenerator(json& generatorParent,
                     shared_ptr<ContainerDomainType>& containerDomain,
@@ -179,20 +160,12 @@ void parseGenerator(json& generatorParent,
                 InnerViewType;
             auto overload = overloaded(
                 [&](shared_ptr<SetDomain>&) {
-                    auto powerSetTest =
-                        getAs<OpPowerSet>(quantifier->container);
-                    if (powerSetTest) {
-                        handleAsPowerSet(generatorExpr, innerDomain, quantifier,
-                                         containerHasEmptyType, *powerSetTest,
-                                         variablesAddedToScope, parsedModel);
-                    } else {
-                        ExprRef<InnerViewType> iter(
-                            quantifier->template newIterRef<InnerViewType>());
-                        addLocalVarsToScopeFromPatternMatch(
-                            generatorExpr[0], innerDomain, iter,
-                            containerHasEmptyType, parsedModel,
-                            variablesAddedToScope);
-                    }
+                    ExprRef<InnerViewType> iter(
+                        quantifier->template newIterRef<InnerViewType>());
+                    addLocalVarsToScopeFromPatternMatch(
+                        generatorExpr[0], innerDomain, iter,
+                        containerHasEmptyType, parsedModel,
+                        variablesAddedToScope);
                 },
                 [&](shared_ptr<MSetDomain>&) {
                     ExprRef<InnerViewType> iter(
@@ -290,22 +263,42 @@ ParseResult makeFlatten(ParseResult sequenceExpr) {
         domain->inner);
 }
 
+static void removeQuantifierVariablesFromScope(
+    const vector<std::string>& variablesAddedToScope,
+    ParsedModel& parsedModel) {
+    for (auto& varName : variablesAddedToScope) {
+        parsedModel.namedExprs.erase(varName);
+    }
+}
+
 optional<ParseResult> parseComprehensionImpl(json& comprExpr,
                                              ParsedModel& parsedModel,
                                              size_t generatorIndex);
 template <typename ContainerReturnType, typename ContainerDomainType>
-ParseResult buildQuant(json& comprExpr, ExprRef<ContainerReturnType>& container,
-                       shared_ptr<ContainerDomainType>& domain,
-                       const AnyDomainRef& innerDomain,
-                       bool containerHasEmptyType, size_t generatorIndex,
-                       ParsedModel& parsedModel) {
+ParseResult buildQuantifier(json& comprExpr,
+                            ExprRef<ContainerReturnType>& container,
+                            shared_ptr<ContainerDomainType>& domain,
+                            const AnyDomainRef& innerDomain,
+                            bool containerHasEmptyType, size_t generatorIndex,
+                            ParsedModel& parsedModel) {
+    // if quantifying over empty type, return empty sequence
     if (lib::get_if<shared_ptr<EmptyDomain>>(&innerDomain)) {
         auto val = make<SequenceValue>();
         val->members.emplace<ExprRefVec<EmptyView>>();
         return ParseResult(fakeSequenceDomain(make_shared<EmptyDomain>()),
                            val.asExpr(), true);
     }
+
+    // if subsetEq expression i.e. {i,j} subsetEq s or as conjure write's it
+    // {i,j} <_ powerSet(s), then use special rewrite
+    auto powerSetTest = getAs<OpPowerSet>(container);
+    if (powerSetTest) {
+        return parseSubsetQuantifier(comprExpr, powerSetTest, domain,
+                                     generatorIndex, parsedModel);
+    }
+
     auto quantifier = make_shared<Quantifier<ContainerReturnType>>(container);
+
     vector<string> variablesAddedToScope;
     parseGenerator(comprExpr[1][generatorIndex]["Generator"], domain,
                    innerDomain, quantifier, containerHasEmptyType,
@@ -314,7 +307,7 @@ ParseResult buildQuant(json& comprExpr, ExprRef<ContainerReturnType>& container,
                               parsedModel);
 
     optional<ParseResult> returnValue;
-    auto innerQuantifier =
+    lib::optional<ParseResult> innerQuantifier =
         parseComprehensionImpl(comprExpr, parsedModel, generatorIndex + 1);
     if (innerQuantifier) {
         quantifier->setExpression(innerQuantifier->expr);
@@ -328,9 +321,7 @@ ParseResult buildQuant(json& comprExpr, ExprRef<ContainerReturnType>& container,
                                   ExprRef<SequenceView>(quantifier),
                                   containerHasEmptyType);
     }
-    for (auto& varName : variablesAddedToScope) {
-        parsedModel.namedExprs.erase(varName);
-    }
+    removeQuantifierVariablesFromScope(variablesAddedToScope, parsedModel);
     return *returnValue;
 }
 // this function is mutually recursive with buildQuant
@@ -362,30 +353,30 @@ optional<ParseResult> parseComprehensionImpl(json& comprExpr,
         [&](ExprRef<SetView>& set) {
             auto& domain =
                 lib::get<shared_ptr<SetDomain>>(quantifyingOver.domain);
-            return buildQuant(comprExpr, set, domain, domain->inner,
-                              quantifyingOver.hasEmptyType, generatorIndex,
-                              parsedModel);
+            return buildQuantifier(comprExpr, set, domain, domain->inner,
+                                   quantifyingOver.hasEmptyType, generatorIndex,
+                                   parsedModel);
         },
         [&](ExprRef<MSetView>& mSet) {
             auto& domain =
                 lib::get<shared_ptr<MSetDomain>>(quantifyingOver.domain);
-            return buildQuant(comprExpr, mSet, domain, domain->inner,
-                              quantifyingOver.hasEmptyType, generatorIndex,
-                              parsedModel);
+            return buildQuantifier(comprExpr, mSet, domain, domain->inner,
+                                   quantifyingOver.hasEmptyType, generatorIndex,
+                                   parsedModel);
         },
         [&](ExprRef<SequenceView>& sequence) {
             auto& domain =
                 lib::get<shared_ptr<SequenceDomain>>(quantifyingOver.domain);
-            return buildQuant(comprExpr, sequence, domain, domain->inner,
-                              quantifyingOver.hasEmptyType, generatorIndex,
-                              parsedModel);
+            return buildQuantifier(comprExpr, sequence, domain, domain->inner,
+                                   quantifyingOver.hasEmptyType, generatorIndex,
+                                   parsedModel);
         },
         [&](ExprRef<FunctionView>& function) {
             auto& domain =
                 lib::get<shared_ptr<FunctionDomain>>(quantifyingOver.domain);
-            return buildQuant(comprExpr, function, domain, domain->to,
-                              quantifyingOver.hasEmptyType, generatorIndex,
-                              parsedModel);
+            return buildQuantifier(comprExpr, function, domain, domain->to,
+                                   quantifyingOver.hasEmptyType, generatorIndex,
+                                   parsedModel);
         },
         [&](auto &&) -> ParseResult {
             myCerr << "Error, not yet handling quantifier for "
@@ -542,4 +533,113 @@ ParseResult toSequence(ParseResult parsedExpr) {
 
         [&](auto&) -> ParseResult { todoImpl(); });
     return lib::visit(overload, parsedExpr.domain);
+}
+
+vector<string> parseSubsetQuantVarNames(json& patternExpr) {
+    vector<string> subsetQuantVars;
+    json& setPatternExpr = patternExpr["AbsPatSet"];
+    for (auto& varPattern : setPatternExpr) {
+        string name = varPattern["Single"]["Name"];
+        subsetQuantVars.emplace_back(name);
+    }
+    return subsetQuantVars;
+}
+/*for an input of {i_1,i_2,...,i_N} subsetEq s, the output should be
+ * i_1 <- s, i_2 <- s, i_2 != i_1, i_3 <- s, i_3 != i_2, i_2 != i_1,
+ * ...*/
+
+template <typename InnerDomainType>
+vector<shared_ptr<Quantifier<SetView>>> makeNestedQuantifiers(
+    ExprRef<SetView>& container, shared_ptr<InnerDomainType>& innerDomain,
+    vector<string>& quantifierVariables, ParsedModel& parsedModel) {
+    typedef typename AssociatedViewType<InnerDomainType>::type InnerViewType;
+
+    vector<shared_ptr<Quantifier<SetView>>> quantifiers;
+    vector<ExprRef<InnerViewType>> iters;
+    for (size_t i = 0; i < quantifierVariables.size(); i++) {
+        // make the quantifier at level i of nesting and its iterator
+        quantifiers.emplace_back(make_shared<Quantifier<SetView>>(container));
+        iters.emplace_back(quantifiers.back()->newIterRef<InnerViewType>());
+        // add iter name to scope
+        parsedModel.namedExprs.emplace(
+            quantifierVariables[i],
+            ParseResult(innerDomain, iters.back(), false));
+
+        // add condition that we don't unroll any value that is unrolled
+        // at a higher level
+        vector<ExprRef<BoolView>> notEqConditions;
+        for (size_t j = 0; j < i; j++) {
+            notEqConditions.emplace_back(
+                OpMaker<OpNotEq<InnerViewType>>::make(iters[i], iters[j]));
+        }
+        if (notEqConditions.size() > 1) {
+            quantifiers.back()->setCondition(OpMaker<OpAnd>::make(
+                OpMaker<OpSequenceLit>::make(move(notEqConditions))));
+        } else if (notEqConditions.size() == 1) {
+            quantifiers.back()->setCondition(notEqConditions[0]);
+        }
+    }
+    return quantifiers;
+}
+
+template <typename InnerViewType>
+ExprRef<SequenceView> flattenNestedQuantifiers(
+    vector<shared_ptr<Quantifier<SetView>>>& quantifiers) {
+    if (quantifiers.size() == 1) {
+        return quantifiers.front();
+    }
+    ExprRef<SequenceView> currentLevel(quantifiers.back());
+    quantifiers[quantifiers.size() - 1]->setExpression(currentLevel);
+    currentLevel = OpMaker<OpFlattenOneLevel<InnerViewType>>::make(
+        quantifiers[quantifiers.size() - 1]);
+    for (size_t i = quantifiers.size() - 2; i > 0; i--) {
+        quantifiers[i - 1]->setExpression(currentLevel);
+        currentLevel =
+            OpMaker<OpFlattenOneLevel<InnerViewType>>::make(quantifiers[i - 1]);
+    }
+    return currentLevel;
+}
+
+// this code path should never be reached, the overloaded version below (which
+// only accepts sets) is the target
+template <typename DomainType>
+ParseResult parseSubsetQuantifier(json&, OptionalRef<OpPowerSet>,
+                                  shared_ptr<DomainType>, size_t,
+                                  ParsedModel&) {
+    shouldNotBeCalledPanic;
+}
+
+// used to parse {i,j} <- powerSet(s), which is out conjure outputs for {i,j}
+// subsetEq s
+ParseResult parseSubsetQuantifier(json& comprExpr,
+                                  OptionalRef<OpPowerSet> powerset,
+                                  shared_ptr<SetDomain> domain,
+                                  size_t generatorIndex,
+                                  ParsedModel& parsedModel) {
+    domain = lib::get<shared_ptr<SetDomain>>(domain->inner);
+    auto container = powerset->operand;
+    vector<string> quantifierVariables = parseSubsetQuantVarNames(
+        comprExpr[1][generatorIndex]["Generator"]["GenInExpr"][0]);
+    return lib::visit(
+        [&](auto& innerDomain) -> ParseResult {
+            typedef typename BaseType<decltype(innerDomain)>::element_type
+                InnerDomainType;
+            typedef typename AssociatedViewType<InnerDomainType>::type
+                InnerViewType;
+            vector<shared_ptr<Quantifier<SetView>>> quantifiers =
+                makeNestedQuantifiers(container, innerDomain,
+                                      quantifierVariables, parsedModel);
+
+            auto topLevelSequence =
+                flattenNestedQuantifiers<InnerViewType>(quantifiers);
+            addConditionsToQuantifier(comprExpr, quantifiers.back(),
+                                      generatorIndex, parsedModel);
+            AnyDomainRef exprDomain =
+                addExprToQuantifier(comprExpr, quantifiers.back(), parsedModel);
+            removeQuantifierVariablesFromScope(quantifierVariables,
+                                               parsedModel);
+            return ParseResult(fakeSequenceDomain(exprDomain), topLevelSequence,
+                               false);
+        },
+        domain->inner);
 }

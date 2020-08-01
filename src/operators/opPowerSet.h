@@ -1,4 +1,7 @@
 
+// this operator is no longer intended to be part of the AST during search. The
+// parser should detect it and re-write it into a different expression.
+
 #ifndef SRC_OPERATORS_OPPOWERSET_H_
 #define SRC_OPERATORS_OPPOWERSET_H_
 #include "operators/simpleOperator.h"
@@ -10,12 +13,8 @@ struct OperatorTrates<OpPowerSet> {
     struct OperandTrigger;
 };
 struct OpPowerSet : public SimpleUnaryOperator<SetView, SetView, OpPowerSet> {
-    size_t sizeLimit;
-    OpPowerSet(ExprRef<SetView> operand, int sizeLimit = -1)
-        : SimpleUnaryOperator<SetView, SetView, OpPowerSet>(std::move(operand)),
-          sizeLimit(sizeLimit) {
-        members.emplace<ExprRefVec<SetView>>();
-    }
+    using SimpleUnaryOperator<SetView, SetView,
+                              OpPowerSet>::SimpleUnaryOperator;
 
     void reevaluateImpl(SetView& operandView);
     void updateVarViolationsImpl(const ViolationContext& vioContext,

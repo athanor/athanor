@@ -2,5 +2,5 @@ $testing:numberIterations=10000
 
 
 
-find s : mset (size 10) of mset (minSize 5, maxSize 3) of int(1..3)
+find s : mset (size 10) of mset (minSize 5, maxSize 10) of int(1..3)
 such that forAll i in s . forAll j in s, i != j . i subsetEq j

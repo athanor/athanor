@@ -1,0 +1,23 @@
+$testing:numberIterations=1000
+
+
+letting n be 5
+letting o be 2**n
+
+
+
+find Ticks : set (size n) of int(0..o)
+
+
+
+such that
+
+    $ implied
+    0 in Ticks,
+
+    forAll {i, j} subsetEq Ticks .
+        forAll {k, l} subsetEq Ticks .
+            {i, j} != {k, l} -> |i - j| != |k - l|
+find m : int(1..o)
+such that m = max(Ticks)
+minimising m

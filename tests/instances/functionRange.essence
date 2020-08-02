@@ -1,0 +1,9 @@
+$testing:numberIterations=100000
+
+
+letting n be 30
+find f : function (total) int(1..n) --> int(1..n)
+find s : set of int(1..n)
+such that s = range(f)
+maximising |s|
+

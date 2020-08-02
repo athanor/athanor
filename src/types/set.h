@@ -58,7 +58,6 @@ struct SetView : public ExprInterface<SetView>,
         return removedMember;
     }
 
-
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline HashType memberChanged(UInt index) {
         auto& members = getMembers<InnerViewType>();
@@ -124,11 +123,10 @@ struct SetView : public ExprInterface<SetView>,
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRef<InnerViewType> removeMemberAndNotify(UInt index) {
-        ExprRef<InnerViewType> removedValue =
-            removeMember<InnerViewType>(index);
-        notifyMemberRemoved(index, getValueHash(removedValue->view().checkedGet(
-                                       NO_SET_UNDEFINED_MEMBERS)));
-        return removedValue;
+        HashType hash = indexHashMap[index];
+        auto removedMember = removeMember<InnerViewType>(index);
+        notifyMemberRemoved(index, hash);
+        return removedMember;
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

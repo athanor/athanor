@@ -42,8 +42,7 @@ ParseResult parseOpPowerSet(json& powerSetExpr, ParsedModel& parsedModel) {
         op, parsedExpr.hasEmptyType);
 }
 
-ExprRef<FunctionView> makeBasicFunctionLitFrom(MultiParseResult
-                                               result) {
+ExprRef<FunctionView> makeBasicFunctionLitFrom(MultiParseResult result) {
     size_t numberElements = result.numberElements();
     return lib::visit(
         [&](auto& domain) {
@@ -56,7 +55,7 @@ ExprRef<FunctionView> makeBasicFunctionLitFrom(MultiParseResult
             auto& functionView = *function->view();
             functionView.range = move(result.exprs);
             function->setConstant(result.allConstant);
-        return function;
+            return function;
         },
         result.domain);
 }
@@ -73,8 +72,7 @@ ParseResult parseOpSetLit(json& setExpr, ParsedModel& parsedModel) {
     auto function = makeBasicFunctionLitFrom(move(result));
     auto set = OpMaker<OpSetLit<FunctionView>>::make(function);
     set->setConstant(allConstant);
-    auto domain =
-        make_shared<SetDomain>(maxSize(numberElements), innerDomain);
+    auto domain = make_shared<SetDomain>(maxSize(numberElements), innerDomain);
     return ParseResult(domain, set, result.hasEmptyType);
 }
 
@@ -101,4 +99,20 @@ ParseResult parseOpIntersect(json& intersectExpr, ParsedModel& parsedModel) {
                 myAbort();
             }),
         left.domain, right.domain);
+}
+
+ParseResult parseOpFunctionRange(json& functionExpr, ParsedModel& parsedModel) {
+    string errorMessage =
+        "Expected function returning expression within Op "
+        "FunctionRange: ";
+    auto parsedExpr = parseExpr(functionExpr, parsedModel);
+    auto operand = expect<FunctionView>(parsedExpr.expr, [&](auto&&) {
+        myCerr << errorMessage << functionExpr << endl;
+    });
+    auto& domain = lib::get<shared_ptr<FunctionDomain>>(parsedExpr.domain)->to;
+    bool constant = operand->isConstant();
+    auto op = OpMaker<OpSetLit<FunctionView>>::make(move(operand));
+    op->setConstant(constant);
+    return ParseResult(make_shared<SetDomain>(noSize(), domain), op,
+                       parsedExpr.hasEmptyType);
 }

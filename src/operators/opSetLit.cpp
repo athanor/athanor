@@ -45,6 +45,7 @@ void OpSetLit<OperandView>::removeMemberFromSet(
     UInt setIndex = operandGroup.focusOperandSetIndex;
 
     this->template removeMemberAndNotify<InnerViewType>(setIndex);
+
     if (setIndex < this->numberElements()) {
         // by deleting an element from the set, another member was moved.
         // Must tell that operand that its location in the set has changed
@@ -151,6 +152,7 @@ struct OperatorTrates<OpSetLit<FunctionView>>::OperandTrigger
     void memberHasBecomeDefined(UInt) final { todoImpl(); }
 
     void imageChanged(UInt index) final {
+        debug_log("hit\n");
         auto& view = op->operand->view().checkedGet(NO_SET_UNDEFINED_MEMBERS);
         mpark::visit(
             [&](auto& operands) {
@@ -168,7 +170,10 @@ struct OperatorTrates<OpSetLit<FunctionView>>::OperandTrigger
     void memberReplaced(UInt index, const AnyExprRef&) final {
         imageChanged(index);
     }
-    void imageSwap(UInt index1, UInt index2) { todoImpl(index1, index2); }
+    void imageSwap(UInt index1, UInt index2) {
+        imageChanged(index1);
+        imageChanged(index2);
+    }
 
     void reattachTrigger() final {
         deleteTrigger(op->operandTrigger);

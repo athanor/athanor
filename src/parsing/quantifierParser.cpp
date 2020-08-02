@@ -589,9 +589,9 @@ ExprRef<SequenceView> flattenNestedQuantifiers(
         return quantifiers.front();
     }
     ExprRef<SequenceView> currentLevel(quantifiers.back());
-    quantifiers[quantifiers.size() - 1]->setExpression(currentLevel);
+    quantifiers[quantifiers.size() - 2]->setExpression(currentLevel);
     currentLevel = OpMaker<OpFlattenOneLevel<InnerViewType>>::make(
-        quantifiers[quantifiers.size() - 1]);
+        quantifiers[quantifiers.size() - 2]);
     for (size_t i = quantifiers.size() - 2; i > 0; i--) {
         quantifiers[i - 1]->setExpression(currentLevel);
         currentLevel =
@@ -618,10 +618,11 @@ ParseResult parseSubsetQuantifier(json& comprExpr,
                                   ParsedModel& parsedModel) {
     domain = lib::get<shared_ptr<SetDomain>>(domain->inner);
     auto container = powerset->operand;
+    lib::optional<AnyDomainRef> exprDomain;
     vector<string> quantifierVariables = parseSubsetQuantVarNames(
         comprExpr[1][generatorIndex]["Generator"]["GenInExpr"][0]);
-    return lib::visit(
-        [&](auto& innerDomain) -> ParseResult {
+    vector<shared_ptr<Quantifier<SetView>>> quantifiers = lib::visit(
+        [&](auto& innerDomain) {
             typedef typename BaseType<decltype(innerDomain)>::element_type
                 InnerDomainType;
             typedef typename AssociatedViewType<InnerDomainType>::type
@@ -629,17 +630,26 @@ ParseResult parseSubsetQuantifier(json& comprExpr,
             vector<shared_ptr<Quantifier<SetView>>> quantifiers =
                 makeNestedQuantifiers(container, innerDomain,
                                       quantifierVariables, parsedModel);
-
-            auto topLevelSequence =
-                flattenNestedQuantifiers<InnerViewType>(quantifiers);
             addConditionsToQuantifier(comprExpr, quantifiers.back(),
                                       generatorIndex, parsedModel);
-            AnyDomainRef exprDomain =
+
+            exprDomain =
                 addExprToQuantifier(comprExpr, quantifiers.back(), parsedModel);
             removeQuantifierVariablesFromScope(quantifierVariables,
                                                parsedModel);
+            return quantifiers;
+        },
+        domain->inner);
+    return lib::visit(
+        [&](auto& exprDomain) {
+            typedef typename BaseType<decltype(exprDomain)>::element_type
+                ExprDomain;
+            typedef typename AssociatedViewType<ExprDomain>::type ExprViewType;
+            auto topLevelSequence =
+                flattenNestedQuantifiers<ExprViewType>(quantifiers);
+//            topLevelSequence->dumpState(cout << "look here") << endl;
             return ParseResult(fakeSequenceDomain(exprDomain), topLevelSequence,
                                false);
         },
-        domain->inner);
+        *exprDomain);
 }

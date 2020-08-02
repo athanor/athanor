@@ -487,20 +487,31 @@ void Quantifier<ContainerType>::evaluateImpl() {
 
 template <typename ContainerType>
 std::ostream& Quantifier<ContainerType>::dumpState(std::ostream& os) const {
+    os << "quantifier(numberUndefined=" << numberUndefined
+       << ", apearsDefined=" << this->appearsDefined() << ", container=";
+    container->dumpState(os) << ",\n";
+    bool printConditionTemplate = true, printExprTemplate = true;
+    if (printConditionTemplate) {
+        os << "condition=";
+        if (condition) {
+            condition->dumpState(os) << ",\n";
+        } else {
+            os << "null";
+        }
+    }
     lib::visit(
         [&](auto& members) {
-            //            typedef viewType(members) View;
-            os << "quantifier(numberUndefined=" << numberUndefined
-               << ", apearsDefined=" << this->appearsDefined()
-               << ", container=";
-            container->dumpState(os) << ",\n";
-            //            os << "expr=";
-            //            lib::get<ExprRef<View>>(expr)->dumpState(os) <<
-            //            ",\n"; os << "condition="; if (condition) {
-            //                condition->dumpState(os) << ",\n";
-            //            } else {
-            //                os << "null,\n";
-            //            }
+            typedef viewType(members) View;
+            if (printExprTemplate) {
+                os << "expr=";
+                lib::get<ExprRef<View>>(expr)->dumpState(os) << ",\n";
+                os << "condition=";
+                if (condition) {
+                    condition->dumpState(os) << ",\n";
+                } else {
+                    os << "null,\n";
+                }
+            }
             os << "unrolledIterVals=" << unrolledIterVals << ",\n";
             os << "unrolledConditions=" << unrolledConditions << ",\n";
             os << "unrolledExprs=[";

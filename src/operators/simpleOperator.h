@@ -74,28 +74,34 @@ struct DefinedContainer<BoolView, Derived> {
 
 template <typename Derived>
 struct OperatorTrates;
-template <typename View, typename OperandView, typename Derived>
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
 struct SimpleBinaryOperator : public View,
                               public DefinedContainer<View, Derived> {
-    typedef SimpleBinaryOperator<View, OperandView, Derived> SimpleSuper;
+    typedef SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
+                                 Derived>
+        SimpleSuper;
     typedef typename OperatorTrates<Derived>::LeftTrigger LeftTrigger;
     typedef typename OperatorTrates<Derived>::RightTrigger RightTrigger;
-    ExprRef<OperandView> left;
-    ExprRef<OperandView> right;
+    ExprRef<LeftOperandView> left;
+    ExprRef<RightOperandView> right;
 
     std::shared_ptr<LeftTrigger> leftTrigger;
     std::shared_ptr<RightTrigger> rightTrigger;
 
    public:
-    SimpleBinaryOperator(ExprRef<OperandView> left, ExprRef<OperandView> right)
+    SimpleBinaryOperator(ExprRef<LeftOperandView> left,
+                         ExprRef<RightOperandView> right)
         : left(std::move(left)), right(std::move(right)) {}
 
     auto& derived() { return *static_cast<Derived*>(this); }
 
     const auto& derived() const { return *static_cast<const Derived*>(this); }
     SimpleBinaryOperator(
-        const SimpleBinaryOperator<View, OperandView, Derived>& other) = delete;
-    SimpleBinaryOperator(SimpleBinaryOperator<View, OperandView, Derived>&&) =
+        const SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
+                                   Derived>& other) = delete;
+    SimpleBinaryOperator(SimpleBinaryOperator<View, LeftOperandView,
+                                              RightOperandView, Derived>&&) =
         delete;
     virtual ~SimpleBinaryOperator() { this->stopTriggeringOnChildren(); }
 

@@ -10,8 +10,8 @@ struct OperatorTrates<OpMod> {
     typedef SimpleBinaryTrigger<OpMod, IntTrigger, true> LeftTrigger;
     typedef SimpleBinaryTrigger<OpMod, IntTrigger, false> RightTrigger;
 };
-struct OpMod : public SimpleBinaryOperator<IntView, IntView, OpMod> {
-    using SimpleBinaryOperator<IntView, IntView, OpMod>::SimpleBinaryOperator;
+struct OpMod : public SimpleBinaryOperator<IntView, IntView,IntView, OpMod> {
+    using SimpleBinaryOperator<IntView, IntView, IntView,OpMod>::SimpleBinaryOperator;
     void reevaluateImpl(IntView& leftView, IntView& rightView, bool, bool);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;

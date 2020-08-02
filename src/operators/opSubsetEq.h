@@ -10,8 +10,8 @@ struct OperatorTrates<OpSubsetEq> {
     struct LeftTrigger;
     struct RightTrigger;
 };
-struct OpSubsetEq : public SimpleBinaryOperator<BoolView, SetView, OpSubsetEq> {
-    using SimpleBinaryOperator<BoolView, SetView,
+struct OpSubsetEq : public SimpleBinaryOperator<BoolView, SetView,SetView, OpSubsetEq> {
+    using SimpleBinaryOperator<BoolView, SetView,SetView,
                                OpSubsetEq>::SimpleBinaryOperator;
 
     void reevaluateImpl(SetView& leftView, SetView& rightView, bool, bool);

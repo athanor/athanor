@@ -13,12 +13,12 @@ struct OperatorTrates<IntRange> {
     typedef Trigger<false> RightTrigger;
 };
 
-struct IntRange : public SimpleBinaryOperator<SequenceView, IntView, IntRange> {
+struct IntRange : public SimpleBinaryOperator<SequenceView, IntView, IntView, IntRange> {
     Int cachedLower;
     Int cachedUpper;
 
     IntRange(ExprRef<IntView> left, ExprRef<IntView> right)
-        : SimpleBinaryOperator<SequenceView, IntView, IntRange>(
+        : SimpleBinaryOperator<SequenceView, IntView,IntView, IntRange>(
               std::move(left), std::move(right)) {
         this->members.emplace<ExprRefVec<IntView>>();
     }

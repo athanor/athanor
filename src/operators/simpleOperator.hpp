@@ -3,15 +3,19 @@
 #define SRC_OPERATORS_SIMPLEOPERATOR_HPP_
 #include "base/base.h"
 #include "operators/simpleOperator.h"
-template <typename View, typename OperandView, typename Derived>
-void SimpleBinaryOperator<View, OperandView, Derived>::evaluateImpl() {
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
+void SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
+                          Derived>::evaluateImpl() {
     left->evaluate();
     right->evaluate();
     reevaluate(true, true);
 }
-template <typename View, typename OperandView, typename Derived>
-void SimpleBinaryOperator<View, OperandView, Derived>::reevaluate(
-    bool leftChanged, bool rightChanged) {
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
+void SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
+                          Derived>::reevaluate(bool leftChanged,
+                                               bool rightChanged) {
     auto leftView = left->getViewIfDefined();
     if (leftView) {
         auto rightView = right->getViewIfDefined();
@@ -25,8 +29,10 @@ void SimpleBinaryOperator<View, OperandView, Derived>::reevaluate(
     this->setDefined(false);
 }
 
-template <typename View, typename OperandView, typename Derived>
-void SimpleBinaryOperator<View, OperandView, Derived>::startTriggeringImpl() {
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
+void SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
+                          Derived>::startTriggeringImpl() {
     if (!leftTrigger) {
         leftTrigger = std::make_shared<LeftTrigger>(&derived());
         rightTrigger = std::make_shared<RightTrigger>(&derived());
@@ -37,8 +43,9 @@ void SimpleBinaryOperator<View, OperandView, Derived>::startTriggeringImpl() {
     }
 }
 
-template <typename View, typename OperandView, typename Derived>
-void SimpleBinaryOperator<View, OperandView,
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
+void SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
                           Derived>::stopTriggeringOnChildren() {
     if (leftTrigger) {
         deleteTrigger(leftTrigger);
@@ -48,8 +55,10 @@ void SimpleBinaryOperator<View, OperandView,
     }
 }
 
-template <typename View, typename OperandView, typename Derived>
-void SimpleBinaryOperator<View, OperandView, Derived>::stopTriggering() {
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
+void SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
+                          Derived>::stopTriggering() {
     if (leftTrigger) {
         stopTriggeringOnChildren();
         left->stopTriggering();
@@ -57,10 +66,12 @@ void SimpleBinaryOperator<View, OperandView, Derived>::stopTriggering() {
     }
 }
 
-template <typename View, typename OperandView, typename Derived>
-ExprRef<View>
-SimpleBinaryOperator<View, OperandView, Derived>::deepCopyForUnrollImpl(
-    const ExprRef<View>&, const AnyIterRef& iterator) const {
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
+ExprRef<View> SimpleBinaryOperator<
+    View, LeftOperandView, RightOperandView,
+    Derived>::deepCopyForUnrollImpl(const ExprRef<View>&,
+                                    const AnyIterRef& iterator) const {
     auto newOp =
         std::make_shared<Derived>(left->deepCopyForUnroll(left, iterator),
                                   right->deepCopyForUnroll(right, iterator));
@@ -69,17 +80,20 @@ SimpleBinaryOperator<View, OperandView, Derived>::deepCopyForUnrollImpl(
     return newOp;
 }
 
-template <typename View, typename OperandView, typename Derived>
-void SimpleBinaryOperator<View, OperandView, Derived>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func, PathExtension path) {
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
+void SimpleBinaryOperator<View, LeftOperandView, RightOperandView, Derived>::
+    findAndReplaceSelf(const FindAndReplaceFunction& func, PathExtension path) {
     this->left = findAndReplace(left, func, path);
     this->right = findAndReplace(right, func, path);
 }
 
-template <typename View, typename OperandView, typename Derived>
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
 std::pair<bool, std::shared_ptr<Derived>>
-SimpleBinaryOperator<View, OperandView, Derived>::standardOptimise(
-    ExprRef<View>&, PathExtension& path) {
+SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
+                     Derived>::standardOptimise(ExprRef<View>&,
+                                                PathExtension& path) {
     auto newOp = std::make_shared<Derived>(left, right);
     derived().copy(*newOp);
     bool optimised = false;
@@ -92,16 +106,19 @@ SimpleBinaryOperator<View, OperandView, Derived>::standardOptimise(
 // we ever get to a point that one of them cannot, use the arrow return type
 // trick to  disable this function. i.e. use auto ...::optimise(...)  ->
 // decltype(std::make_shared<Derived>) instead of
-template <typename View, typename OperandView, typename Derived>
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
 std::pair<bool, ExprRef<View>>
-SimpleBinaryOperator<View, OperandView, Derived>::optimiseImpl(
-    ExprRef<View>& self, PathExtension path) {
+SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
+                     Derived>::optimiseImpl(ExprRef<View>& self,
+                                            PathExtension path) {
     return standardOptimise(self, path);
 }
 
-template <typename View, typename OperandView, typename Derived>
-void SimpleBinaryOperator<View, OperandView,
-                          Derived>::standardSanityDefinednessChecks() const {
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
+void SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
+     Derived>::standardSanityDefinednessChecks() const {
     if (!left->getViewIfDefined() || !right->getViewIfDefined()) {
         if (this->appearsDefined()) {
             throw SanityCheckException(
@@ -113,15 +130,18 @@ void SimpleBinaryOperator<View, OperandView,
     }
 }
 
-template <typename View, typename OperandView, typename Derived>
-void SimpleUnaryOperator<View, OperandView, Derived>::evaluateImpl() {
+template <typename View, typename OperandView,
+          typename Derived>
+void SimpleUnaryOperator<View, OperandView,
+                         Derived>::evaluateImpl() {
     operand->evaluate();
     reevaluate();
 }
-template <typename View, typename OperandView, typename Derived>
-void SimpleUnaryOperator<View, OperandView, Derived>::reevaluate(
-    bool, bool) {  // ignore bools, they are there to make it easier to compile
-                   // between unary and binary ops
+template <typename View, typename OperandView,
+          typename Derived>
+void SimpleUnaryOperator<View, OperandView, Derived>::
+    reevaluate(bool, bool) {  // ignore bools, they are there to make it easier
+                              // to compile between unary and binary ops
     auto view = operand->getViewIfDefined();
     if (view) {
         this->setDefined(true);
@@ -131,8 +151,10 @@ void SimpleUnaryOperator<View, OperandView, Derived>::reevaluate(
     }
 }
 
-template <typename View, typename OperandView, typename Derived>
-void SimpleUnaryOperator<View, OperandView, Derived>::startTriggeringImpl() {
+template <typename View, typename OperandView,
+          typename Derived>
+void SimpleUnaryOperator<View, OperandView,
+                         Derived>::startTriggeringImpl() {
     if (!operandTrigger) {
         operandTrigger = std::make_shared<OperandTrigger>(&derived());
         operand->addTrigger(operandTrigger);
@@ -140,7 +162,8 @@ void SimpleUnaryOperator<View, OperandView, Derived>::startTriggeringImpl() {
     }
 }
 
-template <typename View, typename OperandView, typename Derived>
+template <typename View, typename OperandView,
+          typename Derived>
 void SimpleUnaryOperator<View, OperandView,
                          Derived>::stopTriggeringOnChildren() {
     if (operandTrigger) {
@@ -149,18 +172,22 @@ void SimpleUnaryOperator<View, OperandView,
     }
 }
 
-template <typename View, typename OperandView, typename Derived>
-void SimpleUnaryOperator<View, OperandView, Derived>::stopTriggering() {
+template <typename View, typename OperandView,
+          typename Derived>
+void SimpleUnaryOperator<View, OperandView,
+                         Derived>::stopTriggering() {
     if (operandTrigger) {
         stopTriggeringOnChildren();
         operand->stopTriggering();
     }
 }
 
-template <typename View, typename OperandView, typename Derived>
-ExprRef<View>
-SimpleUnaryOperator<View, OperandView, Derived>::deepCopyForUnrollImpl(
-    const ExprRef<View>&, const AnyIterRef& iterator) const {
+template <typename View, typename OperandView,
+          typename Derived>
+ExprRef<View> SimpleUnaryOperator<
+    View, OperandView,
+    Derived>::deepCopyForUnrollImpl(const ExprRef<View>&,
+                                    const AnyIterRef& iterator) const {
     auto newOp = std::make_shared<Derived>(
         operand->deepCopyForUnroll(operand, iterator));
     this->copyDefinedStatus(*newOp);
@@ -168,16 +195,20 @@ SimpleUnaryOperator<View, OperandView, Derived>::deepCopyForUnrollImpl(
     return newOp;
 }
 
-template <typename View, typename OperandView, typename Derived>
-void SimpleUnaryOperator<View, OperandView, Derived>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func, PathExtension path) {
+template <typename View, typename OperandView,
+          typename Derived>
+void SimpleUnaryOperator<View, OperandView,
+                         Derived>::
+    findAndReplaceSelf(const FindAndReplaceFunction& func, PathExtension path) {
     this->operand = findAndReplace(operand, func, path);
 }
 
-template <typename View, typename OperandView, typename Derived>
+template <typename View, typename OperandView,
+          typename Derived>
 std::pair<bool, std::shared_ptr<Derived>>
-SimpleUnaryOperator<View, OperandView, Derived>::standardOptimise(
-    ExprRef<View>&, PathExtension& path) {
+SimpleUnaryOperator<View, OperandView,
+                    Derived>::standardOptimise(ExprRef<View>&,
+                                               PathExtension& path) {
     auto newOp = std::make_shared<Derived>(operand);
     derived().copy(*newOp);
     bool optimised = false;
@@ -189,14 +220,17 @@ SimpleUnaryOperator<View, OperandView, Derived>::standardOptimise(
 // get to a point that one of them cannot, use the arrow return type trick to
 // disable this function. i.e. use auto ...::optimise(...)  ->
 // decltype(std::make_shared<Derived>) instead of
-template <typename View, typename OperandView, typename Derived>
+template <typename View, typename OperandView,
+          typename Derived>
 std::pair<bool, ExprRef<View>>
-SimpleUnaryOperator<View, OperandView, Derived>::optimiseImpl(
-    ExprRef<View>& self, PathExtension path) {
+SimpleUnaryOperator<View, OperandView,
+                    Derived>::optimiseImpl(ExprRef<View>& self,
+                                           PathExtension path) {
     return standardOptimise(self, path);
 }
 
-template <typename View, typename OperandView, typename Derived>
+template <typename View, typename OperandView,
+          typename Derived>
 void SimpleUnaryOperator<View, OperandView,
                          Derived>::standardSanityDefinednessChecks() const {
     if (!operand->getViewIfDefined() && this->appearsDefined()) {

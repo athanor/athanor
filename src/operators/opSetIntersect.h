@@ -13,8 +13,8 @@ struct OperatorTrates<OpSetIntersect> {
     typedef OperandTrigger<false> RightTrigger;
 };
 struct OpSetIntersect
-    : public SimpleBinaryOperator<SetView, SetView, OpSetIntersect> {
-    using SimpleBinaryOperator<SetView, SetView,
+    : public SimpleBinaryOperator<SetView, SetView,SetView, OpSetIntersect> {
+    using SimpleBinaryOperator<SetView, SetView,SetView,
                                OpSetIntersect>::SimpleBinaryOperator;
 
     void reevaluateImpl(SetView& leftView, SetView& rightView, bool, bool);

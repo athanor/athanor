@@ -2,24 +2,21 @@
 
 #include <iostream>
 #include <memory>
+#include "triggers/allTriggers.h"
 
 #include "operators/simpleOperator.hpp"
 
-
 using namespace std;
-template<typename OperandView>
-void OpFunctionPreimage::reevaluateImpl(OperandView& image, FunctionView& function,
-                                    bool, bool) {
-silentClear();
-										
-}
+static const char* NO_PREIMAGE_UNDEFINED =
+    "preimage does not yet support  undefined members.";
+
 namespace {
 HashType getHashForceDefined(const AnyExprRef& expr) {
     return lib::visit(
         [&](auto& expr) {
             auto view = expr->getViewIfDefined();
             if (!view) {
-                myCerr << NO_UNDEFINED_IN_SUBMSET;
+                myCerr << NO_PREIMAGE_UNDEFINED;
                 myAbort();
             }
             return getValueHash(*view);
@@ -29,184 +26,206 @@ HashType getHashForceDefined(const AnyExprRef& expr) {
 
 }  // namespace
 
-struct OperatorTrates<OpFunctionPreimage>::LeftTrigger : public MSetTrigger {
-   public:
-    OpFunctionPreimage* op;
+template <typename OperandView>
+void OpFunctionPreimage<OperandView>::reevaluateImpl(OperandView& image,
+                                                     FunctionView& function,
+                                                     bool, bool) {
+    this->silentClear();
+    lib::visit(
+        [&](auto& preimageDomain) {
+            typedef typename BaseType<decltype(preimageDomain)>::element_type
+                PreimageDomain;
+            for (size_t i = 0; i < function.rangeSize(); i++) {
+                auto member = function.template getRange<OperandView>()[i];
+                if (getValueHash(image) == getHashForceDefined(member)) {
+                    this->addMember(function.indexToDomain<PreimageDomain>(i));
+                }
+            }
+        },
+        function.fromDomain);
+    this->setAppearsDefined(true);
+}
+
+template <typename OperandView>
+struct OperatorTrates<OpFunctionPreimage<OperandView>>::LeftTrigger
+    : public ChangeTriggerAdapter<
+          typename AssociatedTriggerType<OperandView>::type,
+          OperatorTrates<OpFunctionPreimage<OperandView>>::LeftTrigger> {
+    OpFunctionPreimage<OperandView>* op;
 
    public:
-    LeftTrigger(OpFunctionPreimage* op) : op(op) {}
-    void valueRemoved(UInt, const AnyExprRef& member) {
-        op->changeValue([&]() {
-            updateViolation(op, getHashForceDefined(member));
-            return true;
-        });
+    LeftTrigger(OpFunctionPreimage<OperandView>* op)
+        : ChangeTriggerAdapter<
+              typename AssociatedTriggerType<OperandView>::type,
+              OperatorTrates<OpFunctionPreimage<OperandView>>::LeftTrigger>(
+              op->left),
+          op(op) {}
+    ExprRef<OperandView>& getTriggeringOperand() { return op->left; }
+    void adapterValueChanged() {
+        op->reevaluate(true, true);
+        op->notifyEntireValueChanged();
     }
 
-    void valueAdded(const AnyExprRef& member) final {
-        op->changeValue([&]() {
-            updateViolation(op, getHashForceDefined(member));
-            return true;
-        });
-    }
-    inline void valueChanged() final {
-        op->changeValue([&]() {
-            op->reevaluate(true, false);
-            return true;
-        });
-    }
-    void memberReplaced(UInt index, const AnyExprRef& oldMember) {
-        memberValueChanged(index, getValueHash(oldMember));
-    }
-    inline void memberValueChanged(UInt index, HashType oldHash) final {
-        auto& leftView =
-            op->left->getViewIfDefined().checkedGet(NO_UNDEFINED_IN_SUBMSET);
-        HashType newHash = leftView.indexHashMap[index];
-        op->changeValue([&]() {
-            updateViolation(op, oldHash);
-            updateViolation(op, newHash);
-            return true;
-        });
-    }
-    inline void memberValuesChanged(
-        const std::vector<UInt>& indices,
-        const std::vector<HashType>& oldHashes) final {
-        op->changeValue([&]() {
-            for (HashType hash : oldHashes) {
-                updateViolation(op, hash);
-            }
-            auto& indexHashMap = op->left->view()
-                                     .checkedGet(NO_UNDEFINED_IN_SUBMSET)
-                                     .indexHashMap;
-            for (UInt index : indices) {
-                updateViolation(op, indexHashMap[index]);
-            }
-            return true;
-        });
-    }
+    void adapterHasBecomeDefined() { todoImpl(); }
+
+    void adapterHasBecomeUndefined() { todoImpl(); }
 
     void reattachTrigger() final {
         deleteTrigger(op->leftTrigger);
-        auto trigger =
-            make_shared<OperatorTrates<OpFunctionPreimage>::LeftTrigger>(op);
+        auto trigger = make_shared<
+            OperatorTrates<OpFunctionPreimage<OperandView>>::LeftTrigger>(op);
         op->left->addTrigger(trigger);
         op->leftTrigger = trigger;
     }
-    void hasBecomeUndefined() final { op->setUndefinedAndTrigger(); }
-    void hasBecomeDefined() final { op->reevaluateDefinedAndTrigger(); }
 };
 
-struct OperatorTrates<OpFunctionPreimage>::RightTrigger : public MSetTrigger {
-    OpFunctionPreimage* op;
-    RightTrigger(OpFunctionPreimage* op) : op(op) {}
-    void valueRemoved(UInt, const AnyExprRef& member) {
-        op->changeValue([&]() {
-            updateViolation(op, getHashForceDefined(member));
-            return true;
-        });
-    }
+template <typename OperandView>
+struct OperatorTrates<OpFunctionPreimage<OperandView>>::RightTrigger
+    : public FunctionTrigger {
+    OpFunctionPreimage<OperandView>* op;
 
-    void valueAdded(const AnyExprRef& member) final {
-        op->changeValue([&]() {
-            updateViolation(op, getHashForceDefined(member));
-            return true;
-        });
-    }
+   public:
+    RightTrigger(OpFunctionPreimage<OperandView>* op) : op(op) {}
 
-    inline void valueChanged() final {
-        op->changeValue([&]() {
-            op->reevaluate(false, true);
-            return true;
-        });
-    }
-    void memberReplaced(UInt index, const AnyExprRef& oldMember) {
-        memberValueChanged(index, getHashForceDefined(oldMember));
-    }
+    void imageChanged(UInt index) {
+        auto& functionView =
+            op->right->getViewIfDefined().checkedGet(NO_PREIMAGE_UNDEFINED);
+        lib::visit(
+            [&](auto& preimageDomain) {
+                typedef
+                    typename BaseType<decltype(preimageDomain)>::element_type
+                        PreimageDomain;
+                typedef typename AssociatedViewType<PreimageDomain>::type
+                    PreimageView;
+                auto preimage =
+                    functionView.template indexToDomain<PreimageDomain>(index);
 
-    inline void memberValueChanged(UInt index, HashType oldHash) final {
-        auto& rightView = op->right->view().checkedGet(NO_UNDEFINED_IN_SUBMSET);
-        HashType newHash = rightView.indexHashMap[index];
-        op->changeValue([&]() {
-            updateViolation(op, oldHash);
-            updateViolation(op, newHash);
-            return true;
-        });
+                if (getHashForceDefined(op->left) ==
+                    getHashForceDefined(
+                        functionView.template getRange<OperandView>()[index])) {
+                    if (!op->containsMember(preimage)) {
+                        op->addMemberAndNotify(preimage);
+                    }
+                } else {
+                    HashType hash = getHashForceDefined(preimage);
+                    if (op->hashIndexMap.count(hash)) {
+                        op->template removeMemberAndNotify<PreimageView>(
+                            op->hashIndexMap.at(hash));
+                    }
+                }
+            },
+            functionView.fromDomain);
     }
-
-    inline void memberValuesChanged(
-        const std::vector<UInt>& indices,
-        const std::vector<HashType>& oldHashes) final {
-        op->changeValue([&]() {
-            for (HashType hash : oldHashes) {
-                updateViolation(op, hash);
-            }
-            auto& indexHashMap = op->right->view()
-                                     .checkedGet(NO_UNDEFINED_IN_SUBMSET)
-                                     .indexHashMap;
-            for (UInt index : indices) {
-                updateViolation(op, indexHashMap[index]);
-            }
-            return true;
-        });
+    void memberReplaced(UInt index, const AnyExprRef&) final {
+        imageChanged(index);
     }
+    void imageChanged(const std::vector<UInt>& indices) {
+        for (auto index : indices) {
+            imageChanged(index);
+        }
+    }
+    void imageSwap(UInt, UInt) final { /* ignore, no effect  */
+    }
+    void memberHasBecomeUndefined(UInt) final {
+        myCerr << NO_PREIMAGE_UNDEFINED << endl;
+        todoImpl();
+    }
+    void memberHasBecomeDefined(UInt) final {
+        myCerr << NO_PREIMAGE_UNDEFINED << endl;
+        todoImpl();
+    }
+    void valueChanged() final {
+        op->reevaluate(true, true);
+        op->notifyEntireValueChanged();
+    }
+    void hasBecomeUndefined() { todoImpl(); }
+    void hasBecomeDefined() { todoImpl(); }
 
     void reattachTrigger() final {
         deleteTrigger(op->rightTrigger);
-        auto trigger =
-            make_shared<OperatorTrates<OpFunctionPreimage>::RightTrigger>(op);
+        auto trigger = make_shared<
+            OperatorTrates<OpFunctionPreimage<OperandView>>::RightTrigger>(op);
         op->right->addTrigger(trigger);
         op->rightTrigger = trigger;
     }
-    void hasBecomeUndefined() final { op->setUndefinedAndTrigger(); }
-    void hasBecomeDefined() final { op->reevaluateDefinedAndTrigger(); }
 };
-
-void OpFunctionPreimage::updateVarViolationsImpl(const ViolationContext&,
-                                             ViolationContainer& vioContainer) {
-    left->updateVarViolations(violation, vioContainer);
-    right->updateVarViolations(violation, vioContainer);
+template <typename OperandView>
+void OpFunctionPreimage<OperandView>::updateVarViolationsImpl(
+    const ViolationContext& vioContext, ViolationContainer& vioContainer) {
+    this->left->updateVarViolations(vioContext, vioContainer);
+    this->right->updateVarViolations(vioContext, vioContainer);
 }
-
-void OpFunctionPreimage::copy(OpFunctionPreimage&) const {}
-
-std::ostream& OpFunctionPreimage::dumpState(std::ostream& os) const {
-    os << "OpFunctionPreimage: violation=" << violation << "\nLeft: ";
-    left->dumpState(os);
+template <typename OperandView>
+void OpFunctionPreimage<OperandView>::copy(OpFunctionPreimage&) const {}
+template <typename OperandView>
+std::ostream& OpFunctionPreimage<OperandView>::dumpState(
+    std::ostream& os) const {
+    os << "OpFunctionPreimage: value=" << this->getViewIfDefined()
+       << "\nLeft: ";
+    this->left->dumpState(os);
     os << "\nRight: ";
-    right->dumpState(os);
+    this->right->dumpState(os);
     return os;
 }
 
-string OpFunctionPreimage::getOpName() const { return "OpFunctionPreimage"; }
-void OpFunctionPreimage::debugSanityCheckImpl() const {
-    left->debugSanityCheck();
-    right->debugSanityCheck();
-    auto leftOption = left->getViewIfDefined();
-    auto rightOption = right->getViewIfDefined();
+template <typename OperandView>
+string OpFunctionPreimage<OperandView>::getOpName() const {
+    return toString(
+        "OpFunctionPreimage<",
+        TypeAsString<typename AssociatedValueType<OperandView>::type>::value,
+        ">");
+}
+template <typename OperandView>
+void OpFunctionPreimage<OperandView>::debugSanityCheckImpl() const {
+    this->left->debugSanityCheck();
+    this->right->debugSanityCheck();
+    this->standardSanityChecksForThisType();
+    auto leftOption = this->left->getViewIfDefined();
+    auto rightOption = this->right->getViewIfDefined();
     if (!leftOption || !rightOption) {
-        sanityLargeViolationCheck(violation);
+        sanityCheck(!this->appearsDefined(), "should be undefined.");
         return;
     }
-    auto& leftView = *leftOption;
-    auto& rightView = *rightOption;
-    UInt checkViolation = 0;
-    for (auto& hashCountPair : leftView.memberCounts) {
-        auto rightCount = rightView.memberCount(hashCountPair.first);
-        if (hashCountPair.second > rightCount) {
-            checkViolation += hashCountPair.second - rightCount;
-        }
-    }
-    sanityEqualsCheck(checkViolation, violation);
+    auto& image = *leftOption;
+    auto& functionView = *rightOption;
+
+    lib::visit(
+        [&](auto& preimageDomain) {
+            typedef typename BaseType<decltype(preimageDomain)>::element_type
+                PreimageDomain;
+            HashSet<HashType> hashes;
+            for (size_t i = 0; i < functionView.rangeSize(); i++) {
+                auto member = functionView.template getRange<OperandView>()[i];
+                if (getValueHash(image) == getHashForceDefined(member)) {
+                    auto preimageHash = getHashForceDefined(
+                        functionView.template indexToDomain<PreimageDomain>(i));
+                    hashes.insert(preimageHash);
+                    sanityCheck(this->hashIndexMap.count(preimageHash),
+                                toString("hash ", preimageHash, " missing."));
+                }
+            }
+            sanityEqualsCheck(hashes.size(), this->hashIndexMap.size());
+        },
+        functionView.fromDomain);
 }
 
 template <typename Op>
 struct OpMaker;
 
-template <>
-struct OpMaker<OpFunctionPreimage> {
-    static ExprRef<BoolView> make(ExprRef<MSetView> l, ExprRef<MSetView> r);
+template <typename OperandView>
+struct OpMaker<OpFunctionPreimage<OperandView>> {
+    static ExprRef<SetView> make(ExprRef<OperandView> l,
+                                 ExprRef<FunctionView> r);
 };
 
-ExprRef<BoolView> OpMaker<OpFunctionPreimage>::make(ExprRef<MSetView> l,
-                                                ExprRef<MSetView> r) {
-    return make_shared<OpFunctionPreimage>(move(l), move(r));
+template <typename OperandView>
+ExprRef<SetView> OpMaker<OpFunctionPreimage<OperandView>>::make(
+    ExprRef<OperandView> l, ExprRef<FunctionView> r) {
+    return make_shared<OpFunctionPreimage<OperandView>>(move(l), move(r));
 }
+
+#define opMakerInstantiator(name)                                            \
+    template ExprRef<SetView> OpMaker<OpFunctionPreimage<name##View>>::make( \
+        ExprRef<name##View>, ExprRef<FunctionView>);
+buildForAllTypes(opMakerInstantiator, );
+#undef opMakerInstantiator

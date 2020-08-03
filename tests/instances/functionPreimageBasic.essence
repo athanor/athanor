@@ -1,0 +1,9 @@
+$testing:numberIterations=100000
+
+
+letting d be domain int(1..30)
+find s : set of d
+find f : function (total) d --> d
+find a : d
+such that s = preImage(f,a)
+maximising |s|

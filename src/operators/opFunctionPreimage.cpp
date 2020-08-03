@@ -30,11 +30,15 @@ template <typename OperandView>
 void OpFunctionPreimage<OperandView>::reevaluateImpl(OperandView& image,
                                                      FunctionView& function,
                                                      bool, bool) {
-    this->silentClear();
     lib::visit(
         [&](auto& preimageDomain) {
             typedef typename BaseType<decltype(preimageDomain)>::element_type
                 PreimageDomain;
+            typedef typename AssociatedViewType<PreimageDomain>::type
+                PreimageViewType;
+            this->members.template emplace<ExprRefVec<PreimageViewType>>();
+
+            this->silentClear();
             for (size_t i = 0; i < function.rangeSize(); i++) {
                 auto member = function.template getRange<OperandView>()[i];
                 if (getValueHash(image) == getHashForceDefined(member)) {
@@ -124,7 +128,9 @@ struct OperatorTrates<OpFunctionPreimage<OperandView>>::RightTrigger
             imageChanged(index);
         }
     }
-    void imageSwap(UInt, UInt) final { /* ignore, no effect  */
+    void imageSwap(UInt index1, UInt index2) final {
+        imageChanged(index1);
+        imageChanged(index2);
     }
     void memberHasBecomeUndefined(UInt) final {
         myCerr << NO_PREIMAGE_UNDEFINED << endl;

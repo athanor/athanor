@@ -325,4 +325,13 @@ struct OpMaker<OpMsetSubsetEq> {
     static ExprRef<BoolView> make(ExprRef<MSetView> l, ExprRef<MSetView> r);
 };
 
+template <typename OperandView>
+struct OpFunctionPreimage;
+
+template <typename OperandView>
+struct OpMaker<OpFunctionPreimage<OperandView>> {
+    static ExprRef<SetView> make(ExprRef<OperandView> l,
+                                 ExprRef<FunctionView> r);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

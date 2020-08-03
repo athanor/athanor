@@ -116,3 +116,29 @@ ParseResult parseOpFunctionRange(json& functionExpr, ParsedModel& parsedModel) {
     return ParseResult(make_shared<SetDomain>(noSize(), domain), op,
                        parsedExpr.hasEmptyType);
 }
+
+ParseResult parseOpFunctionPreimage(json& preimageOpExpr,
+                                    ParsedModel& parsedModel) {
+    auto functionParseResult = parseExpr(preimageOpExpr[0], parsedModel);
+    auto function = expect<FunctionView>(functionParseResult.expr, [&](auto&) {
+        myCerr
+            << "Expected function expr as first argument to function preimage\n"
+            << preimageOpExpr << endl;
+    });
+    auto imageResult = parseExpr(preimageOpExpr[1], parsedModel);
+    auto preimageDomain =
+        lib::get<shared_ptr<FunctionDomain>>(functionParseResult.domain)->from;
+    return lib::visit(
+        [&](auto& imageDomain) {
+            typedef typename BaseType<decltype(imageDomain)>::element_type
+                ImageDomain;
+            typedef typename AssociatedViewType<ImageDomain>::type ImageView;
+            auto image = lib::get<ExprRef<ImageView>>(imageResult.expr);
+            auto op =
+                OpMaker<OpFunctionPreimage<ImageView>>::make(image, function);
+            op->setConstant(function->isConstant() && image->isConstant());
+            return ParseResult(make_shared<SetDomain>(noSize(), preimageDomain),
+                               op, functionParseResult.hasEmptyType);
+        },
+        imageResult.domain);
+}

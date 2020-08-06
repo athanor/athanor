@@ -65,7 +65,7 @@ void OpSetLit<OperandView>::addReplacementToSet(
     // temperarily.
     auto unchangedOperand = find_if(
         begin(og.operands), end(og.operands),
-        [&](auto& o) { return hashNotChanged<InnerViewType>(operands, o); });
+        [&](auto& o) { return this->template hashNotChanged<InnerViewType>(operands, o); });
     if (unchangedOperand != og.operands.end()) {
         og.focusOperand = *unchangedOperand;
         this->addMemberAndNotify(operands[og.focusOperand]);

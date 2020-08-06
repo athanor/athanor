@@ -21,7 +21,7 @@ build/debug/Makefile:
 	git submodule init
 	git submodule update
 	mkdir -p build/debug
-	cd build/debug ; cmake ../.. -DCMAKE_BUILD_TYPE=debug
+	cd build/debug ; cmake ../.. -DCMAKE_BUILD_TYPE=Debug
 
 clean:
 	rm -rf build

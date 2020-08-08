@@ -197,6 +197,7 @@ class ExplorationUsingRandomWalk : public SearchStrategy {
                 resetExploreSize();
                 vioToBeat = state.model.getViolation();
                 objToBeat = state.model.getObjective();
+                numberIncreases = 0;
             }
         }
     }

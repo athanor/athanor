@@ -1,0 +1,7 @@
+$testing:numberIterations=100000
+$should be much better when more neighbourhoods added to partitions
+letting n be 10
+find p : partition from int(1..n)
+such that
+ forAll i : int(1..n-1) . together({i,i+1}, p)
+

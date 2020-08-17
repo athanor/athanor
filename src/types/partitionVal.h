@@ -6,33 +6,57 @@
 #include "common/common.h"
 #include "types/partition.h"
 #include "types/set.h"
+#include "types/sizeAttr.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
 
 struct PartitionDomain {
     AnyDomainRef inner;
     bool regular;
-    UInt numberParts;
+    SizeAttr numberParts;
+    SizeAttr partSize;
     UInt numberElements;
     template <typename DomainType>
-    PartitionDomain(DomainType&& inner, bool regular, UInt numberParts)
+    PartitionDomain(DomainType&& inner, bool regular, SizeAttr numberParts,
+                    SizeAttr partSize)
         : inner(makeAnyDomainRef(std::forward<DomainType>(inner))),
           regular(regular),
           numberParts(numberParts),
+          partSize(partSize),
           numberElements(getDomainSize(this->inner)) {
-        if (numberParts == 0 || !regular) {
-            myCerr << "Error: only supporting partitions if they are "
-                      "regular with a fixed number of cells.\n";
-            myAbort();
+        fixAttributes();  // important for neighbourhood assign random
+    }
+    inline size_t ceilDiv(size_t l, size_t r) { return l / r + (l % r != 0); }
+    inline void fixAttributes() {
+        // remove 0s
+        partSize.minSize = std::max<size_t>(partSize.minSize, 1);
+        numberParts.minSize = std::max<size_t>(numberParts.minSize, 1);
+        // remove extreme max sizes
+        partSize.maxSize = std::min<size_t>(partSize.maxSize, numberElements);
+        numberParts.maxSize =
+            std::min<size_t>(numberParts.maxSize, numberElements);
+        // just in case type is MIN_SIZE or MAX_SIZE, now that we have both mins
+        // and maxes, set the types to size_range
+        partSize.sizeType = SizeAttr::SizeAttrType::SIZE_RANGE;
+        numberParts.sizeType = SizeAttr::SizeAttrType::SIZE_RANGE;
+
+        // now tighten up bounds where possible
+        numberParts.maxSize = std::min<size_t>(
+            numberParts.maxSize, numberElements / partSize.minSize);
+        partSize.maxSize = std::min<size_t>(
+            partSize.maxSize,
+            numberElements - ((numberParts.minSize - 1) * partSize.minSize));
+        numberParts.minSize = std::max<size_t>(
+            numberParts.minSize, ceilDiv(numberElements, partSize.maxSize));
+
+        if (partSize.maxSize == partSize.minSize) {
+            partSize.sizeType = SizeAttr::SizeAttrType::EXACT_SIZE;
+            regular = true;
         }
-        if (numberElements % numberParts != 0) {
-            myCerr << "Error: cannot create a regular partition with this "
-                      "number of parts.\n";
-            prettyPrint(myCerr, *this);
-            myAbort();
+        if (numberParts.minSize == numberParts.maxSize) {
+            numberParts.sizeType = SizeAttr::SizeAttrType::EXACT_SIZE;
         }
     }
-
     inline std::shared_ptr<PartitionDomain> deepCopy(
         std::shared_ptr<PartitionDomain>&) {
         auto newDomain = std::make_shared<PartitionDomain>(*this);
@@ -55,27 +79,41 @@ struct PartitionValue : public PartitionView, public ValBase {
     }
 
     AnyExprVec& getChildrenOperands() final;
+
+    // called only once when constructing a partition
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline bool addMember(UInt part, const ValRef<InnerValueType>& member) {
+    void setNumberElements(size_t numberElements) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        members.emplace<ExprRefVec<InnerViewType>>(numberElements, nullptr);
+        ;
+        partInfo.resize(numberElements);
+        memberPartMap.resize(numberElements, 0);
+    }
+
+    // only called when constructing a partition, used to assign the first
+    // member part mapping
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
+    inline bool assignMember(UInt memberIndex, UInt part,
+                             const ValRef<InnerValueType>& member) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        assert(memberIndex < getMembers<InnerViewType>().size());
+        assert(part < partInfo.size());
+
         HashType hash = getValueHash(member);
         if (hashIndexMap.count(hash)) {
             return false;
         }
-        hashIndexMap[hash] = memberPartMap.size();
-        memberPartMap.emplace_back(part);
-        getMembers<InnerViewType>().emplace_back(member.asExpr());
-        if (part >= partHashes.size()) {
-            size_t numberNewParts = (part + 1) - partHashes.size();
-            cachedHashTotal += (numberNewParts * mix(INITIAL_HASH));
-
-            partHashes.resize(part + 1, INITIAL_HASH);
+        hashIndexMap[hash] = memberIndex;
+        memberPartMap[memberIndex] = part;
+        getMembers<InnerViewType>()[memberIndex] = member.asExpr();
+        cachedHashTotal -= partInfo[part].mixedPartHash();
+        partInfo[part].notifyMemberAdded(member.asExpr());
+        cachedHashTotal += partInfo[part].mixedPartHash();
+        if (partInfo[part].partSize == 1) {
+            ++numberParts;
         }
-        cachedHashTotal -= mix(partHashes[part]);
-        partHashes[part] += mix(hash);
-        cachedHashTotal += mix(partHashes[part]);
         valBase(*member).container = this;
-        valBase(*member).id = memberPartMap.size() - 1;
+        valBase(*member).id = memberIndex;
         return true;
     }
 
@@ -93,6 +131,23 @@ struct PartitionValue : public PartitionView, public ValBase {
             return true;
         } else {
             PartitionView::swapContainingParts<InnerViewType>(index1, index2);
+            return false;
+        }
+    }
+
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
+    inline bool tryMoveParts(UInt index, UInt newPart, Func&& func) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        UInt oldPart = memberPartMap[index];
+        PartitionView::moveMemberToPart<InnerViewType>(index, newPart);
+        if (func()) {
+            PartitionView::notifyMemberMoved(index, oldPart, newPart,
+                                             partInfo[oldPart].partSize,
+                                             partInfo[newPart].partSize);
+            return true;
+        } else {
+            PartitionView::moveMemberToPart<InnerViewType>(index, oldPart);
             return false;
         }
     }

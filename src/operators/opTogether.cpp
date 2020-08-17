@@ -1,371 +1,343 @@
 #include "operators/opTogether.h"
-#include <iostream>
-#include <memory>
-#include "triggers/allTriggers.h"
-#include "utils/ignoreUnused.h"
+#include "operators/simpleOperator.hpp"
+
 using namespace std;
 
-template <typename PartitionMemberViewType>
-void OpTogether<PartitionMemberViewType>::reevaluate(
-    bool recalculateLeftCachedIndex, bool recalculateRightCachedIndex) {
-    auto partitionView = partitionOperand->view();
-    auto leftView = left->getViewIfDefined();
-    auto rightView = right->getViewIfDefined();
+static void deletePartitionTriggers(OpTogether& op);
+static void addTrigger(OpTogether& op, const HashType& hash,
+                       PartitionView& view);
+static void reattachAllTriggers(OpTogether& op);
 
-    if (!partitionView) {
-        this->violation = LARGE_VIOLATION;
+void OpTogether::reevaluateImpl(SetView& leftView, PartitionView& rightView,
+                                bool, bool) {
+    if (leftView.numberElements() == 0) {
+        violation = 0;
         return;
     }
-    if (recalculateLeftCachedIndex && leftView) {
-        HashType leftHash = getValueHash(*leftView);
-        cachedLeftIndex = partitionView->hashIndexMap.at(leftHash);
-        reattachPartitionMemberTrigger(true, false);
+    HashMap<UInt, UInt> partCounts;
+    for (auto& hash : leftView.indexHashMap) {
+        if (rightView.hashIndexMap.count(hash)) {
+            UInt part =
+                rightView.memberPartMap[rightView.hashIndexMap.at(hash)];
+            partCounts[part] += 1;
+        } else {
+            this->setDefined(false);
+            return;
+        }
     }
-    if (recalculateRightCachedIndex && rightView) {
-        HashType rightHash = getValueHash(*rightView);
-        cachedRightIndex = partitionView->hashIndexMap.at(rightHash);
-        reattachPartitionMemberTrigger(false, true);
-    }
-    if (leftView && rightView) {
-        this->violation = (partitionView->memberPartMap[cachedLeftIndex] ==
-                           partitionView->memberPartMap[cachedRightIndex])
-                              ? 0
-                              : 1;
-    } else {
-        violation = LARGE_VIOLATION;
+    bool first = true;
+    for (auto& hashCountPair : partCounts) {
+        auto diff = leftView.numberElements() - hashCountPair.second;
+        if (first || diff < violation) {
+            first = false;
+            violation = diff;
+        }
     }
 }
 
-template <typename PartitionMemberViewType>
-void OpTogether<PartitionMemberViewType>::evaluateImpl() {
-    partitionOperand->evaluate();
-    left->evaluate();
-    right->evaluate();
-    reevaluate(true, true);
-}
-
-template <typename PartitionMemberViewType>
-struct OpTogether<PartitionMemberViewType>::PartitionOperandTrigger
-    : public PartitionTrigger {
-    OpTogether<PartitionMemberViewType>* op;
-    PartitionOperandTrigger(OpTogether<PartitionMemberViewType>* op) : op(op) {}
-
-    void containingPartsSwapped(UInt index1, UInt index2) final {
-        ignoreUnused(index1, index2);
-        debug_code(assert(
-            index1 == op->cachedLeftIndex || index1 == op->cachedRightIndex ||
-            index2 == op->cachedLeftIndex || index2 == op->cachedRightIndex));
+struct OperatorTrates<OpTogether>::RightTrigger : public PartitionTrigger {
+    OpTogether* op;
+    RightTrigger(OpTogether* op) : op(op) {}
+    void valueChanged() final {
+        reattachAllTriggers(*op);
         op->changeValue([&]() {
-            op->reevaluate(false, false);
+            op->reevaluate(false, true);
             return true;
         });
     }
 
-    void memberReplaced(UInt index, const AnyExprRef&) final {
-        ignoreUnused(index);
-        debug_code(assert(index == op->cachedLeftIndex ||
-                          index == op->cachedRightIndex));
-        op->reattachPartitionMemberTrigger(index == op->cachedLeftIndex,
-                                           index == op->cachedRightIndex);
+    void hasBecomeUndefined() final {
         op->changeValue([&]() {
-            op->reevaluate(false, false);
+            op->reevaluate(false, true);
+            return true;
+        });
+    }
+
+    void hasBecomeDefined() final {
+        reattachAllTriggers(*op);
+        op->changeValue([&]() {
+            op->reevaluate(false, true);
+            return true;
+        });
+    }
+    void memberReplaced(UInt, const AnyExprRef&) final {
+        op->changeValue([&]() {
+            op->reevaluate(false, true);
+            return true;
+        });
+    }
+
+    void containingPartsSwapped(UInt, UInt) final {
+        op->changeValue([&]() {
+            op->reevaluate(false, true);
+            return true;
+        });
+    }
+    void memberMoved(UInt, UInt, UInt, UInt, UInt) final {
+        op->changeValue([&]() {
+            op->reevaluate(false, true);
+            return true;
+        });
+    }
+    void partAdded(const std::vector<UInt>&, const std::vector<UInt>&) final {
+        op->changeValue([&]() {
+            op->reevaluate(false, true);
+            return true;
+        });
+    }
+    void partRemoved(UInt, const std::vector<UInt>&,
+                     const std::vector<UInt>&) final {
+        op->changeValue([&]() {
+            op->reevaluate(false, true);
+            return true;
+        });
+    }
+    void reattachTrigger() final { reattachAllTriggers(*op); }
+};
+
+struct OperatorTrates<OpTogether>::LeftTrigger : public SetTrigger {
+    OpTogether* op;
+    LeftTrigger(OpTogether* op) : op(op) {}
+    void valueRemoved(UInt indexOfRemovedValue, HashType) final {
+        op->partitionMemberTriggers[indexOfRemovedValue] =
+            op->partitionMemberTriggers.back();
+        op->partitionMemberTriggers.pop_back();
+        op->changeValue([&]() {
+            op->reevaluate(true, false);
+            return true;
+        });
+    }
+    void valueAdded(const AnyExprRef& member) {
+        auto viewOption = op->right->getViewIfDefined();
+        if (!viewOption) {
+            return;
+        }
+        auto& view = *viewOption;
+        HashType hash = getValueHash(member);
+        addTrigger(*op, hash, view);
+        op->changeValue([&]() {
+            op->reevaluate(true, false);
+            return true;
+        });
+    }
+    void handleMemberChange(UInt index) {
+        auto setViewOption = op->left->getViewIfDefined();
+        auto partitionViewOption = op->right->getViewIfDefined();
+        if (!setViewOption || !partitionViewOption) {
+            return;
+        }
+        auto& setView = *setViewOption;
+        auto& partitionView = *partitionViewOption;
+        HashType hash = setView.indexHashMap[index];
+        op->partitionMemberTriggers[index] = nullptr;
+        if (partitionView.hashIndexMap.count(hash)) {
+            op->partitionMemberTriggers[index] =
+                make_shared<OperatorTrates<OpTogether>::RightTrigger>(op);
+            op->right->addTrigger(op->partitionMemberTriggers[index], true,
+                                  partitionView.hashIndexMap.at(hash));
+        }
+        op->changeValue([&]() {
+            op->reevaluate(true, false);
+            return true;
+        });
+    }
+
+    void memberValueChanged(UInt index, HashType) final {
+        handleMemberChange(index);
+    }
+
+    void memberReplaced(UInt index, const AnyExprRef&) final {
+        handleMemberChange(index);
+    }
+    void memberValuesChanged(const std::vector<UInt>& indices,
+                             const std::vector<HashType>&) final {
+        auto setViewOption = op->left->getViewIfDefined();
+        auto partitionViewOption = op->right->getViewIfDefined();
+        if (!setViewOption || !partitionViewOption) {
+            return;
+        }
+        auto& setView = *setViewOption;
+        auto& partitionView = *partitionViewOption;
+        for (auto index : indices) {
+            HashType hash = setView.indexHashMap[index];
+            op->partitionMemberTriggers[index] = nullptr;
+            if (partitionView.hashIndexMap.count(hash)) {
+                op->partitionMemberTriggers[index] =
+                    make_shared<OperatorTrates<OpTogether>::RightTrigger>(op);
+                op->right->addTrigger(op->partitionMemberTriggers[index], true,
+                                      partitionView.hashIndexMap.at(hash));
+            }
+        }
+        op->changeValue([&]() {
+            op->reevaluate(true, false);
             return true;
         });
     }
 
     void valueChanged() final {
+        reattachAllTriggers(*op);
         op->changeValue([&]() {
-            op->reevaluate(true, true);
+            op->reevaluate(true, false);
             return true;
         });
     }
-
-    inline void hasBecomeUndefined() {
+    void reattachTrigger() final { reattachAllTriggers(*op); }
+    void hasBecomeUndefined() final {
+        deletePartitionTriggers(*op);
         op->changeValue([&]() {
-            op->reevaluate(false, false);
+            op->reevaluate(true, false);
             return true;
         });
     }
-
     void hasBecomeDefined() {
+        reattachAllTriggers(*op);
         op->changeValue([&]() {
-            op->reevaluate(true, true);
-            return true;
-        });
-    }
-    void reattachTrigger() final {
-        deleteTrigger(op->partitionOperandTrigger);
-        auto trigger = make_shared<PartitionOperandTrigger>(op);
-        op->partitionOperand->addTrigger(trigger, false);
-        op->reattachPartitionMemberTrigger(true, true);
-        op->partitionOperandTrigger = trigger;
-    }
-};
-
-template <typename PartitionMemberViewType>
-template <bool isLeft>
-struct OpTogether<PartitionMemberViewType>::OperandTrigger
-    : public ChangeTriggerAdapter<
-          typename AssociatedTriggerType<PartitionMemberViewType>::type,
-          OpTogether<PartitionMemberViewType>::OperandTrigger<isLeft>> {
-    typedef typename AssociatedTriggerType<PartitionMemberViewType>::type
-        TriggerType;
-    OpTogether<PartitionMemberViewType>* op;
-    OperandTrigger(OpTogether<PartitionMemberViewType>* op)
-        : ChangeTriggerAdapter<TriggerType, OperandTrigger<isLeft>>(
-              (isLeft) ? op->left : op->right),
-          op(op) {}
-    ExprRef<PartitionMemberViewType>& getTriggeringOperand() {
-        return (isLeft) ? op->left : op->right;
-    }
-    void adapterValueChanged() {
-        op->changeValue([&]() {
-            op->reevaluate(isLeft, !isLeft);
-            return true;
-        });
-    }
-    void reattachTrigger() final {
-        if (isLeft) {
-            reattachLeftTrigger();
-        } else {
-            reattachRightTrigger();
-        }
-    }
-
-    void reattachLeftTrigger() {
-        deleteTrigger(op->leftOperandTrigger);
-        auto trigger = make_shared<
-            OpTogether<PartitionMemberViewType>::OperandTrigger<true>>(op);
-        op->left->addTrigger(trigger);
-        op->leftOperandTrigger = trigger;
-    }
-
-    void reattachRightTrigger() {
-        deleteTrigger(op->rightOperandTrigger);
-        auto trigger = make_shared<
-            OpTogether<PartitionMemberViewType>::OperandTrigger<false>>(op);
-        op->right->addTrigger(trigger);
-        op->rightOperandTrigger = trigger;
-    }
-    void adapterHasBecomeDefined() {
-        op->changeValue([&]() {
-            op->reevaluate(isLeft, !isLeft);
-            return true;
-        });
-    }
-
-    void adapterHasBecomeUndefined() {
-        op->changeValue([&]() {
-            op->reevaluate(false, false);
+            op->reevaluate(true, false);
             return true;
         });
     }
 };
 
-template <typename PartitionMemberViewType>
-void OpTogether<PartitionMemberViewType>::startTriggeringImpl() {
-    if (!partitionOperandTrigger) {
-        partitionOperandTrigger = make_shared<PartitionOperandTrigger>(this);
-        partitionOperand->addTrigger(partitionOperandTrigger, false);
-        reattachPartitionMemberTrigger(true, true);
-        partitionOperand->startTriggering();
-
-        leftOperandTrigger = make_shared<OperandTrigger<true>>(this);
-        left->addTrigger(leftOperandTrigger);
-        left->startTriggering();
-
-        rightOperandTrigger = make_shared<OperandTrigger<false>>(this);
-        right->addTrigger(rightOperandTrigger);
-        right->startTriggering();
-    }
+static void deletePartitionTriggers(OpTogether& op) {
+    op.rightTrigger = nullptr;
+    op.partitionMemberTriggers.clear();
 }
 
-template <typename PartitionMemberViewType>
-void OpTogether<PartitionMemberViewType>::reattachPartitionMemberTrigger(
-    bool left, bool right) {
-    if (left) {
-        if (leftMemberTrigger) {
-            deleteTrigger(leftMemberTrigger);
-        }
-        leftMemberTrigger = make_shared<PartitionOperandTrigger>(this);
-        partitionOperand->addTrigger(leftMemberTrigger, true, cachedLeftIndex);
+static void addTrigger(OpTogether& op, const HashType& hash,
+                       PartitionView& view) {
+    shared_ptr<OperatorTrates<OpTogether>::RightTrigger> trigger = nullptr;
+    if (view.hashIndexMap.count(hash)) {
+        trigger = make_shared<OperatorTrates<OpTogether>::RightTrigger>(&op);
+        op.right->addTrigger(trigger, true, view.hashIndexMap.at(hash));
     }
-    if (right) {
-        if (rightMemberTrigger) {
-            deleteTrigger(rightMemberTrigger);
-        }
-        rightMemberTrigger = make_shared<PartitionOperandTrigger>(this);
-        partitionOperand->addTrigger(rightMemberTrigger, true,
-                                     cachedRightIndex);
-    }
+    op.partitionMemberTriggers.emplace_back(move(trigger));
 }
 
-template <typename PartitionMemberViewType>
-void OpTogether<PartitionMemberViewType>::stopTriggeringOnChildren() {
-    if (partitionOperandTrigger) {
-        deleteTrigger(partitionOperandTrigger);
-        partitionOperandTrigger = nullptr;
-        deleteTrigger(leftOperandTrigger);
-        leftOperandTrigger = nullptr;
-        deleteTrigger(rightOperandTrigger);
-        rightOperandTrigger = nullptr;
-        if (leftMemberTrigger) {
-            deleteTrigger(leftMemberTrigger);
-            leftMemberTrigger = nullptr;
-        }
-        if (rightMemberTrigger) {
-            deleteTrigger(rightMemberTrigger);
-            rightMemberTrigger = nullptr;
-        }
-    }
-}
-
-template <typename PartitionMemberViewType>
-void OpTogether<PartitionMemberViewType>::stopTriggering() {
-    if (partitionOperandTrigger) {
-        stopTriggeringOnChildren();
-        partitionOperand->stopTriggering();
-        left->stopTriggering();
-        right->stopTriggering();
-    }
-}
-
-template <typename PartitionMemberViewType>
-void OpTogether<PartitionMemberViewType>::updateVarViolationsImpl(
-    const ViolationContext& vioContext, ViolationContainer& vioContainer) {
-    auto partition = partitionOperand->getViewIfDefined();
-    if (!partition) {
-        partitionOperand->updateVarViolations(violation, vioContainer);
+static void reattachAllTriggers(OpTogether& op) {
+    op.leftTrigger = nullptr;
+    deletePartitionTriggers(op);
+    auto setViewOption = op.left->getViewIfDefined();
+    auto partitionViewOption = op.right->getViewIfDefined();
+    if (!setViewOption) {
         return;
     }
+    auto& setView = *setViewOption;
+    op.leftTrigger = make_shared<OperatorTrates<OpTogether>::LeftTrigger>(&op);
+    op.left->addTrigger(op.leftTrigger);
 
-    if (!left->appearsDefined()) {
+    if (!partitionViewOption) {
+        return;
+    }
+    auto& partitionView = *partitionViewOption;
+    op.rightTrigger =
+        make_shared<OperatorTrates<OpTogether>::RightTrigger>(&op);
+    op.right->addTrigger(op.rightTrigger, false, -1);
+    for (auto hash : setView.indexHashMap) {
+        addTrigger(op, hash, partitionView);
+    }
+}
+
+void OpTogether::startTriggeringImpl() {
+    if (!leftTrigger) {
+        reattachAllTriggers(*this);
+    }
+}
+void OpTogether::stopTriggering() {
+    if (leftTrigger) {
+        this->leftTrigger = nullptr;
+        deletePartitionTriggers(*this);
+        this->left->stopTriggering();
+        this->right->stopTriggering();
+    }
+}
+void updateVarViolationsOnSet(ExprRef<SetView>& left, UInt violation,
+                              ViolationContainer& vioContainer) {
+    auto viewOption = left->getViewIfDefined();
+    if (!viewOption) {
         left->updateVarViolations(violation, vioContainer);
         return;
     }
-    if (!right->appearsDefined()) {
-        right->updateVarViolations(violation, vioContainer);
+    auto& view = *viewOption;
+    mpark::visit(
+        [&](auto& members) {
+            for (auto& member : members) {
+                member->updateVarViolations(violation, vioContainer);
+            }
+        },
+        view.members);
+}
+
+void OpTogether::updateVarViolationsImpl(const ViolationContext&,
+                                         ViolationContainer& vioContainer) {
+    if (violation == 0) {
         return;
+    } else if (allOperandsAreDefined()) {
+        updateVarViolationsOnSet(this->left, violation, vioContainer);
+        right->updateVarViolations(violation, vioContainer);
+    } else {
+        left->updateVarViolations(violation, vioContainer);
+        right->updateVarViolations(violation, vioContainer);
     }
-    auto* boolVioContextTest =
-        dynamic_cast<const BoolViolationContext*>(&vioContext);
-    UInt childViolation =
-        (boolVioContextTest && boolVioContextTest->negated) ? 1 : violation;
-    partition->getMembers<PartitionMemberViewType>()[cachedLeftIndex]
-        ->updateVarViolations(childViolation, vioContainer);
-    partition->getMembers<PartitionMemberViewType>()[cachedRightIndex]
-        ->updateVarViolations(childViolation, vioContainer);
 }
 
-template <typename PartitionMemberViewType>
-ExprRef<BoolView> OpTogether<PartitionMemberViewType>::deepCopyForUnrollImpl(
-    const ExprRef<BoolView>&, const AnyIterRef& iterator) const {
-    auto newOpTogether = make_shared<OpTogether<PartitionMemberViewType>>(
-        partitionOperand->deepCopyForUnroll(partitionOperand, iterator),
-        left->deepCopyForUnroll(left, iterator),
-        right->deepCopyForUnroll(right, iterator));
-    newOpTogether->violation = this->violation;
-    newOpTogether->cachedLeftIndex = cachedLeftIndex;
-    newOpTogether->cachedRightIndex = cachedRightIndex;
-    return newOpTogether;
-}
+void OpTogether::copy(OpTogether&) const {}
 
-template <typename PartitionMemberViewType>
-std::ostream& OpTogether<PartitionMemberViewType>::dumpState(
-    std::ostream& os) const {
-    os << "opTogether(value=" << this->getViewIfDefined() << ",";
-    os << "partition=";
-    partitionOperand->dumpState(os) << ",\n";
-    os << "left=";
-    left->dumpState(os) << ",\n";
-    os << "right=";
-    right->dumpState(os) << ")";
+ostream& OpTogether::dumpState(ostream& os) const {
+    os << "OpTogether: violation=" << violation << "\nleft: ";
+    left->dumpState(os);
+    os << "\nright: ";
+    right->dumpState(os);
     return os;
 }
 
-template <typename PartitionMemberViewType>
-void OpTogether<PartitionMemberViewType>::findAndReplaceSelf(
-    const FindAndReplaceFunction& func, PathExtension path) {
-    this->partitionOperand = findAndReplace(partitionOperand, func, path);
-    this->left = findAndReplace(left, func, path);
-    this->right = findAndReplace(right, func, path);
-}
-
-template <typename PartitionMemberViewType>
-pair<bool, ExprRef<BoolView>> OpTogether<PartitionMemberViewType>::optimiseImpl(
-    ExprRef<BoolView>&, PathExtension path) {
-    bool optimised = false;
-    auto newOp = make_shared<OpTogether<PartitionMemberViewType>>(
-        partitionOperand, left, right);
-    AnyExprRef newOpAsExpr = ExprRef<BoolView>(newOp);
-    optimised |= optimise(newOpAsExpr, newOp->partitionOperand, path);
-    optimised |= optimise(newOpAsExpr, newOp->left, path);
-    optimised |= optimise(newOpAsExpr, newOp->right, path);
-    return make_pair(optimised, newOp);
-}
-
-template <typename PartitionMemberViewType>
-string OpTogether<PartitionMemberViewType>::getOpName() const {
-    return toString(
-        "OpTogether<",
-        TypeAsString<
-            typename AssociatedValueType<PartitionMemberViewType>::type>::value,
-        ">(", left, ",", right, ")");
-}
-
-template <typename PartitionMemberViewType>
-void OpTogether<PartitionMemberViewType>::debugSanityCheckImpl() const {
-    partitionOperand->debugSanityCheck();
+string OpTogether::getOpName() const { return "OpTogether"; }
+void OpTogether::debugSanityCheckImpl() const {
     left->debugSanityCheck();
     right->debugSanityCheck();
-    auto partitionView = partitionOperand->view();
-    auto leftView = left->getViewIfDefined();
-    auto rightView = right->getViewIfDefined();
-    if (!partitionView || !leftView || !rightView) {
-        sanityEqualsCheck(LARGE_VIOLATION, this->violation);
+    auto leftOption = left->getViewIfDefined();
+    auto rightOption = right->getViewIfDefined();
+    if (!leftOption || !rightOption) {
+        sanityLargeViolationCheck(violation);
+        return;
     }
-    if (partitionView) {
-        if (leftView) {
-            HashType leftHash = getValueHash(*leftView);
-            sanityEqualsCheck(partitionView->hashIndexMap[leftHash],
-                              cachedLeftIndex);
-        }
-        if (rightView) {
-            HashType rightHash = getValueHash(*rightView);
-            sanityEqualsCheck(partitionView->hashIndexMap[rightHash],
-                              cachedRightIndex);
-        }
-        if (leftView && rightView) {
-            bool equalParts = partitionView->memberPartMap[cachedLeftIndex] ==
-                              partitionView->memberPartMap[cachedRightIndex];
-            if (equalParts) {
-                sanityEqualsCheck(0, this->violation);
-            } else {
-                sanityEqualsCheck(1, this->violation);
-            }
+    auto& leftView = *leftOption;
+    auto& rightView = *rightOption;
+    if (leftView.numberElements() == 0) {
+        sanityEqualsCheck(0, violation);
+        return;
+    }
+    HashMap<UInt, UInt> partCounts;
+    for (auto& hash : leftView.indexHashMap) {
+        if (rightView.hashIndexMap.count(hash)) {
+            UInt part =
+                rightView.memberPartMap[rightView.hashIndexMap.at(hash)];
+            partCounts[part] += 1;
+        } else {
+            sanityLargeViolationCheck(violation);
+            return;
         }
     }
+    UInt checkViolation;
+    bool first = true;
+    for (auto& hashCountPair : partCounts) {
+        auto diff = leftView.numberElements() - hashCountPair.second;
+        if (first || diff < checkViolation) {
+            first = false;
+            checkViolation = diff;
+        }
+    }
+    sanityEqualsCheck(checkViolation, violation);
 }
 
 template <typename Op>
 struct OpMaker;
 
-template <typename View>
-struct OpMaker<OpTogether<View>> {
-    static ExprRef<BoolView> make(ExprRef<PartitionView> partition,
-                                  ExprRef<View> left, ExprRef<View> right);
+template <>
+struct OpMaker<OpTogether> {
+    static ExprRef<BoolView> make(ExprRef<SetView> l, ExprRef<PartitionView> r);
 };
 
-template <typename View>
-ExprRef<BoolView> OpMaker<OpTogether<View>>::make(
-    ExprRef<PartitionView> partition, ExprRef<View> left, ExprRef<View> right) {
-    return make_shared<OpTogether<View>>(move(partition), move(left),
-                                         move(right));
+ExprRef<BoolView> OpMaker<OpTogether>::make(ExprRef<SetView> l,
+                                            ExprRef<PartitionView> r) {
+    return make_shared<OpTogether>(move(l), move(r));
 }
-
-#define opTogetherInstantiators(name)       \
-    template struct OpTogether<name##View>; \
-    template struct OpMaker<OpTogether<name##View>>;
-
-buildForAllTypes(opTogetherInstantiators, );
-#undef opTogetherInstantiators

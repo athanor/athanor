@@ -1,57 +1,38 @@
 
 #ifndef SRC_OPERATORS_OPTOGETHER_H_
 #define SRC_OPERATORS_OPTOGETHER_H_
-#include "base/base.h"
-#include "triggers/allTriggers.h"
+#include "operators/simpleOperator.h"
+#include "operators/simpleTrigger.h"
 #include "types/bool.h"
 #include "types/partition.h"
-template <typename PartitionMemberViewType>
-struct OpTogether : public BoolView {
-    struct PartitionOperandTrigger;
-    template <bool isLeft>
-    struct OperandTrigger;
-    ExprRef<PartitionView> partitionOperand;
-    ExprRef<PartitionMemberViewType> left;
-    ExprRef<PartitionMemberViewType> right;
-    UInt cachedLeftIndex;
-    UInt cachedRightIndex;
-    std::shared_ptr<PartitionOperandTrigger> partitionOperandTrigger;
-    std::shared_ptr<PartitionOperandTrigger> leftMemberTrigger;
-    std::shared_ptr<PartitionOperandTrigger> rightMemberTrigger;
-    std::shared_ptr<OperandTrigger<true>> leftOperandTrigger;
-    std::shared_ptr<OperandTrigger<false>> rightOperandTrigger;
+#include "types/set.h"
+struct OpTogether;
 
-    OpTogether(ExprRef<PartitionView> partitionOperand,
-               ExprRef<PartitionMemberViewType> left,
-               ExprRef<PartitionMemberViewType> right)
-        : partitionOperand(std::move(partitionOperand)),
-          left(std::move(left)),
-          right(std::move(right)) {}
+template <>
+struct OperatorTrates<OpTogether> {
+    struct LeftTrigger;
+    struct RightTrigger;
+};
 
-    OpTogether(const OpTogether<PartitionMemberViewType>&) = delete;
-    OpTogether(OpTogether<PartitionMemberViewType>&&) = delete;
-    ~OpTogether() { this->stopTriggeringOnChildren(); }
+struct OpTogether : public SimpleBinaryOperator<BoolView, SetView,
+                                                PartitionView, OpTogether> {
+    std::vector<std::shared_ptr<OperatorTrates<OpTogether>::RightTrigger>>
+        partitionMemberTriggers;  // one trigger for each member of the set
+                                  // operand, triggering on one specific member
+                                  // of the partition. //may be null if set
+                                  // member does not exist in partition.
 
-    void evaluateImpl() final;
+    using SimpleBinaryOperator<BoolView, SetView, PartitionView,
+                               OpTogether>::SimpleBinaryOperator;
     void startTriggeringImpl() final;
     void stopTriggering() final;
-    void stopTriggeringOnChildren();
-
+    void reevaluateImpl(SetView& leftView, PartitionView& rightView, bool,
+                        bool);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
-                                 ViolationContainer&) final;
-    ExprRef<BoolView> deepCopyForUnrollImpl(
-        const ExprRef<BoolView>& self, const AnyIterRef& iterator) const final;
+                                 ViolationContainer& vioContainer) final;
+    void copy(OpTogether& newOp) const;
     std::ostream& dumpState(std::ostream& os) const final;
-    void findAndReplaceSelf(const FindAndReplaceFunction&, PathExtension) final;
-
-    void reevaluate(bool recalculateCachedLeftIndex,
-                    bool recalculateCachedRightIndex);
-    void reattachPartitionMemberTrigger(bool leftTrigger, bool rightTrigger);
-    std::pair<bool, ExprRef<BoolView>> optimiseImpl(ExprRef<BoolView>&,
-                                                    PathExtension path) final;
-
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };
-
 #endif /* SRC_OPERATORS_OPTOGETHER_H_ */

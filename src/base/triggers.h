@@ -270,24 +270,33 @@ class TriggerOwner {
     std::shared_ptr<Trigger> trigger;
 
    public:
-    TriggerOwner() {}
     TriggerOwner(std::shared_ptr<Trigger> trigger)
         : trigger(std::move(trigger)) {}
     ~TriggerOwner() { deleteTrigger(trigger); }
+
+    TriggerOwner() {}
+    TriggerOwner(const TriggerOwner<Trigger>&) = delete;
+    TriggerOwner(TriggerOwner<Trigger>&& other)
+        : trigger(std::move(other.trigger)) {
+        other.trigger = nullptr;
+    }
     inline TriggerOwner<Trigger>& operator=(std::shared_ptr<Trigger> trigger) {
-        if (this->trigger) {
+        if (this->trigger && this->trigger.get() != trigger.get()) {
             deleteTrigger(this->trigger);
         }
         this->trigger = trigger;
         return *this;
     }
-    inline TriggerOwner<Trigger>& operator=(TriggerOwner<Trigger> other) {
-        if (this->trigger) {
+    inline TriggerOwner<Trigger>& operator=(TriggerOwner<Trigger>&& other) {
+        if (this->trigger && this->trigger.get() != other.trigger.get()) {
             deleteTrigger(this->trigger);
         }
         this->trigger = other.trigger;
+        other.trigger = nullptr;
         return *this;
     }
+    TriggerOwner<Trigger>& operator=(const TriggerOwner<Trigger>& other) =
+        delete;
 
     inline explicit operator bool() const noexcept {
         return trigger.operator bool();

@@ -275,11 +275,6 @@ ParseResult parseOpNotEq(json& operandsExpr, ParsedModel& parsedModel) {
 }
 
 ParseResult parseOpTogether(json& operandsExpr, ParsedModel& parsedModel) {
-    const string UNSUPPORTED_MESSAGE =
-        "Only supporting together when given a set literal "
-        "of two elements "
-        "as "
-        "the first parameter.\n";
     auto set = expect<SetView>(
         parseExpr(operandsExpr[0], parsedModel).expr, [&](auto&&) {
             myCerr << "Error, together takes a set as its "
@@ -292,28 +287,9 @@ ParseResult parseOpTogether(json& operandsExpr, ParsedModel& parsedModel) {
                       "its second "
                       "parameter.\n";
         });
-    auto setLit = getAs<OpSetLit<FunctionView>>(set);
-    if (!setLit) {
-        myCerr << UNSUPPORTED_MESSAGE << endl;
-        myAbort();
-    }
-    return lib::visit(
-        [&](auto& members) {
-            if (members.size() != 2) {
-                myCerr << UNSUPPORTED_MESSAGE << endl;
-                myAbort();
-            }
-
-            typedef viewType(members) View;
-            bool constant = partition->isConstant() &&
-                            members[0]->isConstant() &&
-                            members[1]->isConstant();
-            auto op = OpMaker<OpTogether<View>>::make(partition, members[0],
-                                                      members[1]);
-            op->setConstant(constant);
-            return ParseResult(fakeBoolDomain, op, false);
-        },
-        setLit->getChildrenOperands());
+    auto op = OpMaker<OpTogether>::make(set, partition);
+    op->setConstant(set->isConstant() && partition->isConstant());
+    return ParseResult(fakeBoolDomain, op, false);
 }
 
 template <bool flipped>

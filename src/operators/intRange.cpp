@@ -63,7 +63,7 @@ void OperatorTrates<IntRange>::Trigger<isLeft>::hasBecomeDefined() {
     }
     op->notifyValueDefined();
 }
-inline template <bool isLeft>
+template <bool isLeft>
 void OperatorTrates<IntRange>::Trigger<isLeft>::adjustLower(
     const IntView& leftView, bool trigger) {
     Int newLower = leftView.value;

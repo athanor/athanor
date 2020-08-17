@@ -107,8 +107,8 @@ struct SimpleBinaryOperator : public View,
 
     void evaluateImpl() final;
     void reevaluate(bool leftChange, bool rightChange);
-    void startTriggeringImpl() final;
-    void stopTriggering() final;
+    void startTriggeringImpl() override;
+    void stopTriggering() override;
     ExprRef<View> deepCopyForUnrollImpl(const ExprRef<View>&,
                                         const AnyIterRef& iterator) const final;
     void findAndReplaceSelf(const FindAndReplaceFunction& func,

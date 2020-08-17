@@ -1,0 +1,7 @@
+$testing:numberIterations=1000
+find p : partition (regular, numParts 3) from int(1..12)
+such that together({1,2,3,4}, p)
+such that !together({5,6,7,8}, p)
+such that !together({9,10,11,12}, p)
+such that together({5,6,7}, p)
+such that together({9,10,11}, p)

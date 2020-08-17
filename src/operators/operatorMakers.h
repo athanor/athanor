@@ -258,15 +258,12 @@ struct OpMaker<OpDiv> {
     static ExprRef<IntView> make(ExprRef<IntView> l, ExprRef<IntView> r);
 };
 
-template <typename View>
 struct OpTogether;
 
-template <typename View>
-struct OpMaker<OpTogether<View>> {
-    static ExprRef<BoolView> make(ExprRef<PartitionView> partition,
-                                  ExprRef<View> left, ExprRef<View> right);
+template <>
+struct OpMaker<OpTogether> {
+    static ExprRef<BoolView> make(ExprRef<SetView> l, ExprRef<PartitionView> r);
 };
-
 template <typename view>
 struct OpInDomain;
 template <>

@@ -5,7 +5,6 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 
-const HashType PartitionView::INITIAL_HASH(0);
 template <>
 HashType getValueHash<PartitionView>(const PartitionView& val) {
     return val.cachedHashTotal;
@@ -47,12 +46,15 @@ ostream& prettyPrint<PartitionView>(ostream& os, const PartitionView& v) {
     os << "partition(";
     lib::visit(
         [&](auto& membersImpl) {
-            vector<ExprRefVec<viewType(membersImpl)>> parts(v.numberParts());
+            vector<ExprRefVec<viewType(membersImpl)>> parts(v.numberElements());
             for (size_t i = 0; i < v.memberPartMap.size(); i++) {
                 parts[v.memberPartMap[i]].emplace_back(membersImpl[i]);
             }
             bool first = true;
             for (auto& part : parts) {
+                if (part.empty()) {
+                    continue;
+                }
                 if (first) {
                     first = false;
                 } else {
@@ -63,6 +65,7 @@ ostream& prettyPrint<PartitionView>(ostream& os, const PartitionView& v) {
         },
         v.members);
     os << ")";
+    os << "\n$memberPartMap=" << v.memberPartMap << "\n";
     return os;
 }
 
@@ -77,12 +80,15 @@ ostream& prettyPrint<PartitionView>(ostream& os, const PartitionDomain& domain,
             typedef typename AssociatedDomain<Value>::type Domain;
             const auto& domainPtr = lib::get<shared_ptr<Domain>>(domain.inner);
 
-            vector<ExprRefVec<viewType(membersImpl)>> parts(v.numberParts());
+            vector<ExprRefVec<viewType(membersImpl)>> parts(v.numberElements());
             for (size_t i = 0; i < v.memberPartMap.size(); i++) {
                 parts[v.memberPartMap[i]].emplace_back(membersImpl[i]);
             }
             bool first = true;
             for (auto& part : parts) {
+                if (part.empty()) {
+                    continue;
+                }
                 if (first) {
                     first = false;
                 } else {
@@ -100,12 +106,14 @@ template <typename InnerViewType>
 void deepCopyImpl(const PartitionValue& src,
                   const ExprRefVec<InnerViewType>& srcMembersImpl,
                   PartitionValue& target) {
-    // to be optimised later
+    typedef typename AssociatedValueType<InnerViewType>::type InnerValueType;
+
     target.silentClear();
+    target.setNumberElements<InnerValueType>(srcMembersImpl.size());
 
     for (size_t i = 0; i < srcMembersImpl.size(); i++) {
-        target.addMember(src.memberPartMap[i],
-                         assumeAsValue(srcMembersImpl[i]));
+        target.assignMember(i, src.memberPartMap[i],
+                            assumeAsValue(srcMembersImpl[i]));
     }
     debug_code(target.debugSanityCheck());
     target.notifyEntireValueChanged();
@@ -129,6 +137,7 @@ ostream& prettyPrint<PartitionDomain>(ostream& os, const PartitionDomain& d) {
         os << "regular,";
     }
     os << "numberParts=" << d.numberParts;
+    os << ", partSize=" << d.partSize;
     os << ",numberElements=" << d.numberElements;
     os << ",from=";
     prettyPrint(os, d.inner);
@@ -200,10 +209,14 @@ bool largerValue<PartitionView>(const PartitionView&, const PartitionView&) {
 }
 
 void PartitionView::standardSanityChecksForThisType() const {
-    HashType checkCachedHashTotal = INITIAL_HASH;
-    vector<HashType> checkPartHashes(partHashes.size(), INITIAL_HASH);
     lib::visit(
         [&](auto& members) {
+            HashType checkCachedHashTotal = HashType(0);
+            vector<PartInfo> checkPartInfo(partInfo.size());
+            sanityEqualsCheck(members.size(), partInfo.size());
+            sanityEqualsCheck(members.size(), memberPartMap.size());
+            sanityEqualsCheck(members.size(), hashIndexMap.size());
+
             for (size_t i = 0; i < members.size(); i++) {
                 auto& member = members[i];
                 auto viewOption = member->getViewIfDefined();
@@ -215,34 +228,22 @@ void PartitionView::standardSanityChecksForThisType() const {
                     toString("hash ", hash, " missing from hashIndexMap."));
                 sanityEqualsCheck(i, hashIndexMap.at(hash));
                 UInt part = memberPartMap[i];
-                sanityCheck(
-                    part < checkPartHashes.size(),
-                    toString("Expected ", checkPartHashes.size(),
-                             " parts but member ", i, " maps to part ", part));
-                checkPartHashes[part] += mix(hash);
+                checkPartInfo[part].notifyMemberAdded(member);
             }
-            for (size_t i = 0; i < checkPartHashes.size(); i++) {
-                sanityEqualsCheck(checkPartHashes[i], partHashes[i]);
-                checkCachedHashTotal += mix(checkPartHashes[i]);
+            for (size_t i = 0; i < checkPartInfo.size(); i++) {
+                sanityEqualsCheck(checkPartInfo[i], partInfo[i]);
+                checkCachedHashTotal += checkPartInfo[i].mixedPartHash();
             }
 
             sanityEqualsCheck(checkCachedHashTotal, cachedHashTotal);
-            sanityEqualsCheck(members.size(), hashIndexMap.size());
-            sanityEqualsCheck(memberPartMap.size(), members.size());
         },
         members);
 
-    vector<bool> foundParts(numberParts(), false);
-    for (size_t i = 0; i < memberPartMap.size(); i++) {
-        auto part = memberPartMap[i];
-        sanityCheck(part < numberParts(),
-                    toString("found part ", part, " but number parts is ",
-                             numberParts()));
-        foundParts[part] = true;
+    size_t checkNumberParts = 0;
+    for (auto& part : partInfo) {
+        checkNumberParts += (part.partSize > 0);
     }
-    for (size_t i = 0; i < foundParts.size(); i++) {
-        sanityCheck(foundParts[i], toString("Could not find part ", i));
-    }
+    sanityEqualsCheck(checkNumberParts, numberParts);
 }
 
 void PartitionValue::debugSanityCheckImpl() const {
@@ -267,8 +268,6 @@ UInt getSize<PartitionValue>(const PartitionValue&) {
 AnyExprVec& PartitionValue::getChildrenOperands() { return members; }
 
 template <>
-size_t getResourceLowerBound<PartitionDomain>(
-    const PartitionDomain& domain) {
-    return getDomainSize(domain.inner) *
-           getResourceLowerBound(domain.inner);
+size_t getResourceLowerBound<PartitionDomain>(const PartitionDomain& domain) {
+    return getDomainSize(domain.inner) * getResourceLowerBound(domain.inner);
 }

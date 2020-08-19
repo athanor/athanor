@@ -75,7 +75,6 @@ struct OperatorTrates<OpFunctionPreimage<OperandView>>::LeftTrigger
     void adapterHasBecomeUndefined() { todoImpl(); }
 
     void reattachTrigger() final {
-        deleteTrigger(op->leftTrigger);
         auto trigger = make_shared<
             OperatorTrates<OpFunctionPreimage<OperandView>>::LeftTrigger>(op);
         op->left->addTrigger(trigger);
@@ -148,7 +147,6 @@ struct OperatorTrates<OpFunctionPreimage<OperandView>>::RightTrigger
     void hasBecomeDefined() { todoImpl(); }
 
     void reattachTrigger() final {
-        deleteTrigger(op->rightTrigger);
         auto trigger = make_shared<
             OperatorTrates<OpFunctionPreimage<OperandView>>::RightTrigger>(op);
         op->right->addTrigger(trigger);

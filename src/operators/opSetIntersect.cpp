@@ -128,7 +128,6 @@ struct OperatorTrates<OpSetIntersect>::OperandTrigger : public SetTrigger {
         }
     }
     void reattachLeftTrigger() {
-        deleteTrigger(op->leftTrigger);
         auto trigger =
             make_shared<OperatorTrates<OpSetIntersect>::OperandTrigger<true>>(
                 op);
@@ -137,7 +136,6 @@ struct OperatorTrates<OpSetIntersect>::OperandTrigger : public SetTrigger {
     }
 
     void reattachRightTrigger() {
-        deleteTrigger(op->rightTrigger);
         auto trigger =
             make_shared<OperatorTrates<OpSetIntersect>::OperandTrigger<false>>(
                 op);

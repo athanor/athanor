@@ -75,6 +75,8 @@ typedef std::function<std::pair<bool, AnyExprRef>(AnyExprRef,
     FindAndReplaceFunction;
 
 struct AnyIterRef;
+template <typename Trigger>
+class TriggerOwner;
 
 template <typename View>
 struct ExprRef : public StandardSharedPtr<ExprInterface<View>> {
@@ -218,6 +220,11 @@ struct ExprInterface : public Undefinable<View> {
         }
     }
 
+    template <typename TriggerSubType>
+    void addTrigger(const TriggerOwner<TriggerSubType>& trigger,
+                    bool includeMembers = true, Int memberIndex = -1) {
+        this->addTrigger(trigger.getTrigger(), includeMembers, memberIndex);
+    }
     inline void evaluate() {
         if (!isEvaluated()) {
             setEvaluated(true);

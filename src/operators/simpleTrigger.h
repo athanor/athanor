@@ -42,14 +42,12 @@ struct SimpleBinaryTrigger
         }
     }
     inline void reassignLeftTrigger() {
-        deleteTrigger(op->leftTrigger);
         auto newTrigger =
             std::make_shared<SimpleBinaryTrigger<Op, TriggerType, true>>(op);
         op->left->addTrigger(newTrigger);
         op->leftTrigger = newTrigger;
     }
     inline void reassignRightTrigger() {
-        deleteTrigger(op->rightTrigger);
         auto newTrigger =
             std::make_shared<SimpleBinaryTrigger<Op, TriggerType, false>>(op);
         op->right->addTrigger(newTrigger);
@@ -93,7 +91,6 @@ struct SimpleUnaryTrigger
     }
 
     void reattachTrigger() {
-        deleteTrigger(op->operandTrigger);
         auto newTrigger =
             std::make_shared<SimpleUnaryTrigger<Op, TriggerType>>(op);
         op->operand->addTrigger(newTrigger);

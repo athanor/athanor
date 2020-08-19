@@ -117,7 +117,6 @@ struct OperatorTrates<OpMsetSubsetEq>::LeftTrigger : public MSetTrigger {
     }
 
     void reattachTrigger() final {
-        deleteTrigger(op->leftTrigger);
         auto trigger =
             make_shared<OperatorTrates<OpMsetSubsetEq>::LeftTrigger>(op);
         op->left->addTrigger(trigger);
@@ -182,7 +181,6 @@ struct OperatorTrates<OpMsetSubsetEq>::RightTrigger : public MSetTrigger {
     }
 
     void reattachTrigger() final {
-        deleteTrigger(op->rightTrigger);
         auto trigger =
             make_shared<OperatorTrates<OpMsetSubsetEq>::RightTrigger>(op);
         op->right->addTrigger(trigger);

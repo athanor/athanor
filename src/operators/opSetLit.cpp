@@ -63,9 +63,10 @@ void OpSetLit<OperandView>::addReplacementToSet(
     // It shall be made the replacement operand for this set.
     // If no operands have the same value, disable this operand group
     // temperarily.
-    auto unchangedOperand = find_if(
-        begin(og.operands), end(og.operands),
-        [&](auto& o) { return this->template hashNotChanged<InnerViewType>(operands, o); });
+    auto unchangedOperand =
+        find_if(begin(og.operands), end(og.operands), [&](auto& o) {
+            return this->template hashNotChanged<InnerViewType>(operands, o);
+        });
     if (unchangedOperand != og.operands.end()) {
         og.focusOperand = *unchangedOperand;
         this->addMemberAndNotify(operands[og.focusOperand]);
@@ -176,7 +177,6 @@ struct OperatorTrates<OpSetLit<FunctionView>>::OperandTrigger
     }
 
     void reattachTrigger() final {
-        deleteTrigger(op->operandTrigger);
         auto trigger =
             make_shared<OperatorTrates<OpSetLit<FunctionView>>::OperandTrigger>(
                 op);

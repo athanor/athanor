@@ -18,124 +18,130 @@ void IntRange::reevaluateImpl(IntView& leftView, IntView& rightView, bool,
         this->addMember(this->numberElements(), val.asExpr());
     }
 }
-template <bool isLeft>
-struct OperatorTrates<IntRange>::Trigger : public IntTrigger {
-    IntRange* op;
-    Trigger(IntRange* op) : op(op) {}
-    void valueChanged() final {
-        if (!op->isDefined()) {
-            return;
-        }
-        if (isLeft) {
-            auto leftView = op->left->getViewIfDefined();
-            if (!leftView) {
-                hasBecomeUndefined();
-                return;
-            }
-            adjustLower(*leftView, true);
-        } else {
-            auto rightView = op->right->getViewIfDefined();
-            if (!rightView) {
-                hasBecomeUndefined();
-                return;
-            }
-            adjustUpper(*rightView, true);
-        }
-    }
 
-    void hasBecomeUndefined() final { op->setUndefinedAndTrigger(); }
-    void hasBecomeDefined() {
+template <bool isLeft>
+void OperatorTrates<IntRange>::Trigger<isLeft>::valueChanged() {
+    if (!op->isDefined()) {
+        return;
+    }
+    if (isLeft) {
         auto leftView = op->left->getViewIfDefined();
         if (!leftView) {
+            hasBecomeUndefined();
             return;
         }
+        adjustLower(*leftView, true);
+    } else {
         auto rightView = op->right->getViewIfDefined();
         if (!rightView) {
+            hasBecomeUndefined();
             return;
         }
-        op->setDefined(true);
-        if (isLeft) {
-            adjustLower(*leftView, false);
-        } else {
-            adjustUpper(*rightView, false);
-        }
-        op->notifyValueDefined();
+        adjustUpper(*rightView, true);
     }
-    inline void adjustLower(const IntView& leftView, bool trigger) {
-        Int newLower = leftView.value;
-        while (op->cachedLower > newLower) {
-            --op->cachedLower;
-            if (op->cachedLower > op->cachedUpper) {
-                continue;
-            }
-            auto val = make<IntValue>();
-            val->value = op->cachedLower;
-            if (trigger) {
-                op->addMemberAndNotify(0, val.asExpr());
-            } else {
-                op->addMember(0, val.asExpr());
-            }
-        }
-        while (op->cachedLower < newLower) {
-            ++op->cachedLower;
-            if (op->cachedLower > op->cachedUpper + 1) {
-                continue;
-            }
-            if (trigger) {
-                op->removeMemberAndNotify<IntView>(0);
-            } else {
-                op->removeMember<IntView>(0);
-            }
-        }
-    }
-    inline void adjustUpper(const IntView& rightView, bool trigger) {
-        Int newUpper = rightView.value;
-        while (op->cachedUpper < newUpper) {
-            ++op->cachedUpper;
-            if (op->cachedUpper < op->cachedLower) {
-                continue;
-            }
-            auto val = make<IntValue>();
-            val->value = op->cachedUpper;
-            if (trigger) {
-                op->addMemberAndNotify(op->numberElements(), val.asExpr());
-            } else {
-                op->addMember(op->numberElements(), val.asExpr());
-            }
-        }
-        while (op->cachedUpper > newUpper) {
-            --op->cachedUpper;
-            if (op->cachedUpper < op->cachedLower - 1) {
-                continue;
-            }
-            if (trigger) {
-                op->removeMemberAndNotify<IntView>(op->numberElements() - 1);
-            } else {
-                op->removeMember<IntView>(op->numberElements() - 1);
-            }
-        }
-    }
+}
 
-    inline void reattachTrigger() final {
-        if (isLeft) {
-            reassignLeftTrigger();
+template <bool isLeft>
+void OperatorTrates<IntRange>::Trigger<isLeft>::hasBecomeUndefined() {
+    op->setUndefinedAndTrigger();
+}
+template <bool isLeft>
+void OperatorTrates<IntRange>::Trigger<isLeft>::hasBecomeDefined() {
+    auto leftView = op->left->getViewIfDefined();
+    if (!leftView) {
+        return;
+    }
+    auto rightView = op->right->getViewIfDefined();
+    if (!rightView) {
+        return;
+    }
+    op->setDefined(true);
+    if (isLeft) {
+        adjustLower(*leftView, false);
+    } else {
+        adjustUpper(*rightView, false);
+    }
+    op->notifyValueDefined();
+}
+inline template <bool isLeft>
+void OperatorTrates<IntRange>::Trigger<isLeft>::adjustLower(
+    const IntView& leftView, bool trigger) {
+    Int newLower = leftView.value;
+    while (op->cachedLower > newLower) {
+        --op->cachedLower;
+        if (op->cachedLower > op->cachedUpper) {
+            continue;
+        }
+        auto val = make<IntValue>();
+        val->value = op->cachedLower;
+        if (trigger) {
+            op->addMemberAndNotify(0, val.asExpr());
         } else {
-            reassignRightTrigger();
+            op->addMember(0, val.asExpr());
         }
     }
-    inline void reassignLeftTrigger() {
-        deleteTrigger(op->leftTrigger);
-        auto newTrigger = make_shared<Trigger<true>>(op);
-        op->left->addTrigger(newTrigger);
-        op->leftTrigger = newTrigger;
+    while (op->cachedLower < newLower) {
+        ++op->cachedLower;
+        if (op->cachedLower > op->cachedUpper + 1) {
+            continue;
+        }
+        if (trigger) {
+            op->removeMemberAndNotify<IntView>(0);
+        } else {
+            op->removeMember<IntView>(0);
+        }
     }
-    inline void reassignRightTrigger() {
-        deleteTrigger(op->rightTrigger);
-        auto newTrigger = make_shared<Trigger<false>>(op);
-        op->right->addTrigger(newTrigger);
-        op->rightTrigger = newTrigger;
+}
+inline template <bool isLeft>
+void OperatorTrates<IntRange>::Trigger<isLeft>::adjustUpper(
+    const IntView& rightView, bool trigger) {
+    Int newUpper = rightView.value;
+    while (op->cachedUpper < newUpper) {
+        ++op->cachedUpper;
+        if (op->cachedUpper < op->cachedLower) {
+            continue;
+        }
+        auto val = make<IntValue>();
+        val->value = op->cachedUpper;
+        if (trigger) {
+            op->addMemberAndNotify(op->numberElements(), val.asExpr());
+        } else {
+            op->addMember(op->numberElements(), val.asExpr());
+        }
     }
-};
+    while (op->cachedUpper > newUpper) {
+        --op->cachedUpper;
+        if (op->cachedUpper < op->cachedLower - 1) {
+            continue;
+        }
+        if (trigger) {
+            op->removeMemberAndNotify<IntView>(op->numberElements() - 1);
+        } else {
+            op->removeMember<IntView>(op->numberElements() - 1);
+        }
+    }
+}
+
+template <bool isLeft>
+void OperatorTrates<IntRange>::Trigger<isLeft>::reattachTrigger() {
+    if (isLeft) {
+        reassignLeftTrigger();
+    } else {
+        reassignRightTrigger();
+    }
+}
+inline template <bool isLeft>
+void OperatorTrates<IntRange>::Trigger<isLeft>::reassignLeftTrigger() {
+    auto newTrigger = make_shared<Trigger<true>>(op);
+    op->left->addTrigger(newTrigger);
+    op->leftTrigger = newTrigger;
+}
+template <bool isLeft>
+void OperatorTrates<IntRange>::Trigger<isLeft>::reassignRightTrigger() {
+    auto newTrigger = make_shared<Trigger<false>>(op);
+    op->right->addTrigger(newTrigger);
+    op->rightTrigger = newTrigger;
+}
 
 void IntRange::updateVarViolationsImpl(const ViolationContext& vioContext,
                                        ViolationContainer& vioContainer) {
@@ -157,6 +163,7 @@ ostream& IntRange::dumpState(ostream& os) const {
 
 template <typename Op>
 struct OpMaker;
+
 template <>
 struct OpMaker<IntRange> {
     static ExprRef<SequenceView> make(ExprRef<IntView> l, ExprRef<IntView> r);

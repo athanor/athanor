@@ -86,8 +86,8 @@ struct SimpleBinaryOperator : public View,
     ExprRef<LeftOperandView> left;
     ExprRef<RightOperandView> right;
 
-    std::shared_ptr<LeftTrigger> leftTrigger;
-    std::shared_ptr<RightTrigger> rightTrigger;
+    TriggerOwner<LeftTrigger> leftTrigger;
+    TriggerOwner<RightTrigger> rightTrigger;
 
    public:
     SimpleBinaryOperator(ExprRef<LeftOperandView> left,
@@ -103,12 +103,11 @@ struct SimpleBinaryOperator : public View,
     SimpleBinaryOperator(SimpleBinaryOperator<View, LeftOperandView,
                                               RightOperandView, Derived>&&) =
         delete;
-    virtual ~SimpleBinaryOperator() { this->stopTriggeringOnChildren(); }
+    virtual ~SimpleBinaryOperator() {}
 
     void evaluateImpl() final;
     void reevaluate(bool leftChange, bool rightChange);
     void startTriggeringImpl() final;
-    void stopTriggeringOnChildren();
     void stopTriggering() final;
     ExprRef<View> deepCopyForUnrollImpl(const ExprRef<View>&,
                                         const AnyIterRef& iterator) const final;
@@ -128,7 +127,7 @@ struct SimpleUnaryOperator : public View,
     typedef typename OperatorTrates<Derived>::OperandTrigger OperandTrigger;
     ExprRef<OperandView> operand;
 
-    std::shared_ptr<OperandTrigger> operandTrigger;
+    TriggerOwner<OperandTrigger> operandTrigger;
 
     SimpleUnaryOperator(ExprRef<OperandView> operand)
         : operand(std::move(operand)) {}
@@ -139,7 +138,7 @@ struct SimpleUnaryOperator : public View,
         const SimpleUnaryOperator<View, OperandView, Derived>& other) = delete;
     SimpleUnaryOperator(SimpleUnaryOperator<View, OperandView, Derived>&&) =
         delete;
-    virtual ~SimpleUnaryOperator() { this->stopTriggeringOnChildren(); }
+    virtual ~SimpleUnaryOperator() {}
     void evaluateImpl() final;
     void reevaluate(
         bool = false,
@@ -147,7 +146,6 @@ struct SimpleUnaryOperator : public View,
                         // compile between unary and binary ops
 
     void startTriggeringImpl() final;
-    void stopTriggeringOnChildren();
     void stopTriggering() final;
     ExprRef<View> deepCopyForUnrollImpl(const ExprRef<View>&,
                                         const AnyIterRef& iterator) const final;

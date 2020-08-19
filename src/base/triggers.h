@@ -262,4 +262,44 @@ struct TriggerContainerBase {
     }
 };
 
+/*operators can wrap this around the triggers they create so that deleteTrigger
+ * is automatically called on the contained trigger when this class goes out of
+ * scope. */
+template <typename Trigger>
+class TriggerOwner {
+    std::shared_ptr<Trigger> trigger;
+
+   public:
+    TriggerOwner() {}
+    TriggerOwner(std::shared_ptr<Trigger> trigger)
+        : trigger(std::move(trigger)) {}
+    ~TriggerOwner() { deleteTrigger(trigger); }
+    inline TriggerOwner<Trigger>& operator=(std::shared_ptr<Trigger> trigger) {
+        if (this->trigger) {
+            deleteTrigger(this->trigger);
+        }
+        this->trigger = trigger;
+        return *this;
+    }
+    inline TriggerOwner<Trigger>& operator=(TriggerOwner<Trigger> other) {
+        if (this->trigger) {
+            deleteTrigger(this->trigger);
+        }
+        this->trigger = other.trigger;
+        return *this;
+    }
+
+    inline explicit operator bool() const noexcept {
+        return trigger.operator bool();
+    }
+    inline Trigger& operator*() const {
+        debug_code(assert(trigger));
+        return trigger.operator*();
+    }
+    inline Trigger* operator->() const noexcept {
+        debug_code(assert(trigger));
+        return trigger.operator->();
+    }
+    inline const auto& getTrigger() const { return trigger; }
+};
 #endif /* SRC_BASE_TRIGGERS_H_ */

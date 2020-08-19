@@ -24,7 +24,6 @@ struct OperatorTrates<OpPowerSet>::OperandTrigger
     inline void adapterValueChanged() { todoImpl(); }
 
     void reattachTrigger() {
-        deleteTrigger(op->operandTrigger);
         auto newTrigger =
             std::make_shared<OperatorTrates<OpPowerSet>::OperandTrigger>(op);
         op->operand->addTrigger(newTrigger);

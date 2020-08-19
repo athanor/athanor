@@ -144,7 +144,6 @@ class OperatorTrates<OpProd>::OperandsSequenceTrigger : public SequenceTrigger {
     }
 
     void reattachTrigger() final {
-        deleteTrigger(op->operandTrigger);
         auto trigger = make_shared<OperandsSequenceTrigger>(op);
         op->operand->addTrigger(trigger);
         op->operandTrigger = trigger;

@@ -224,7 +224,6 @@ class OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger
         updateMinValues(*op, true);
     }
     void reattachTrigger() final {
-        deleteTrigger(op->operandTrigger);
         auto trigger = make_shared<
             OperatorTrates<OpMinMax<minMode>>::OperandsSequenceTrigger>(op);
         op->operand->addTrigger(trigger);

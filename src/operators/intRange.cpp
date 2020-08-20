@@ -92,7 +92,7 @@ void OperatorTrates<IntRange>::Trigger<isLeft>::adjustLower(
         }
     }
 }
-inline template <bool isLeft>
+template <bool isLeft>
 void OperatorTrates<IntRange>::Trigger<isLeft>::adjustUpper(
     const IntView& rightView, bool trigger) {
     Int newUpper = rightView.value;
@@ -130,7 +130,7 @@ void OperatorTrates<IntRange>::Trigger<isLeft>::reattachTrigger() {
         reassignRightTrigger();
     }
 }
-inline template <bool isLeft>
+template <bool isLeft>
 void OperatorTrates<IntRange>::Trigger<isLeft>::reassignLeftTrigger() {
     auto newTrigger = make_shared<Trigger<true>>(op);
     op->left->addTrigger(newTrigger);

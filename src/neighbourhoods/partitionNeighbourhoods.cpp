@@ -250,9 +250,9 @@ struct PartitionMoveParts
                 continue;
             }
 
-            success = val.tryMoveParts<InnerValueType>(index, newPart, [&]() {
-                return params.parentCheck(params.vals);
-            });
+            success = val.tryMoveMembersToPart<InnerValueType>(
+                {index}, newPart,
+                [&]() { return params.parentCheck(params.vals); });
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
             debug_neighbourhood_action(
@@ -266,8 +266,8 @@ struct PartitionMoveParts
                                    << " and newPart " << newPart);
         if (!params.changeAccepted()) {
             debug_neighbourhood_action("Change rejected");
-            val.tryMoveParts<InnerValueType>(index, oldPart,
-                                             []() { return true; });
+            val.tryMoveMembersToPart<InnerValueType>({index}, oldPart,
+                                                     []() { return true; });
         }
     }
 };

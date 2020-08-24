@@ -92,24 +92,61 @@ struct PartitionView : public ExprInterface<PartitionView>,
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    void moveMemberToPart(UInt memberIndex, UInt part2) {
-        debug_code(assert(memberIndex < memberPartMap.size()));
-        UInt part1 = memberPartMap[memberIndex];
-        auto& member = getMembers<InnerViewType>()[memberIndex];
-        cachedHashTotal -= partInfo[part1].mixedPartHash();
-        cachedHashTotal -= partInfo[part2].mixedPartHash();
+    std::vector<UInt> moveMembersToPart(const std::vector<UInt>& memberIndices,
+                                        UInt destPart) {
+        std::vector<UInt> oldParts;
+        for (auto memberIndex : memberIndices) {
+            debug_code(assert(memberIndex < memberPartMap.size()));
+            UInt part = memberPartMap[memberIndex];
+            oldParts.emplace_back(part);
+            auto& member = getMembers<InnerViewType>()[memberIndex];
+            cachedHashTotal -= partInfo[part].mixedPartHash();
+            cachedHashTotal -= partInfo[destPart].mixedPartHash();
 
-        partInfo[part1].notifyMemberRemoved(member);
-        partInfo[part2].notifyMemberAdded(member);
+            partInfo[part].notifyMemberRemoved(member);
+            partInfo[destPart].notifyMemberAdded(member);
 
-        cachedHashTotal += partInfo[part1].mixedPartHash();
-        cachedHashTotal += partInfo[part2].mixedPartHash();
-        memberPartMap[memberIndex] = part2;
-        if (partInfo[part1].partSize == 0) {
-            --numberParts;
+            cachedHashTotal += partInfo[part].mixedPartHash();
+            cachedHashTotal += partInfo[destPart].mixedPartHash();
+            memberPartMap[memberIndex] = destPart;
+            if (partInfo[part].partSize == 0) {
+                --numberParts;
+            }
+            if (partInfo[destPart].partSize == 1) {
+                ++numberParts;
+            }
         }
-        if (partInfo[part2].partSize == 1) {
-            ++numberParts;
+        return oldParts;
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    void moveMembersFromPart(const std::vector<UInt>& partMembers,
+                             const std::vector<UInt>& memberNewParts) {
+        debug_code(assert(partMembers.size() == memberNewParts.size()));
+        debug_code(assert(!partMembers.empty()));
+        debug_code(assert(partMembers[0] < memberPartMap.size()));
+        UInt part = memberPartMap[partMembers[0]];
+        for (size_t i = 0; i < partMembers.size(); i++) {
+            auto index = partMembers[i];
+            auto destPart = memberNewParts[i];
+            debug_code(assert(index < memberPartMap.size()));
+            debug_code(assert(memberPartMap[index] == part));
+            auto member = getMembers<InnerViewType>()[index];
+            cachedHashTotal -= partInfo[part].mixedPartHash();
+            cachedHashTotal -= partInfo[destPart].mixedPartHash();
+
+            partInfo[part].notifyMemberRemoved(member);
+            partInfo[destPart].notifyMemberAdded(member);
+            memberPartMap[index] = destPart;
+
+            cachedHashTotal += partInfo[part].mixedPartHash();
+            cachedHashTotal += partInfo[destPart].mixedPartHash();
+            if (partInfo[part].partSize == 0) {
+                --numberParts;
+            }
+            if (partInfo[destPart].partSize == 1) {
+                ++numberParts;
+            }
         }
     }
 

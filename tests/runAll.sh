@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #to use release build pass --use-release-build
 # to pass a bash expansion filter for filtering instances, like you would pass to ls, then use --filter pattern
-#to run sanity checks every n iterations instead of all iterations, pass --sanity-check-intervals n 
+#to run sanity checks every n iterations (default 50) , pass --sanity-check-intervals n 
 
 #default: ./runAll.sh --sanity-check-intervals 50 --use-release-build
 pushd $(dirname "$0") > /dev/null

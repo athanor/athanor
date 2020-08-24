@@ -137,17 +137,21 @@ struct PartitionValue : public PartitionView, public ValBase {
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline bool tryMoveParts(UInt index, UInt newPart, Func&& func) {
+    inline bool tryMoveMembersToPart(const std::vector<UInt>& memberIndices,
+                                     UInt destPart, Func&& func) {
+        debug_code(auto partInfoBackup = partInfo);
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        UInt oldPart = memberPartMap[index];
-        PartitionView::moveMemberToPart<InnerViewType>(index, newPart);
+        const std::vector<UInt> oldParts =
+            PartitionView::moveMembersToPart<InnerViewType>(memberIndices,
+                                                            destPart);
         if (func()) {
-            PartitionView::notifyMemberMoved(index, oldPart, newPart,
-                                             partInfo[oldPart].partSize,
-                                             partInfo[newPart].partSize);
+            PartitionView::notifyMembersMovedToPart(memberIndices, oldParts,
+                                                    destPart);
             return true;
         } else {
-            PartitionView::moveMemberToPart<InnerViewType>(index, oldPart);
+            PartitionView::moveMembersFromPart<InnerViewType>(memberIndices,
+                                                              oldParts);
+            debug_code(assert(partInfoBackup == partInfo));
             return false;
         }
     }

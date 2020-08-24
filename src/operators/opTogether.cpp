@@ -73,25 +73,21 @@ struct OperatorTrates<OpTogether>::RightTrigger : public PartitionTrigger {
             return true;
         });
     }
-    void memberMoved(UInt, UInt, UInt, UInt, UInt) final {
+    void membersMovedToPart(const std::vector<UInt>&, const std::vector<UInt>&,
+                            UInt) final {
         op->changeValue([&]() {
             op->reevaluate(false, true);
             return true;
         });
     }
-    void partAdded(const std::vector<UInt>&, const std::vector<UInt>&) final {
+    void membersMovedFromPart(UInt, const std::vector<UInt>&,
+                              const std::vector<UInt>&) final {
         op->changeValue([&]() {
             op->reevaluate(false, true);
             return true;
         });
     }
-    void partRemoved(UInt, const std::vector<UInt>&,
-                     const std::vector<UInt>&) final {
-        op->changeValue([&]() {
-            op->reevaluate(false, true);
-            return true;
-        });
-    }
+
     void reattachTrigger() final { reattachAllTriggers(*op); }
 };
 

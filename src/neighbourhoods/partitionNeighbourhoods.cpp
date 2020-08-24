@@ -360,6 +360,94 @@ struct PartitionMergeParts
     }
 };
 
+template <typename InnerDomain>
+struct PartitionSplitParts
+    : public NeighbourhoodFunc<PartitionDomain, 1,
+                               PartitionSplitParts<InnerDomain>> {
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    const PartitionDomain& domain;
+    const InnerDomain& innerDomain;
+    const UInt innerDomainSize;
+    PartitionSplitParts(const PartitionDomain& domain)
+        : domain(domain),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomainSize(getDomainSize(innerDomain)) {}
+    static string getName() { return "PartitionSplitParts"; }
+    static bool matches(const PartitionDomain& domain) {
+        return domain.numberParts.maxSize > 1 &&
+               (!domain.regular || domain.numberParts.maxSize == 2);
+    }
+    bool isValidMove(const PartitionValue& val, UInt srcPart, UInt destPart) {
+        bool invalid =
+            srcPart == destPart ||  // can't Split part with itsself
+            val.partInfo[srcPart].partSize == 0 ||   // can't Split empty part
+            val.partInfo[destPart].partSize == 0 ||  // can't Split empty parts
+            val.partInfo[srcPart].partSize + val.partInfo[destPart].partSize >
+                domain.partSize.maxSize;  // dest partwould become to large
+        return !invalid;
+    }
+
+    vector<UInt> getMembersInPart(PartitionValue& val, UInt part) {
+        vector<UInt> memberIndices;
+        for (size_t i = 0; i < val.memberPartMap.size(); i++) {
+            if (val.memberPartMap[i] == part) {
+                memberIndices.emplace_back(i);
+            }
+        }
+        return memberIndices;
+    }
+    void apply(NeighbourhoodParams& params, PartitionValue& val) {
+        if (val.numberParts == domain.partSize.minSize) {
+            return;
+        }
+        int numberTries = 0;
+        const int tryLimit = params.parentCheckTryLimit;
+        debug_neighbourhood_action("Looking for parts to Split");
+        auto& vioContainerAtThisLevel =
+            params.vioContainer.childViolations(val.id);
+
+        bool success;
+        UInt index, srcPart, destPart;
+        std::vector<UInt> memberIndices;
+        do {
+            ++params.stats.minorNodeCount;
+
+            index = vioContainerAtThisLevel.selectRandomVar(
+                domain.numberElements - 1);
+            srcPart = val.memberPartMap[index];
+            destPart = globalRandom<size_t>(1, val.numberElements() - 1);
+            // shift newPart not to clash with old part.
+            destPart = (srcPart + destPart) % val.numberElements();
+            if (!isValidMove(val, srcPart, destPart)) {
+                success = false;
+                continue;
+            }
+
+            memberIndices = getMembersInPart(val, srcPart);
+
+            success = val.tryMoveMembersToPart<InnerValueType>(
+                memberIndices, destPart,
+                [&]() { return params.parentCheck(params.vals); });
+        } while (!success && ++numberTries < tryLimit);
+        if (!success) {
+            debug_neighbourhood_action(
+                "Couldn't find parts to Split, number "
+                "tries="
+                << tryLimit);
+            return;
+        }
+        debug_neighbourhood_action("Parts Splitd: srcPart "
+                                   << srcPart << " and destPart " << destPart
+                                   << " and indices " << memberIndices);
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            val.tryMoveMembersToPart<InnerValueType>(memberIndices, srcPart,
+                                                     []() { return true; });
+        }
+    }
+};
+
 void partitionAssignRandomGen(const PartitionDomain& domain,
                               int numberValsRequired,
                               std::vector<Neighbourhood>& neighbourhoods) {
@@ -410,7 +498,7 @@ const NeighbourhoodVec<PartitionDomain>
     NeighbourhoodGenList<PartitionDomain>::value = {
         {1, generateForAllTypes<PartitionDomain, PartitionSwapParts>},
         {1, generateForAllTypes<PartitionDomain, PartitionMoveParts>},
-        {1, generateForAllTypes<PartitionDomain, 5PartitionMergeParts>},
+        {1, generateForAllTypes<PartitionDomain, PartitionMergeParts>},
 };
 
 const NeighbourhoodVec<PartitionDomain>

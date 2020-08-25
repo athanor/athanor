@@ -1,0 +1,6 @@
+$testing:numberIterations=10000
+
+
+letting n be 300
+find p : partition from int(1..n)
+such that forAll i,j : int(1..n), i < j . !together({i,j}, p)

@@ -246,33 +246,46 @@ void OpTogether::stopTriggering() {
         this->right->stopTriggering();
     }
 }
-void updateVarViolationsOnSet(ExprRef<SetView>& left, UInt violation,
+void updateVarViolationsOnSet(SetView& leftView, PartitionView& rightView,
+                              UInt violation,
                               ViolationContainer& vioContainer) {
-    auto viewOption = left->getViewIfDefined();
-    if (!viewOption) {
-        left->updateVarViolations(violation, vioContainer);
-        return;
-    }
-    auto& view = *viewOption;
     mpark::visit(
         [&](auto& members) {
-            for (auto& member : members) {
+            typedef viewType(members) View;
+            auto& partitionMembers = rightView.getMembers<View>();
+            for (size_t i = 0; i < members.size(); i++) {
+                auto& member = members[i];
+                auto& hash = leftView.indexHashMap[i];
                 member->updateVarViolations(violation, vioContainer);
+                if (rightView.hashIndexMap.count(hash)) {
+                    partitionMembers[rightView.hashIndexMap[hash]]
+                        ->updateVarViolations(violation, vioContainer);
+                }
             }
         },
-        view.members);
+        leftView.members);
 }
 
-void OpTogether::updateVarViolationsImpl(const ViolationContext&,
+void OpTogether::updateVarViolationsImpl(const ViolationContext& vioContext,
                                          ViolationContainer& vioContainer) {
-    if (violation == 0) {
+    auto* boolVioContextTest =
+        dynamic_cast<const BoolViolationContext*>(&vioContext);
+    UInt violationToReport = (boolVioContextTest && boolVioContextTest->negated)
+                                 ? boolVioContextTest->parentViolation
+                                 : this->violation;
+
+    if (violationToReport == 0) {
         return;
     } else if (allOperandsAreDefined()) {
-        updateVarViolationsOnSet(this->left, violation, vioContainer);
-        right->updateVarViolations(violation, vioContainer);
+        auto& leftView =
+            left->getViewIfDefined().checkedGet("should be defined here.");
+        auto& rightView =
+            right->getViewIfDefined().checkedGet("should be defined here.");
+        updateVarViolationsOnSet(leftView, rightView, violationToReport,
+                                 vioContainer);
     } else {
-        left->updateVarViolations(violation, vioContainer);
-        right->updateVarViolations(violation, vioContainer);
+        left->updateVarViolations(violationToReport, vioContainer);
+        right->updateVarViolations(violationToReport, vioContainer);
     }
 }
 

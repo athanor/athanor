@@ -5,6 +5,7 @@
 #include "base/base.h"
 #include "common/common.h"
 #include "triggers/partitionTrigger.h"
+#include "utils/fastIterableIntSet.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
 
@@ -53,10 +54,11 @@ struct PartitionView : public ExprInterface<PartitionView>,
                                            // position in members above
     std::vector<PartInfo>
         partInfo;  // info on each part, should be same size as members
-    size_t numberParts = 0;           // number non empty parts
+    FastIterableIntSet parts;         // set of all non empty parts
+    FastIterableIntSet emptyParts;    // set of all empty parts
     std::vector<UInt> memberPartMap;  // map from each member index to its part
     HashType cachedHashTotal = HashType(0);
-
+    inline size_t numberParts() { return parts.size(); }
     virtual inline AnyExprVec& getChildrenOperands() { shouldNotBeCalledPanic; }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -110,10 +112,12 @@ struct PartitionView : public ExprInterface<PartitionView>,
             cachedHashTotal += partInfo[destPart].mixedPartHash();
             memberPartMap[memberIndex] = destPart;
             if (partInfo[part].partSize == 0) {
-                --numberParts;
+                parts.erase(part);
+                emptyParts.insert(part);
             }
             if (partInfo[destPart].partSize == 1) {
-                ++numberParts;
+                parts.insert(destPart);
+                emptyParts.erase(destPart);
             }
         }
         return oldParts;
@@ -142,10 +146,12 @@ struct PartitionView : public ExprInterface<PartitionView>,
             cachedHashTotal += partInfo[part].mixedPartHash();
             cachedHashTotal += partInfo[destPart].mixedPartHash();
             if (partInfo[part].partSize == 0) {
-                --numberParts;
+                parts.erase(part);
+                emptyParts.insert(part);
             }
             if (partInfo[destPart].partSize == 1) {
-                ++numberParts;
+                parts.insert(destPart);
+                emptyParts.erase(destPart);
             }
         }
     }
@@ -161,16 +167,28 @@ struct PartitionView : public ExprInterface<PartitionView>,
     }
 
     void silentClear() {
+        emptyParts.clear();
         cachedHashTotal = HashType(0);
         memberPartMap.clear();
         hashIndexMap.clear();
         partInfo.clear();
-        numberParts = 0;
+        parts.clear();
+        emptyParts.clear();
         lib::visit([&](auto& members) { members.clear(); }, members);
     }
 
     size_t numberElements() const { return memberPartMap.size(); }
     void standardSanityChecksForThisType() const;
+
+    inline std::vector<UInt> getMembersInPart(UInt part) {
+        std::vector<UInt> memberIndices;
+        for (size_t i = 0; i < memberPartMap.size(); i++) {
+            if (memberPartMap[i] == part) {
+                memberIndices.emplace_back(i);
+            }
+        }
+        return memberIndices;
+    }
 };
 
 #endif /* SRC_TYPES_PARTITION_H_ */

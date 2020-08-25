@@ -4,6 +4,7 @@
 #include <vector>
 #include "base/intSize.h"
 #include "common/common.h"
+#include "utils/random.h"
 class FastIterableIntSet {
     static const int NOT_PRESENT = 0;
     Int minElement;
@@ -54,6 +55,10 @@ class FastIterableIntSet {
             elementIndexes[translate(element)] = NOT_PRESENT;
             return 1;
         }
+    }
+
+    inline int randomElement() const {
+        return contents[globalRandom<size_t>(0, contents.size() - 1)];
     }
 
     inline auto begin() const { return contents.cbegin(); }

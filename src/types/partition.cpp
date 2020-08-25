@@ -240,10 +240,16 @@ void PartitionView::standardSanityChecksForThisType() const {
         members);
 
     size_t checkNumberParts = 0;
-    for (auto& part : partInfo) {
-        checkNumberParts += (part.partSize > 0);
+    for (size_t i = 0; i < partInfo.size(); i++) {
+        if (partInfo[i].partSize > 0) {
+            sanityCheck(parts.count(i), toString(i, " missing from parts set"));
+            sanityCheck(!emptyParts.count(i),
+                        toString(i, " should not be in emptyParts set"));
+            checkNumberParts += 1;
+        }
     }
-    sanityEqualsCheck(checkNumberParts, numberParts);
+    sanityEqualsCheck(checkNumberParts, parts.size());
+    sanityEqualsCheck(checkNumberParts + emptyParts.size(), partInfo.size());
 }
 
 void PartitionValue::debugSanityCheckImpl() const {

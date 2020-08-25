@@ -186,8 +186,20 @@ void generate(const Domain& domain, int numberValsRequired,
 
 static const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
 
+// how many times to attempt inserting a value into a set (any set, not essence
+// set), based on the number of elements in the set and the maximum allowed
 inline int calcNumberInsertionAttempts(UInt numberMembers, UInt domainSize) {
     double successChance = (domainSize - numberMembers) / (double)domainSize;
+    if (successChance == 0) {
+        return 0;
+    }
+    return (int)(ceil(NUMBER_TRIES_CONSTANT_MULTIPLIER / successChance));
+}
+
+// how many times to attempt selecting a value from a subsetset of a set, based
+// on the sizes of the subset and the total set
+inline int calcNumberSelectionAttempts(UInt subsetSize, UInt setSize) {
+    double successChance = subsetSize / (double)setSize;
     if (successChance == 0) {
         return 0;
     }

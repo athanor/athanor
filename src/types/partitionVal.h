@@ -88,6 +88,10 @@ struct PartitionValue : public PartitionView, public ValBase {
         ;
         partInfo.resize(numberElements);
         memberPartMap.resize(numberElements, 0);
+        emptyParts.clear();
+        for (size_t i = 0; i < partInfo.size(); i++) {
+            emptyParts.insert(i);
+        }
     }
 
     // only called when constructing a partition, used to assign the first
@@ -110,7 +114,8 @@ struct PartitionValue : public PartitionView, public ValBase {
         partInfo[part].notifyMemberAdded(member.asExpr());
         cachedHashTotal += partInfo[part].mixedPartHash();
         if (partInfo[part].partSize == 1) {
-            ++numberParts;
+            parts.insert(part);
+            emptyParts.erase(part);
         }
         valBase(*member).container = this;
         valBase(*member).id = memberIndex;

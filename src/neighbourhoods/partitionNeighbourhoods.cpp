@@ -115,6 +115,10 @@ bool assignRandomValueInDomain<PartitionDomain>(
         domain.inner);
 }
 
+template <typename T>
+T squared(T v) {
+    return v * v;
+}
 template <typename InnerDomain>
 struct PartitionSwapParts
     : public NeighbourhoodFunc<PartitionDomain, 1,
@@ -133,15 +137,12 @@ struct PartitionSwapParts
         return domain.numberParts.maxSize > 1;
     }
     void apply(NeighbourhoodParams& params, PartitionValue& val) {
-        if (val.numberParts < 2) {
+        if (val.numberParts() < 2) {
             return;
         }
-        size_t numberParts = val.numberParts;
         int numberTries = 0;
-        const int tryLimit =
-            params.parentCheckTryLimit *
-            calcNumberInsertionAttempts(domain.numberElements / numberParts,
-                                        domain.numberElements);
+        const int tryLimit = params.parentCheckTryLimit;
+        // squaring value as need to randomly select two non empty parts.
         debug_neighbourhood_action("Looking for indices to swap");
         auto& vioContainerAtThisLevel =
             params.vioContainer.childViolations(val.id);
@@ -194,7 +195,9 @@ struct PartitionMoveParts
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "PartitionMoveParts"; }
     static bool matches(const PartitionDomain& domain) {
-        return !domain.regular && domain.numberParts.maxSize > 1;
+        return !domain.regular && domain.numberParts.maxSize > 1 &&
+               domain.numberParts.sizeType !=
+                   SizeAttr::SizeAttrType::EXACT_SIZE;
     }
     bool isValidMove(const PartitionValue& val, UInt oldPart, UInt newPart,
                      UInt numberParts) {
@@ -221,15 +224,12 @@ struct PartitionMoveParts
     }
 
     void apply(NeighbourhoodParams& params, PartitionValue& val) {
-        if (val.numberParts < 2) {
+        if (val.numberParts() < 2) {
             return;
         }
-        size_t numberParts = val.numberParts;
         int numberTries = 0;
-        const int tryLimit =
-            params.parentCheckTryLimit *
-            calcNumberInsertionAttempts(domain.numberElements / numberParts,
-                                        domain.numberElements);
+        const int tryLimit = params.parentCheckTryLimit;
+
         debug_neighbourhood_action("Looking for index to move");
         auto& vioContainerAtThisLevel =
             params.vioContainer.childViolations(val.id);
@@ -245,7 +245,7 @@ struct PartitionMoveParts
             newPart = globalRandom<size_t>(1, val.numberElements() - 1);
             // shift newPart not to clash with old part.
             newPart = (oldPart + newPart) % val.numberElements();
-            if (!isValidMove(val, oldPart, newPart, numberParts)) {
+            if (!isValidMove(val, oldPart, newPart, val.numberParts())) {
                 success = false;
                 continue;
             }
@@ -287,8 +287,15 @@ struct PartitionMergeParts
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "PartitionMergeParts"; }
     static bool matches(const PartitionDomain& domain) {
-        return domain.numberParts.maxSize > 1 &&
-               (!domain.regular || domain.numberParts.maxSize == 2);
+        return domain.numberParts.maxSize >
+                   1 &&  // partition with one part makes no sense here
+               (!domain.regular ||
+                domain.numberParts.maxSize ==
+                    2) &&  // since we are merging parts, either this is not
+                           // regular or max number parts is 2
+               domain.numberParts.sizeType !=
+                   SizeAttr::SizeAttrType::EXACT_SIZE;  // allows variable
+                                                        // number of parts
     }
     bool isValidMove(const PartitionValue& val, UInt srcPart, UInt destPart) {
         bool invalid =
@@ -300,21 +307,13 @@ struct PartitionMergeParts
         return !invalid;
     }
 
-    vector<UInt> getMembersInPart(PartitionValue& val, UInt part) {
-        vector<UInt> memberIndices;
-        for (size_t i = 0; i < val.memberPartMap.size(); i++) {
-            if (val.memberPartMap[i] == part) {
-                memberIndices.emplace_back(i);
-            }
-        }
-        return memberIndices;
-    }
     void apply(NeighbourhoodParams& params, PartitionValue& val) {
-        if (val.numberParts == domain.partSize.minSize) {
+        if (val.numberParts() == domain.partSize.minSize) {
             return;
         }
         int numberTries = 0;
         const int tryLimit = params.parentCheckTryLimit;
+
         debug_neighbourhood_action("Looking for parts to merge");
         auto& vioContainerAtThisLevel =
             params.vioContainer.childViolations(val.id);
@@ -328,15 +327,13 @@ struct PartitionMergeParts
             index = vioContainerAtThisLevel.selectRandomVar(
                 domain.numberElements - 1);
             srcPart = val.memberPartMap[index];
-            destPart = globalRandom<size_t>(1, val.numberElements() - 1);
-            // shift newPart not to clash with old part.
-            destPart = (srcPart + destPart) % val.numberElements();
+            destPart = val.parts.randomElement();
             if (!isValidMove(val, srcPart, destPart)) {
                 success = false;
                 continue;
             }
 
-            memberIndices = getMembersInPart(val, srcPart);
+            memberIndices = val.getMembersInPart(srcPart);
 
             success = val.tryMoveMembersToPart<InnerValueType>(
                 memberIndices, destPart,
@@ -375,34 +372,34 @@ struct PartitionSplitParts
           innerDomainSize(getDomainSize(innerDomain)) {}
     static string getName() { return "PartitionSplitParts"; }
     static bool matches(const PartitionDomain& domain) {
-        return domain.numberParts.maxSize > 1 &&
-               (!domain.regular || domain.numberParts.maxSize == 2);
+        return domain.numberParts.maxSize >
+                   1 &&  // partition with one part makes no sense here
+               (!domain.regular ||
+                domain.numberParts.maxSize ==
+                    2) &&  // since we are splitting parts, either this is not
+                           // regular or max number parts is 2
+               domain.numberParts.sizeType !=
+                   SizeAttr::SizeAttrType::EXACT_SIZE;  // allows variable
+                                                        // number of parts
     }
     bool isValidMove(const PartitionValue& val, UInt srcPart, UInt destPart) {
         bool invalid =
-            srcPart == destPart ||  // can't Split part with itsself
-            val.partInfo[srcPart].partSize == 0 ||   // can't Split empty part
-            val.partInfo[destPart].partSize == 0 ||  // can't Split empty parts
-            val.partInfo[srcPart].partSize + val.partInfo[destPart].partSize >
-                domain.partSize.maxSize;  // dest partwould become to large
+            srcPart == destPart ||  // can't split part with itsself
+            val.partInfo[srcPart].partSize == 0 ||  // can't Split empty part
+            val.partInfo[destPart].partSize !=
+                0 ||  // can't split into existing part, destPart must be empty
+            val.partInfo[srcPart].partSize - domain.partSize.minSize <
+                domain.partSize.minSize;  // spliting this part would leave
+                                          // srcPart too small
         return !invalid;
     }
-
-    vector<UInt> getMembersInPart(PartitionValue& val, UInt part) {
-        vector<UInt> memberIndices;
-        for (size_t i = 0; i < val.memberPartMap.size(); i++) {
-            if (val.memberPartMap[i] == part) {
-                memberIndices.emplace_back(i);
-            }
-        }
-        return memberIndices;
-    }
     void apply(NeighbourhoodParams& params, PartitionValue& val) {
-        if (val.numberParts == domain.partSize.minSize) {
+        if (val.numberParts() == domain.partSize.maxSize) {
             return;
         }
         int numberTries = 0;
         const int tryLimit = params.parentCheckTryLimit;
+
         debug_neighbourhood_action("Looking for parts to Split");
         auto& vioContainerAtThisLevel =
             params.vioContainer.childViolations(val.id);
@@ -416,15 +413,24 @@ struct PartitionSplitParts
             index = vioContainerAtThisLevel.selectRandomVar(
                 domain.numberElements - 1);
             srcPart = val.memberPartMap[index];
-            destPart = globalRandom<size_t>(1, val.numberElements() - 1);
-            // shift newPart not to clash with old part.
-            destPart = (srcPart + destPart) % val.numberElements();
+            destPart = val.emptyParts.randomElement();
             if (!isValidMove(val, srcPart, destPart)) {
                 success = false;
                 continue;
             }
+            // work out the max number of elements that can be moved from src to
+            // dest, to be used in random generator
+            const UInt minSplitSize = domain.partSize.minSize;
+            const UInt maxSplitSize = min<UInt>(
+                val.partInfo[srcPart].partSize - domain.partSize.minSize,
+                domain.partSize.maxSize);
+            UInt splitSize = globalRandom(minSplitSize, maxSplitSize);
 
-            memberIndices = getMembersInPart(val, srcPart);
+            memberIndices = val.getMembersInPart(srcPart);
+            // randomly select splitSize members from memberIndices
+            shuffle(begin(memberIndices), end(memberIndices),
+                    globalRandomGenerator);
+            memberIndices.resize(splitSize);
 
             success = val.tryMoveMembersToPart<InnerValueType>(
                 memberIndices, destPart,
@@ -432,12 +438,12 @@ struct PartitionSplitParts
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
             debug_neighbourhood_action(
-                "Couldn't find parts to Split, number "
+                "Couldn't find parts to split, number "
                 "tries="
                 << tryLimit);
             return;
         }
-        debug_neighbourhood_action("Parts Splitd: srcPart "
+        debug_neighbourhood_action("Parts splitd: srcPart "
                                    << srcPart << " and destPart " << destPart
                                    << " and indices " << memberIndices);
         if (!params.changeAccepted()) {
@@ -499,6 +505,7 @@ const NeighbourhoodVec<PartitionDomain>
         {1, generateForAllTypes<PartitionDomain, PartitionSwapParts>},
         {1, generateForAllTypes<PartitionDomain, PartitionMoveParts>},
         {1, generateForAllTypes<PartitionDomain, PartitionMergeParts>},
+        {1, generateForAllTypes<PartitionDomain, PartitionSplitParts>},
 };
 
 const NeighbourhoodVec<PartitionDomain>

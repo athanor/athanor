@@ -408,7 +408,7 @@ void OpSequenceIndex<SequenceMemberViewType>::debugSanityCheckImpl() const {
     sequenceOperand->debugSanityCheck();
     indexOperand->debugSanityCheck();
     auto indexView = indexOperand->getViewIfDefined();
-    auto sequenceView = sequenceOperand->getViewIfDefined;
+    auto sequenceView = sequenceOperand->getViewIfDefined();
     if (!indexView || !sequenceView) {
         sanityCheck((is_same<BoolView, SequenceMemberViewType>::value ||
                      !this->appearsDefined()),

@@ -45,6 +45,9 @@ OpSequenceIndex<SequenceMemberViewType>::getMember() const {
 template <typename SequenceMemberViewType>
 OptionalRef<SequenceMemberViewType>
 OpSequenceIndex<SequenceMemberViewType>::view() {
+    if (!sequenceOperand->appearsDefined()) {
+        return emptyOrViolatingOptional<SequenceMemberViewType>();
+    }
     auto member = getMember();
     if (member) {
         return (*member)->view();
@@ -56,6 +59,10 @@ OpSequenceIndex<SequenceMemberViewType>::view() {
 template <typename SequenceMemberViewType>
 OptionalRef<const SequenceMemberViewType>
 OpSequenceIndex<SequenceMemberViewType>::view() const {
+    if (!sequenceOperand->appearsDefined()) {
+        return emptyOrViolatingOptional<SequenceMemberViewType>();
+    }
+
     auto member = getMember();
     if (member) {
         return (*member)->view();
@@ -82,7 +89,7 @@ void OpSequenceIndex<SequenceMemberViewType>::reevaluate() {
     cachedIndex = indexView->value - 1;
     locallyDefined =
         cachedIndex >= 0 && cachedIndex < (Int)sequenceView->numberElements();
-    setAppearsDefined(locallyDefined && getMember().get()->appearsDefined());
+    setAppearsDefined(sequenceOperand->appearsDefined() && locallyDefined && getMember().get()->appearsDefined());
 }
 
 template <typename SequenceMemberViewType>

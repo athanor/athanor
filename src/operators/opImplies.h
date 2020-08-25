@@ -12,7 +12,8 @@ struct OperatorTrates<OpImplies> {
     typedef SimpleBinaryTrigger<OpImplies, BoolTrigger, true> LeftTrigger;
     typedef SimpleBinaryTrigger<OpImplies, BoolTrigger, false> RightTrigger;
 };
-struct OpImplies : public SimpleBinaryOperator<BoolView, BoolView, BoolView,OpImplies> {
+struct OpImplies
+    : public SimpleBinaryOperator<BoolView, BoolView, BoolView, OpImplies> {
     using SimpleBinaryOperator<BoolView, BoolView, BoolView,
                                OpImplies>::SimpleBinaryOperator;
     void reevaluateImpl(BoolView& leftView, BoolView& rightView, bool, bool);

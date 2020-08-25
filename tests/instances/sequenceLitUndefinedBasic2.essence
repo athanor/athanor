@@ -1,0 +1,5 @@
+$testing:numberIterations=100
+$testing:no-solutions
+find a : int(1..2)
+such that
+sequence(1,1/0)(1) = a

@@ -10,10 +10,10 @@ struct OperatorTrates<OpMsetSubsetEq> {
     struct LeftTrigger;
     struct RightTrigger;
 };
-struct OpMsetSubsetEq
-    : public SimpleBinaryOperator<BoolView, MSetView, MSetView,OpMsetSubsetEq> {
+struct OpMsetSubsetEq : public SimpleBinaryOperator<BoolView, MSetView,
+                                                    MSetView, OpMsetSubsetEq> {
     HashMap<HashType, UInt> hashExcesses;
-    using SimpleBinaryOperator<BoolView, MSetView,MSetView,
+    using SimpleBinaryOperator<BoolView, MSetView, MSetView,
                                OpMsetSubsetEq>::SimpleBinaryOperator;
 
     void reevaluateImpl(MSetView& leftView, MSetView& rightView, bool, bool);

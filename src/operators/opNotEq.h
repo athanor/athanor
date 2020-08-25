@@ -17,9 +17,9 @@ struct OperatorTrates<OpNotEq<OperandView>> {
 };
 
 template <typename OperandView>
-struct OpNotEq
-    : public SimpleBinaryOperator<BoolView, OperandView, OperandView,OpNotEq<OperandView>> {
-    using SimpleBinaryOperator<BoolView, OperandView,OperandView,
+struct OpNotEq : public SimpleBinaryOperator<BoolView, OperandView, OperandView,
+                                             OpNotEq<OperandView>> {
+    using SimpleBinaryOperator<BoolView, OperandView, OperandView,
                                OpNotEq<OperandView>>::SimpleBinaryOperator;
 
     void reevaluateImpl(OperandView& leftView, OperandView& rightView, bool,

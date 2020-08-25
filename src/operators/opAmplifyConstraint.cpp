@@ -9,12 +9,14 @@ void OpAmplifyConstraint::reevaluateImpl(BoolView& view) {
     }
 }
 
-void OpAmplifyConstraint::updateVarViolationsImpl(const ViolationContext& vioContext,
-                                    ViolationContainer& vioContainer) {
-    this->operand->updateVarViolations(vioContext,vioContainer);
-                                       }
+void OpAmplifyConstraint::updateVarViolationsImpl(
+    const ViolationContext& vioContext, ViolationContainer& vioContainer) {
+    this->operand->updateVarViolations(vioContext, vioContainer);
+}
 
-void OpAmplifyConstraint::copy(OpAmplifyConstraint& other) const { other.multiplier = multiplier;  }
+void OpAmplifyConstraint::copy(OpAmplifyConstraint& other) const {
+    other.multiplier = multiplier;
+}
 
 ostream& OpAmplifyConstraint::dumpState(ostream& os) const {
     os << "OpAmplifyConstraint: violation=" << violation << "\noperand: ";
@@ -28,12 +30,12 @@ void OpAmplifyConstraint::debugSanityCheckImpl() const {
     this->standardSanityDefinednessChecks();
     auto view = operand->getViewIfDefined();
     sanityCheck(view, "must always be defined.\n");
-        if (view->violation != 0 && LARGE_VIOLATION / view->violation <= multiplier) {
+    if (view->violation != 0 &&
+        LARGE_VIOLATION / view->violation <= multiplier) {
         sanityEqualsCheck(LARGE_VIOLATION, violation);
     } else {
         sanityEqualsCheck(view->violation * multiplier, violation);
     }
-
 }
 
 template <typename Op>
@@ -44,6 +46,7 @@ struct OpMaker<OpAmplifyConstraint> {
     static ExprRef<BoolView> make(ExprRef<BoolView> o, UInt64 multiplier);
 };
 
-ExprRef<BoolView> OpMaker<OpAmplifyConstraint>::make(ExprRef<BoolView> o, UInt64 multiplier) {
+ExprRef<BoolView> OpMaker<OpAmplifyConstraint>::make(ExprRef<BoolView> o,
+                                                     UInt64 multiplier) {
     return make_shared<OpAmplifyConstraint>(move(o), multiplier);
 }

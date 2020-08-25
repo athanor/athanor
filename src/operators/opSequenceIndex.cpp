@@ -89,7 +89,8 @@ void OpSequenceIndex<SequenceMemberViewType>::reevaluate() {
     cachedIndex = indexView->value - 1;
     locallyDefined =
         cachedIndex >= 0 && cachedIndex < (Int)sequenceView->numberElements();
-    setAppearsDefined(sequenceOperand->appearsDefined() && locallyDefined && getMember().get()->appearsDefined());
+    setAppearsDefined(sequenceOperand->appearsDefined() && locallyDefined &&
+                      getMember().get()->appearsDefined());
 }
 
 template <typename SequenceMemberViewType>
@@ -166,22 +167,12 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
         // ignore, already triggering on member
     }
 
-    void memberHasBecomeUndefined(UInt index) final {
-        debug_code(assert((!is_same<BoolView, SequenceMemberViewType>::value)));
-        if (!op->appearsDefined() || (Int)index != op->cachedIndex) {
-            return;
-        }
-        op->setAppearsDefined(false);
-        op->notifyValueUndefined();
+    inline void memberHasBecomeUndefined(UInt) {
+        op->eventForwardedAsDefinednessChange();
     }
 
-    void memberHasBecomeDefined(UInt index) final {
-        debug_code(assert((!is_same<BoolView, SequenceMemberViewType>::value)));
-        if (!op->locallyDefined || (Int)index != op->cachedIndex) {
-            return;
-        }
-        op->setAppearsDefined(true);
-        op->notifyValueDefined();
+    inline void memberHasBecomeDefined(UInt) {
+        op->eventForwardedAsDefinednessChange();
     }
 
     void positionsSwapped(UInt index1, UInt index2) final {
@@ -214,6 +205,7 @@ struct OpSequenceIndex<SequenceMemberViewType>::SequenceOperandTrigger
     }
 
     void hasBecomeDefined() { op->eventForwardedAsDefinednessChange(); }
+
     void reattachTrigger() final {
         deleteTrigger(op->sequenceOperandTrigger);
         if (op->sequenceMemberTrigger) {

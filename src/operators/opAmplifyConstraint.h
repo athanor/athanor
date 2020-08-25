@@ -10,10 +10,15 @@ struct OperatorTrates<OpAmplifyConstraint> {
     typedef SimpleUnaryTrigger<OpAmplifyConstraint, BoolTrigger> OperandTrigger;
 };
 
-struct OpAmplifyConstraint : public SimpleUnaryOperator<BoolView, BoolView, OpAmplifyConstraint> {
-    using SimpleUnaryOperator<BoolView, BoolView, OpAmplifyConstraint>::SimpleUnaryOperator;
+struct OpAmplifyConstraint
+    : public SimpleUnaryOperator<BoolView, BoolView, OpAmplifyConstraint> {
+    using SimpleUnaryOperator<BoolView, BoolView,
+                              OpAmplifyConstraint>::SimpleUnaryOperator;
     UInt64 multiplier;
-    OpAmplifyConstraint(ExprRef<BoolView> operand, UInt64 multiplier) : SimpleUnaryOperator<BoolView, BoolView, OpAmplifyConstraint>(std::move(operand)), multiplier(multiplier) {}
+    OpAmplifyConstraint(ExprRef<BoolView> operand, UInt64 multiplier)
+        : SimpleUnaryOperator<BoolView, BoolView, OpAmplifyConstraint>(
+              std::move(operand)),
+          multiplier(multiplier) {}
     void reevaluateImpl(BoolView& view);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;

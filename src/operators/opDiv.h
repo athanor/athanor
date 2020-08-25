@@ -11,7 +11,8 @@ struct OperatorTrates<OpDiv> {
     typedef SimpleBinaryTrigger<OpDiv, IntTrigger, false> RightTrigger;
 };
 struct OpDiv : public SimpleBinaryOperator<IntView, IntView, IntView, OpDiv> {
-    using SimpleBinaryOperator<IntView, IntView, IntView, OpDiv>::SimpleBinaryOperator;
+    using SimpleBinaryOperator<IntView, IntView, IntView,
+                               OpDiv>::SimpleBinaryOperator;
     void reevaluateImpl(IntView& leftView, IntView& rightView, bool, bool);
     void updateVarViolationsImpl(const ViolationContext& vioContext,
                                  ViolationContainer& vioContainer) final;

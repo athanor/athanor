@@ -12,8 +12,9 @@ struct OperatorTrates<OpLessEq> {
     typedef SimpleBinaryTrigger<OpLessEq, IntTrigger, true> LeftTrigger;
     typedef SimpleBinaryTrigger<OpLessEq, IntTrigger, false> RightTrigger;
 };
-struct OpLessEq : public SimpleBinaryOperator<BoolView, IntView,IntView, OpLessEq> {
-    using SimpleBinaryOperator<BoolView, IntView,IntView,
+struct OpLessEq
+    : public SimpleBinaryOperator<BoolView, IntView, IntView, OpLessEq> {
+    using SimpleBinaryOperator<BoolView, IntView, IntView,
                                OpLessEq>::SimpleBinaryOperator;
 
     void reevaluateImpl(IntView& leftView, IntView& rightView, bool, bool);

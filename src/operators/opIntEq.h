@@ -13,8 +13,9 @@ struct OperatorTrates<OpIntEq> {
     typedef SimpleBinaryTrigger<OpIntEq, IntTrigger, true> LeftTrigger;
     typedef SimpleBinaryTrigger<OpIntEq, IntTrigger, false> RightTrigger;
 };
-struct OpIntEq : public SimpleBinaryOperator<BoolView, IntView,IntView, OpIntEq> {
-    using SimpleBinaryOperator<BoolView, IntView,IntView,
+struct OpIntEq
+    : public SimpleBinaryOperator<BoolView, IntView, IntView, OpIntEq> {
+    using SimpleBinaryOperator<BoolView, IntView, IntView,
                                OpIntEq>::SimpleBinaryOperator;
     DefinesLock definesLock;
     DefinedVarTrigger<OpIntEq>* definedVarTrigger = NULL;

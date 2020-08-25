@@ -14,7 +14,8 @@ struct OperatorTrates<OpEnumEq> {
     typedef SimpleBinaryTrigger<OpEnumEq, EnumTrigger, false> RightTrigger;
 };
 
-struct OpEnumEq : public SimpleBinaryOperator<BoolView, EnumView, EnumView, OpEnumEq> {
+struct OpEnumEq
+    : public SimpleBinaryOperator<BoolView, EnumView, EnumView, OpEnumEq> {
     using SimpleBinaryOperator<BoolView, EnumView, EnumView,
                                OpEnumEq>::SimpleBinaryOperator;
     DefinesLock definesLock;

@@ -200,8 +200,10 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
             return;
         }
         op->startingIndices.emplace_back(op->numberElements());
+        // remember op->numberElements() is size of flattened sequence.
+        // this number is replaced in the for loop below anyways.
         for (size_t i = op->startingIndices.size(); i > index + 1; i--) {
-            op->startingIndices[index - 1] = op->startingIndices[i - 2];
+            op->startingIndices[i - 1] = op->startingIndices[i - 2];
             op->startingIndices[i - 1] += shiftAmount;
         }
     }
@@ -236,63 +238,82 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
     }
     void memberHasBecomeDefined(UInt index) { todoImpl(index); }
     void memberHasBecomeUndefined(UInt index) { todoImpl(index); }
+    void fixIndicesForSwap(UInt index1, UInt index2, Int& index1SequenceSize,
+                           Int& index2SequenceSize) {
+        UInt startingIndexAfterIndex2 =
+            (index2 + 1 < op->startingIndices.size())
+                ? op->startingIndices[index2 + 1]
+                : op->numberElements();
+        index2SequenceSize =
+            startingIndexAfterIndex2 - op->startingIndices[index2];
+        index1SequenceSize =
+            op->startingIndices[index1 + 1] - op->startingIndices[index1];
+        if (index1SequenceSize == index2SequenceSize) {
+            return;
+        }
+        Int diff = index2SequenceSize - index1SequenceSize;
+        for (size_t i = index1 + 1; i <= index2; i++) {
+            op->startingIndices[i] += diff;
+        }
+        return;
+    }
     void positionsSwapped(UInt index1, UInt index2) {
+        if (index1 == index2) {
+            return;
+        }
         std::swap(op->innerSequenceTriggers[index1],
                   op->innerSequenceTriggers[index2]);
         op->innerSequenceTriggers[index1]->index = index1;
         op->innerSequenceTriggers[index2]->index = index2;
-        if (index1 == index2) {
-            return;
-        } else if (index1 > index2) {
+        if (index1 > index2) {
             swap(index1, index2);
         }
-        UInt nextStartingIndex = (index2 + 1 < op->startingIndices.size())
-                                     ? op->startingIndices[index2 + 1]
-                                     : op->numberElements();
-        if (op->startingIndices[index1] == op->startingIndices[index2]) {
-            op->startingIndices[index2] = nextStartingIndex;
+        UInt startingIndex1BeforeSwap = op->startingIndices[index1];
+        UInt startingIndex2BeforeSwap = op->startingIndices[index2];
+        Int index1SequenceSizeBeforeSwap, index2SequenceSizeBeforeSwap;
+        fixIndicesForSwap(index1, index2, index1SequenceSizeBeforeSwap,
+                          index2SequenceSizeBeforeSwap);
+        debug_code(op->assertValidStartingIndices());
+        // now that startingIndices have been updated, move the actual sequence
+        // members. start by swapping the positions of first n elements of
+        // sequence 1 (position in the flattened output) with the first n
+        // elements of sequence 2. N here is the size of the smaller sequence.
+        swapElements(
+            startingIndex1BeforeSwap, startingIndex2BeforeSwap,
+            min(index1SequenceSizeBeforeSwap, index2SequenceSizeBeforeSwap));
 
-            debug_code(op->assertValidStartingIndices());
+        if (index1SequenceSizeBeforeSwap == index2SequenceSizeBeforeSwap) {
+            // nothing left to do if the sequences were the same size
+            return;
+        } else if (startingIndex1BeforeSwap + index1SequenceSizeBeforeSwap ==
+                       startingIndex2BeforeSwap &&
+                   (index1SequenceSizeBeforeSwap == 0 ||
+                    index2SequenceSizeBeforeSwap == 0)) {
+            // no shifting required
             return;
         }
-        UInt length1 =
-            op->startingIndices[index1 + 1] - op->startingIndices[index1];
-        UInt length2 = nextStartingIndex - op->startingIndices[index2];
-
-        UInt shorterLength = std::min(length1, length2);
-        swapElements(op->startingIndices[index1], op->startingIndices[index2],
-                     shorterLength);
-        if (length1 == length2) {
-            debug_code(op->assertValidStartingIndices());
-            return;
-        }
-        if (length2 == 0 && index2 - index1 == 1) {
-            op->startingIndices[index2] = op->startingIndices[index1];
-            debug_code(op->assertValidStartingIndices());
-            return;
-        }
+        // if the sequences were different sizes, take the remaining elements
+        // (those from the longer sequence) and move them to be in their new
+        // position.
         UInt fromStart, toStart, moveLength;
 
-        if (length1 < length2) {
-            fromStart = op->startingIndices[index2] + length1;
-            toStart = op->startingIndices[index1] + length1;
-            moveLength = length2 - length1;
-            incrementIndices(index1 + 1, index2 + 1, moveLength);
+        if (index1SequenceSizeBeforeSwap < index2SequenceSizeBeforeSwap) {
+            fromStart = startingIndex2BeforeSwap + index1SequenceSizeBeforeSwap;
+            toStart = startingIndex1BeforeSwap + index1SequenceSizeBeforeSwap;
+            moveLength =
+                index2SequenceSizeBeforeSwap - index1SequenceSizeBeforeSwap;
         } else {
-            fromStart = op->startingIndices[index1] + length2;
-            toStart = op->startingIndices[index2] + length2;
-            moveLength = length1 - length2;
-            incrementIndices(index1 + 1, index2 + 1, -moveLength);
+            fromStart = startingIndex1BeforeSwap + index2SequenceSizeBeforeSwap;
+            toStart = startingIndex2BeforeSwap + index2SequenceSizeBeforeSwap;
+            moveLength =
+                index1SequenceSizeBeforeSwap - index2SequenceSizeBeforeSwap;
         }
         moveElements(fromStart, toStart, moveLength);
-        debug_code(op->assertValidStartingIndices());
-    }
-    void incrementIndices(UInt shiftStart, UInt shiftEnd, Int moveLength) {
-        for (UInt i = shiftStart; i < shiftEnd; i++) {
-            op->startingIndices[i] += moveLength;
-        }
     }
     void moveElements(UInt start1, UInt start2, UInt length) {
+        debug_log("start1=" << start1 << ", start2=" << start2
+                            << ", length=" << length
+                            << ", numberElements=" << op->numberElements());
         vector<ExprRef<SequenceInnerType>> elements;
         for (size_t i = start1 + length; i > start1; i--) {
             elements.emplace_back(

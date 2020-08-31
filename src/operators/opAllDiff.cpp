@@ -69,9 +69,8 @@ class OperatorTrates<OpAllDiff>::OperandsSequenceTrigger
     }
 
     void valueRemoved(UInt index, const AnyExprRef& exprIn) final {
-        auto boolHashPair = getHashIfDefined(exprIn);
-        if (boolHashPair.first) {
-            if (op->removeHash(boolHashPair.second, index) >= 1) {
+        if (appearsDefined(exprIn)) {
+            if (op->removeHash(op->indicesHashMap[index], index) >= 1) {
                 op->changeValue([&]() {
                     --op->violation;
                     return true;

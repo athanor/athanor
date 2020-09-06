@@ -140,6 +140,18 @@ struct SetView : public ExprInterface<SetView>,
         notifyMemberChanged(index, oldHash);
         return newHash;
     }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void membersChangedAndNotify(std::vector<UInt> indices) {
+        std::vector<HashType> oldHashes;
+        for (auto index : indices) {
+            debug_code(assert(index < numberElements()));
+            oldHashes.emplace_back(indexHashMap[index]);
+        }
+        membersChanged<InnerViewType>(indices);
+        notifyMembersChanged(indices, oldHashes);
+    }
+
     virtual inline AnyExprVec& getChildrenOperands() { shouldNotBeCalledPanic; }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {

@@ -57,7 +57,7 @@ class FastIterableIntSet {
         }
     }
 
-    inline int randomElement() const {
+    inline Int randomElement() const {
         return contents[globalRandom<size_t>(0, contents.size() - 1)];
     }
 

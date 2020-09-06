@@ -331,4 +331,10 @@ struct OpMaker<OpFunctionPreimage<OperandView>> {
                                  ExprRef<FunctionView> r);
 };
 
+struct OpPartitionParts;
+template <>
+struct OpMaker<OpPartitionParts> {
+    static ExprRef<SetView> make(ExprRef<PartitionView> o);
+};
+
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

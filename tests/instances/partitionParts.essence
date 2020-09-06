@@ -1,0 +1,6 @@
+$testing:numberIterations=100000
+letting n be 30
+letting n_min be 5
+find p : partition (minNumParts n_min) from int(1..n)
+find s : set (minSize n_min, maxSize n) of set of int(1..n)
+such that forAll p1 in parts(p) . exists s1 in s . s1 = p1

@@ -20,5 +20,7 @@ struct OpSetSize : public SimpleUnaryOperator<IntView, SetView, OpSetSize> {
     std::ostream& dumpState(std::ostream& os) const final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
+    std::pair<bool, ExprRef<IntView>> optimiseImpl(ExprRef<IntView>& self,
+                                                   PathExtension path);
 };
 #endif /* SRC_OPERATORS_OPSETSIZE_H_ */

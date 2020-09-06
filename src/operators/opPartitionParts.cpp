@@ -151,7 +151,8 @@ struct OperatorTrates<OpPartitionParts>::OperandTrigger
                     op->memberChangedAndNotify<SetView>(setIndex);
                     if (set.numberElements() == 0) {
                         removePartAndNotify(setIndex);
-                        if (!newSet && destSetIndex == op->setPartMap.size()) {
+                        if (!newSet &&
+                            destSetIndex == (Int)op->setPartMap.size()) {
                             destSetIndex = setIndex;
                         }
                     }

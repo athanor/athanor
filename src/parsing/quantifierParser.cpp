@@ -378,6 +378,20 @@ optional<ParseResult> parseComprehensionImpl(json& comprExpr,
                                    quantifyingOver.hasEmptyType, generatorIndex,
                                    parsedModel);
         },
+        [&](ExprRef<PartitionView>& partition) {
+            auto parts = OpMaker<OpPartitionParts>::make(partition);
+            parts->setConstant(partition->isConstant());
+            auto& partitionDomain =
+                lib::get<shared_ptr<PartitionDomain>>(quantifyingOver.domain);
+            auto partsDomain = make_shared<SetDomain>(
+                partitionDomain->numberParts,
+                make_shared<SetDomain>(partitionDomain->partSize,
+                                       partitionDomain->inner));
+            return buildQuantifier(
+                comprExpr, parts, partsDomain, partsDomain->inner,
+                quantifyingOver.hasEmptyType, generatorIndex, parsedModel);
+        },
+
         [&](auto &&) -> ParseResult {
             myCerr << "Error, not yet handling quantifier for "
                       "this type: "
@@ -623,7 +637,7 @@ ParseResult parseSubsetQuantifier(json& comprExpr,
         comprExpr[1][generatorIndex]["Generator"]["GenInExpr"][0]);
     vector<shared_ptr<Quantifier<SetView>>> quantifiers = lib::visit(
         [&](auto& innerDomain) {
-                        vector<shared_ptr<Quantifier<SetView>>> quantifiers =
+            vector<shared_ptr<Quantifier<SetView>>> quantifiers =
                 makeNestedQuantifiers(container, innerDomain,
                                       quantifierVariables, parsedModel);
             addConditionsToQuantifier(comprExpr, quantifiers.back(),
@@ -643,7 +657,8 @@ ParseResult parseSubsetQuantifier(json& comprExpr,
             typedef typename AssociatedViewType<ExprDomain>::type ExprViewType;
             auto topLevelSequence =
                 flattenNestedQuantifiers<ExprViewType>(quantifiers);
-//            topLevelSequence->dumpState(cout << "look here") << endl;
+            //            topLevelSequence->dumpState(cout << "look here") <<
+            //            endl;
             return ParseResult(fakeSequenceDomain(exprDomain), topLevelSequence,
                                false);
         },

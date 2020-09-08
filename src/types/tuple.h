@@ -19,11 +19,19 @@ struct TupleView : public ExprInterface<TupleView>,
     TupleView(std::vector<AnyExprRef> members) : members(members) {}
 
     inline void memberChanged(UInt) { cachedHashTotal.invalidate(); }
+    inline void memberReplaced(UInt, const AnyExprRef&) {
+        cachedHashTotal.invalidate();
+    }
 
    public:
     inline void memberChangedAndNotify(UInt index) {
         memberChanged(index);
         notifyMemberChanged(index);
+    }
+
+    inline void memberReplacedAndNotify(UInt index, const AnyExprRef& expr) {
+        memberReplaced(index, expr);
+        notifyMemberReplaced(index, expr);
     }
 
     inline void defineMemberAndNotify(UInt index) {

@@ -76,9 +76,17 @@ struct ContainerTrigger<SequenceView> : public SequenceTrigger {
     }
 
     void positionsSwapped(UInt index1, UInt index2) final {
-        op->notifyContainerMembersSwapped(index1, index2);
-        correctUnrolledTupleIndex(index1);
-        correctUnrolledTupleIndex(index2);
+        auto& tuple1 =
+            lib::get<IterRef<TupleView>>(op->unrolledIterVals[index1])
+                ->view()
+                .get();
+        auto& tuple2 =
+            lib::get<IterRef<TupleView>>(op->unrolledIterVals[index2])
+                ->view()
+                .get();
+        swap(tuple1.members[1], tuple2.members[1]);
+        tuple1.memberReplacedAndNotify(1, tuple2.members[1]);
+        tuple2.memberReplacedAndNotify(1, tuple1.members[1]);
     }
 
     template <typename View>

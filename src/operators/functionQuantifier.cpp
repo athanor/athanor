@@ -69,31 +69,21 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
     }
 
     void imageSwap(UInt index1, UInt index2) final {
-        op->notifyContainerMembersSwapped(index1, index2);
-        correctUnrolledTupleIndex(index1);
-        correctUnrolledTupleIndex(index2);
+        auto& tuple1 =
+            lib::get<IterRef<TupleView>>(op->unrolledIterVals[index1])
+                ->view()
+                .get();
+        auto& tuple2 =
+            lib::get<IterRef<TupleView>>(op->unrolledIterVals[index2])
+                ->view()
+                .get();
+        swap(tuple1.members[1], tuple2.members[1]);
+        tuple1.memberReplacedAndNotify(1, tuple2.members[1]);
+        tuple2.memberReplacedAndNotify(1, tuple1.members[1]);
     }
 
     void memberHasBecomeUndefined(UInt) final {}
     void memberHasBecomeDefined(UInt) final {}
-
-    void correctUnrolledTupleIndex(size_t index) {
-        debug_log("Correcting tuple index " << index);
-        auto& tuple = lib::get<IterRef<TupleView>>(op->unrolledIterVals[index]);
-        auto& containerView = *op->container->view();
-        lib::visit(
-            [&](auto& fromDomain) {
-                typedef typename BaseType<decltype(fromDomain)>::element_type
-                    Domain;
-                typedef typename AssociatedValueType<Domain>::type Value;
-                typedef typename AssociatedViewType<Value>::type View;
-                auto& preImage =
-                    lib::get<ExprRef<View>>(tuple->view()->members[0]);
-                containerView.template indexToDomain<Domain>(
-                    index, (*preImage->view()));
-            },
-            containerView.fromDomain);
-    }
 
     void hasBecomeUndefined() {
         op->containerDefined = false;

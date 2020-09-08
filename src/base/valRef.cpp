@@ -5,7 +5,7 @@ using namespace std;
 ValBase constantPool;
 ValBase inlinedPool;
 ValBase variablePool;
-// checks if v is one of the global pools like inlinedPool or variablePool for
+// checks if v is one of the global pools like inlinedPool or constant for
 // example.
 bool isPoolMarker(const ValBase* v) {
     return v == &variablePool || v == &inlinedPool || v == &constantPool;

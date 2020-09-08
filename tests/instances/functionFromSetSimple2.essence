@@ -1,0 +1,5 @@
+$testing:numberIterations=50000
+
+find f : function (total) set of int(1..8) --> set of int(1..8)
+find s : set (size 2**8) of set of int(1..8)
+such that forAll i in s . i = f(i)

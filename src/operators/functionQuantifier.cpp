@@ -20,18 +20,19 @@ struct InitialUnroller<FunctionView> {
             [&](auto& membersImpl) {
                 for (size_t i = 0; i < membersImpl.size(); i++) {
                     lib::visit(
-                        [&](auto& fromDomain) {
+                        [&](auto& preimageDomain) {
                             typedef typename BaseType<decltype(
-                                fromDomain)>::element_type Domain;
+                                preimageDomain)>::element_type Domain;
                             auto tupleFirstMember =
-                                containerView.template indexToDomain<Domain>(i);
+                                containerView.template indexToPreimage<Domain>(
+                                    i);
                             auto unrolledExpr = OpMaker<OpTupleLit>::make(
                                 {tupleFirstMember, membersImpl[i]});
                             unrolledExpr->evaluate();
                             quantifier.template unroll<TupleView>(
                                 {false, i, unrolledExpr});
                         },
-                        containerView.fromDomain);
+                        containerView.preimageDomain);
                 }
             },
             containerView.range);
@@ -126,14 +127,13 @@ struct ContainerSanityChecker<FunctionView> {
             sanityCheck(view, "view() should not return undefined here.");
             sanityEqualsCheck(2, view->members.size());
             lib::visit(
-                [&](const auto& fromDomain) {
-                    typedef
-                        typename BaseType<decltype(fromDomain)>::element_type
-                            Domain;
+                [&](const auto& preimageDomain) {
+                    typedef typename BaseType<decltype(
+                        preimageDomain)>::element_type Domain;
                     typedef typename AssociatedValueType<Domain>::type Value;
                     typedef typename AssociatedViewType<Value>::type View;
                     auto tupleFirstMember =
-                        container.template indexToDomain<Domain>(i);
+                        container.template indexToPreimage<Domain>(i);
                     auto* exprPtr =
                         lib::get_if<ExprRef<View>>(&(view->members[0]));
                     sanityCheck(
@@ -150,7 +150,7 @@ struct ContainerSanityChecker<FunctionView> {
                                          tupleFirstMember->view(),
                                          " but was actually ", memberView));
                 },
-                container.fromDomain);
+                container.preimageDomain);
         }
     }
 };

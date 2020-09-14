@@ -11,130 +11,41 @@
 
 static const char* NO_FUNCTION_UNDEFINED_MEMBERS =
     "Not yet handling functions with undefined members.\n";
-bool canBuildDimensionVec(const AnyDomainRef& domain);
 
-// pre images are either explicitly stored or are inferred from just the index
-// of the image.  For explicitly stored pre images, we use the preimage
-// container.  For inferred pre images, we use dimensions struct, which can be
-// used to convert pre images to indices and vice versa.
 struct Dimension {
     // dimensions are like int domain bounds, lower and upper inclusive
     Int lower;
     Int upper;
     UInt blockSize = 0;
     Dimension(Int lower, Int upper) : lower(lower), upper(upper) {}
-
-    inline bool operator==(const Dimension& other) const {
-        return lower == other.lower && upper == other.upper &&
-               blockSize == other.blockSize;
-    }
-    friend inline std::ostream& operator<<(std::ostream& os,
-                                           const Dimension& d) {
-        return os << "Dimension(lower=" << d.lower << ", upper=" << d.upper
-                  << ", blockSize=" << d.blockSize << ")";
-    }
 };
 
 typedef std::vector<Dimension> DimensionVec;
 
-struct ExplicitPreimageContainer {
-    AnyExprVec preimages;
-    std::vector<HashType> preimageHashes;
-    HashMap<HashType, UInt> preimageHashIndexMap;
-    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline ExprRefVec<InnerViewType>& get() {
-        return lib::get<ExprRefVec<InnerViewType>>(preimages);
-    }
-
-    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline const ExprRefVec<InnerViewType>& get() const {
-        return lib::get<ExprRefVec<InnerViewType>>(preimages);
-    }
-
-    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline bool add(ExprRef<InnerViewType> expr) {
-        auto hash = getValueHash(expr);
-        if (preimageHashIndexMap.count(hash)) {
-            return false;
-        }
-        get<InnerViewType>().emplace_back(expr);
-        preimageHashes.emplace_back(hash);
-        preimageHashIndexMap[hash] = preimageHashes.size() - 1;
-        return true;
-    }
-    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    ExprRef<InnerViewType> remove(UInt index) {
-        auto& preimages = this->get<InnerViewType>();
-        debug_code(assert(index < preimages.size()));
-        if (index < preimages.size() - 1) {
-            std::swap(preimages[index], preimages.back());
-            std::swap(preimageHashes[index], preimageHashes.back());
-            std::swap(preimageHashIndexMap.at(preimageHashes[index]),
-                      preimageHashIndexMap.at(preimageHashes.back()));
-        }
-        auto hash = preimageHashes.back();
-        auto expr = preimages.back();
-        preimageHashes.pop_back();
-        preimages.pop_back();
-        preimageHashIndexMap.erase(hash);
-        return expr;
-    }
-};
-struct Uninit {};
-typedef lib::variant<DimensionVec, ExplicitPreimageContainer, Uninit> Preimages;
-
-struct CachedHashes {
-    HashType hashTotal = HashType(0);  // hash of entire function
-    std::vector<HashType> rangeHashes;
-    HashMap<HashType, UInt> rangeHashIndexMap;
-    inline void assignRangeHash(UInt index, HashType newHash,
-                                bool replaceOld = true) {
-        debug_code(assert(index < rangeHashes.size()));
-        if (replaceOld) {
-            rangeHashIndexMap.erase(rangeHashes[index]);
-        }
-        rangeHashes[index] = newHash;
-        rangeHashIndexMap[newHash] = index;
-    }
-    inline void swapRangeHashes(UInt index1, UInt index2) {
-        debug_code(assert(index1 < rangeHashes.size()));
-        debug_code(assert(index2 < rangeHashes.size()));
-        std::swap(rangeHashes[index1], rangeHashes[index2]);
-        std::swap(rangeHashIndexMap.at(rangeHashes[index1]),
-                  rangeHashIndexMap.at(rangeHashes[index2]));
-    }
-
-    inline void unassignRangeHash(UInt index) {
-        debug_code(assert(index < rangeHashes.size()));
-        rangeHashIndexMap.erase(rangeHashes[index]);
-    }
-};
-
-DimensionVec makeDimensionVecFromDomain(const AnyDomainRef& domain);
 template <typename Domain>
 ExprRef<typename AssociatedViewType<
     typename AssociatedValueType<Domain>::type>::type>
-functionIndexToPreimage(const Domain&, const DimensionVec&, UInt, size_t&) {
+functionIndexToDomain(const Domain&, const DimensionVec&, UInt, size_t&) {
     todoImpl();
 }
 
 template <>
-ExprRef<IntView> functionIndexToPreimage<IntDomain>(
+ExprRef<IntView> functionIndexToDomain<IntDomain>(
     const IntDomain& domain, const DimensionVec& dimensions, UInt index,
     size_t& dimIndex);
 
 template <>
-ExprRef<EnumView> functionIndexToPreimage<EnumDomain>(
+ExprRef<EnumView> functionIndexToDomain<EnumDomain>(
     const EnumDomain& domain, const DimensionVec& dimensions, UInt index,
     size_t& dimIndex);
 
 template <>
-ExprRef<TupleView> functionIndexToPreimage<TupleDomain>(
+ExprRef<TupleView> functionIndexToDomain<TupleDomain>(
     const TupleDomain&, const DimensionVec& dimensions, UInt index,
     size_t& dimIndex);
 
 template <typename Domain>
-void functionIndexToPreimage(
+void functionIndexToDomain(
     const Domain&, const DimensionVec&, UInt,
     typename AssociatedViewType<
         typename AssociatedValueType<Domain>::type>::type&,
@@ -143,193 +54,217 @@ void functionIndexToPreimage(
 }
 
 template <>
-void functionIndexToPreimage<IntDomain>(const IntDomain&,
-                                        const DimensionVec& dimensions,
-                                        UInt index, IntView&, size_t& dimIndex);
+void functionIndexToDomain<IntDomain>(const IntDomain&,
+                                      const DimensionVec& dimensions,
+                                      UInt index, IntView&, size_t& dimIndex);
 
 template <>
-void functionIndexToPreimage<EnumDomain>(const EnumDomain&,
-                                         const DimensionVec& dimensions,
-                                         UInt index, EnumView&,
-                                         size_t& dimIndex);
+void functionIndexToDomain<EnumDomain>(const EnumDomain&,
+                                       const DimensionVec& dimensions,
+                                       UInt index, EnumView&, size_t& dimIndex);
 
 template <>
-void functionIndexToPreimage<TupleDomain>(const TupleDomain&,
-                                          const DimensionVec& dimensions, UInt,
-                                          TupleView&, size_t& index);
+void functionIndexToDomain<TupleDomain>(const TupleDomain&,
+                                        const DimensionVec& dimensions, UInt,
+                                        TupleView&, size_t& index);
 
 lib::optional<Int> getAsIntForFunctionIndex(const AnyExprRef& expr);
 
 struct FunctionView : public ExprInterface<FunctionView>,
                       TriggerContainer<FunctionView> {
     friend FunctionValue;
-    AnyDomainRef preimageDomain;
-
-    Preimages preimages = Uninit();
+    AnyDomainRef fromDomain;
+    DimensionVec dimensions;
     AnyExprVec range;
-    bool partial = false;
-    SimpleCache<CachedHashes> cachedHashes;
+    SimpleCache<HashType> cachedHashTotal;
     UInt numberUndefined = 0;
-
-    bool lazyPreimages() const { return lib::get_if<DimensionVec>(&preimages); }
-    const DimensionVec& getDimensions() const {
-        return lib::get<DimensionVec>(preimages);
-    }
-
-    ExplicitPreimageContainer& getPreimages() {
-        return lib::get<ExplicitPreimageContainer>(preimages);
-    }
-
-    const ExplicitPreimageContainer& getPreimages() const {
-        return lib::get<ExplicitPreimageContainer>(preimages);
-    }
     FunctionView() {}
-
-    void initView(AnyDomainRef preImageDomain, Preimages preimages,
-                  AnyExprVec range, bool partial) {
-        cachedHashes.invalidate();
-        this->partial = partial;
-        this->preimageDomain = preImageDomain;
-        this->preimages = std::move(preimages);
-        this->range = std::move(range);
-    }
-
-    lib::optional<UInt> preimageToIndex(const IntView& intV);
-    lib::optional<UInt> preimageToIndex(const EnumView& tupleV);
-    lib::optional<UInt> preimageToIndex(const TupleView& tupleV);
-
-    template <typename View, EnableIfView<BaseType<View>> = 0>
-    lib::optional<UInt> preimageToIndex(const View& view) {
-        return nonLazyDomainToIndex(view);
-    }
-
-    template <typename View, EnableIfView<BaseType<View>> = 0>
-    lib::optional<UInt> nonLazyDomainToIndex(const View& view) const {
-        const auto& map = getPreimages().preimageHashIndexMap;
-        auto iter = map.find(getValueHash(view));
-        if (iter != map.end()) {
-            return iter->second;
-        } else {
-            return lib::nullopt;
-        }
-    }
-    template <typename Domain,
-              typename View = typename AssociatedViewType<Domain>::type>
-    ExprRef<View> indexToPreimage(UInt index) const {
-        if (!lazyPreimages()) {
-            debug_code(assert(index < rangeSize()));
-            return getPreimages().get<View>()[index];
-        }
-        size_t dimIndex = 0;
-        return functionIndexToPreimage<Domain>(
-            *lib::get<std::shared_ptr<Domain>>(preimageDomain), getDimensions(),
-            index, dimIndex);
-    }
-
-    void debugCheckDimensionVec();
-
-    HashType getPreimageHash(UInt index) const {
-        if (!lazyPreimages()) {
-            auto& preimages = getPreimages();
-            debug_code(assert(index < preimages.preimageHashes.size()));
-            return preimages.preimageHashes[index];
-        }
-        return lib::visit(
-            [&](auto& domain) {
-                typedef
-                    typename BaseType<decltype(domain)>::element_type Domain;
-                return getValueHash(indexToPreimage<Domain>(index));
+    FunctionView(AnyDomainRef preImageDomain, AnyExprVec rangeIn) {
+        lib::visit(
+            [&](auto& rangeIn) {
+                this->resetDimensions<viewType(rangeIn)>(
+                    preImageDomain, makeDimensionVecFromDomain(preImageDomain),
+                    false);
+                this->range = rangeIn;
             },
-            preimageDomain);
+            rangeIn);
+    }
+
+    lib::optional<UInt> domainToIndex(const IntView& intV);
+    lib::optional<UInt> domainToIndex(const EnumView& tupleV);
+    lib::optional<UInt> domainToIndex(const TupleView& tupleV);
+
+    template <typename View, EnableIfView<BaseType<View>> = 0>
+    lib::optional<UInt> domainToIndex(const View&) {
+        shouldNotBeCalledPanic;
+    }
+
+    template <
+        typename Domain,
+        typename View = typename AssociatedViewType<
+            typename AssociatedValueType<Domain>::type>::type,
+        typename std::enable_if<IsDomainType<Domain>::value, int>::type = 0>
+    void indexToDomain(UInt index, View& view) const {
+        size_t dimIndex = 0;
+        functionIndexToDomain<Domain>(
+            *lib::get<std::shared_ptr<Domain>>(fromDomain), dimensions, index,
+            view, dimIndex);
+    }
+
+    template <
+        typename Domain,
+        typename View = typename AssociatedViewType<
+            typename AssociatedValueType<Domain>::type>::type,
+        typename std::enable_if<IsDomainType<Domain>::value, int>::type = 0>
+    ExprRef<View> indexToDomain(UInt index) const {
+        size_t dimIndex = 0;
+        return functionIndexToDomain<Domain>(
+            *lib::get<std::shared_ptr<Domain>>(fromDomain), dimensions, index,
+            dimIndex);
+    }
+
+    static DimensionVec makeDimensionVecFromDomain(const AnyDomainRef& domain);
+    void debugCheckDimensionVec();
+    template <typename InnerViewType, typename DimVec,
+              EnableIfView<InnerViewType> = 0>
+    void resetDimensions(AnyDomainRef fromDom, DimVec&& dim,
+                         bool alocateRange = true) {
+        fromDomain = std::move(fromDom);
+        dimensions = std::forward<DimVec>(dim);
+        size_t requiredSize = 1;
+        for (auto iter = dimensions.rbegin(); iter != dimensions.rend();
+             ++iter) {
+            auto& dim = *iter;
+            dim.blockSize = requiredSize;
+            requiredSize *= (dim.upper - dim.lower) + 1;
+        }
+        if (alocateRange) {
+            range.emplace<ExprRefVec<InnerViewType>>().assign(requiredSize,
+                                                              nullptr);
+            debug_code(debugCheckDimensionVec());
+        }
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline HashType calcMemberHash(UInt index,
                                    const ExprRef<InnerViewType>& expr) const {
         HashType input[2];
-        input[0] = getPreimageHash(index);
+        input[0] = HashType(index);
         input[1] = getValueHash(
             expr->view().checkedGet(NO_FUNCTION_UNDEFINED_MEMBERS));
         return mix(((char*)input), sizeof(input));
     }
 
-    inline HashType calcMemberHashFromCache(
-        UInt index, const CachedHashes& cachedHashes) const {
-        debug_code(assert(index < cachedHashes.rangeHashes.size()));
-        HashType input[2];
-        input[0] = getPreimageHash(index);
-        input[1] = cachedHashes.rangeHashes[index];
-        return mix(((char*)input), sizeof(input));
-    }
-    template <typename InnerViewType>
-    inline void imageChanged(UInt index) {
-        cachedHashes.applyIfValid([&](auto& cachedHashes) {
-            cachedHashes.hashTotal -=
-                calcMemberHashFromCache(index, cachedHashes);
-            cachedHashes.assignRangeHash(
-                index, getValueHash(getRange<InnerViewType>()[index]));
-            cachedHashes.hashTotal +=
-                calcMemberHashFromCache(index, cachedHashes);
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void assignImage(size_t index,
+                            const ExprRef<InnerViewType>& member) {
+        auto& range = getRange<InnerViewType>();
+        debug_code(assert(index < range.size()));
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            if (range[index]) {
+                value -= this->calcMemberHash(index, range[index]);
+            }
         });
+        range[index] = member;
+        if (member->appearsDefined()) {
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                value += this->calcMemberHash(index, range[index]);
+            });
+        } else {
+            numberUndefined++;
+        }
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void imagesChanged(const std::vector<UInt>& indices) {
-        cachedHashes.applyIfValid([&](auto& cachedHashes) {
-            for (auto index : indices) {
-                cachedHashes.hashTotal -=
-                    calcMemberHashFromCache(index, cachedHashes);
-                cachedHashes.assignRangeHash(
-                    index, getValueHash(getRange<InnerViewType>()[index]));
-                cachedHashes.hashTotal +=
-                    calcMemberHashFromCache(index, cachedHashes);
-            }
+    inline lib::optional<HashType> notifyPossibleImageChange(UInt index) {
+        debug_code(assert(index < rangeSize()));
+        debug_code(standardSanityChecksForThisType());
+
+        if (!cachedHashTotal.isValid()) {
+            return lib::nullopt;
+        }
+        return calcMemberHash(index, getRange<InnerViewType>()[index]);
+    }
+    inline void checkNotUsingCachedHash() {
+        if (cachedHashTotal.isValid()) {
+            myCerr
+                << "Error: constraint changing a member of a function without "
+                   "passing a previous member hash.  Means no support for "
+                   "getting total hash of this function.  Suspected "
+                   "reason is that one of the constraints has not been "
+                   "updated to support this.\n";
+            myAbort();
+        }
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline lib::optional<HashType> imageChanged(
+        UInt index, lib::optional<HashType> previousMemberHash = lib::nullopt) {
+        if (!previousMemberHash) {
+            checkNotUsingCachedHash();
+        }
+        lib::optional<HashType> newHashOption;
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            newHashOption = this->calcMemberHash<InnerViewType>(
+                index, getRange<InnerViewType>()[index]);
+            value -= *previousMemberHash;
+            value += *newHashOption;
         });
+        return newHashOption;
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    HashType calcCombinedMembersHash(const std::vector<UInt>& indices) {
+        HashType newHash(0);
+        auto& range = getRange<InnerViewType>();
+        for (UInt index : indices) {
+            debug_code(assert(index < range.size()));
+            newHash += calcMemberHash(index, range[index]);
+        }
+        return newHash;
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline lib::optional<HashType> notifyPossibleImagesChange(
+        const std::vector<UInt>& indices) {
+        debug_code(standardSanityChecksForThisType());
+        if (!cachedHashTotal.isValid()) {
+            return lib::nullopt;
+        }
+        return calcCombinedMembersHash<InnerViewType>(indices);
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline lib::optional<HashType> imagesChanged(
+        const std::vector<UInt>& indices,
+        lib::optional<HashType> previousMembersCombinedHash) {
+        if (!previousMembersCombinedHash) {
+            checkNotUsingCachedHash();
+        }
+        lib::optional<HashType> newHashOption;
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            newHashOption = calcCombinedMembersHash<InnerViewType>(indices);
+            value -= *previousMembersCombinedHash;
+            value += *newHashOption;
+        });
+        return newHashOption;
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void swapImages(UInt index1, UInt index2) {
         auto& range = getRange<InnerViewType>();
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            value -= this->calcMemberHash(index1, range[index1]);
+            value -= this->calcMemberHash(index2, range[index2]);
+        });
+
         std::swap(range[index1], range[index2]);
-        cachedHashes.applyIfValid([&](auto& cachedHashes) {
-            cachedHashes.hashTotal -=
-                calcMemberHashFromCache(index1, cachedHashes);
-            cachedHashes.hashTotal -=
-                calcMemberHashFromCache(index2, cachedHashes);
-            cachedHashes.swapRangeHashes(index1, index2);
-            cachedHashes.hashTotal +=
-                calcMemberHashFromCache(index1, cachedHashes);
-            cachedHashes.hashTotal +=
-                calcMemberHashFromCache(index2, cachedHashes);
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            value += this->calcMemberHash(index1, range[index1]);
+            value += this->calcMemberHash(index2, range[index2]);
         });
+
         debug_code(standardSanityChecksForThisType());
-    }
-
-    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
-    inline void defineMemberAndNotify(UInt index) {
-        cachedHashes.applyIfValid([&](auto& cachedHashes) {
-            cachedHashes.assignRangeHash(
-                index, getValueHash(getRange<InnerViewType>()[index]), false);
-            cachedHashes.hashTotal +=
-                calcMemberHashFromCache(index, cachedHashes);
-        });
-        debug_code(assert(numberUndefined > 0));
-        numberUndefined--;
-        if (numberUndefined == 0) {
-            this->setAppearsDefined(true);
-        }
-        notifyMemberDefined(index);
-    }
-
-    inline void undefineMemberAndNotify(UInt index) {
-        cachedHashes.applyIfValid([&](auto& cachedHashes) {
-            cachedHashes.hashTotal -=
-                calcMemberHashFromCache(index, cachedHashes);
-            cachedHashes.unassignRangeHash(index);
-        });
-        numberUndefined++;
-        this->setAppearsDefined(false);
-        notifyMemberUndefined(index);
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
@@ -341,7 +276,6 @@ struct FunctionView : public ExprInterface<FunctionView>,
     inline const ExprRefVec<InnerViewType>& getRange() const {
         return lib::get<ExprRefVec<InnerViewType>>(range);
     }
-
     virtual inline AnyExprVec& getChildrenOperands() { shouldNotBeCalledPanic; }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline ExprRefVec<InnerViewType>& getMembers() {
@@ -358,15 +292,42 @@ struct FunctionView : public ExprInterface<FunctionView>,
     }
 
     void standardSanityChecksForThisType() const;
-
     void silentClear() {
         lib::visit(
             [&](auto& membersImpl) {
-                cachedHashes.invalidate();
+                cachedHashTotal.invalidate();
                 membersImpl.clear();
-                preimages = Uninit();
             },
             range);
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void defineMemberAndNotify(UInt index) {
+        cachedHashTotal.applyIfValid([&](auto& value) {
+            value +=
+                this->calcMemberHash(index, getMembers<InnerViewType>()[index]);
+        });
+        debug_code(assert(numberUndefined > 0));
+        numberUndefined--;
+        if (numberUndefined == 0) {
+            this->setAppearsDefined(true);
+        }
+        notifyMemberDefined(index);
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void undefineMemberAndNotify(UInt index) {
+        checkNotUsingCachedHash();
+        undefineMemberAndNotify<InnerViewType>(index, HashType(0));
+    }
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void undefineMemberAndNotify(UInt index,
+                                        HashType hashOfPossibleChange) {
+        cachedHashTotal.applyIfValid(
+            [&](auto& value) { value -= hashOfPossibleChange; });
+        numberUndefined++;
+        this->setAppearsDefined(false);
+        notifyMemberUndefined(index);
     }
 };
 

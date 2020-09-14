@@ -4,42 +4,6 @@
 using namespace std;
 using namespace lib;
 using namespace nlohmann;
-template <typename PreimageView, typename RangeView>
-static void buildFunctionUsingDimensions(const AnyDomainRef& preimageDomain,
-                                         FunctionView& functionView,
-                                         bool partial,
-                                         ExprRefVec<PreimageView>& domainExprs,
-                                         ExprRefVec<RangeView>& rangeExprs) {
-    functionView.initView(
-        preimageDomain, makeDimensionVecFromDomain(preimageDomain),
-        ExprRefVec<RangeView>(rangeExprs.size(), nullptr), partial);
-    for (size_t i = 0; i < rangeExprs.size(); i++) {
-        domainExprs[i]->evaluate();
-        auto index = functionView.preimageToIndex(
-            domainExprs[i]->getViewIfDefined().checkedGet(
-                "Error: whilst parsing function lit, preimage is "
-                "undefined."));
-        if (!index) {
-            myCerr << "Error in function literal: domain out of "
-                      "range.\n";
-            shouldNotBeCalledPanic;
-        }
-        functionView.template getRange<RangeView>()[*index] = rangeExprs[i];
-    }
-}
-template <typename PreimageView, typename RangeView>
-static void buildFunctionUsingExplicitPreimages(
-    const AnyDomainRef& preimageDomain, FunctionView& functionView,
-    bool partial, ExprRefVec<PreimageView>& domainExprs,
-    ExprRefVec<RangeView>& rangeExprs) {
-    ExplicitPreimageContainer preimages;
-    preimages.preimages.emplace<ExprRefVec<PreimageView>>();
-    for (auto& expr : domainExprs) {
-        preimages.add(expr);
-    }
-    functionView.initView(preimageDomain, move(preimages), move(rangeExprs),
-                          partial);
-}
 
 ParseResult parseOpFunctionLit(json& functionExpr, ParsedModel& parsedModel) {
     auto domainResult = parseAllAsSameType(
@@ -55,21 +19,27 @@ ParseResult parseOpFunctionLit(json& functionExpr, ParsedModel& parsedModel) {
     }
     return lib::visit(
         [&](auto& domainExprs, auto& rangeExprs) -> ParseResult {
-            typedef viewType(rangeExprs) RangeView;
-            bool partial =
-                domainExprs.size() < getDomainSize(domainResult.domain);
-            bool useDimensions =
-                !partial && canBuildDimensionVec(domainResult.domain);
-            auto op = OpMaker<OpFunctionLitBasic>::make<RangeView>(
-                domainResult.domain);
+            typedef viewType(rangeExprs) View;
+            auto op =
+                OpMaker<OpFunctionLitBasic>::make<View>(domainResult.domain);
             auto& functionView = *op->view();
-            if (useDimensions) {
-                buildFunctionUsingDimensions(domainResult.domain, functionView,
-                                             partial, domainExprs, rangeExprs);
-            } else {
-                buildFunctionUsingExplicitPreimages(domainResult.domain,
-                                                    functionView, partial,
-                                                    domainExprs, rangeExprs);
+            for (size_t i = 0; i < rangeExprs.size(); i++) {
+                if (!domainExprs[i]->isConstant()) {
+                    myCerr << "Error: function literals only support constants "
+                              "at the moment.\n";
+                    myExit(1);
+                }
+                domainExprs[i]->evaluate();
+                auto index = functionView.domainToIndex(
+                    domainExprs[i]->getViewIfDefined().checkedGet(
+                        "Error: whilst parsing function lit, preimage is "
+                        "undefined."));
+                if (!index) {
+                    myCerr
+                        << "Error in function literal: domain out of range.\n";
+                    myExit(1);
+                }
+                functionView.assignImage(*index, rangeExprs[i]);
             }
             auto domain = make_shared<FunctionDomain>(
                 JectivityAttr::NONE, PartialAttr::TOTAL, domainResult.domain,
@@ -157,7 +127,6 @@ shared_ptr<FunctionDomain> parseDomainMatrix(json& matrixDomainExpr,
 ParseResult parseOpSequenceLit(json& matrixExpr, ParsedModel& parsedModel);
 shared_ptr<IntDomain> parseDomainInt(json& intDomainExpr,
                                      ParsedModel& parsedModel);
-
 ParseResult parseOpMatrixLit(json& matrixExpr, ParsedModel& parsedModel) {
     auto domain = parseDomainInt(matrixExpr[0]["DomainInt"], parsedModel);
     if (domain->bounds.size() == 1 && domain->bounds.front().first == 1) {
@@ -170,8 +139,9 @@ ParseResult parseOpMatrixLit(json& matrixExpr, ParsedModel& parsedModel) {
             typedef viewType(rangeExprs) View;
             auto op = OpMaker<OpFunctionLitBasic>::make<View>(domain);
             auto& functionView = *op->view();
-            functionView.initView(domain, makeDimensionVecFromDomain(domain),
-                                  rangeExprs, false);
+            for (size_t i = 0; i < rangeExprs.size(); i++) {
+                functionView.assignImage(i, rangeExprs[i]);
+            }
             auto functionDomain = make_shared<FunctionDomain>(
                 JectivityAttr::NONE, PartialAttr::TOTAL, domain,
                 rangeResult.domain);

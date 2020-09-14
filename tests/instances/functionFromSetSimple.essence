@@ -1,4 +1,0 @@
-$testing:numberIterations=50000
-
-find f : function (total) set of int(1..8) --> set of int(1..8)
-such that forAll (i,j) in f . i = j

@@ -11,6 +11,9 @@ struct OpFunctionLitBasic : public FunctionView {
             : op(op), index(index) {}
     };
     std::vector<std::shared_ptr<ExprTriggerBase>> exprTriggers;
+
+    OpFunctionLitBasic(AnyDomainRef preImageDomain, AnyExprVec rangeIn)
+        : FunctionView(std::move(preImageDomain), std::move(rangeIn)) {}
     OpFunctionLitBasic() {}
     OpFunctionLitBasic(const OpFunctionLitBasic&) = delete;
     OpFunctionLitBasic(OpFunctionLitBasic&&) = delete;

@@ -42,12 +42,11 @@ void OpFunctionPreimage<OperandView>::reevaluateImpl(OperandView& image,
             for (size_t i = 0; i < function.rangeSize(); i++) {
                 auto member = function.template getRange<OperandView>()[i];
                 if (getValueHash(image) == getHashForceDefined(member)) {
-                    this->addMember(
-                        function.indexToPreimage<PreimageDomain>(i));
+                    this->addMember(function.indexToDomain<PreimageDomain>(i));
                 }
             }
         },
-        function.preimageDomain);
+        function.fromDomain);
     this->setAppearsDefined(true);
 }
 
@@ -102,8 +101,7 @@ struct OperatorTrates<OpFunctionPreimage<OperandView>>::RightTrigger
                 typedef typename AssociatedViewType<PreimageDomain>::type
                     PreimageView;
                 auto preimage =
-                    functionView.template indexToPreimage<PreimageDomain>(
-                        index);
+                    functionView.template indexToDomain<PreimageDomain>(index);
 
                 if (getHashForceDefined(op->left) ==
                     getHashForceDefined(
@@ -119,7 +117,7 @@ struct OperatorTrates<OpFunctionPreimage<OperandView>>::RightTrigger
                     }
                 }
             },
-            functionView.preimageDomain);
+            functionView.fromDomain);
     }
     void memberReplaced(UInt index, const AnyExprRef&) final {
         imageChanged(index);
@@ -204,8 +202,7 @@ void OpFunctionPreimage<OperandView>::debugSanityCheckImpl() const {
                 auto member = functionView.template getRange<OperandView>()[i];
                 if (getValueHash(image) == getHashForceDefined(member)) {
                     auto preimageHash = getHashForceDefined(
-                        functionView.template indexToPreimage<PreimageDomain>(
-                            i));
+                        functionView.template indexToDomain<PreimageDomain>(i));
                     hashes.insert(preimageHash);
                     sanityCheck(this->hashIndexMap.count(preimageHash),
                                 toString("hash ", preimageHash, " missing."));
@@ -213,7 +210,7 @@ void OpFunctionPreimage<OperandView>::debugSanityCheckImpl() const {
             }
             sanityEqualsCheck(hashes.size(), this->hashIndexMap.size());
         },
-        functionView.preimageDomain);
+        functionView.fromDomain);
 }
 
 template <typename Op>

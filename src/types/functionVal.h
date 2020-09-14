@@ -16,7 +16,6 @@ struct FunctionDomain {
     PartialAttr partial;
     AnyDomainRef from;
     AnyDomainRef to;
-    SizeAttr sizeAttr = noSize();
     bool isMatrixDomain = false;
     template <typename FromDomainType, typename ToDomainType>
     FunctionDomain(JectivityAttr jectivity, PartialAttr partial,
@@ -26,7 +25,6 @@ struct FunctionDomain {
           from(makeAnyDomainRef(std::forward<FromDomainType>(from))),
           to(makeAnyDomainRef(std::forward<ToDomainType>(to))) {
         checkSupported();
-        this->sizeAttr = exactSize(getDomainSize(this->from));
     }
 
     template <typename DomainType>
@@ -73,49 +71,6 @@ struct FunctionDomain {
 };
 
 struct FunctionValue : public FunctionView, public ValBase {
-    static const UInt PREIMAGE_VALBASE_INDEX = 0;
-    static const UInt IMAGE_VALBASE_INDEX = 1;
-    ValBase preimageValBase;
-    ValBase imageValBase;
-    FunctionValue()
-        : preimageValBase(PREIMAGE_VALBASE_INDEX, this),
-          imageValBase(IMAGE_VALBASE_INDEX, this) {}
-    void initView(AnyDomainRef, Preimages, AnyExprVec, bool) {
-        myCerr << "Call init val instead\n";
-        shouldNotBeCalledPanic;
-    }
-
-    void initVal(AnyDomainRef preImageDomain, Preimages preimages,
-                 AnyExprVec range, bool partial) {
-        FunctionView::initView(preImageDomain, std::move(preimages),
-                               std::move(range), partial);
-        lib::visit(
-            [&](auto& range) {
-                for (size_t i = 0; i < range.size(); i++) {
-                    auto& val = *assumeAsValue(range[i]);
-                    valBase(val).container = &imageValBase;
-                    valBase(val).id = i;
-                }
-            },
-            this->range);
-        if (!lazyPreimages()) {
-            lib::visit(
-                [&](auto& preimages) {
-                    for (size_t i = 0; i < preimages.size(); i++) {
-                        auto& val = *assumeAsValue(preimages[i]);
-                        valBase(val).container = &preimageValBase;
-                        valBase(val).id = i;
-                    }
-                },
-                getPreimages().preimages);
-        }
-    }
-
-    template <typename Domain,
-              typename Value = typename AssociatedValueType<Domain>::type>
-    ValRef<Value> getExplicitPreimage(UInt index) {
-        return assumeAsValue(this->indexToPreimage<Domain>(index));
-    }
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline ValRef<InnerValueType> member(UInt index) {
         return assumeAsValue(
@@ -123,6 +78,19 @@ struct FunctionValue : public FunctionView, public ValBase {
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
     AnyExprVec& getChildrenOperands() final;
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
+    inline void assignImage(UInt index, const ValRef<InnerValueType>& member) {
+        FunctionView::assignImage(index, member.asExpr());
+        valBase(*member).container = this;
+        valBase(*member).id = index;
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    void setInnerType() {
+        if (lib::get_if<ExprRefVec<InnerViewType>>(&(range)) == NULL) {
+            range.emplace<ExprRefVec<InnerViewType>>();
+        }
+    }
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
@@ -144,23 +112,20 @@ struct FunctionValue : public FunctionView, public ValBase {
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline bool tryImageChange(UInt index, Func&& func) {
+    inline bool tryImageChange(UInt index,
+                               lib::optional<HashType> previousMemberHash,
+                               Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        lib::optional<HashType> previousImageHash =
-            cachedHashes.calcIfValid([&](auto& cachedHashes) {
-                return cachedHashes.rangeHashes[index];
-            });
-        FunctionView::imageChanged<InnerViewType>(index);
+        auto newMemberHash = FunctionView::imageChanged<InnerViewType>(
+            index, previousMemberHash);
         if (func()) {
             FunctionView::notifyImageChanged(index);
             return true;
         } else {
-            cachedHashes.applyIfValid([&](auto& cachedHashes) {
-                cachedHashes.hashTotal -=
-                    calcMemberHashFromCache(index, cachedHashes);
-                cachedHashes.assignRangeHash(index, previousImageHash.value());
-                cachedHashes.hashTotal +=
-                    calcMemberHashFromCache(index, cachedHashes);
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                debug_code(assert(previousMemberHash && newMemberHash));
+                value -= *previousMemberHash;
+                value += *newMemberHash;
             });
             return false;
         }
@@ -168,33 +133,22 @@ struct FunctionValue : public FunctionView, public ValBase {
 
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline bool tryImagesChange(const std::vector<UInt>& indices, Func&& func) {
+    inline bool tryImagesChange(
+        const std::vector<UInt>& indices,
+        lib::optional<HashType> previousMembersCombinedHash, Func&& func) {
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
-        lib::optional<std::vector<HashType>> previousImageHashes =
-            cachedHashes.calcIfValid([&](auto& cachedHashes) {
-                std::vector<HashType> hashes;
-                for (auto index : indices) {
-                    hashes.emplace_back(cachedHashes.rangeHashes[index]);
-                    ;
-                }
-                return hashes;
-            });
-        FunctionView::imagesChanged<InnerViewType>(indices);
+        auto newMembersCombinedHash =
+            FunctionView::imagesChanged<InnerViewType>(
+                indices, previousMembersCombinedHash);
         if (func()) {
             FunctionView::notifyImagesChanged(indices);
             return true;
         } else {
-            cachedHashes.applyIfValid([&](auto& cachedHashes) {
-                const auto& previousHashes = previousImageHashes.value();
-                for (size_t i = 0; i < indices.size(); i++) {
-                    auto index = indices[i];
-                    auto hash = previousHashes[i];
-                    cachedHashes.hashTotal -=
-                        calcMemberHashFromCache(index, cachedHashes);
-                    cachedHashes.assignRangeHash(index, hash);
-                    cachedHashes.hashTotal +=
-                        calcMemberHashFromCache(index, cachedHashes);
-                }
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                debug_code(assert(previousMembersCombinedHash &&
+                                  newMembersCombinedHash));
+                value -= *previousMembersCombinedHash;
+                value += *newMembersCombinedHash;
             });
             return false;
         }

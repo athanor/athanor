@@ -101,8 +101,6 @@ bool isPoolMarker(const ValBase* v);
 struct ValBase {
     UInt id = 0;
     ValBase* container = &constantPool;
-    ValBase() {}
-    ValBase(UInt id, ValBase* container) : id(id), container(container) {}
     virtual ~ValBase() {}
     inline bool operator==(const ValBase& other) const {
         return id == other.id && container == other.container;
@@ -132,11 +130,4 @@ inline void varBaseSanityChecks(
         sanityEqualsCheck(base.id, i);
     }
 }
-
-#define valBaseFuncs(name) \
-    template <>            \
-    ValBase& valBase<name##Value>(name##Value & v);
-buildForAllTypes(valBaseFuncs, );
-#undef valBaseFuncs
-
 #endif /* SRC_BASE_VALREF_H_ */

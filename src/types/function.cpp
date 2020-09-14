@@ -11,8 +11,6 @@
 #include "utils/ignoreUnused.h"
 #include "utils/safePow.h"
 using namespace std;
-template <>
-void deepCopy<FunctionValue>(const FunctionValue& src, FunctionValue& target);
 struct NoSupportException {};
 Dimension intDomainToDimension(IntDomain& dom) {
     if (dom.bounds.size() > 1) {
@@ -22,23 +20,6 @@ Dimension intDomainToDimension(IntDomain& dom) {
         throw NoSupportException();
     }
     return Dimension(dom.bounds.front().first, dom.bounds.front().second);
-}
-
-bool canBuildDimensionVec(const AnyDomainRef& domain) {
-    return lib::visit(
-        overloaded([&](const shared_ptr<IntDomain>&) { return true; },
-                   [&](const shared_ptr<EnumDomain>&) { return true; },
-                   [&](const shared_ptr<BoolDomain>&) { return true; },
-                   [&](const shared_ptr<TupleDomain>& domain) {
-                       for (const auto& d : domain->inners) {
-                           if (!canBuildDimensionVec(d)) {
-                               return false;
-                           }
-                       }
-                       return true;
-                   },
-                   [&](const auto&) { return false; }),
-        domain);
 }
 
 void makeDimensionVecFromDomainHelper(const AnyDomainRef& domain,
@@ -68,16 +49,12 @@ void makeDimensionVecFromDomainHelper(const AnyDomainRef& domain,
     }
 }
 
-DimensionVec makeDimensionVecFromDomain(const AnyDomainRef& domain) {
-    DimensionVec dimensions;
-    makeDimensionVecFromDomainHelper(domain, dimensions);
-    size_t requiredSize = 1;
-    for (auto iter = dimensions.rbegin(); iter != dimensions.rend(); ++iter) {
-        auto& dim = *iter;
-        dim.blockSize = requiredSize;
-        requiredSize *= (dim.upper - dim.lower) + 1;
-    }
-    return dimensions;
+DimensionVec FunctionView::makeDimensionVecFromDomain(
+    const AnyDomainRef& domain) {
+    DimensionVec dimVec;
+    makeDimensionVecFromDomainHelper(domain, dimVec);
+
+    return dimVec;
 }
 
 template <typename Op>
@@ -98,31 +75,31 @@ lib::optional<UInt> translateValueFromDimension(Int value,
     return lib::nullopt;
 }
 template <typename View>
-lib::optional<UInt> preimageToIndexHelper(const View&, const DimensionVec&,
-                                          size_t&) {
+lib::optional<UInt> domainToIndexHelper(const View&, const DimensionVec&,
+                                        size_t&) {
     todoImpl();
 }
 
-lib::optional<UInt> preimageToIndexHelper(const EnumView& v,
-                                          const DimensionVec& dimVec,
-                                          size_t& dimIndex) {
+lib::optional<UInt> domainToIndexHelper(const EnumView& v,
+                                        const DimensionVec& dimVec,
+                                        size_t& dimIndex) {
     debug_code(assert(dimIndex < dimVec.size()));
     auto i = translateValueFromDimension(v.value, dimVec[dimIndex]);
     ++dimIndex;
     return i;
 }
 
-lib::optional<UInt> preimageToIndexHelper(const IntView& v,
-                                          const DimensionVec& dimVec,
-                                          size_t& dimIndex) {
+lib::optional<UInt> domainToIndexHelper(const IntView& v,
+                                        const DimensionVec& dimVec,
+                                        size_t& dimIndex) {
     debug_code(assert(dimIndex < dimVec.size()));
     auto i = translateValueFromDimension(v.value, dimVec[dimIndex]);
     ++dimIndex;
     return i;
 }
-lib::optional<UInt> preimageToIndexHelper(const TupleView& tupleV,
-                                          const DimensionVec& dimVec,
-                                          size_t& dimIndex) {
+lib::optional<UInt> domainToIndexHelper(const TupleView& tupleV,
+                                        const DimensionVec& dimVec,
+                                        size_t& dimIndex) {
     debug_code(assert(dimIndex < dimVec.size()));
     size_t indexTotal = 0;
     bool undefined = false;
@@ -135,8 +112,7 @@ lib::optional<UInt> preimageToIndexHelper(const TupleView& tupleV,
                     undefined = true;
                     return;
                 }
-                auto index =
-                    preimageToIndexHelper(*memberView, dimVec, dimIndex);
+                auto index = domainToIndexHelper(*memberView, dimVec, dimIndex);
                 if (!index) {
                     undefined = true;
                     return;
@@ -151,34 +127,23 @@ lib::optional<UInt> preimageToIndexHelper(const TupleView& tupleV,
     return indexTotal;
 }
 
-lib::optional<UInt> FunctionView::preimageToIndex(const IntView& v) {
-    if (!lazyPreimages()) {
-        return nonLazyDomainToIndex(v);
-    }
+lib::optional<UInt> FunctionView::domainToIndex(const IntView& v) {
     size_t index = 0;
-    return preimageToIndexHelper(v, getDimensions(), index);
+    return domainToIndexHelper(v, dimensions, index);
 }
 
-lib::optional<UInt> FunctionView::preimageToIndex(const EnumView& v) {
-    if (!lazyPreimages()) {
-        return nonLazyDomainToIndex(v);
-    }
-
+lib::optional<UInt> FunctionView::domainToIndex(const EnumView& v) {
     size_t index = 0;
-    return preimageToIndexHelper(v, getDimensions(), index);
+    return domainToIndexHelper(v, dimensions, index);
 }
 
-lib::optional<UInt> FunctionView::preimageToIndex(const TupleView& v) {
-    if (!lazyPreimages()) {
-        return nonLazyDomainToIndex(v);
-    }
-
+lib::optional<UInt> FunctionView::domainToIndex(const TupleView& v) {
     size_t index = 0;
-    return preimageToIndexHelper(v, getDimensions(), index);
+    return domainToIndexHelper(v, dimensions, index);
 }
 
 template <>
-ExprRef<IntView> functionIndexToPreimage<IntDomain>(
+ExprRef<IntView> functionIndexToDomain<IntDomain>(
     const IntDomain&, const DimensionVec& dimensions, UInt index,
     size_t& dimIndex) {
     debug_code(assert(dimIndex < dimensions.size()));
@@ -189,10 +154,10 @@ ExprRef<IntView> functionIndexToPreimage<IntDomain>(
 }
 
 template <>
-void functionIndexToPreimage<IntDomain>(const IntDomain&,
-                                        const DimensionVec& dimensions,
-                                        UInt index, IntView& view,
-                                        size_t& dimIndex) {
+void functionIndexToDomain<IntDomain>(const IntDomain&,
+                                      const DimensionVec& dimensions,
+                                      UInt index, IntView& view,
+                                      size_t& dimIndex) {
     debug_code(assert(dimIndex < dimensions.size()));
     view.changeValue([&]() {
         view.value = dimensions[dimIndex].lower + index;
@@ -202,7 +167,7 @@ void functionIndexToPreimage<IntDomain>(const IntDomain&,
 }
 
 template <>
-ExprRef<EnumView> functionIndexToPreimage<EnumDomain>(
+ExprRef<EnumView> functionIndexToDomain<EnumDomain>(
     const EnumDomain&, const DimensionVec& dimensions, UInt index,
     size_t& dimIndex) {
     debug_code(assert(dimIndex < dimensions.size()));
@@ -213,10 +178,10 @@ ExprRef<EnumView> functionIndexToPreimage<EnumDomain>(
 }
 
 template <>
-void functionIndexToPreimage<EnumDomain>(const EnumDomain&,
-                                         const DimensionVec& dimensions,
-                                         UInt index, EnumView& view,
-                                         size_t& dimIndex) {
+void functionIndexToDomain<EnumDomain>(const EnumDomain&,
+                                       const DimensionVec& dimensions,
+                                       UInt index, EnumView& view,
+                                       size_t& dimIndex) {
     debug_code(assert(dimIndex < dimensions.size()));
     view.changeValue([&]() {
         view.value = dimensions[dimIndex].lower + index;
@@ -226,7 +191,7 @@ void functionIndexToPreimage<EnumDomain>(const EnumDomain&,
 }
 
 template <>
-ExprRef<TupleView> functionIndexToPreimage<TupleDomain>(
+ExprRef<TupleView> functionIndexToDomain<TupleDomain>(
     const TupleDomain& domain, const DimensionVec& dimVec, UInt index,
     size_t& dimIndex) {
     vector<AnyExprRef> tupleMembers;
@@ -236,7 +201,7 @@ ExprRef<TupleView> functionIndexToPreimage<TupleDomain>(
         index %= dimVec[dimIndex].blockSize;
         lib::visit(
             [&](auto& innerDomainPtr) {
-                tupleMembers.emplace_back(functionIndexToPreimage(
+                tupleMembers.emplace_back(functionIndexToDomain(
                     *innerDomainPtr, dimVec, row, dimIndex));
             },
             inner);
@@ -248,10 +213,10 @@ ExprRef<TupleView> functionIndexToPreimage<TupleDomain>(
 }
 
 template <>
-void functionIndexToPreimage<TupleDomain>(const TupleDomain& domain,
-                                          const DimensionVec& dimensions,
-                                          UInt index, TupleView& view,
-                                          size_t& dimIndex) {
+void functionIndexToDomain<TupleDomain>(const TupleDomain& domain,
+                                        const DimensionVec& dimensions,
+                                        UInt index, TupleView& view,
+                                        size_t& dimIndex) {
     debug_code(assert(view.members.size() == domain.inners.size()));
     for (size_t i = 0; i < domain.inners.size(); i++) {
         auto& dim = dimensions[dimIndex];
@@ -266,8 +231,8 @@ void functionIndexToPreimage<TupleDomain>(const TupleDomain& domain,
                 auto& memberView = memberExpr->view().get();
                 UInt row = index / dim.blockSize;
                 index %= dim.blockSize;
-                functionIndexToPreimage(*innerDomainPtr, dimensions, row,
-                                        memberView, dimIndex);
+                functionIndexToDomain(*innerDomainPtr, dimensions, row,
+                                      memberView, dimIndex);
             },
             domain.inners[i]);
     }
@@ -275,25 +240,17 @@ void functionIndexToPreimage<TupleDomain>(const TupleDomain& domain,
 
 template <>
 HashType getValueHash<FunctionView>(const FunctionView& val) {
-    return val.cachedHashes
-        .getOrSet([&]() {
-            return lib::visit(
-                [&](const auto& range) {
-                    CachedHashes cachedHashes;
-                    cachedHashes.rangeHashes.resize(
-                        range.size(), HashType(0));  // 0 will be replaced
-
-                    for (size_t i = 0; i < range.size(); ++i) {
-                        cachedHashes.assignRangeHash(i, getValueHash(range[i]),
-                                                     false);
-                        cachedHashes.hashTotal +=
-                            val.calcMemberHashFromCache(i, cachedHashes);
-                    }
-                    return cachedHashes;
-                },
-                val.range);
-        })
-        .hashTotal;
+    return val.cachedHashTotal.getOrSet([&]() {
+        return lib::visit(
+            [&](const auto& range) {
+                HashType total(0);
+                for (size_t i = 0; i < range.size(); ++i) {
+                    total += val.calcMemberHash(i, range[i]);
+                }
+                return total;
+            },
+            val.range);
+    });
 }
 
 template <>
@@ -306,13 +263,13 @@ ostream& prettyPrint<FunctionView>(ostream& os, const FunctionView& v) {
                     os << ",\n";
                 }
                 lib::visit(
-                    [&](auto& preimageDomain) {
+                    [&](auto& fromDomain) {
                         typedef typename BaseType<decltype(
-                            preimageDomain)>::element_type Domain;
-                        auto from = v.indexToPreimage<Domain>(i);
+                            fromDomain)>::element_type Domain;
+                        auto from = v.indexToDomain<Domain>(i);
                         prettyPrint(os, from->view());
                     },
-                    v.preimageDomain);
+                    v.fromDomain);
                 os << " --> ";
                 prettyPrint(os, rangeImpl[i]->view());
             }
@@ -339,13 +296,13 @@ ostream& prettyPrint<FunctionView>(ostream& os, const FunctionDomain& domain,
                 }
                 if (!domain.isMatrixDomain) {
                     lib::visit(
-                        [&](auto& preimageDomain) {
+                        [&](auto& fromDomain) {
                             typedef typename BaseType<decltype(
-                                preimageDomain)>::element_type Domain;
-                            auto from = v.indexToPreimage<Domain>(i);
-                            prettyPrint(os, *preimageDomain, from->view());
+                                fromDomain)>::element_type Domain;
+                            auto from = v.indexToDomain<Domain>(i);
+                            prettyPrint(os, *fromDomain, from->view());
                         },
-                        v.preimageDomain);
+                        v.fromDomain);
 
                     os << " --> ";
                 }
@@ -362,45 +319,28 @@ ostream& prettyPrint<FunctionView>(ostream& os, const FunctionDomain& domain,
     return os;
 }
 
-AnyExprVec deepCopyRange(const AnyExprVec& range) {
-    return lib::visit(
-        [&](auto& range) -> AnyExprVec {
-            ExprRefVec<viewType(range)> newRange;
-            for (auto& member : range) {
-                newRange.emplace_back(
-                    deepCopy(*assumeAsValue(member)).asExpr());
-            }
-            return newRange;
-        },
-        range);
-}
-
-Preimages deepCopyPreimages(const Preimages& preimages) {
-    if (lib::get_if<DimensionVec>(&preimages)) {
-        return preimages;
-    } else {
-        const auto& preimageContainer =
-            lib::get<ExplicitPreimageContainer>(preimages);
-        ExplicitPreimageContainer newPreimages = preimageContainer;
-        // shallow copy first as this takes care of maps and vectors, now
-        // replace exprs with deep copies
-        lib::visit(
-            [&](auto& newPreimageMembers) {
-                for (auto& member : newPreimageMembers) {
-                    member = deepCopy(*assumeAsValue(member)).asExpr();
-                }
-            },
-            newPreimages.preimages);
-        return newPreimages;
+template <typename InnerViewType>
+void deepCopyImpl(const FunctionValue&,
+                  const ExprRefVec<InnerViewType>& srcMemnersImpl,
+                  FunctionValue& target) {
+    target.cachedHashTotal.invalidate();
+    // to be optimised later
+    target.silentClear();
+    for (size_t i = 0; i < srcMemnersImpl.size(); i++) {
+        target.assignImage(i, deepCopy(*assumeAsValue(srcMemnersImpl[i])));
     }
+    debug_code(target.debugSanityCheck());
+    target.notifyEntireValueChanged();
 }
 
 template <>
 void deepCopy<FunctionValue>(const FunctionValue& src, FunctionValue& target) {
-    target.silentClear();
-    target.initVal(src.preimageDomain, deepCopyPreimages(src.preimages),
-                   deepCopyRange(src.range), src.partial);
-    target.notifyEntireValueChanged();
+    assert(src.range.index() == target.range.index());
+    return visit(
+        [&](auto& srcMembersImpl) {
+            return deepCopyImpl(src, srcMembersImpl, target);
+        },
+        src.range);
 }
 
 template <>
@@ -419,52 +359,24 @@ ostream& prettyPrint<FunctionDomain>(ostream& os, const FunctionDomain& d) {
 
 void matchInnerType(const FunctionValue& src, FunctionValue& target) {
     lib::visit(
-        [&](auto& srcRange) {
-            target.range.emplace<ExprRefVec<viewType(srcRange)>>();
+        [&](auto& srcMembersImpl) {
+            target.setInnerType<viewType(srcMembersImpl)>();
         },
         src.range);
-    if (src.lazyPreimages()) {
-        target.preimages = src.preimages;
-        // copy over dimension  vec that is
-    } else {
-        lib::visit(
-            [&](auto& preimages) {
-                auto& targetPreimageContainer =
-                    target.preimages.emplace<ExplicitPreimageContainer>();
-                targetPreimageContainer.preimages
-                    .emplace<ExprRefVec<viewType(preimages)>>();
-            },
-            src.getPreimages().preimages);
-    }
 }
 
 void matchInnerType(const FunctionDomain& domain, FunctionValue& target) {
     lib::visit(
-        [&](auto& rangeDomain) {
-            typedef typename AssociatedViewType<typename BaseType<decltype(
-                rangeDomain)>::element_type>::type RangeView;
-            target.range.emplace<ExprRefVec<RangeView>>();
+        [&](auto& innerDomainImpl) {
+            target.setInnerType<typename AssociatedViewType<
+                typename AssociatedValueType<typename BaseType<decltype(
+                    innerDomainImpl)>::element_type>::type>::type>();
         },
         domain.to);
-    if (canBuildDimensionVec(domain.from)) {
-        target.preimages.emplace<DimensionVec>() =
-            makeDimensionVecFromDomain(domain.from);
-    } else {
-        lib::visit(
-            [&](auto& preimageDomain) {
-                typedef typename AssociatedViewType<typename BaseType<decltype(
-                    preimageDomain)>::element_type>::type PreimageView;
-                target.preimages.emplace<ExplicitPreimageContainer>()
-                    .preimages.emplace<ExprRefVec<PreimageView>>();
-            },
-            domain.from);
-    }
 }
 
 template <>
 UInt getDomainSize<FunctionDomain>(const FunctionDomain& domain) {
-    assert(domain.partial == PartialAttr::TOTAL &&
-           domain.jectivity == JectivityAttr::NONE);
     auto crossProd = safePow<UInt>(getDomainSize(domain.to),
                                    getDomainSize(domain.from), MAX_DOMAIN_SIZE);
     if (!crossProd) {
@@ -546,95 +458,65 @@ bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
         u.range);
 }
 
-void checkPreimages(const FunctionView& view) {
-    if (view.lazyPreimages()) {
-        sanityEqualsCheck(makeDimensionVecFromDomain(view.preimageDomain),
-                          view.getDimensions());
-        return;
-    } else {
-        auto preimages = view.getPreimages();
-        lib::visit(
-            [&](auto& members) {
-                sanityEqualsCheck(view.rangeSize(), members.size());
-                sanityEqualsCheck(members.size(),
-                                  preimages.preimageHashes.size());
-                sanityEqualsCheck(members.size(),
-                                  preimages.preimageHashIndexMap.size());
-                for (size_t i = 0; i < members.size(); i++) {
-                    members[i]->debugSanityCheck();
-                    sanityEqualsCheck(getValueHash(members[i]),
-                                      preimages.preimageHashes[i]);
-                    sanityCheck(preimages.preimageHashIndexMap.count(
-                                    preimages.preimageHashes[i]),
-                                "hash missing from preimage hash index map");
-                    sanityEqualsCheck(
-                        i,
-                        preimages
-                            .preimageHashIndexMap[preimages.preimageHashes[i]]);
-                }
-            },
-            preimages.preimages);
-    }
-}
 void FunctionView::standardSanityChecksForThisType() const {
-    checkPreimages(*this);
-
     lib::visit(
         [&](auto& range) {
             UInt checkNumberUndefined = 0;
-            HashType checkCachedHashTotal(0);
-            cachedHashes.applyIfValid([&](auto& cachedHashes) {
-                sanityEqualsCheck(range.size(),
-                                  cachedHashes.rangeHashes.size());
-                sanityEqualsCheck(range.size(),
-                                  cachedHashes.rangeHashIndexMap.size());
-            });
+            HashType checkCachedHashTotal;
             for (size_t i = 0; i < range.size(); i++) {
                 if (!range[i]->appearsDefined()) {
                     checkNumberUndefined++;
                     continue;
                 }
-                cachedHashes.applyIfValid([&](auto& cachedHashes) {
-                    auto hash = getValueHash(range[i]);
-                    sanityEqualsCheck(hash, cachedHashes.rangeHashes[i]);
-                    sanityCheck(cachedHashes.rangeHashIndexMap.count(hash),
-                                "hash missing from range hash index map");
-                    sanityEqualsCheck(i,
-                                      cachedHashes.rangeHashIndexMap.at(hash));
+                cachedHashTotal.applyIfValid([&](auto&) {
                     checkCachedHashTotal +=
-                        calcMemberHashFromCache(i, cachedHashes);
+                        calcMemberHash<viewType(range)>(i, range[i]);
                 });
             }
             sanityEqualsCheck(checkNumberUndefined, numberUndefined);
-            cachedHashes.applyIfValid([&](auto& cachedHashes) {
-                sanityEqualsCheck(checkCachedHashTotal, cachedHashes.hashTotal);
+            cachedHashTotal.applyIfValid([&](auto& value) {
+                sanityEqualsCheck(checkCachedHashTotal, value);
             });
         },
         this->range);
 }
 
 void FunctionValue::debugSanityCheckImpl() const {
-    this->standardSanityChecksForThisType();
     lib::visit(
         [&](const auto& valMembersImpl) {
+            recurseSanityChecks(valMembersImpl);
+            this->standardSanityChecksForThisType();
             // check var bases
-            varBaseSanityChecks(this->imageValBase, valMembersImpl);
+
+            varBaseSanityChecks(*this, valMembersImpl);
         },
         range);
-    if (!lazyPreimages()) {
-        lib::visit(
-            [&](const auto& valMembersImpl) {
-                // check var bases
-                varBaseSanityChecks(this->preimageValBase, valMembersImpl);
-            },
-            getPreimages().preimages);
-    }
 }
 
 AnyExprVec& FunctionValue::getChildrenOperands() { return range; }
 
+void FunctionView::debugCheckDimensionVec() {
+    lib::visit(
+        overloaded(
+            [&](shared_ptr<TupleDomain>& d) {
+                assert(d->inners.size() == dimensions.size());
+            },
+            [&](shared_ptr<IntDomain>&) { assert(dimensions.size() == 1); },
+            [&](shared_ptr<EnumDomain>&) { assert(dimensions.size() == 1); },
+            [](auto&) { shouldNotBeCalledPanic; }),
+        fromDomain);
+}
+
 template <>
 size_t getResourceLowerBound<FunctionDomain>(const FunctionDomain& domain) {
-    return domain.sizeAttr.minSize * getResourceLowerBound(domain.from) +
-           domain.sizeAttr.minSize * getResourceLowerBound(domain.to) + 1;
+    DimensionVec dimVec;
+    makeDimensionVecFromDomainHelper(domain.from, dimVec);
+
+    // calculate size of from domain
+    size_t fromDomainSize = 1;
+    for (auto iter = dimVec.rbegin(); iter != dimVec.rend(); ++iter) {
+        auto& dim = *iter;
+        fromDomainSize *= (dim.upper - dim.lower) + 1;
+    }
+    return fromDomainSize * getResourceLowerBound(domain.to);
 }

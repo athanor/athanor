@@ -10,104 +10,27 @@
 
 using namespace std;
 
-template <typename PreimageDomainPtrType, typename ImageDomainPtrType>
-bool assignRandomFunctionUsingExplicitPreimages(
-    const FunctionDomain& domain,
-    const PreimageDomainPtrType& preimageDomainPtr,
-    const ImageDomainPtrType& imageDomainPtr, FunctionValue& val,
-    NeighbourhoodResourceTracker& resource) {
+template <typename InnerDomainPtrType>
+bool assignRandomValueInDomainImpl(const FunctionDomain& domain,
+                                   const InnerDomainPtrType& innerDomainPtr,
+                                   FunctionValue& val,
+                                   NeighbourhoodResourceTracker& resource) {
     typedef typename AssociatedValueType<
-        typename PreimageDomainPtrType::element_type>::type PreimageValueType;
-    typedef typename AssociatedValueType<
-        typename ImageDomainPtrType::element_type>::type ImageValueType;
-    typedef typename AssociatedViewType<ImageValueType>::type ImageViewType;
-    typedef
-        typename AssociatedViewType<PreimageValueType>::type PreimageViewType;
-    ExplicitPreimageContainer preimageContainer;
-    preimageContainer.preimages.emplace<ExprRefVec<PreimageViewType>>();
-    ExprRefVec<ImageViewType> range;
-    auto newNumberElementsOption = resource.randomNumberElements(
-        domain.sizeAttr.minSize, domain.sizeAttr.maxSize, preimageDomainPtr);
-    if (!newNumberElementsOption) {
-        return false;
-    }
-    size_t newNumberElements = *newNumberElementsOption;
-    while (newNumberElements > range.size()) {
-        auto reserved = resource.reserve(domain.sizeAttr.minSize,
-                                         preimageDomainPtr, range.size());
-        auto reserved2 = resource.reserve(domain.sizeAttr.minSize,
-                                          imageDomainPtr, range.size());
-        auto preimage = constructValueFromDomain(*preimageDomainPtr);
-        bool success = false;
-        do {
-            success = assignRandomValueInDomain(*preimageDomainPtr, *preimage,
-                                                resource);
-            if (!success) {
-                break;
-                ;
-            }
-        } while (!preimageContainer.add(preimage.asExpr()));
-        if (!success) {
-            break;
-        }
-        auto image = constructValueFromDomain(*imageDomainPtr);
-        success = assignRandomValueInDomain(*imageDomainPtr, *image, resource);
-        if (!success) {
-            preimageContainer.remove<PreimageViewType>(range.size());
-            break;
-        }
-        range.emplace_back(image.asExpr());
-    }
-    if (range.size() >= domain.sizeAttr.minSize) {
-        val.initVal(domain.from, std::move(preimageContainer), std::move(range),
-                    domain.partial == PartialAttr::PARTIAL);
-
-        return true;
-    }
-    return false;
-}
-
-template <typename PreimageDomainPtrType, typename ImageDomainPtrType>
-bool assignRandomFunctionUsingDimensions(
-    const FunctionDomain& domain, const PreimageDomainPtrType&,
-    const ImageDomainPtrType& imageDomainPtr, FunctionValue& val,
-    NeighbourhoodResourceTracker& resource) {
-    typedef typename AssociatedValueType<
-        typename ImageDomainPtrType::element_type>::type ImageValueType;
-    typedef typename AssociatedViewType<ImageValueType>::type ImageViewType;
-    ExprRefVec<ImageViewType> range;
-    while (range.size() < domain.sizeAttr.minSize) {
-        auto reserved = resource.reserve(domain.sizeAttr.minSize,
-                                         imageDomainPtr, range.size());
-        auto newMember = constructValueFromDomain(*imageDomainPtr);
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    val.resetDimensions<InnerViewType>(
+        domain.from, FunctionView::makeDimensionVecFromDomain(domain.from));
+    for (size_t i = 0; i < val.rangeSize(); i++) {
+        auto reserved = resource.reserve(val.rangeSize(), innerDomainPtr, i);
+        auto newMember = constructValueFromDomain(*innerDomainPtr);
         bool success =
-            assignRandomValueInDomain(*imageDomainPtr, *newMember, resource);
+            assignRandomValueInDomain(*innerDomainPtr, *newMember, resource);
         if (!success) {
             return false;
         }
-        range.emplace_back(newMember.asExpr());
+        val.assignImage<InnerValueType>(i, newMember);
     }
-    val.initVal(domain.from, makeDimensionVecFromDomain(domain.from),
-                std::move(range), false);
     return true;
-}
-
-template <typename PreimageDomainPtrType, typename ImageDomainPtrType>
-bool assignRandomValueInDomainImpl(
-    const FunctionDomain& domain,
-    const PreimageDomainPtrType& preimageDomainPtr,
-    const ImageDomainPtrType& imageDomainPtr, FunctionValue& val,
-    NeighbourhoodResourceTracker& resource) {
-    bool useDimensions = domain.partial == PartialAttr::TOTAL &&
-                         canBuildDimensionVec(domain.from);
-
-    if (useDimensions) {
-        return assignRandomFunctionUsingDimensions(
-            domain, preimageDomainPtr, imageDomainPtr, val, resource);
-    } else {
-        return assignRandomFunctionUsingExplicitPreimages(
-            domain, preimageDomainPtr, imageDomainPtr, val, resource);
-    }
 }
 
 template <>
@@ -115,11 +38,11 @@ bool assignRandomValueInDomain<FunctionDomain>(
     const FunctionDomain& domain, FunctionValue& val,
     NeighbourhoodResourceTracker& resource) {
     return lib::visit(
-        [&](auto& preimageDomainPtr, auto& imageDomainPtr) {
-            return assignRandomValueInDomainImpl(domain, preimageDomainPtr,
-                                                 imageDomainPtr, val, resource);
+        [&](auto& innerDomainPtr) {
+            return assignRandomValueInDomainImpl(domain, innerDomainPtr, val,
+                                                 resource);
         },
-        domain.from, domain.to);
+        domain.to);
 }
 
 template <typename InnerDomainPtrType>
@@ -127,6 +50,8 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
                                const InnerDomainPtrType&,
                                int numberValsRequired,
                                std::vector<Neighbourhood>& neighbourhoods) {
+    typedef typename AssociatedViewType<
+        typename InnerDomainPtrType::element_type>::type InnerViewType;
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(1, domain.to, innerDomainNeighbourhoods);
     typedef typename AssociatedValueType<
@@ -142,19 +67,24 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
                     return;
                 }
                 auto& vioContainerAtThisLevel =
-                    params.vioContainer.childViolations(val.id).childViolations(
-                        FunctionValue::IMAGE_VALBASE_INDEX);
+                    params.vioContainer.childViolations(val.id);
                 UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
                     val.rangeSize() - 1);
-
+                auto previousMemberHash =
+                    val.notifyPossibleImageChange<InnerViewType>(indexToChange);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
                     return val.tryImageChange<InnerValueType>(
-                        indexToChange,
+                        indexToChange, previousMemberHash,
                         [&]() { return params.parentCheck(params.vals); });
                 };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
+                    if (requiresRevert) {
+                        previousMemberHash =
+                            val.notifyPossibleImageChange<InnerViewType>(
+                                indexToChange);
+                    }
                     return !requiresRevert;
                 };
                 AnyValVec changingMembers;
@@ -169,7 +99,7 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
                     val.tryImageChange<InnerValueType>(indexToChange,
-
+                                                       previousMemberHash,
                                                        [&]() { return true; });
                 }
             });
@@ -195,6 +125,7 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
     generateNeighbourhoods(0, domain.to, innerDomainNeighbourhoods);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
         if (innerNh.numberValsRequired < 2) {
             continue;
@@ -211,20 +142,27 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
                     return;
                 }
                 auto& vioContainerAtThisLevel =
-                    params.vioContainer.childViolations(val.id).childViolations(
-                        FunctionValue::IMAGE_VALBASE_INDEX);
+                    params.vioContainer.childViolations(val.id);
                 std::vector<UInt> indicesToChange =
                     vioContainerAtThisLevel.selectRandomVars(
                         val.rangeSize() - 1, innerNhNumberValsRequired);
                 debug_log(indicesToChange);
+                auto previousMembersCombinedHash =
+                    val.notifyPossibleImagesChange<InnerViewType>(
+                        indicesToChange);
                 ParentCheckCallBack parentCheck = [&](const AnyValVec&) {
                     return val.tryImagesChange<InnerValueType>(
-                        indicesToChange,
+                        indicesToChange, previousMembersCombinedHash,
                         [&]() { return params.parentCheck(params.vals); });
                 };
                 bool requiresRevert = false;
                 AcceptanceCallBack changeAccepted = [&]() {
                     requiresRevert = !params.changeAccepted();
+                    if (requiresRevert) {
+                        previousMembersCombinedHash =
+                            val.notifyPossibleImagesChange<InnerViewType>(
+                                indicesToChange);
+                    }
                     return !requiresRevert;
                 };
                 AnyValVec changingMembers;
@@ -239,8 +177,9 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
                     changingMembers, params.stats, vioContainerAtThisLevel);
                 innerNhApply(innerNhParams);
                 if (requiresRevert) {
-                    val.tryImagesChange<InnerValueType>(indicesToChange,
-                                                        [&]() { return true; });
+                    val.tryImagesChange<InnerValueType>(
+                        indicesToChange, previousMembersCombinedHash,
+                        [&]() { return true; });
                 }
             });
     }
@@ -281,8 +220,7 @@ struct FunctionImagesSwap
         const int tryLimit = params.parentCheckTryLimit;
         debug_neighbourhood_action("Looking for indices to swap");
         auto& vioContainerAtThisLevel =
-            params.vioContainer.childViolations(val.id).childViolations(
-                FunctionValue::IMAGE_VALBASE_INDEX);
+            params.vioContainer.childViolations(val.id);
 
         bool success;
         UInt index1, index2;
@@ -325,12 +263,20 @@ struct FunctionImagesSwapAlongAxis
     typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
     const FunctionDomain& domain;
     const InnerDomain& innerDomain;
-    shared_ptr<TupleDomain> preimageDomain;
+    ValRef<TupleValue> preImage = make<TupleValue>();
+    shared_ptr<TupleDomain> preImageDomain;
 
     FunctionImagesSwapAlongAxis(const FunctionDomain& domain)
         : domain(domain),
           innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.to)),
-          preimageDomain(lib::get<shared_ptr<TupleDomain>>(this->domain.from)) {
+          preImageDomain(lib::get<shared_ptr<TupleDomain>>(this->domain.from)) {
+        for (auto& innerDomain : preImageDomain->inners) {
+            ignoreUnused(innerDomain);
+            auto intVal = make<IntValue>();
+            // just assign it to anything
+            intVal->value = 0;
+            preImage->members.emplace_back(intVal.asExpr());
+        }
     }
 
     static string getName() { return "FunctionImagesSwapAlongAxis"; }
@@ -354,8 +300,7 @@ struct FunctionImagesSwapAlongAxis
         const int tryLimit = params.parentCheckTryLimit;
         debug_neighbourhood_action("Looking for indices to swap");
         auto& vioContainerAtThisLevel =
-            params.vioContainer.childViolations(val.id).childViolations(
-                FunctionValue::IMAGE_VALBASE_INDEX);
+            params.vioContainer.childViolations(val.id);
 
         bool success;
         UInt index1, index2;
@@ -395,14 +340,14 @@ struct FunctionImagesSwapAlongAxis
         // first, choose an index, biasing towards violating members
         UInt index1 = vioContainer.selectRandomVar(val.rangeSize() - 1);
         // now we need the second index.  For this we need to first randomly
-        // choose the dimension we what to swap in. extract preimage that is
+        // choose the dimension we what to swap in. extract preImage that is
         // this index
-        auto preimage = assumeAsValue(val.indexToPreimage<TupleDomain>(index1));
+        val.indexToDomain<TupleDomain>(index1, *preImage);
         size_t dimToChange =
-            globalRandom<size_t>(0, preimage->members.size() - 1);
-        auto intVal = preimage->template member<IntValue>(dimToChange);
+            globalRandom<size_t>(0, preImage->members.size() - 1);
+        auto intVal = preImage->member<IntValue>(dimToChange);
         auto& intDomain = lib::get<shared_ptr<IntDomain>>(
-            preimageDomain->inners[dimToChange]);
+            preImageDomain->inners[dimToChange]);
         if (getDomainSize(*intDomain) < 2) {
             return lib::nullopt;
         }
@@ -412,7 +357,7 @@ struct FunctionImagesSwapAlongAxis
             newValue = getRandomValueInDomain(*intDomain);
         } while (newValue == intVal->value);
         intVal->value = newValue;
-        auto index2 = val.preimageToIndex(*preimage);
+        auto index2 = val.domainToIndex(*preImage);
         debug_code(assert(index2));
         return make_pair(index1, *index2);
     }
@@ -450,12 +395,12 @@ struct FunctionUnifyImages
         debug_neighbourhood_action("Looking for indices to unitfy");
 
         auto& vioContainerAtThisLevel =
-            params.vioContainer.childViolations(val.id).childViolations(
-                FunctionValue::IMAGE_VALBASE_INDEX);
+            params.vioContainer.childViolations(val.id);
 
         bool success;
         UInt index1, index2;
         ValueType valueBackup;
+        lib::optional<HashType> previousMemberHash;
         do {
             ++params.stats.minorNodeCount;
             ++params.stats.minorNodeCount;
@@ -474,11 +419,14 @@ struct FunctionUnifyImages
             }
             auto& view1 = val.getRange<InnerViewType>()[index1]->view().get();
             auto& view2 = val.getRange<InnerViewType>()[index2]->view().get();
+            previousMemberHash =
+                val.notifyPossibleImageChange<InnerViewType>(index2);
             valueBackup = valueOf(view2);
             success = view2.changeValue([&]() {
                 valueOf(view2) = valueOf(view1);
                 bool allowed = val.tryImageChange<IntValue>(
-                    index2, [&]() { return params.parentCheck(params.vals); });
+                    index2, previousMemberHash,
+                    [&]() { return params.parentCheck(params.vals); });
                 if (allowed) {
                     return true;
                 } else {
@@ -496,10 +444,12 @@ struct FunctionUnifyImages
                                                       << index2);
         if (!params.changeAccepted()) {
             debug_neighbourhood_action("Change rejected");
+            previousMemberHash =
+                val.notifyPossibleImageChange<InnerViewType>(index2);
             auto& view2 = val.getRange<InnerViewType>()[index2]->view().get();
             view2.changeValue([&]() -> bool {
                 valueOf(view2) = valueBackup;
-                return val.tryImageChange<IntValue>(index2,
+                return val.tryImageChange<IntValue>(index2, previousMemberHash,
                                                     [&]() { return true; });
             });
         }
@@ -534,12 +484,12 @@ struct FunctionSplitImages
             calcNumberInsertionAttempts(val.rangeSize(), innerDomainSize);
         debug_neighbourhood_action("Looking for indices to split");
         auto& vioContainerAtThisLevel =
-            params.vioContainer.childViolations(val.id).childViolations(
-                FunctionValue::IMAGE_VALBASE_INDEX);
+            params.vioContainer.childViolations(val.id);
 
         bool success;
         UInt index1, index2;
         ValueType valueBackup;
+        lib::optional<HashType> previousMemberHash;
         NeighbourhoodResourceAllocator allocator(innerDomain);
         do {
             ++params.stats.minorNodeCount;
@@ -559,17 +509,18 @@ struct FunctionSplitImages
             auto& view1 = val.getRange<InnerViewType>()[index1]->view().get();
             static_cast<void>(view1);
             auto value2 = val.member<InnerValueType>(index2);
-
+            previousMemberHash =
+                val.notifyPossibleImageChange<InnerViewType>(index2);
             valueBackup = valueOf(*value2);
             auto resource = allocator.requestLargerResource();
             success = value2->changeValue([&]() {
                 bool assigned =
                     assignRandomValueInDomain(innerDomain, *value2, resource);
-                bool allowed =
-                    assigned && valueOf(*value2) != valueBackup &&
-                    val.tryImageChange<InnerValueType>(index2, [&]() {
-                        return params.parentCheck(params.vals);
-                    });
+                bool allowed = assigned && valueOf(*value2) != valueBackup &&
+                               val.tryImageChange<InnerValueType>(
+                                   index2, previousMemberHash, [&]() {
+                                       return params.parentCheck(params.vals);
+                                   });
                 if (!allowed) {
                     valueOf(*value2) = valueBackup;
                 }
@@ -585,11 +536,13 @@ struct FunctionSplitImages
                                                     << index2);
         if (!params.changeAccepted()) {
             debug_neighbourhood_action("Change rejected");
+            previousMemberHash =
+                val.notifyPossibleImageChange<InnerViewType>(index2);
             auto& view2 = val.getRange<InnerViewType>()[index2]->view().get();
             view2.changeValue([&]() {
                 valueOf(view2) = valueBackup;
                 return val.tryImageChange<InnerValueType>(
-                    index2, [&]() { return true; });
+                    index2, previousMemberHash, [&]() { return true; });
             });
         }
     }
@@ -668,11 +621,15 @@ struct FunctionCrossover
                                  ValRef<InnerValueType> member1,
                                  ValRef<InnerValueType> member2,
                                  Func&& parentCheck) {
+        auto fromValPreviousMemberHash =
+            fromVal.notifyPossibleImageChange<InnerViewType>(indexToCrossOver);
+        auto toValPreviousMemberHash =
+            toVal.notifyPossibleImageChange<InnerViewType>(indexToCrossOver);
         swapValAssignments(*member1, *member2);
-        bool success =
-            fromVal.tryImageChange<InnerValueType>(indexToCrossOver, [&]() {
+        bool success = fromVal.tryImageChange<InnerValueType>(
+            indexToCrossOver, fromValPreviousMemberHash, [&]() {
                 return toVal.tryImageChange<InnerValueType>(
-                    indexToCrossOver, [&]() {
+                    indexToCrossOver, toValPreviousMemberHash, [&]() {
                         if (parentCheck()) {
                             return true;
                         } else {

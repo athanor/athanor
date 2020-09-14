@@ -79,7 +79,9 @@ void OpSetLit<OperandView>::addReplacementToSet(
 template <typename OperandView>
 template <typename InnerViewType>
 void OpSetLit<OperandView>::removeOperandValue(
-    ExprRefVec<InnerViewType>& operands, size_t index, HashType hash) {
+    ExprRefVec<InnerViewType>& operands, size_t index) {
+    debug_code(assert(index < cachedOperandHashes.size()));
+    HashType hash = this->cachedOperandHashes.get(index);
     auto iter = hashIndicesMap.find(hash);
     debug_code(assert(iter != hashIndicesMap.end()));
     auto& operandGroup = iter->second;
@@ -104,7 +106,9 @@ template <typename OperandView>
 template <typename InnerViewType>
 bool OpSetLit<OperandView>::hashNotChanged(ExprRefVec<InnerViewType>& operands,
                                            UInt index) {
-    debug_code(assert(index < operands.size()));
+    if (index >= operands.size()) {
+        return false;
+    }
     HashType operandHash =
         getValueHash(operands[index]->getViewIfDefined().checkedGet(
             NO_SET_UNDEFINED_MEMBERS));
@@ -151,14 +155,14 @@ struct OperatorTrates<OpSetLit<FunctionView>>::OperandTrigger
     void hasBecomeDefined() final { todoImpl(); }
     void memberHasBecomeUndefined(UInt) final { todoImpl(); }
     void memberHasBecomeDefined(UInt) final { todoImpl(); }
-
+    void preimageChanged(UInt, HashType) final {}
+    void preimageChanged(const std::vector<UInt>&,
+                         const std::vector<HashType>&) {}
     void imageChanged(UInt index) final {
-        debug_log("hit\n");
         auto& view = op->operand->view().checkedGet(NO_SET_UNDEFINED_MEMBERS);
         mpark::visit(
             [&](auto& operands) {
-                op->removeOperandValue(operands, index,
-                                       op->cachedOperandHashes.get(index));
+                op->removeOperandValue(operands, index);
                 op->addOperandValue(operands, index);
             },
             getMembersFromOperand(view));
@@ -170,6 +174,31 @@ struct OperatorTrates<OpSetLit<FunctionView>>::OperandTrigger
     }
     void memberReplaced(UInt index, const AnyExprRef&) final {
         imageChanged(index);
+    }
+    void valueRemoved(UInt index, const AnyExprRef&, const AnyExprRef&) {
+        auto& view = op->operand->view().checkedGet(NO_SET_UNDEFINED_MEMBERS);
+        mpark::visit(
+            [&](auto& operands) {
+                op->removeOperandValue(operands,
+                                       op->cachedOperandHashes.size() - 1);
+                op->cachedOperandHashes.erase(op->cachedOperandHashes.size() -
+                                              1);
+                if (index == op->cachedOperandHashes.size()) {
+                    return;
+                }
+                op->removeOperandValue(operands, index);
+                op->addOperandValue(operands, index);
+            },
+            getMembersFromOperand(view));
+    }
+    void valueAdded(const AnyExprRef&, const AnyExprRef&) {
+        auto& view = op->operand->view().checkedGet(NO_SET_UNDEFINED_MEMBERS);
+        mpark::visit(
+            [&](auto& operands) {
+                op->addOperandValue(operands, op->cachedOperandHashes.size(),
+                                    true);
+            },
+            getMembersFromOperand(view));
     }
     void imageSwap(UInt index1, UInt index2) {
         imageChanged(index1);

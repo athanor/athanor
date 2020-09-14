@@ -25,8 +25,10 @@ struct FunctionDomain {
           partial(partial),
           from(makeAnyDomainRef(std::forward<FromDomainType>(from))),
           to(makeAnyDomainRef(std::forward<ToDomainType>(to))) {
+        if (this->partial == PartialAttr::TOTAL) {
+            this->sizeAttr = exactSize(getDomainSize(this->from));
+        }
         checkSupported();
-        this->sizeAttr = exactSize(getDomainSize(this->from));
     }
 
     template <typename DomainType>
@@ -63,10 +65,6 @@ struct FunctionDomain {
         if (jectivity != JectivityAttr::NONE) {
             myCerr
                 << "Sorry, jectivity for functions must currently be None.\n";
-            myAbort();
-        }
-        if (partial != PartialAttr::TOTAL) {
-            myCerr << "Error, functions must currently be total.\n";
             myAbort();
         }
     }
@@ -136,17 +134,20 @@ struct FunctionValue : public FunctionView, public ValBase {
         }
     }
 
-    template <typename Domain,
-              typename Value = typename AssociatedValueType<Domain>::type>
-    ValRef<Value> getExplicitPreimage(UInt index) {
-        return assumeAsValue(this->indexToPreimage<Domain>(index));
-    }
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
-    inline ValRef<InnerValueType> member(UInt index) {
+    inline ValRef<InnerValueType> getImageVal(UInt index) {
         return assumeAsValue(
             getRange<
                 typename AssociatedViewType<InnerValueType>::type>()[index]);
     }
+    // only works for functions using explicit pre images
+    template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
+    inline ValRef<InnerValueType> getPreimageVal(UInt index) {
+        return assumeAsValue(getPreimages()
+                                 .template get<typename AssociatedViewType<
+                                     InnerValueType>::type>()[index]);
+    }
+
     AnyExprVec& getChildrenOperands() final;
 
     template <typename InnerValueType, typename Func,
@@ -225,6 +226,138 @@ struct FunctionValue : public FunctionView, public ValBase {
         }
     }
 
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
+    inline bool tryPreimageChange(UInt index, Func&& func) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        debug_code(assert(index < rangeSize()));
+        HashType previousPreimageHash = getPreimages().preimageHashes[index];
+
+        FunctionView::preimageChanged<InnerViewType>(index);
+        if (func()) {
+            FunctionView::notifyPreimageChanged(index, previousPreimageHash);
+            return true;
+        } else {
+            cachedHashes.applyIfValid([&](auto& cachedHashes) {
+                cachedHashes.hashTotal -=
+                    calcMemberHashFromCache(index, cachedHashes);
+            });
+            getPreimages().change(index, previousPreimageHash);
+            cachedHashes.applyIfValid([&](auto& cachedHashes) {
+                cachedHashes.hashTotal +=
+                    calcMemberHashFromCache(index, cachedHashes);
+            });
+            return false;
+        }
+    }
+
+    template <typename InnerValueType, typename Func,
+              EnableIfValue<InnerValueType> = 0>
+    inline bool tryPreimagesChange(const std::vector<UInt>& indices,
+                                   Func&& func) {
+        typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+        std::vector<HashType> previousPreimageHashes;
+        for (auto index : indices) {
+            previousPreimageHashes.emplace_back(
+                getPreimages().preimageHashes[index]);
+        }
+
+        FunctionView::preimagesChanged<InnerViewType>(indices);
+        if (func()) {
+            FunctionView::notifyPreimagesChanged(indices,
+                                                 previousPreimageHashes);
+            return true;
+        } else {
+            for (size_t i = 0; i < indices.size(); i++) {
+                auto index = indices[i];
+                auto hash = previousPreimageHashes[i];
+                cachedHashes.applyIfValid([&](auto& cachedHashes) {
+                    cachedHashes.hashTotal -=
+                        calcMemberHashFromCache(index, cachedHashes);
+                });
+                getPreimages().change(index, hash);
+                cachedHashes.applyIfValid([&](auto& cachedHashes) {
+                    cachedHashes.hashTotal +=
+                        calcMemberHashFromCache(index, cachedHashes);
+                });
+            }
+            return false;
+        }
+    }
+
+    template <typename PreimageValueType, typename ImageValueType,
+              typename Func, EnableIfValue<PreimageValueType> = 0,
+              EnableIfValue<ImageValueType> = 0>
+    inline bool tryAddValue(const ValRef<PreimageValueType>& preimage,
+                            const ValRef<ImageValueType>& image, Func&& func) {
+        if (FunctionView::addValue(preimage.asExpr(), image.asExpr())) {
+            if (func()) {
+                valBase(*preimage).container = &preimageValBase;
+                valBase(*image).container = &imageValBase;
+                valBase(*preimage).id = rangeSize() - 1;
+                valBase(*image).id = rangeSize() - 1;
+                FunctionView::notifyValueAdded(preimage.asExpr(),
+                                               image.asExpr());
+                return true;
+            } else {
+                typedef typename AssociatedViewType<PreimageValueType>::type
+                    PreimageViewType;
+                typedef typename AssociatedViewType<ImageValueType>::type
+                    ImageViewType;
+                FunctionView::removeValue<PreimageViewType, ImageViewType>(
+                    rangeSize() - 1);
+            }
+        }
+        return false;
+    }
+
+    template <typename PreimageValueType, typename ImageValueType,
+              typename Func, EnableIfValue<PreimageValueType> = 0,
+              EnableIfValue<ImageValueType> = 0>
+    inline lib::optional<
+        std::pair<ValRef<PreimageValueType>, ValRef<ImageValueType>>>
+    tryRemoveValue(UInt index, Func&& func) {
+        typedef typename AssociatedViewType<PreimageValueType>::type
+            PreimageViewType;
+        typedef typename AssociatedViewType<ImageValueType>::type ImageViewType;
+        debug_code(assert(index < rangeSize()));
+        auto preimage = getPreimageVal<PreimageValueType>(index);
+        auto image = getImageVal<ImageValueType>(index);
+        FunctionView::removeValue<PreimageViewType, ImageViewType>(index);
+        if (func()) {
+            valBase(*preimage).container = NULL;
+            valBase(*image).container = NULL;
+            if (index < rangeSize()) {
+                valBase(*getPreimageVal<PreimageValueType>(index)).id = index;
+                valBase(*getImageVal<ImageValueType>(index)).id = index;
+            }
+            FunctionView::notifyValueRemoved(index, preimage.asExpr(),
+                                             image.asExpr());
+            return std::make_pair(preimage, image);
+        } else {
+            FunctionView::addValue(preimage.asExpr(), image.asExpr());
+            swapValues<PreimageViewType, ImageViewType>(index, rangeSize() - 1);
+            debug_code(standardSanityChecksForThisType());
+            return lib::nullopt;
+        }
+    }
+
+    // helper for tryRemoveValue
+   private:
+    template <typename PreimageViewType, typename ImageViewType,
+              EnableIfView<PreimageViewType> = 0,
+              EnableIfView<ImageViewType> = 0>
+    inline void swapValues(UInt index1, UInt index2) {
+        auto& range = getRange<ImageViewType>();
+        std::swap(range[index1], range[index2]);
+        cachedHashes.applyIfValid([&](auto& cachedHashes) {
+            cachedHashes.swapRangeHashes(index1, index2);
+        });
+        auto& preimages = getPreimages();
+        preimages.swap<PreimageViewType>(index1, index2);
+    }
+
+   public:
     template <typename Func>
     bool tryAssignNewValue(FunctionValue& newvalue, Func&& func) {
         // fake putting in the value first untill func()verifies that it is

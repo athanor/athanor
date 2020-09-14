@@ -839,10 +839,6 @@ const NeighbourhoodVec<SequenceDomain>
 
 };
 
-template <>
-const AnyDomainRef getInner<SequenceDomain>(const SequenceDomain& domain) {
-    return domain.inner;
-}
 const NeighbourhoodVec<SequenceDomain>
     NeighbourhoodGenList<SequenceDomain>::mergeNeighbourhoods = {};
 

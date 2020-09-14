@@ -30,6 +30,8 @@ typedef function<AnyDomainRef(json&, ParsedModel&)> ParseDomainFunction;
 
 ParseResult parseOpSetLit(json& setExpr, ParsedModel& parsedModel);
 ParseResult parseOpFunctionRange(json& functionExpr, ParsedModel& parsedModel);
+ParseResult parseOpFunctionDefined(json& functionExpr,
+                                   ParsedModel& parsedModel);
 ParseResult parseOpFunctionPreimage(json& preimageOpExpr,
                                     ParsedModel& parsedModel);
 ParseResult parseOpMatrixLit(json& matrixExpr, ParsedModel& parsedModel);
@@ -399,6 +401,7 @@ optional<ParseResult> tryParseExpr(json& essenceExpr,
              {"MkOpDiv", parseOpDiv},
              {"MkOpPreImage", parseOpFunctionPreimage},
              {"MkOpRange", parseOpFunctionRange},
+             {"MkOpDefined", parseOpFunctionDefined},
              {"MkOpMinus", parseOpMinus},
              {"MkOpPow", parseOpPower},
              {"MkOpIntersect", parseOpIntersect},

@@ -172,7 +172,36 @@ struct OpFunctionImage<FunctionMemberViewType>::FunctionOperandTrigger
     OpFunctionImage<FunctionMemberViewType>* op;
     FunctionOperandTrigger(OpFunctionImage<FunctionMemberViewType>* op)
         : op(op) {}
-
+    void preimageChanged(UInt index, HashType) {
+        if (op->locallyDefined && (Int)index != op->cachedIndex) {
+            return;
+        }
+        if (!op->eventForwardedAsDefinednessChange()) {
+            op->notifyEntireValueChanged();
+            op->reattachFunctionMemberTrigger();
+        }
+    }
+    void preimageChanged(const std::vector<UInt>& indices,
+                         const std::vector<HashType>& oldHashes) {
+        for (size_t i = 0; i < indices.size(); i++) {
+            auto index = indices[i];
+            auto hash = oldHashes[i];
+            preimageChanged(index, hash);
+        }
+    }
+    void valueAdded(const AnyExprRef&, const AnyExprRef&) {
+        if (op->locallyDefined) {
+            return;
+        }
+        op->eventForwardedAsDefinednessChange();
+    }
+    void valueRemoved(UInt, const AnyExprRef&, const AnyExprRef&) {
+        auto cachedIndex = op->cachedIndex;
+        if (!op->eventForwardedAsDefinednessChange() &&
+            cachedIndex != op->cachedIndex) {
+            op->reattachFunctionMemberTrigger();
+        }
+    }
     void imageChanged(UInt) {
         // ignore, already triggering on member
     }

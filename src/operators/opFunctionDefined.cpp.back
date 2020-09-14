@@ -1,0 +1,69 @@
+#include <iostream>
+#include <memory>
+#include "operators/opFunctionDefined.h"
+#include "operators/opPartitionParts.h"
+#include "operators/simpleOperator.hpp"
+#include "types/set.h"
+
+using namespace std;
+template <typename>
+struct OpMaker;
+struct OpPartitionSize;
+template <>
+struct OpMaker<OpPartitionSize> {
+    static ExprRef<SetView> make(ExprRef<PartitionView> o);
+};
+
+void OpFunctionDefined::reevaluateImpl(SetView& operandView) {
+    value = operandView.numberElements();
+}
+void OpFunctionDefined::updateVarViolationsImpl(
+    const ViolationContext& vioContext, ViolationContainer& vioContainer) {
+    operand->updateVarViolations(vioContext, vioContainer);
+}
+
+void OpFunctionDefined::copy(OpFunctionDefined&) const {}
+
+std::ostream& OpFunctionDefined::dumpState(std::ostream& os) const {
+    os << "OpFunctionDefined: value=" << value << "\noperand: ";
+    operand->dumpState(os);
+    return os;
+}
+
+string OpFunctionDefined::getOpName() const { return "OpFunctionDefined"; }
+void OpFunctionDefined::debugSanityCheckImpl() const {
+    operand->debugSanityCheck();
+    this->standardSanityDefinednessChecks();
+    auto view = operand->getViewIfDefined();
+    if (!view) {
+        return;
+    }
+    sanityEqualsCheck((Set)view->numberElements(), value);
+}
+
+std::pair<bool, ExprRef<SetView>> OpFunctionDefined::optimiseImpl(
+    ExprRef<SetView>& self, PathExtension path) {
+    auto boolOpPair = standardOptimise(self, path);
+    auto partitionPartsTest =
+        getAs<OpPartitionParts>(boolOpPair.second->operand);
+    if (partitionPartsTest) {
+        debug_log(
+            "Optimise: replacing size of parts(partition) with "
+            "numberParts(partition)");
+        return make_pair(
+            true, OpMaker<OpPartitionSize>::make(partitionPartsTest->operand));
+    }
+    return boolOpPair;
+}
+
+template <typename Op>
+struct OpMaker;
+
+template <>
+struct OpMaker<OpFunctionDefined> {
+    static ExprRef<SetView> make(ExprRef<SetView> o);
+};
+
+ExprRef<SetView> OpMaker<OpFunctionDefined>::make(ExprRef<SetView> o) {
+    return make_shared<OpFunctionDefined>(move(o));
+}

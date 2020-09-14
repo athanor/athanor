@@ -567,12 +567,13 @@ vector<shared_ptr<Quantifier<SetView>>> makeNestedQuantifiers(
     ExprRef<SetView>& container, shared_ptr<InnerDomainType>& innerDomain,
     vector<string>& quantifierVariables, ParsedModel& parsedModel) {
     typedef typename AssociatedViewType<InnerDomainType>::type InnerViewType;
-
+    auto fakeIter = make_shared<Iterator<InnerViewType>>(numeric_limits<UInt>().max(), nullptr);
+    //a fake iterator so we can deep copy the container, since currently our deep copy was originally designed for unrolling.
     vector<shared_ptr<Quantifier<SetView>>> quantifiers;
     vector<ExprRef<InnerViewType>> iters;
     for (size_t i = 0; i < quantifierVariables.size(); i++) {
         // make the quantifier at level i of nesting and its iterator
-        quantifiers.emplace_back(make_shared<Quantifier<SetView>>(container));
+        quantifiers.emplace_back(make_shared<Quantifier<SetView>>(container->deepCopyForUnroll(container, fakeIter)));
         iters.emplace_back(quantifiers.back()->newIterRef<InnerViewType>());
         // add iter name to scope
         parsedModel.namedExprs.emplace(

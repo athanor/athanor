@@ -47,6 +47,29 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
 
     void imageChanged(UInt) final {}
     void imageChanged(const std::vector<UInt>&) final {}
+    void preimageChanged(UInt, HashType) final {}
+    void preimageChanged(const std::vector<UInt>&,
+                         const std::vector<HashType>&) final {}
+
+    void valueAdded(const AnyExprRef& preimage, const AnyExprRef& image) final {
+        lib::visit(
+            [&](auto& preimage, auto& image) {
+                auto unrolledExpr =
+                    OpMaker<OpTupleLit>::make({preimage, image});
+                unrolledExpr->evaluate();
+                op->template unroll<TupleView>({false, op->numberElements(), unrolledExpr});
+            },
+            preimage, image);
+    }
+    void valueRemoved(UInt indexOfRemovedValue, const AnyExprRef&,
+                      const AnyExprRef&) final {
+        if (indexOfRemovedValue < op->numberUnrolled() - 1) {
+            op->notifyContainerMembersSwapped(indexOfRemovedValue,
+                                              op->numberUnrolled() - 1);
+        }
+        op->roll(op->numberUnrolled() - 1);
+    }
+
     void memberReplaced(UInt index, const AnyExprRef&) {
         debug_code(assert(index < op->unrolledIterVals.size()));
         auto iterRef =

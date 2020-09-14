@@ -1,0 +1,7 @@
+$testing:numberIterations=100000
+
+letting n be 1000
+find f : function (maxSize n) set of int(1..n) --> int(1..n)
+such that forAll {i,j}subsetEq defined(f) . |i intersect j| = 0
+such that n = sum i in defined(f) . |i|
+such that forAll (i,j) in f . j in i

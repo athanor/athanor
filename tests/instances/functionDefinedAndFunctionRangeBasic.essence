@@ -1,0 +1,8 @@
+$testing:numberIterations=200000
+
+letting n be 30
+find f : function int(1..n*2) --> int(1..n*2)
+find s : set (size n) of int(1..n)
+such that defined(f) = s
+find t : set (size n) of int(n+1..n*2)
+such that range(f) = t

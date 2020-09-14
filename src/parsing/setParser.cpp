@@ -111,12 +111,35 @@ ParseResult parseOpFunctionRange(json& functionExpr, ParsedModel& parsedModel) {
     auto operand = expect<FunctionView>(parsedExpr.expr, [&](auto&&) {
         myCerr << errorMessage << functionExpr << endl;
     });
-    auto& domain = lib::get<shared_ptr<FunctionDomain>>(parsedExpr.domain)->to;
+    auto& functionDomain =
+        *lib::get<shared_ptr<FunctionDomain>>(parsedExpr.domain);
     bool constant = operand->isConstant();
     auto op = OpMaker<OpSetLit<FunctionView>>::make(move(operand));
     op->setConstant(constant);
-    return ParseResult(make_shared<SetDomain>(noSize(), domain), op,
-                       parsedExpr.hasEmptyType);
+    return ParseResult(
+        make_shared<SetDomain>(maxSize(functionDomain.sizeAttr.maxSize),
+                               functionDomain.to),
+        op, parsedExpr.hasEmptyType);
+}
+
+ParseResult parseOpFunctionDefined(json& functionExpr,
+                                   ParsedModel& parsedModel) {
+    string errorMessage =
+        "Expected function returning expression within Op "
+        "FunctionDefined: ";
+    auto parsedExpr = parseExpr(functionExpr, parsedModel);
+    auto operand = expect<FunctionView>(parsedExpr.expr, [&](auto&&) {
+        myCerr << errorMessage << functionExpr << endl;
+    });
+    auto& functionDomain =
+        *lib::get<shared_ptr<FunctionDomain>>(parsedExpr.domain);
+
+    bool constant = operand->isConstant();
+    auto op = OpMaker<OpFunctionDefined>::make(move(operand));
+    op->setConstant(constant);
+    return ParseResult(
+        make_shared<SetDomain>(functionDomain.sizeAttr, functionDomain.from),
+        op, parsedExpr.hasEmptyType);
 }
 
 ParseResult parseOpFunctionPreimage(json& preimageOpExpr,

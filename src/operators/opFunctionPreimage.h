@@ -16,7 +16,8 @@ template <typename OperandView>
 struct OpFunctionPreimage
     : public SimpleBinaryOperator<SetView, OperandView, FunctionView,
                                   OpFunctionPreimage<OperandView>> {
-    HashMap<HashType, UInt> hashExcesses;
+    lib::optional<HashType> cachedImageHash;
+    HashMap<UInt, HashType> imageToPreimageHashMap;
     using SimpleBinaryOperator<
         SetView, OperandView, FunctionView,
         OpFunctionPreimage<OperandView>>::SimpleBinaryOperator;

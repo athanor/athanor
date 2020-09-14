@@ -37,13 +37,16 @@ void OpFunctionPreimage<OperandView>::reevaluateImpl(OperandView& image,
             typedef typename AssociatedViewType<PreimageDomain>::type
                 PreimageViewType;
             this->members.template emplace<ExprRefVec<PreimageViewType>>();
-
             this->silentClear();
+            imageToPreimageHashMap.clear();
+            cachedImageHash = getValueHash(image);
             for (size_t i = 0; i < function.rangeSize(); i++) {
                 auto member = function.template getRange<OperandView>()[i];
-                if (getValueHash(image) == getHashForceDefined(member)) {
-                    this->addMember(
-                        function.indexToPreimage<PreimageDomain>(i));
+                auto memberHash = getHashForceDefined(member);
+                if (cachedImageHash.value() == memberHash) {
+                    auto preimage = function.indexToPreimage<PreimageDomain>(i);
+                    imageToPreimageHashMap[i] = getHashForceDefined(preimage);
+                    this->addMember(preimage);
                 }
             }
         },
@@ -101,22 +104,21 @@ struct OperatorTrates<OpFunctionPreimage<OperandView>>::RightTrigger
                         PreimageDomain;
                 typedef typename AssociatedViewType<PreimageDomain>::type
                     PreimageView;
-                auto preimage =
-                    functionView.template indexToPreimage<PreimageDomain>(
-                        index);
-
-                if (getHashForceDefined(op->left) ==
-                    getHashForceDefined(
-                        functionView.template getRange<OperandView>()[index])) {
-                    if (!op->containsMember(preimage)) {
-                        op->addMemberAndNotify(preimage);
-                    }
-                } else {
-                    HashType hash = getHashForceDefined(preimage);
-                    if (op->hashIndexMap.count(hash)) {
-                        op->template removeMemberAndNotify<PreimageView>(
-                            op->hashIndexMap.at(hash));
-                    }
+                auto newImageHash = getHashForceDefined(
+                    functionView.template getRange<OperandView>()[index]);
+                auto preimageHashIter = op->imageToPreimageHashMap.find(index);
+                if (op->cachedImageHash.value() == newImageHash) {
+                    auto preimage =
+                        functionView.template indexToPreimage<PreimageDomain>(
+                            index);
+                    auto preimageHash = getHashForceDefined(preimage);
+                    op->imageToPreimageHashMap[index] = preimageHash;
+                    op->addMemberAndNotify(preimage);
+                } else if (preimageHashIter !=
+                           op->imageToPreimageHashMap.end()) {
+                    op->template removeMemberAndNotify<PreimageView>(
+                        op->hashIndexMap.at(preimageHashIter->second));
+                    op->imageToPreimageHashMap.erase(preimageHashIter);
                 }
             },
             functionView.preimageDomain);
@@ -137,6 +139,69 @@ struct OperatorTrates<OpFunctionPreimage<OperandView>>::RightTrigger
         myCerr << NO_PREIMAGE_UNDEFINED << endl;
         todoImpl();
     }
+
+    void preimageChanged(UInt index, HashType) {
+        auto preimageHashIter = op->imageToPreimageHashMap.find(index);
+        if (preimageHashIter == op->imageToPreimageHashMap.end()) {
+            return;
+        }
+        auto& functionView =
+            op->right->getViewIfDefined().checkedGet(NO_PREIMAGE_UNDEFINED);
+
+        lib::visit(
+            [&](auto& preimageDomain) {
+                typedef
+                    typename BaseType<decltype(preimageDomain)>::element_type
+                        PreimageDomain;
+                typedef typename AssociatedViewType<PreimageDomain>::type
+                    PreimageView;
+                auto indexInSet = op->hashIndexMap[preimageHashIter->second];
+                op->template memberChangedAndNotify<PreimageView>(indexInSet);
+                preimageHashIter->second = op->indexHashMap[indexInSet];
+            },
+            functionView.preimageDomain);
+    }
+    void preimageChanged(const std::vector<UInt>& indices,
+                         const std::vector<HashType>& oldHashes) {
+        for (size_t i = 0; i < indices.size(); i++) {
+            auto index = indices[i];
+            auto hash = oldHashes[i];
+            preimageChanged(index, hash);
+        }
+    }
+    void valueAdded(const AnyExprRef&, const AnyExprRef&) {
+        auto& functionView =
+            op->right->getViewIfDefined().checkedGet(NO_PREIMAGE_UNDEFINED);
+        imageChanged(functionView.rangeSize() - 1);
+    }
+
+    void valueRemoved(UInt index, const AnyExprRef&, const AnyExprRef&) {
+        auto& functionView =
+            op->right->getViewIfDefined().checkedGet(NO_PREIMAGE_UNDEFINED);
+        lib::visit(
+            [&](auto& preimageDomain) {
+                typedef
+                    typename BaseType<decltype(preimageDomain)>::element_type
+                        PreimageDomain;
+                typedef typename AssociatedViewType<PreimageDomain>::type
+                    PreimageView;
+                auto iter = op->imageToPreimageHashMap.find(index);
+                if (iter != op->imageToPreimageHashMap.end()) {
+                    op->template removeMemberAndNotify<PreimageView>(
+                        op->hashIndexMap.at(iter->second));
+                    op->imageToPreimageHashMap.erase(iter);
+                }
+                // keep indices in sync
+                iter =
+                    op->imageToPreimageHashMap.find(functionView.rangeSize());
+                if (iter != op->imageToPreimageHashMap.end()) {
+                    op->imageToPreimageHashMap[index] = iter->second;
+                    op->imageToPreimageHashMap.erase(iter);
+                }
+            },
+            functionView.preimageDomain);
+    }
+
     void memberHasBecomeDefined(UInt) final {
         myCerr << NO_PREIMAGE_UNDEFINED << endl;
         todoImpl();
@@ -199,19 +264,27 @@ void OpFunctionPreimage<OperandView>::debugSanityCheckImpl() const {
         [&](auto& preimageDomain) {
             typedef typename BaseType<decltype(preimageDomain)>::element_type
                 PreimageDomain;
+            sanityEqualsCheck(cachedImageHash.value(), getValueHash(image));
             HashSet<HashType> hashes;
             for (size_t i = 0; i < functionView.rangeSize(); i++) {
                 auto member = functionView.template getRange<OperandView>()[i];
-                if (getValueHash(image) == getHashForceDefined(member)) {
+                if (cachedImageHash.value() == getHashForceDefined(member)) {
                     auto preimageHash = getHashForceDefined(
                         functionView.template indexToPreimage<PreimageDomain>(
                             i));
+                    sanityCheck(
+                        imageToPreimageHashMap.count(i),
+                        toString("index ", i, " with hash ", preimageHash,
+                                 " missing from imageToPreimageHashMap"));
+                    sanityEqualsCheck(preimageHash,
+                                      imageToPreimageHashMap.at(i));
                     hashes.insert(preimageHash);
                     sanityCheck(this->hashIndexMap.count(preimageHash),
                                 toString("hash ", preimageHash, " missing."));
                 }
             }
             sanityEqualsCheck(hashes.size(), this->hashIndexMap.size());
+            sanityEqualsCheck(hashes.size(), imageToPreimageHashMap.size());
         },
         functionView.preimageDomain);
 }

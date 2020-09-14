@@ -53,8 +53,8 @@ struct OpSetLit
     template <typename InnerViewType>
     bool hashNotChanged(ExprRefVec<InnerViewType>& operands, UInt index);
     template <typename InnerViewType>
-    void removeOperandValue(ExprRefVec<InnerViewType>& operands, size_t index,
-                            HashType hash);
+    void removeOperandValue(ExprRefVec<InnerViewType>& operands,
+                            size_t index);
     template <typename InnerViewType>
     void addOperandValue(ExprRefVec<InnerViewType>& operands, size_t index,
                          bool insert = false);

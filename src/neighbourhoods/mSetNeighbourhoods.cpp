@@ -325,11 +325,6 @@ struct MSetAssignRandom
     }
 };
 
-template <>
-const AnyDomainRef getInner<MSetDomain>(const MSetDomain& domain) {
-    return domain.inner;
-}
-
 const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::value = {
     {1, mSetLiftSingleGen},
     {1, mSetLiftMultipleGen},

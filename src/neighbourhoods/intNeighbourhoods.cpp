@@ -90,7 +90,7 @@ struct IntAssignRandom {
 
     void operator()(NeighbourhoodParams& params) {
         auto& val = *(params.getVals<IntValue>().front());
-        int numberTries = 0;
+        int numberTries = 00;
         const int tryLimit = params.parentCheckTryLimit;
         debug_neighbourhood_action("Assigning random value: original value is "
                                    << asView(val));

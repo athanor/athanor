@@ -495,11 +495,6 @@ void partitionAssignRandomGen(const PartitionDomain& domain,
         });
 }
 
-template <>
-const AnyDomainRef getInner<PartitionDomain>(const PartitionDomain& domain) {
-    return domain.inner;
-}
-
 const NeighbourhoodVec<PartitionDomain>
     NeighbourhoodGenList<PartitionDomain>::value = {
         {1, generateForAllTypes<PartitionDomain, PartitionSwapParts>},

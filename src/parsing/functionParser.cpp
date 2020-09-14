@@ -84,29 +84,21 @@ shared_ptr<FunctionDomain> parseDomainFunction(json& functionDomainExpr,
                                                ParsedModel& parsedModel) {
     SizeAttr sizeAttr = parseSizeAttr(functionDomainExpr[1][0], parsedModel);
 
-    if (sizeAttr.sizeType != SizeAttr::SizeAttrType::NO_SIZE) {
-        myCerr << "Do not support/understand function with "
-                  "size attribute.\nn";
-        myAbort();
-    }
     PartialAttr partialAttr = parsePartialAttr(functionDomainExpr[1][1]);
-    if (partialAttr != PartialAttr::TOTAL) {
-        myCerr << "Error: currently only support total "
-                  "functions.\n";
-        myAbort();
-    }
     if (functionDomainExpr[1][2] != "JectivityAttr_None") {
         myCerr << "Error, not supporting jectivity attributes "
                   "on functions at "
                   "the moment.\n";
-        myAbort
-
-            ();
+        myAbort();
     }
-    return make_shared<FunctionDomain>(
+    auto domain = make_shared<FunctionDomain>(
         JectivityAttr::NONE, partialAttr,
         parseDomain(functionDomainExpr[2], parsedModel),
         parseDomain(functionDomainExpr[3], parsedModel));
+    if (sizeAttr.sizeType != SizeAttr::SizeAttrType::NO_SIZE) {
+        domain->sizeAttr = sizeAttr;
+    }
+    return domain;
 }
 
 ParseResult parseOpFunctionImage(const FunctionDomain& domain,

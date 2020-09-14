@@ -123,17 +123,16 @@ bool assignRandomValueInDomain<FunctionDomain>(
 }
 
 template <typename InnerDomainPtrType>
-void functionLiftSingleGenImpl(const FunctionDomain& domain,
-                               const InnerDomainPtrType&,
-                               int numberValsRequired,
-                               std::vector<Neighbourhood>& neighbourhoods) {
+void functionLiftImageSingleGenImpl(
+    const FunctionDomain& domain, const InnerDomainPtrType&,
+    int numberValsRequired, std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(1, domain.to, innerDomainNeighbourhoods);
     typedef typename AssociatedValueType<
         typename InnerDomainPtrType::element_type>::type InnerValueType;
     for (auto& innerNh : innerDomainNeighbourhoods) {
         neighbourhoods.emplace_back(
-            "functionLiftSingle_" + innerNh.name, numberValsRequired,
+            "functionLiftImageSingle_" + innerNh.name, numberValsRequired,
             [innerNhApply{std::move(innerNh.apply)}](
                 NeighbourhoodParams& params) {
                 auto& val = *(params.getVals<FunctionValue>().front());
@@ -161,7 +160,7 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
                 auto& changingMembersImpl =
                     changingMembers.emplace<ValRefVec<InnerValueType>>();
                 changingMembersImpl.emplace_back(
-                    val.member<InnerValueType>(indexToChange));
+                    val.getImageVal<InnerValueType>(indexToChange));
 
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck, params.parentCheckTryLimit,
@@ -176,21 +175,193 @@ void functionLiftSingleGenImpl(const FunctionDomain& domain,
     }
 }
 
-void functionLiftSingleGen(const FunctionDomain& domain, int numberValsRequired,
-                           std::vector<Neighbourhood>& neighbourhoods) {
+void functionLiftImageSingleGen(const FunctionDomain& domain,
+                                int numberValsRequired,
+                                std::vector<Neighbourhood>& neighbourhoods) {
     lib::visit(
         [&](const auto& innerDomainPtr) {
-            functionLiftSingleGenImpl(domain, innerDomainPtr,
-                                      numberValsRequired, neighbourhoods);
+            functionLiftImageSingleGenImpl(domain, innerDomainPtr,
+                                           numberValsRequired, neighbourhoods);
         },
         domain.to);
 }
 
 template <typename InnerDomainPtrType>
-void functionLiftMultipleGenImpl(const FunctionDomain& domain,
-                                 const InnerDomainPtrType&,
-                                 int numberValsRequired,
-                                 std::vector<Neighbourhood>& neighbourhoods) {
+void functionLiftPreimageSingleGenImpl(
+    const FunctionDomain& domain, const InnerDomainPtrType&,
+    int numberValsRequired, std::vector<Neighbourhood>& neighbourhoods) {
+    std::vector<Neighbourhood> innerDomainNeighbourhoods;
+    generateNeighbourhoods(1, domain.from, innerDomainNeighbourhoods);
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    for (auto& innerNh : innerDomainNeighbourhoods) {
+        neighbourhoods.emplace_back(
+            "functionLiftPreimageSingle_" + innerNh.name, numberValsRequired,
+            [innerNhApply{std::move(innerNh.apply)}](
+                NeighbourhoodParams& params) {
+                auto& val = *(params.getVals<FunctionValue>().front());
+                if (val.rangeSize() == 0) {
+                    ++params.stats.minorNodeCount;
+                    return;
+                }
+                auto& vioContainerAtThisLevel =
+                    params.vioContainer.childViolations(val.id).childViolations(
+                        FunctionValue::PREIMAGE_VALBASE_INDEX);
+                UInt indexToChange = vioContainerAtThisLevel.selectRandomVar(
+                    val.rangeSize() - 1);
+
+                ParentCheckCallBack parentCheck = [&](const AnyValVec&
+                                                          newValue) {
+                    HashType newHash = getValueHash(
+                        lib::get<ValRefVec<InnerValueType>>(newValue).front());
+                    if (val.getPreimages().preimageHashIndexMap.count(
+                            newHash)) {
+                        return false;
+                    }
+                    return val.tryPreimageChange<InnerValueType>(
+                        indexToChange,
+                        [&]() { return params.parentCheck(params.vals); });
+                };
+                bool requiresRevert = false;
+                AcceptanceCallBack changeAccepted = [&]() {
+                    requiresRevert = !params.changeAccepted();
+                    return !requiresRevert;
+                };
+                AnyValVec changingMembers;
+                auto& changingMembersImpl =
+                    changingMembers.emplace<ValRefVec<InnerValueType>>();
+                changingMembersImpl.emplace_back(
+                    val.getPreimageVal<InnerValueType>(indexToChange));
+
+                NeighbourhoodParams innerNhParams(
+                    changeAccepted, parentCheck, params.parentCheckTryLimit,
+                    changingMembers, params.stats, vioContainerAtThisLevel);
+                innerNhApply(innerNhParams);
+                if (requiresRevert) {
+                    val.tryPreimageChange<InnerValueType>(
+                        indexToChange,
+
+                        [&]() { return true; });
+                }
+            });
+    }
+}
+
+void functionLiftPreimageSingleGen(const FunctionDomain& domain,
+                                   int numberValsRequired,
+                                   std::vector<Neighbourhood>& neighbourhoods) {
+    if (domain.partial == PartialAttr::TOTAL) {
+        return;
+    }
+    lib::visit(
+        [&](const auto& innerDomainPtr) {
+            functionLiftPreimageSingleGenImpl(
+                domain, innerDomainPtr, numberValsRequired, neighbourhoods);
+        },
+        domain.from);
+}
+
+template <typename InnerValueType>
+bool functionPreimageDoesNotContain(
+    FunctionValue& val, const ValRefVec<InnerValueType>& newMembers) {
+    size_t lastInsertedIndex = 0;
+    auto& preimages = val.getPreimages();
+    do {
+        HashType hash = getValueHash(newMembers[lastInsertedIndex]);
+        bool inserted = preimages.preimageHashIndexMap.emplace(hash, 0).second;
+        if (!inserted) {
+            break;
+        }
+    } while (++lastInsertedIndex < newMembers.size());
+    for (size_t i = 0; i < lastInsertedIndex; i++) {
+        preimages.preimageHashIndexMap.erase(getValueHash(newMembers[i]));
+    }
+    return lastInsertedIndex == newMembers.size();
+}
+
+template <typename InnerDomainPtrType>
+void functionLiftPreimageMultipleGenImpl(
+    const FunctionDomain& domain, const InnerDomainPtrType&,
+    int numberValsRequired, std::vector<Neighbourhood>& neighbourhoods) {
+    std::vector<Neighbourhood> innerDomainNeighbourhoods;
+    generateNeighbourhoods(0, domain.from, innerDomainNeighbourhoods);
+    typedef typename AssociatedValueType<
+        typename InnerDomainPtrType::element_type>::type InnerValueType;
+    for (auto& innerNh : innerDomainNeighbourhoods) {
+        if (innerNh.numberValsRequired < 2) {
+            continue;
+        }
+
+        neighbourhoods.emplace_back(
+            "functionLiftPreimageMultiple_" + innerNh.name, numberValsRequired,
+            [innerNhApply{std::move(innerNh.apply)},
+             innerNhNumberValsRequired{innerNh.numberValsRequired}](
+                NeighbourhoodParams& params) {
+                auto& val = *(params.getVals<FunctionValue>().front());
+                if (val.rangeSize() < (size_t)innerNhNumberValsRequired) {
+                    ++params.stats.minorNodeCount;
+                    return;
+                }
+                auto& vioContainerAtThisLevel =
+                    params.vioContainer.childViolations(val.id).childViolations(
+                        FunctionValue::PREIMAGE_VALBASE_INDEX);
+                std::vector<UInt> indicesToChange =
+                    vioContainerAtThisLevel.selectRandomVars(
+                        val.rangeSize() - 1, innerNhNumberValsRequired);
+                debug_log(indicesToChange);
+                ParentCheckCallBack parentCheck =
+                    [&](const AnyValVec& newMembers) {
+                        auto& newMembersImpl =
+                            lib::get<ValRefVec<InnerValueType>>(newMembers);
+                        return functionPreimageDoesNotContain(val,
+                                                              newMembersImpl) &&
+                               val.tryPreimagesChange<InnerValueType>(
+                                   indicesToChange, [&]() {
+                                       return params.parentCheck(params.vals);
+                                   });
+                    };
+                bool requiresRevert = false;
+                AcceptanceCallBack changeAccepted = [&]() {
+                    requiresRevert = !params.changeAccepted();
+                    return !requiresRevert;
+                };
+                AnyValVec changingMembers;
+                auto& changingMembersImpl =
+                    changingMembers.emplace<ValRefVec<InnerValueType>>();
+                for (UInt indexToChange : indicesToChange) {
+                    changingMembersImpl.emplace_back(
+                        val.getPreimageVal<InnerValueType>(indexToChange));
+                }
+                NeighbourhoodParams innerNhParams(
+                    changeAccepted, parentCheck, params.parentCheckTryLimit,
+                    changingMembers, params.stats, vioContainerAtThisLevel);
+                innerNhApply(innerNhParams);
+                if (requiresRevert) {
+                    val.tryPreimagesChange<InnerValueType>(
+                        indicesToChange, [&]() { return true; });
+                }
+            });
+    }
+}
+
+void functionLiftPreimageMultipleGen(
+    const FunctionDomain& domain, int numberValsRequired,
+    std::vector<Neighbourhood>& neighbourhoods) {
+    if (domain.partial == PartialAttr::TOTAL) {
+        return;
+    }
+    lib::visit(
+        [&](const auto& innerDomainPtr) {
+            functionLiftPreimageMultipleGenImpl(
+                domain, innerDomainPtr, numberValsRequired, neighbourhoods);
+        },
+        domain.from);
+}
+
+template <typename InnerDomainPtrType>
+void functionLiftImageMultipleGenImpl(
+    const FunctionDomain& domain, const InnerDomainPtrType&,
+    int numberValsRequired, std::vector<Neighbourhood>& neighbourhoods) {
     std::vector<Neighbourhood> innerDomainNeighbourhoods;
     generateNeighbourhoods(0, domain.to, innerDomainNeighbourhoods);
     typedef typename AssociatedValueType<
@@ -201,7 +372,7 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
         }
 
         neighbourhoods.emplace_back(
-            "functionLiftMultiple_" + innerNh.name, numberValsRequired,
+            "functionLiftImageMultiple_" + innerNh.name, numberValsRequired,
             [innerNhApply{std::move(innerNh.apply)},
              innerNhNumberValsRequired{innerNh.numberValsRequired}](
                 NeighbourhoodParams& params) {
@@ -232,7 +403,7 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
                     changingMembers.emplace<ValRefVec<InnerValueType>>();
                 for (UInt indexToChange : indicesToChange) {
                     changingMembersImpl.emplace_back(
-                        val.member<InnerValueType>(indexToChange));
+                        val.getImageVal<InnerValueType>(indexToChange));
                 }
                 NeighbourhoodParams innerNhParams(
                     changeAccepted, parentCheck, params.parentCheckTryLimit,
@@ -246,16 +417,159 @@ void functionLiftMultipleGenImpl(const FunctionDomain& domain,
     }
 }
 
-void functionLiftMultipleGen(const FunctionDomain& domain,
-                             int numberValsRequired,
-                             std::vector<Neighbourhood>& neighbourhoods) {
+void functionLiftImageMultipleGen(const FunctionDomain& domain,
+                                  int numberValsRequired,
+                                  std::vector<Neighbourhood>& neighbourhoods) {
     lib::visit(
         [&](const auto& innerDomainPtr) {
-            functionLiftMultipleGenImpl(domain, innerDomainPtr,
-                                        numberValsRequired, neighbourhoods);
+            functionLiftImageMultipleGenImpl(
+                domain, innerDomainPtr, numberValsRequired, neighbourhoods);
         },
         domain.to);
 }
+
+template <typename PreimageDomain>
+struct FunctionAdd
+    : public NeighbourhoodFunc<FunctionDomain, 1, FunctionAdd<PreimageDomain>> {
+    typedef
+        typename AssociatedValueType<PreimageDomain>::type PreimageValueType;
+    typedef
+        typename AssociatedViewType<PreimageValueType>::type PreimageViewType;
+    const FunctionDomain& domain;
+    const PreimageDomain& preimageDomain;
+    const UInt preimageDomainSize;
+    FunctionAdd(const FunctionDomain& domain)
+        : domain(domain),
+          preimageDomain(*lib::get<shared_ptr<PreimageDomain>>(domain.from)),
+          preimageDomainSize(getDomainSize(preimageDomain)) {}
+    static string getName() { return "FunctionAdd"; }
+    static bool matches(const FunctionDomain& domain) {
+        return domain.sizeAttr.sizeType != SizeAttr::SizeAttrType::EXACT_SIZE &&
+               domain.partial != PartialAttr::TOTAL;
+    }
+    void apply(NeighbourhoodParams& params, FunctionValue& val) {
+        if (val.rangeSize() == domain.sizeAttr.maxSize) {
+            ++params.stats.minorNodeCount;
+            return;
+        }
+        lib::visit(
+            [&](auto& imageDomainPtr) {
+                auto& imageDomain = *imageDomainPtr;
+                typedef BaseType<decltype(imageDomain)> ImageDomain;
+                typedef typename AssociatedValueType<ImageDomain>::type
+                    ImageValueType;
+
+                int numberTries = 0;
+                const int tryLimit = params.parentCheckTryLimit *
+                                     calcNumberInsertionAttempts(
+                                         val.rangeSize(), preimageDomainSize);
+                debug_neighbourhood_action("Looking for value to add");
+                bool success = false;
+                TupleDomain combinedDomain({domain.from, domain.to});
+                NeighbourhoodResourceAllocator resourceAllocator(
+                    combinedDomain);
+                auto newMember = constructValueFromDomain(combinedDomain);
+
+                do {
+                    auto resource = resourceAllocator.requestLargerResource();
+                    success = assignRandomValueInDomain(combinedDomain,
+                                                        *newMember, resource);
+                    params.stats.minorNodeCount +=
+                        resource.getResourceConsumed();
+                    success = success &&
+                              !val.getPreimages().preimageHashIndexMap.count(
+                                  getValueHash(newMember->members[0]));
+                    if (!success) {
+                        continue;
+                    }
+                    success = val.tryAddValue(
+                        newMember->member<PreimageValueType>(0),
+                        newMember->member<ImageValueType>(1),
+                        [&]() { return params.parentCheck(params.vals); });
+                } while (!success && ++numberTries < tryLimit);
+                if (!success) {
+                    debug_neighbourhood_action(
+                        "Couldn't find value, number tries=" << tryLimit);
+                    return;
+                }
+                debug_neighbourhood_action("Added value: " << newMember);
+                if (!params.changeAccepted()) {
+                    debug_neighbourhood_action("Change rejected");
+                    val.tryRemoveValue<PreimageValueType, ImageValueType>(
+                        val.rangeSize() - 1, []() { return true; });
+                }
+            },
+            domain.to);
+    }
+};
+
+template <typename PreimageDomain>
+struct FunctionRemove
+    : public NeighbourhoodFunc<FunctionDomain, 1,
+                               FunctionRemove<PreimageDomain>> {
+    typedef
+        typename AssociatedValueType<PreimageDomain>::type PreimageValueType;
+    typedef
+        typename AssociatedViewType<PreimageValueType>::type PreimageViewType;
+
+    const FunctionDomain& domain;
+    FunctionRemove(const FunctionDomain& domain) : domain(domain) {}
+    static string getName() { return "FunctionRemove"; }
+    static bool matches(const FunctionDomain& domain) {
+        return domain.sizeAttr.sizeType != SizeAttr::SizeAttrType::EXACT_SIZE &&
+               domain.partial != PartialAttr::TOTAL;
+    }
+    void apply(NeighbourhoodParams& params, FunctionValue& val) {
+        if (val.rangeSize() == domain.sizeAttr.minSize) {
+            ++params.stats.minorNodeCount;
+            return;
+        }
+        lib::visit(
+            [&](auto& imageDomainPtr) {
+                auto& imageDomain = *imageDomainPtr;
+                typedef BaseType<decltype(imageDomain)> ImageDomain;
+                typedef typename AssociatedValueType<ImageDomain>::type
+                    ImageValueType;
+
+                size_t indexToRemove;
+                int numberTries = 0;
+                lib::optional<
+                    pair<ValRef<PreimageValueType>, ValRef<ImageValueType>>>
+                    removedMember;
+                bool success = false;
+                debug_neighbourhood_action("Looking for value to remove");
+                do {
+                    ++params.stats.minorNodeCount;
+                    indexToRemove =
+                        globalRandom<size_t>(0, val.rangeSize() - 1);
+                    debug_log("trying to remove index " << indexToRemove
+                                                        << " from Function "
+                                                        << val.view());
+                    removedMember =
+                        val.tryRemoveValue<PreimageValueType, ImageValueType>(
+                            indexToRemove,
+                            [&]() { return params.parentCheck(params.vals); });
+                    success = removedMember.has_value();
+                    if (success) {
+                        debug_neighbourhood_action("Removed "
+                                                   << *removedMember);
+                    }
+                } while (!success &&
+                         ++numberTries < params.parentCheckTryLimit);
+                if (!success) {
+                    debug_neighbourhood_action(
+                        "Couldn't find value, number tries=" << numberTries);
+                    return;
+                }
+                if (!params.changeAccepted()) {
+                    debug_neighbourhood_action("Change rejected");
+                    val.tryAddValue(removedMember->first, removedMember->second,
+                                    []() { return true; });
+                }
+            },
+            domain.to);
+    }
+};
 
 template <typename InnerDomain>
 struct FunctionImagesSwap
@@ -466,8 +780,8 @@ struct FunctionUnifyImages
             index2 = globalRandom<UInt>(0, val.rangeSize() - 1);
             index2 = (index1 + index2) % val.rangeSize();
 
-            if (valueOf(*val.member<InnerValueType>(index1)) ==
-                valueOf(*val.member<InnerValueType>(index2))) {
+            if (valueOf(*val.getImageVal<InnerValueType>(index1)) ==
+                valueOf(*val.getImageVal<InnerValueType>(index2))) {
                 continue;
             }
             // randomly swap indices
@@ -552,8 +866,8 @@ struct FunctionSplitImages
             index2 = globalRandom<UInt>(0, val.rangeSize() - 1);
             index2 = (index1 + index2) % val.rangeSize();
 
-            if (valueOf(*val.member<InnerValueType>(index1)) !=
-                valueOf(*val.member<InnerValueType>(index2))) {
+            if (valueOf(*val.getImageVal<InnerValueType>(index1)) !=
+                valueOf(*val.getImageVal<InnerValueType>(index2))) {
                 continue;
             }
             // randomly swap indices
@@ -562,7 +876,7 @@ struct FunctionSplitImages
             }
             auto& view1 = val.getRange<InnerViewType>()[index1]->view().get();
             static_cast<void>(view1);
-            auto value2 = val.member<InnerValueType>(index2);
+            auto value2 = val.getImageVal<InnerValueType>(index2);
 
             valueBackup = valueOf(*value2);
             auto resource = allocator.requestLargerResource();
@@ -707,8 +1021,8 @@ struct FunctionCrossover
             success = false;
             ++params.stats.minorNodeCount;
             indexToCrossOver = globalRandom<UInt>(0, maxCrossOverIndex);
-            member1 = fromVal.member<InnerValueType>(indexToCrossOver);
-            member2 = toVal.member<InnerValueType>(indexToCrossOver);
+            member1 = fromVal.getImageVal<InnerValueType>(indexToCrossOver);
+            member2 = toVal.getImageVal<InnerValueType>(indexToCrossOver);
             success = performCrossOver(
                 fromVal, toVal, indexToCrossOver, member1, member2,
                 [&]() { return params.parentCheck(params.vals); });
@@ -733,22 +1047,40 @@ struct FunctionCrossover
     }
 };
 
-template <>
-const AnyDomainRef getInner<FunctionDomain>(const FunctionDomain& domain) {
-    return domain.to;
-}
+struct ImageDomainGetter {
+    const AnyDomainRef operator()(const FunctionDomain& domain) {
+        return domain.to;
+    }
+};
+
+struct PreimageDomainGetter {
+    const AnyDomainRef operator()(const FunctionDomain& domain) {
+        return domain.from;
+    }
+};
 
 const NeighbourhoodVec<FunctionDomain>
     NeighbourhoodGenList<FunctionDomain>::value = {
-        {1, functionLiftSingleGen},                                    //
-        {1, functionLiftMultipleGen},                                  //
-        {1, generateForAllTypes<FunctionDomain, FunctionImagesSwap>},  //
-        {1,
-         generateForAllTypes<FunctionDomain, FunctionImagesSwapAlongAxis>},  //
-        {2, generateForAllTypes<FunctionDomain, FunctionCrossover>},         //
-        {1, generate<FunctionDomain, FunctionUnifyImages<IntDomain>>},       //
-
-        {1, generate<FunctionDomain, FunctionUnifyImages<BoolDomain>>},  //
-        {1, generate<FunctionDomain, FunctionSplitImages<IntDomain>>},   //
-        {1, generate<FunctionDomain, FunctionSplitImages<BoolDomain>>},  //
+        {1, functionLiftImageSingleGen},       //
+        {1, functionLiftImageMultipleGen},     //
+        {1, functionLiftPreimageSingleGen},    //
+        {1, functionLiftPreimageMultipleGen},  //
+        {1, generateForAllTypes<FunctionDomain, FunctionImagesSwap,
+                                ImageDomainGetter>},  //
+        {1, generateForAllTypes<FunctionDomain, FunctionAdd,
+                                PreimageDomainGetter>},  //
+        {1, generateForAllTypes<FunctionDomain, FunctionRemove,
+                                PreimageDomainGetter>},  //
+        {1, generateForAllTypes<FunctionDomain, FunctionImagesSwapAlongAxis,
+                                ImageDomainGetter>},  //
+        {2, generateForAllTypes<FunctionDomain, FunctionCrossover,
+                                ImageDomainGetter>},  //
+        {1, generate<FunctionDomain, FunctionUnifyImages<IntDomain>,
+                     ImageDomainGetter>},  //
+        {1, generate<FunctionDomain, FunctionUnifyImages<BoolDomain>,
+                     ImageDomainGetter>},  //
+        {1, generate<FunctionDomain, FunctionSplitImages<IntDomain>,
+                     ImageDomainGetter>},  //
+        {1, generate<FunctionDomain, FunctionSplitImages<BoolDomain>,
+                     ImageDomainGetter>},  //
 };

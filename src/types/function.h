@@ -79,6 +79,23 @@ struct ExplicitPreimageContainer {
         preimageHashIndexMap.erase(hash);
         return expr;
     }
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    void swap(UInt index1, UInt index2) {
+        auto& preimages = this->get<InnerViewType>();
+        debug_code(assert(index1 < preimages.size()));
+        debug_code(assert(index2 < preimages.size()));
+        std::swap(preimages[index1], preimages[index2]);
+        std::swap(preimageHashes[index1], preimageHashes[index2]);
+        std::swap(preimageHashIndexMap.at(preimageHashes[index1]),
+                  preimageHashIndexMap.at(preimageHashes[index2]));
+    }
+
+    void change(UInt index, HashType newHash) {
+        debug_code(assert(index < preimageHashes.size()));
+        preimageHashIndexMap.erase(preimageHashes[index]);
+        preimageHashes[index] = newHash;
+        preimageHashIndexMap[newHash] = index;
+    }
 };
 struct Uninit {};
 typedef lib::variant<DimensionVec, ExplicitPreimageContainer, Uninit> Preimages;
@@ -104,6 +121,13 @@ struct CachedHashes {
     inline void unassignRangeHash(UInt index) {
         ignoreUnused(index);
         debug_code(assert(index < rangeHashes.size()));
+    }
+    void addNewHash(HashType hash) { rangeHashes.emplace_back(hash); }
+    HashType removeHash(UInt index) {
+        HashType removedHash = rangeHashes[index];
+        rangeHashes[index] = rangeHashes.back();
+        rangeHashes.pop_back();
+        return removedHash;
     }
 };
 
@@ -270,6 +294,22 @@ struct FunctionView : public ExprInterface<FunctionView>,
         });
     }
 
+    template <typename InnerViewType>
+    inline void preimageChanged(UInt index) {
+        auto& preimages = getPreimages();
+        debug_code(assert(index < rangeSize()));
+        cachedHashes.applyIfValid([&](auto& cachedHashes) {
+            cachedHashes.hashTotal -=
+                calcMemberHashFromCache(index, cachedHashes);
+        });
+        auto newHash = getValueHash(preimages.get<InnerViewType>()[index]);
+        preimages.change(index, newHash);
+        cachedHashes.applyIfValid([&](auto& cachedHashes) {
+            cachedHashes.hashTotal +=
+                calcMemberHashFromCache(index, cachedHashes);
+        });
+    }
+
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
     inline void imagesChanged(const std::vector<UInt>& indices) {
         cachedHashes.applyIfValid([&](auto& cachedHashes) {
@@ -282,6 +322,59 @@ struct FunctionView : public ExprInterface<FunctionView>,
                     calcMemberHashFromCache(index, cachedHashes);
             }
         });
+    }
+
+    template <typename InnerViewType, EnableIfView<InnerViewType> = 0>
+    inline void preimagesChanged(const std::vector<UInt>& indices) {
+        auto& preimages = getPreimages();
+        for (auto index : indices) {
+            debug_code(assert(index < rangeSize()));
+            cachedHashes.applyIfValid([&](auto& cachedHashes) {
+                cachedHashes.hashTotal -=
+                    calcMemberHashFromCache(index, cachedHashes);
+            });
+            auto newHash = getValueHash(preimages.get<InnerViewType>()[index]);
+            preimages.change(index, newHash);
+            cachedHashes.applyIfValid([&](auto& cachedHashes) {
+                cachedHashes.hashTotal +=
+                    calcMemberHashFromCache(index, cachedHashes);
+            });
+        }
+    }
+
+    template <typename PreimageViewType, typename ImageViewType,
+              EnableIfView<PreimageViewType> = 0,
+              EnableIfView<ImageViewType> = 0>
+    inline bool addValue(const ExprRef<PreimageViewType>& preimage,
+                         const ExprRef<ImageViewType>& image) {
+        auto& preimages = getPreimages();
+        if (!preimages.add(preimage)) {
+            return false;
+        }
+        getRange<ImageViewType>().emplace_back(image);
+        cachedHashes.applyIfValid([&](auto& cachedHashes) {
+            auto hash = getValueHash(image);
+            cachedHashes.addNewHash(hash);
+            cachedHashes.hashTotal +=
+                calcMemberHashFromCache(rangeSize() - 1, cachedHashes);
+        });
+        return true;
+    }
+    template <typename PreimageViewType, typename ImageViewType,
+              EnableIfView<PreimageViewType> = 0,
+              EnableIfView<ImageViewType> = 0>
+    inline void removeValue(UInt index) {
+        auto& preimages = getPreimages();
+        debug_code(assert(index < rangeSize()));
+        cachedHashes.applyIfValid([&](auto& cachedHashes) {
+            cachedHashes.hashTotal -=
+                calcMemberHashFromCache(index, cachedHashes);
+            cachedHashes.removeHash(index);
+        });
+        preimages.remove<PreimageViewType>(index);
+        auto& range = getRange<ImageViewType>();
+        range[index] = std::move(range.back());
+        range.pop_back();
     }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

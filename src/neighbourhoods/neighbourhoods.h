@@ -151,8 +151,12 @@ inline bool assignRandomValueInDomain(const AnyDomainRef& domain,
 }
 
 template <typename Domain>
-const AnyDomainRef getInner(const Domain& domain);
-template <typename Domain, template <typename> class NhFunc>
+struct DefaultInnerGetter {
+    const AnyDomainRef operator()(const Domain& domain) { return domain.inner; }
+};
+
+template <typename Domain, template <typename> class NhFunc,
+          typename InnerGetter = DefaultInnerGetter<Domain>>
 void generateForAllTypes(const Domain& domain, int numberValsRequired,
                          std::vector<Neighbourhood>& neighbourhoods) {
     lib::visit(
@@ -165,10 +169,11 @@ void generateForAllTypes(const Domain& domain, int numberValsRequired,
                                             Nh(domain));
             }
         },
-        getInner(domain));
+        InnerGetter()(domain));
 }
 
-template <typename Domain, typename NhFunc>
+template <typename Domain, typename NhFunc,
+          typename InnerGetter = DefaultInnerGetter<Domain>>
 void generate(const Domain& domain, int numberValsRequired,
               std::vector<Neighbourhood>& neighbourhoods) {
     typedef typename NhFunc::InnerDomainType InnerDomain;
@@ -181,7 +186,7 @@ void generate(const Domain& domain, int numberValsRequired,
                        }
                    },
                    [](const auto&) {}),
-               getInner(domain));
+               InnerGetter()(domain));
 }
 
 static const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;

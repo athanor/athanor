@@ -3,17 +3,22 @@
 #define SRC_TRIGGERS_FUNCTIONTRIGGER_H_
 #include "base/base.h"
 struct FunctionOuterTrigger : public virtual TriggerBase {
-    // later will have more specific triggers, currently only those inherited
-    // from TriggerBase
+    virtual void valueRemoved(UInt indexOfRemovedValue,
+                              const AnyExprRef& preimage,
+                              const AnyExprRef& image) = 0;
+    virtual void valueAdded(const AnyExprRef& preimage,
+                            const AnyExprRef& image) = 0;
     virtual void memberHasBecomeDefined(UInt) = 0;
     virtual void memberHasBecomeUndefined(UInt) = 0;
 };
 
 struct FunctionMemberTrigger : public virtual TriggerBase {
     virtual void imageChanged(UInt index) = 0;
-
     virtual void imageChanged(const std::vector<UInt>& indices) = 0;
     virtual void imageSwap(UInt index1, UInt index2) = 0;
+    virtual void preimageChanged(UInt index, HashType oldHash) = 0;
+    virtual void preimageChanged(const std::vector<UInt>& indices,
+                                 const std::vector<HashType>& oldHashes) = 0;
 };
 
 struct FunctionTrigger : public virtual FunctionOuterTrigger,
@@ -89,6 +94,28 @@ struct TriggerContainer<FunctionView>
         visitTriggers([&](auto& t) { t->memberHasBecomeUndefined(index); },
                       triggers);
     }
+
+    inline void notifyPreimageChanged(UInt index, HashType oldHash) {
+        visitMemberTriggers(
+            [&](auto& t) { t->preimageChanged(index, oldHash); }, index);
+    }
+
+    inline void notifyPreimagesChanged(const std::vector<UInt>& indices,
+                                       const std::vector<HashType>& oldHashes) {
+        visitMemberTriggers(
+            [&](auto& t) { t->preimageChanged(indices, oldHashes); }, indices);
+    }
+    inline void notifyValueAdded(const AnyExprRef& preimage,
+                                 const AnyExprRef& image) {
+        visitTriggers([&](auto& t) { t->valueAdded(preimage, image); },
+                      triggers);
+    }
+
+    inline void notifyValueRemoved(UInt index, const AnyExprRef& preimage,
+                                   const AnyExprRef& image) {
+        visitTriggers([&](auto& t) { t->valueRemoved(index, preimage, image); },
+                      triggers);
+    }
 };
 
 template <typename Child>
@@ -139,6 +166,28 @@ struct ChangeTriggerAdapter<FunctionTrigger, Child>
             this->forwardValueChanged();
         }
     }
+    void preimageChanged(const std::vector<UInt>&,
+                         const std::vector<HashType>&) override {
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
+    }
+    void preimageChanged(UInt, HashType) final {
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
+    }
+    virtual void valueRemoved(UInt, const AnyExprRef&,
+                              const AnyExprRef&) final {
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
+    }
+    void valueAdded(const AnyExprRef&, const AnyExprRef&) final {
+        if (!eventHandledAsDefinednessChange()) {
+            this->forwardValueChanged();
+        }
+    }
     void hasBecomeDefined() override { eventHandledAsDefinednessChange(); }
     void hasBecomeUndefined() override { eventHandledAsDefinednessChange(); }
 
@@ -172,9 +221,34 @@ struct ForwardingTrigger<FunctionTrigger, Op, Child>
         }
     }
 
+    void preimageChanged(const std::vector<UInt>& indices,
+                         const std::vector<HashType>& oldHashes) override {
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyPreimagesChanged(indices, oldHashes);
+        }
+    }
+
+    void preimageChanged(UInt index, HashType oldHash) final {
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyPreimageChanged(index, oldHash);
+        }
+    }
+
     void memberReplaced(UInt index, const AnyExprRef& oldMember) override {
         if (this->op->allowForwardingOfTrigger()) {
             this->op->notifyMemberReplaced(index, oldMember);
+        }
+    }
+    void valueAdded(const AnyExprRef& preimage, const AnyExprRef& image) final {
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyValueAdded(preimage, image);
+        }
+    }
+
+    void valueRemoved(UInt indexOfRemovedValue, const AnyExprRef& preimage,
+                      const AnyExprRef& image) final {
+        if (this->op->allowForwardingOfTrigger()) {
+            this->op->notifyValueRemoved(indexOfRemovedValue, preimage, image);
         }
     }
 

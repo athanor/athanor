@@ -53,7 +53,9 @@ ExprRef<FunctionView> makeBasicFunctionLitFrom(MultiParseResult result) {
             auto function =
                 OpMaker<OpFunctionLitBasic>::make<View>(preImageDomain);
             auto& functionView = *function->view();
-            functionView.range = move(result.exprs);
+            functionView.initView(preImageDomain,
+                                  makeDimensionVecFromDomain(preImageDomain),
+                                  move(result.exprs), false);
             function->setConstant(result.allConstant);
             return function;
         },

@@ -64,27 +64,13 @@ ostream& prettyPrint<TupleView>(ostream& os, const TupleDomain& domain,
 
 template <>
 void deepCopy<TupleValue>(const TupleValue& src, TupleValue& target) {
-    target.cachedHashTotal.invalidate();
-    // just in case tuple is empty, make sure to populate with elements
-    while (target.members.size() < src.members.size()) {
+    target.silentClear();
+    for (auto& member : src.members) {
         lib::visit(
-            [&](const auto& srcMember) {
-                auto srcVal = assumeAsValue(srcMember);
-                auto newMember = make<valType(srcVal)>();
-                matchInnerType(*srcVal, *newMember);
-                target.addMember(newMember);
+            [&](auto& member) {
+                target.addMember(deepCopy(*assumeAsValue(member)));
             },
-            src.members[target.members.size()]);
-    }
-    for (size_t i = 0; i < src.members.size(); i++) {
-        lib::visit(
-            [&](auto& srcMember) {
-                auto& targetMember =
-                    lib::get<ExprRef<viewType(srcMember)>>(target.members[i]);
-                deepCopy(*assumeAsValue(srcMember),
-                         *assumeAsValue(targetMember));
-            },
-            src.members[i]);
+            member);
     }
     target.notifyEntireValueChanged();
 }

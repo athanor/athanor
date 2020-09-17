@@ -12,7 +12,7 @@ bool assignRandomValueInDomain<TupleDomain>(
     const TupleDomain& domain, TupleValue& val,
     NeighbourhoodResourceTracker& resource) {
     // populate tuple with unassigned members if it is empty
-
+    val.silentClear();
     while (val.members.size() < domain.inners.size()) {
         lib::visit(
             [&](auto& innerDomainPtr) {

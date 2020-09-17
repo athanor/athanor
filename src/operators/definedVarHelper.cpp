@@ -69,34 +69,6 @@ inline void visitDerivedTypeHelper(Visitor&&, NoMatchHandler&& noMatchHandler,
     noMatchHandler();
 }
 
-template <typename Visitor, typename NoMatchHandler, typename T, typename... Ts>
-inline void visitDerivedTypeHelper(Visitor&& visitor,
-                                   NoMatchHandler&& noMatchHandler,
-                                   ValBase* base) {
-    T* derived = dynamic_cast<T*>(base);
-    if (derived) {
-        visitor(*derived);
-    } else {
-        visitDerivedTypeHelper<Visitor, NoMatchHandler, Ts...>(
-            forward<Visitor>(visitor), forward<NoMatchHandler>(noMatchHandler),
-            base);
-    }
-}
-
-template <typename Visitor, typename NoMatchHandler>
-void visitDerivedType(Visitor&& visitor, NoMatchHandler&& noMatchHandler,
-                      ValBase* base) {
-    visitDerivedTypeHelper<Visitor, NoMatchHandler, SequenceValue,
-                           FunctionValue, TupleValue>(
-        forward<Visitor>(visitor), forward<NoMatchHandler>(noMatchHandler),
-        base);
-}
-
-bool supportsDefinedElements(const FunctionValue&) { return true; }
-bool supportsDefinedElements(const SequenceValue& val) {
-    return !val.injective;
-}
-bool supportsDefinedElements(const TupleValue&) { return true; }
 // functions for updating the containers when their element has been changed
 // because of the element being defined on  an expression which changed.
 bool isInContainerSupportingDefinedVars(ValBase* container) {
@@ -105,41 +77,14 @@ bool isInContainerSupportingDefinedVars(ValBase* container) {
     } else if (!container || isPoolMarker(container)) {
         return false;
     }
-    bool isSupported = true;
-    visitDerivedType(
-        [&](auto& val) { isSupported &= supportsDefinedElements(val); },
-        [&]() { isSupported = false; }, container);
-    return isSupported &&
+    return container->supportsDefinedVars() &&
            isInContainerSupportingDefinedVars(container->container);
 }
 
-void notifyType(const ValBase* base, FunctionValue& val);
-void notifyType(const ValBase* base, SequenceValue& val);
-void notifyType(const ValBase* base, TupleValue& val);
-
-void updateParentContainer(ValBase* container) {
+void updateParentContainer(ValBase* container, UInt childId) {
     if (!container || isPoolMarker(container)) {
         return;
     }
-    visitDerivedType([&](auto& val) { notifyType(container, val); },
-                     [&]() { shouldNotBeCalledPanic; }, container);
-    updateParentContainer(container->container);
-}
-
-void notifyType(const ValBase* base, SequenceValue& val) {
-    lib::visit(
-        [&](auto& members) {
-            val.changeSubsequenceAndNotify<viewType(members)>(base->id,
-                                                              base->id + 1);
-        },
-        val.members);
-}
-
-void notifyType(const ValBase* base, FunctionValue& val) {
-    val.notifyImageChanged(base->id);
-}
-
-void notifyType(const ValBase* base, TupleValue& val) {
-    debug_code(assert(base->id < val.members.size()));
-    val.memberChangedAndNotify(base->id);
+    container->notifyVarDefined(childId);
+    updateParentContainer(container->container, container->id);
 }

@@ -47,6 +47,18 @@ struct SequenceDomain {
 struct SequenceValue : public SequenceView, public ValBase {
     bool injective = false;
     HashSet<HashType> memberHashes;
+
+    inline bool supportsDefinedVars() final { return !injective; }
+
+    inline void notifyVarDefined(UInt memberId) final {
+        lib::visit(
+            [&](auto& members) {
+                this->changeSubsequenceAndNotify<viewType(members)>(
+                    memberId, memberId + 1);
+            },
+            this->members);
+    }
+
     void silentClear() {
         SequenceView::silentClear();
         memberHashes.clear();

@@ -34,6 +34,12 @@ struct TupleDomain {
 };
 
 struct TupleValue : public TupleView, public ValBase {
+    inline bool supportsDefinedVars() final { return true; }
+    inline void notifyVarDefined(UInt memberId) final {
+        debug_code(assert(memberId < this->members.size()));
+        this->memberChangedAndNotify(memberId);
+    }
+
     template <typename InnerValueType, EnableIfValue<InnerValueType> = 0>
     inline ValRef<InnerValueType> member(UInt index) {
         return assumeAsValue(
@@ -54,11 +60,12 @@ struct TupleValue : public TupleView, public ValBase {
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
     inline bool tryMemberChange(size_t index, Func&& func) {
+        TupleView::memberChanged(index);
         if (func()) {
-            TupleView::memberChanged(index);
             TupleView::notifyMemberChanged(index);
             return true;
         } else {
+            cachedHashTotal.invalidate();
             return false;
         }
     }

@@ -62,14 +62,17 @@ Int getRandomValueInDomain(const IntDomain& domain, Int minValue,
             return chooseBound(bound, domain.bounds[i + 1], newValue);
         }
     }
+    cout << domain << endl;
+    cout << minValue << endl;
+    cout << maxValue << endl;
     assert(false);
     myAbort();
 }
 
 template <>
-bool assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
-                                          IntValue& val,
-                                          NeighbourhoodResourceTracker& resource) {
+bool assignRandomValueInDomain<IntDomain>(
+    const IntDomain& domain, IntValue& val,
+    NeighbourhoodResourceTracker& resource) {
     if (!val.domain) {
         val.domain = &domain;
     }
@@ -78,8 +81,7 @@ bool assignRandomValueInDomain<IntDomain>(const IntDomain& domain,
     }
     val.value = getRandomValueInDomain(domain);
     return true;
-    }
-
+}
 struct IntAssignRandom {
     StandardUcbSelector selector =
         StandardUcbSelector(2, DEFAULT_UCB_EXPLORATION_BIAS);

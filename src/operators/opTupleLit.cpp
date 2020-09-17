@@ -8,6 +8,7 @@ using namespace std;
 
 void OpTupleLit::evaluateImpl() {
     numberUndefined = 0;
+    cachedHashTotal.invalidate();
     for (auto& member : members) {
         lib::visit(
             [&](auto& member) {
@@ -57,6 +58,7 @@ struct ExprTrigger
 }  // namespace
 
 void OpTupleLit::replaceMember(UInt index, const AnyExprRef& newMember) {
+    cachedHashTotal.invalidate();
     debug_code(assert(index < members.size()));
     auto oldMember = move(members[index]);
     members[index] = move(newMember);

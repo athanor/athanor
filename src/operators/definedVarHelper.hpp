@@ -6,7 +6,7 @@
 
 void handleDefinedVarTriggers();
 bool isInContainerSupportingDefinedVars(ValBase* container);
-void updateParentContainer(ValBase* container);
+void updateParentContainer(ValBase* container, UInt memberId);
 
 enum class DefinedDirection { NONE, LEFT, RIGHT, BOTH };
 
@@ -39,6 +39,7 @@ inline DefinedDirection getDefinedDirection(View& leftView, View& rightView,
         leftChanged && rightVal && !rightVal->isConstant() &&
         isInContainerSupportingDefinedVars(rightVal->container) &&
         rightVal->domainContainsValue(leftView);
+
     auto* leftVal = dynamic_cast<Value*>(&leftView);
     bool canPropagateLeft =
         rightChanged && leftVal && !leftVal->isConstant() &&
@@ -97,7 +98,7 @@ struct DefinedVarTrigger {
         } else {
             toOption->matchValueOf(*fromOption);
             auto& val = static_cast<Value&>(*toOption);
-            updateParentContainer(val.container);
+            updateParentContainer(val.container, val.id);
             // must call updateValue to the operator as if the value was already
             // matched, the op might not know this and may not have updated
             op->updateValue(*leftOption, *rightOption);

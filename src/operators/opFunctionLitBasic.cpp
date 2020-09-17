@@ -53,7 +53,7 @@ struct ExprTrigger
     }
 
     void adapterHasBecomeUndefined() {
-        this->op->template undefineMemberAndNotify<View>(this->index);
+        this->op->undefineMemberAndNotify(this->index);
     }
 };
 }  // namespace
@@ -128,13 +128,15 @@ ExprRef<FunctionView> OpFunctionLitBasic::deepCopyForUnrollImpl(
         },
         range);
 
-    auto newOpFunctionLitBasic =
-        make_shared<OpFunctionLitBasic>(fromDomain, move(newMembers));
+    auto newOpFunctionLitBasic = make_shared<OpFunctionLitBasic>();
+    newOpFunctionLitBasic->initView(preimageDomain,
+                                    makeDimensionVecFromDomain(preimageDomain),
+                                    move(newMembers), false);
     return newOpFunctionLitBasic;
 }
 
 std::ostream& OpFunctionLitBasic::dumpState(std::ostream& os) const {
-    os << "OpFunctionLitBasic(from " << fromDomain
+    os << "OpFunctionLitBasic(from " << preimageDomain
        << "): numberUndefined=" << numberUndefined
        << ", appearsDefined=" << this->appearsDefined() << ", range=(";
     lib::visit(
@@ -167,7 +169,8 @@ void OpFunctionLitBasic::findAndReplaceSelf(const FindAndReplaceFunction& func,
 
 pair<bool, ExprRef<FunctionView>> OpFunctionLitBasic::optimiseImpl(
     ExprRef<FunctionView>&, PathExtension path) {
-    auto newOp = make_shared<OpFunctionLitBasic>(fromDomain, range);
+    auto newOp = make_shared<OpFunctionLitBasic>();
+    newOp->initView(preimageDomain, preimages, range, partial);
     AnyExprRef newOpAsExpr = ExprRef<FunctionView>(newOp);
     bool optimised = false;
     lib::visit(
@@ -177,12 +180,21 @@ pair<bool, ExprRef<FunctionView>> OpFunctionLitBasic::optimiseImpl(
             }
         },
         newOp->range);
+    if (!newOp->lazyPreimages()) {
+        lib::visit(
+            [&](auto& operands) {
+                for (auto& operand : operands) {
+                    optimised |= optimise(newOpAsExpr, operand, path);
+                }
+            },
+            newOp->getPreimages().preimages);
+    }
 
     return std::make_pair(optimised, newOp);
 }
 
 string OpFunctionLitBasic::getOpName() const {
-    return toString("OpFunctionLitBasic(from ", fromDomain, ")");
+    return toString("OpFunctionLitBasic(from ", preimageDomain, ")");
 }
 
 void OpFunctionLitBasic::debugSanityCheckImpl() const {
@@ -204,11 +216,8 @@ struct OpMaker<OpFunctionLitBasic> {
 
 template <typename RangeViewType>
 EnableIfViewAndReturn<RangeViewType, ExprRef<FunctionView>>
-OpMaker<OpFunctionLitBasic>::make(AnyDomainRef preImageDomain) {
+OpMaker<OpFunctionLitBasic>::make(AnyDomainRef) {
     auto op = make_shared<OpFunctionLitBasic>();
-    op->resetDimensions<RangeViewType>(
-        preImageDomain,
-        FunctionView::makeDimensionVecFromDomain(preImageDomain));
     return op;
 }
 

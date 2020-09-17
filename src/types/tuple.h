@@ -51,6 +51,12 @@ struct TupleView : public ExprInterface<TupleView>,
         notifyMemberUndefined(index);
     }
     void standardSanityChecksForThisType() const;
+
+    void silentClear() {
+        members.clear();
+        cachedHashTotal.invalidate();
+        numberUndefined = 0;
+    }
 };
 
 #endif /* SRC_TYPES_TUPLE_H_ */

@@ -2,6 +2,7 @@
 #ifndef SRC_BASE_VALREF_H_
 #define SRC_BASE_VALREF_H_
 #include "base/exprRef.h"
+#include "utils/ignoreUnused.h"
 #include "utils/variantOperations.h"
 
 #include <vector>
@@ -101,10 +102,15 @@ bool isPoolMarker(const ValBase* v);
 struct ValBase {
     UInt id = 0;
     ValBase* container = &constantPool;
+    ValBase() {}
+    ValBase(UInt id, ValBase* container) : id(id), container(container) {}
     virtual ~ValBase() {}
     inline bool operator==(const ValBase& other) const {
         return id == other.id && container == other.container;
     }
+
+    virtual inline bool supportsDefinedVars() { return false; }
+    virtual inline void notifyVarDefined(UInt) { shouldNotBeCalledPanic; }
 };
 
 template <typename Val>
@@ -130,4 +136,11 @@ inline void varBaseSanityChecks(
         sanityEqualsCheck(base.id, i);
     }
 }
+
+#define valBaseFuncs(name) \
+    template <>            \
+    ValBase& valBase<name##Value>(name##Value & v);
+buildForAllTypes(valBaseFuncs, );
+#undef valBaseFuncs
+
 #endif /* SRC_BASE_VALREF_H_ */

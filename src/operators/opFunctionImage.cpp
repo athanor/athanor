@@ -101,7 +101,7 @@ lib::optional<UInt> OpFunctionImage<FunctionMemberViewType>::calculateIndex()
             if (!view) {
                 return lib::nullopt;
             }
-            return (*functionView).domainToIndex(*view);
+            return (*functionView).preimageToIndex(*view);
         },
         preImageOperand);
 }

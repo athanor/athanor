@@ -29,7 +29,7 @@ void OpPartitionSize::debugSanityCheckImpl() const {
     if (!view) {
         return;
     }
-    sanityEqualsCheck((Int)view->numberElements(), value);
+    sanityEqualsCheck((Int)view->numberParts(), value);
 }
 
 template <typename Op>

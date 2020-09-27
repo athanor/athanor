@@ -1,6 +1,6 @@
 
-#ifndef SRC_OPERATORS_OPSETSIZE_H_
-#define SRC_OPERATORS_OPSETSIZE_H_
+#ifndef SRC_OPERATORS_OPFUNCTIONDEFINED_H_
+#define SRC_OPERATORS_OPFUNCTIONDEFINED_H_
 #include "operators/simpleOperator.h"
 #include "operators/simpleTrigger.h"
 #include "types/function.h"
@@ -23,4 +23,4 @@ struct OpFunctionDefined
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
 };
-#endif /* SRC_OPERATORS_OPSETSIZE_H_ */
+#endif /* SRC_OPERATORS_OPFUNCTIONDEFINED_H_ */

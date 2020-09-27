@@ -1,11 +1,17 @@
 #include <algorithm>
 #include "parsing/parserCommon.h"
+#include "types/boolVal.h"
 #include "types/partitionVal.h"
 #include "types/setVal.h"
 #include "types/sizeAttr.h"
 using namespace std;
 using namespace lib;
 using namespace nlohmann;
+namespace {
+
+auto fakeBoolDomain = make_shared<BoolDomain>();
+}
+
 shared_ptr<PartitionDomain> parseDomainPartition(json& partitionDomainExpr,
                                                  ParsedModel& parsedModel) {
     bool regular = partitionDomainExpr[1]["isRegular"];
@@ -68,4 +74,30 @@ ParseResult parseOpPartitionParty(json& partsExpr, ParsedModel& parsedModel) {
                 partitionExpr.hasEmptyType);
         },
         lib::get<shared_ptr<PartitionDomain>>(partitionExpr.domain)->inner);
+}
+
+ParseResult parseOpTogether(json& operandsExpr, ParsedModel& parsedModel) {
+    auto set = expect<SetView>(
+        parseExpr(operandsExpr[0], parsedModel).expr, [&](auto&&) {
+            myCerr << "Error, together takes a set as its "
+                      "first parameter.\n";
+        });
+
+    auto partition = expect<PartitionView>(
+        parseExpr(operandsExpr[1], parsedModel).expr, [&](auto&&) {
+            myCerr << "Error, together takes a partition as "
+                      "its second "
+                      "parameter.\n";
+        });
+    auto op = OpMaker<OpTogether>::make(set, partition);
+    op->setConstant(set->isConstant() && partition->isConstant());
+    return ParseResult(fakeBoolDomain, op, false);
+}
+
+ParseResult parseOpApart(json& operandsExpr, ParsedModel& parsedModel) {
+    auto result = parseOpTogether(operandsExpr, parsedModel);
+    auto& expr = lib::get<ExprRef<BoolView>>(result.expr);
+    auto negated = OpMaker<OpNot>::make(expr);
+    negated->setConstant(expr->isConstant());
+    return ParseResult(result.domain, negated, result.hasEmptyType);
 }

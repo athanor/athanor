@@ -103,6 +103,7 @@ ParseResult parseOpRecordIndex(shared_ptr<TupleDomain>& tupleDomain,
 ParseResult parseOpEq(json& operandsExpr, ParsedModel& parsedModel);
 ParseResult parseOpNotEq(json& operandsExpr, ParsedModel& parsedModel);
 ParseResult parseOpTogether(json& operandsExpr, ParsedModel& parsedModel);
+ParseResult parseOpApart(json& operandsExpr, ParsedModel& parsedModel);
 template <bool>
 ParseResult parseOpLess(json& expr, ParsedModel& parsedModel);
 template <bool>
@@ -407,6 +408,7 @@ optional<ParseResult> tryParseExpr(json& essenceExpr,
              {"MkOpPow", parseOpPower},
              {"MkOpIntersect", parseOpIntersect},
              {"MkOpTogether", parseOpTogether},
+             {"MkOpApart", parseOpApart},
              {"MkOpTwoBars", parseOpTwoBars},
              {"MkOpPowerSet", parseOpPowerSet},
              {"MkOpSubsetEq", parseOpSubsetEq},

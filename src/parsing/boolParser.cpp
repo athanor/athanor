@@ -274,24 +274,6 @@ ParseResult parseOpNotEq(json& operandsExpr, ParsedModel& parsedModel) {
         left);
 }
 
-ParseResult parseOpTogether(json& operandsExpr, ParsedModel& parsedModel) {
-    auto set = expect<SetView>(
-        parseExpr(operandsExpr[0], parsedModel).expr, [&](auto&&) {
-            myCerr << "Error, together takes a set as its "
-                      "first parameter.\n";
-        });
-
-    auto partition = expect<PartitionView>(
-        parseExpr(operandsExpr[1], parsedModel).expr, [&](auto&&) {
-            myCerr << "Error, together takes a partition as "
-                      "its second "
-                      "parameter.\n";
-        });
-    auto op = OpMaker<OpTogether>::make(set, partition);
-    op->setConstant(set->isConstant() && partition->isConstant());
-    return ParseResult(fakeBoolDomain, op, false);
-}
-
 template <bool flipped>
 ParseResult parseOpLess(json& expr, ParsedModel& parsedModel) {
     auto errorFunc = [&](auto&&) {

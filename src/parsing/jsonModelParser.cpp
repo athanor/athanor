@@ -83,6 +83,7 @@ ParseResult parseOpSubset(json& operandsExpr, ParsedModel& parsedModel);
 ParseResult parseOpSubsetEq(json& operandsExpr, ParsedModel& parsedModel);
 ParseResult parseOpIntersect(json& intersectExpr, ParsedModel& parsedModel);
 ParseResult parseOpAllDiff(json& operandExpr, ParsedModel& parsedModel);
+ParseResult parseOpPartitionParty(json& partsExpr, ParsedModel& parsedModel);
 ParseResult parseOpPartitionParts(json& partsExpr, ParsedModel& parsedModel);
 ParseResult parseOpPowerSet(json& powerSetExpr, ParsedModel& parsedModel);
 ParseResult parseOpSequenceIndex(AnyDomainRef& innerDomain,
@@ -420,6 +421,7 @@ optional<ParseResult> tryParseExpr(json& essenceExpr,
              {"MkOpRelationProj", parseOpRelationProj},
              {"MkOpIndexing", parseOpIndexing},
              {"MkOpParts", parseOpPartitionParts},
+             {"MkOpParty", parseOpPartitionParty},
              {"MkOpToInt", parseOpToInt}},
             essenceExpr, parsedModel);
     }

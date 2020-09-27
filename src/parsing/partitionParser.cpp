@@ -38,3 +38,34 @@ ParseResult parseOpPartitionParts(json& partsExpr, ParsedModel& parsedModel) {
             make_shared<SetDomain>(domain->partSize, domain->inner)),
         op, parsedExpr.hasEmptyType);
 }
+
+ParseResult parseOpPartitionParty(json& partsExpr, ParsedModel& parsedModel) {
+    string errorMessage =
+        "Expected partition returning expression within Op "
+        "PartitionParty: ";
+    auto partyMemberExpr = parseExpr(partsExpr[0], parsedModel);
+    auto partitionExpr = parseExpr(partsExpr[1], parsedModel);
+    auto operand = expect<PartitionView>(partitionExpr.expr, [&](auto&&) {
+        myCerr << errorMessage << partsExpr << endl;
+    });
+    return lib::visit(
+        [&](auto& innerDomain) {
+            typedef typename BaseType<decltype(innerDomain)>::element_type
+                InnerDomainType;
+            typedef typename AssociatedViewType<InnerDomainType>::type
+                InnerViewType;
+            auto partyMember =
+                expect<InnerViewType>(partyMemberExpr.expr, [&](auto&) {
+                    myCerr << "Expected party member to be same type as "
+                              "partition member.\n";
+                });
+            bool constant = partyMember->isConstant() && operand->isConstant();
+            auto op = OpMaker<OpPartitionParty<viewType(partyMember)>>::make(
+                partyMember, operand);
+            op->setConstant(constant);
+            return ParseResult(
+                make_shared<SetDomain>(noSize(), partyMemberExpr.domain), op,
+                partitionExpr.hasEmptyType);
+        },
+        lib::get<shared_ptr<PartitionDomain>>(partitionExpr.domain)->inner);
+}

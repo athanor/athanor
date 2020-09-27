@@ -341,5 +341,13 @@ template <>
 struct OpMaker<OpFunctionDefined> {
     static ExprRef<SetView> make(ExprRef<FunctionView> o);
 };
+template<typename OperandView>
+struct OpPartitionParty;
+template <typename OperandView>
+struct OpMaker<OpPartitionParty<OperandView>> {
+    static ExprRef<SetView> make(ExprRef<OperandView> l,
+                                 ExprRef<PartitionView> r);
+};
+
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

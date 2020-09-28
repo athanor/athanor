@@ -236,6 +236,8 @@ static void reattachAllTriggers(OpTogether& op) {
 void OpTogether::startTriggeringImpl() {
     if (!leftTrigger) {
         reattachAllTriggers(*this);
+        left->startTriggering();
+        right->startTriggering();
     }
 }
 void OpTogether::stopTriggering() {

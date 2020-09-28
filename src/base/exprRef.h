@@ -75,7 +75,7 @@ typedef std::function<std::pair<bool, AnyExprRef>(AnyExprRef,
     FindAndReplaceFunction;
 
 struct AnyIterRef;
-template <typename Trigger>
+template <typename Trigger, bool print = false>
 class TriggerOwner;
 
 template <typename View>

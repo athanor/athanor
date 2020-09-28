@@ -265,38 +265,68 @@ struct TriggerContainerBase {
 /*operators can wrap this around the triggers they create so that deleteTrigger
  * is automatically called on the contained trigger when this class goes out of
  * scope. */
-template <typename Trigger>
+template <typename Trigger, bool print>
 class TriggerOwner {
     std::shared_ptr<Trigger> trigger;
 
    public:
     TriggerOwner(std::shared_ptr<Trigger> trigger)
-        : trigger(std::move(trigger)) {}
-    ~TriggerOwner() { deleteTrigger(trigger); }
+        : trigger(std::move(trigger)) {
+        info("constructed owner");
+    }
+    void info(const std::string& s) {
+        ignoreUnused(s);
+        if (!print) {
+            return;
+        }
+        debug_log("***" << s);
+        debug_log("trigger is not null" << static_cast<bool>(this->trigger));
+        debug_log("trigger is active: " << (this->trigger &&
+                                            this->trigger->active()));
+        if (this->trigger && this->trigger->active()) {
+            debug_log("op is " << this->trigger->op);
+        }
+    }
+    ~TriggerOwner() {
+        info("before destruction");
+        deleteTrigger(trigger);
+        info("after destruction");
+    }
 
-    TriggerOwner() {}
-    TriggerOwner(const TriggerOwner<Trigger>&) = delete;
-    TriggerOwner(TriggerOwner<Trigger>&& other)
+    TriggerOwner() { info("default construction"); }
+    TriggerOwner(const TriggerOwner<Trigger, print>&) = delete;
+    TriggerOwner(TriggerOwner<Trigger, print>&& other)
         : trigger(std::move(other.trigger)) {
         other.trigger = nullptr;
+        info("move");
     }
-    inline TriggerOwner<Trigger>& operator=(std::shared_ptr<Trigger> trigger) {
-        if (this->trigger && this->trigger.get() != trigger.get()) {
-            deleteTrigger(this->trigger);
+    inline TriggerOwner<Trigger, print>& operator=(
+        std::shared_ptr<Trigger> otherTrigger) {
+        info("copy equals");
+        if (this->trigger) {
+            if (!trigger || this->trigger.get() != otherTrigger.get()) {
+                deleteTrigger(this->trigger);
+            }
         }
-        this->trigger = trigger;
+        this->trigger = otherTrigger;
+        info("after copy equals");
         return *this;
     }
-    inline TriggerOwner<Trigger>& operator=(TriggerOwner<Trigger>&& other) {
-        if (this->trigger && this->trigger.get() != other.trigger.get()) {
-            deleteTrigger(this->trigger);
+    inline TriggerOwner<Trigger, print>& operator=(
+        TriggerOwner<Trigger, print>&& other) {
+        info("move equals");
+        if (this->trigger) {
+            if (!trigger || this->trigger.get() != other.trigger.get()) {
+                deleteTrigger(this->trigger);
+            }
         }
         this->trigger = other.trigger;
         other.trigger = nullptr;
+        info("after move equals");
         return *this;
     }
-    TriggerOwner<Trigger>& operator=(const TriggerOwner<Trigger>& other) =
-        delete;
+    TriggerOwner<Trigger, print>& operator=(
+        const TriggerOwner<Trigger, print>& other) = delete;
 
     inline explicit operator bool() const noexcept {
         return trigger.operator bool();

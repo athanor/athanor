@@ -16,7 +16,7 @@ struct OperatorTrates<OpTogether> {
 
 struct OpTogether : public SimpleBinaryOperator<BoolView, SetView,
                                                 PartitionView, OpTogether> {
-    std::vector<std::shared_ptr<OperatorTrates<OpTogether>::RightTrigger>>
+    std::vector<TriggerOwner<OperatorTrates<OpTogether>::RightTrigger>>
         partitionMemberTriggers;  // one trigger for each member of the set
                                   // operand, triggering on one specific member
                                   // of the partition. //may be null if set

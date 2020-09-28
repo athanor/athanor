@@ -1,4 +1,4 @@
-#include "operators/opTogether.h"
+        #include "operators/opTogether.h"
 #include "operators/simpleOperator.hpp"
 
 using namespace std;
@@ -96,7 +96,7 @@ struct OperatorTrates<OpTogether>::LeftTrigger : public SetTrigger {
     LeftTrigger(OpTogether* op) : op(op) {}
     void valueRemoved(UInt indexOfRemovedValue, HashType) final {
         op->partitionMemberTriggers[indexOfRemovedValue] =
-            op->partitionMemberTriggers.back();
+            move(op->partitionMemberTriggers.back());
         op->partitionMemberTriggers.pop_back();
         op->changeValue([&]() {
             op->reevaluate(true, false);

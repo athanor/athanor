@@ -317,7 +317,7 @@ class TriggerOwner {
         info("move equals");
         if (&other == this) {
             info("skipping as same");
-            return;
+            return *this;
         }
 
         if (this->trigger) {

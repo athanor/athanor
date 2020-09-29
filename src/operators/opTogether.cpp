@@ -1,8 +1,15 @@
-        #include "operators/opTogether.h"
+#include "operators/opTogether.h"
 #include "operators/simpleOperator.hpp"
 
 using namespace std;
 
+OpTogether::~OpTogether() {
+    deleteTrigger(this->leftTrigger.getTrigger());
+    deleteTrigger(this->rightTrigger.getTrigger());
+    for (auto& trigger : partitionMemberTriggers) {
+        deleteTrigger(trigger.getTrigger());
+    }
+}
 static void deletePartitionTriggers(OpTogether& op);
 static void addTrigger(OpTogether& op, const HashType& hash,
                        PartitionView& view);
@@ -95,6 +102,7 @@ struct OperatorTrates<OpTogether>::LeftTrigger : public SetTrigger {
     OpTogether* op;
     LeftTrigger(OpTogether* op) : op(op) {}
     void valueRemoved(UInt indexOfRemovedValue, HashType) final {
+        deleteTrigger(op->partitionMemberTriggers[indexOfRemovedValue].getTrigger());
         op->partitionMemberTriggers[indexOfRemovedValue] =
             move(op->partitionMemberTriggers.back());
         op->partitionMemberTriggers.pop_back();
@@ -125,8 +133,10 @@ struct OperatorTrates<OpTogether>::LeftTrigger : public SetTrigger {
         auto& setView = *setViewOption;
         auto& partitionView = *partitionViewOption;
         HashType hash = setView.indexHashMap[index];
+        deleteTrigger(op->partitionMemberTriggers[index].getTrigger());
         op->partitionMemberTriggers[index] = nullptr;
         if (partitionView.hashIndexMap.count(hash)) {
+            deleteTrigger(op->partitionMemberTriggers[index].getTrigger());
             op->partitionMemberTriggers[index] =
                 make_shared<OperatorTrates<OpTogether>::RightTrigger>(op);
             op->right->addTrigger(op->partitionMemberTriggers[index], true,
@@ -156,6 +166,7 @@ struct OperatorTrates<OpTogether>::LeftTrigger : public SetTrigger {
         auto& partitionView = *partitionViewOption;
         for (auto index : indices) {
             HashType hash = setView.indexHashMap[index];
+            deleteTrigger(op->partitionMemberTriggers[index].getTrigger());
             op->partitionMemberTriggers[index] = nullptr;
             if (partitionView.hashIndexMap.count(hash)) {
                 op->partitionMemberTriggers[index] =
@@ -196,6 +207,9 @@ struct OperatorTrates<OpTogether>::LeftTrigger : public SetTrigger {
 
 static void deletePartitionTriggers(OpTogether& op) {
     op.rightTrigger = nullptr;
+    for (auto& trigger: op.partitionMemberTriggers) {
+        deleteTrigger(trigger.getTrigger());
+    }
     op.partitionMemberTriggers.clear();
 }
 

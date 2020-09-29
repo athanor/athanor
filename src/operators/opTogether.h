@@ -24,6 +24,8 @@ struct OpTogether : public SimpleBinaryOperator<BoolView, SetView,
 
     using SimpleBinaryOperator<BoolView, SetView, PartitionView,
                                OpTogether>::SimpleBinaryOperator;
+
+    ~OpTogether();
     void startTriggeringImpl() final;
     void stopTriggering() final;
     void reevaluateImpl(SetView& leftView, PartitionView& rightView, bool,

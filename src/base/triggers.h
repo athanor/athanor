@@ -304,7 +304,7 @@ class TriggerOwner {
         std::shared_ptr<Trigger> otherTrigger) {
         info("copy equals");
         if (this->trigger) {
-            if (!trigger || this->trigger.get() != otherTrigger.get()) {
+            if (!otherTrigger || this->trigger.get() != otherTrigger.get()) {
                 deleteTrigger(this->trigger);
             }
         }
@@ -315,8 +315,13 @@ class TriggerOwner {
     inline TriggerOwner<Trigger, print>& operator=(
         TriggerOwner<Trigger, print>&& other) {
         info("move equals");
+        if (&other == this) {
+            info("skipping as same");
+            return;
+        }
+
         if (this->trigger) {
-            if (!trigger || this->trigger.get() != other.trigger.get()) {
+            if (!other.trigger || this->trigger.get() != other.trigger.get()) {
                 deleteTrigger(this->trigger);
             }
         }

@@ -342,6 +342,20 @@ auto& interactiveFlag = selectionStratGroup.add<Flag>(
     "i", "interactive, Prompt user for neighbourhood to select.",
     [](auto&&) { selectionStrategyChoice = INTERACTIVE; });
 auto& devGroup = argParser.makePrintGroup("developer", "Developer options...");
+extern UInt allowedViolation;
+UInt allowedViolation = 0;
+
+auto& allowedViolationArg =
+    devGroup
+        .add<ComplexFlag>(
+            "--debug-allow-violation", Policy::OPTIONAL,
+            "Only used for debuging, allow solutions with some violation.")
+        .add<Arg<UInt>>("max_violation", Policy::MANDATORY, "",
+                        chain(Converter<UInt>(), [](const auto& value) {
+                            allowedViolation = value;
+                            return value;
+                        }));
+
 auto& disableVioBiasFlag = devGroup.add<Flag>(
     "--disable-vio-bias", Policy::OPTIONAL,
     "Disable the search from biasing towards violating variables.");

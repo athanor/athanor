@@ -99,6 +99,8 @@ ostream& prettyPrint<PartitionView>(ostream& os, const PartitionDomain& domain,
         },
         v.members);
     os << ")";
+    os << "\n$number parts = " << v.numberParts() << "\n";
+
     return os;
 }
 

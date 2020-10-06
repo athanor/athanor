@@ -167,9 +167,14 @@ void printUnnamedType(ostream& os, const EnumDomain& domain) {
 extern string bestSolution;
 extern bool saveBestSolution;
 ostringstream bestSolutionStream;
-ostream& initSolutionStream() {
+ostream& initSolutionStream(const Model& model) {
     if (!noPrintSolutions) {
-        cout << "solution start\n";
+        if (model.getViolation() > 0) {
+            cout << "solution with violation " << model.getViolation()
+                 << " start\n";
+        } else {
+            cout << "solution start\n";
+        }
     }
     if (saveBestSolution) {
         bestSolutionStream.str("");
@@ -180,7 +185,7 @@ ostream& initSolutionStream() {
     }
 }
 
-void closeSolutionStream() {
+void closeSolutionStream(const Model& model) {
     if (saveBestSolution) {
         bestSolution = bestSolutionStream.str();
         if (!noPrintSolutions) {
@@ -188,7 +193,12 @@ void closeSolutionStream() {
         }
     }
     if (!noPrintSolutions) {
-        std::cout << "solution end\n";
+        if (model.getViolation() > 0) {
+            cout << "solution with violation " << model.getViolation()
+                 << " end\n";
+        } else {
+            cout << "solution end\n";
+        }
     }
 }
 
@@ -202,7 +212,7 @@ void Model::tryPrintVariables() const {
 #define varName(x) "<var>" << x << "</var>"
     os << "<code>";
 #else
-    auto& os = initSolutionStream();
+    auto& os = initSolutionStream(*this);
 #define varName(x) x
 #endif
 
@@ -236,7 +246,7 @@ void Model::tryPrintVariables() const {
     os << "</code>";
     val::global().call<void>("printSolution", os.str());
 #endif
-    closeSolutionStream();
+    closeSolutionStream(*this);
 }
 
 void Model::debugSanityCheck() const {

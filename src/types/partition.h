@@ -58,7 +58,7 @@ struct PartitionView : public ExprInterface<PartitionView>,
     FastIterableIntSet emptyParts;    // set of all empty parts
     std::vector<UInt> memberPartMap;  // map from each member index to its part
     HashType cachedHashTotal = HashType(0);
-    inline size_t numberParts() { return parts.size(); }
+    inline size_t numberParts() const { return parts.size(); }
     virtual inline AnyExprVec& getChildrenOperands() { shouldNotBeCalledPanic; }
 
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

@@ -8,6 +8,8 @@
 using namespace std;
 extern bool noPrintSolutions;
 extern bool quietMode;
+extern UInt allowedViolation;
+
 Int NeighbourhoodResult::getDeltaViolation() const {
     return model.getViolation() - statsMarkPoint.lastViolation;
 }
@@ -217,11 +219,11 @@ void StatsContainer::checkForBestSolution(bool vioImproved, bool objImproved,
     if (vioImproved) {
         bestViolation = lastViolation;
         bestObjective = lastObjective;
-    } else if(bestViolation == 0 && lastViolation == 0 && objImproved) {
+    } else if (bestViolation == 0 && lastViolation == 0 && objImproved) {
         bestObjective = lastObjective;
     }
 
-    if (vioImproved || (lastViolation == 0 && objImproved)) {
+    if (vioImproved || (lastViolation <= allowedViolation && objImproved)) {
         printCurrentState(model);
     }
 }
@@ -231,7 +233,7 @@ void StatsContainer::printCurrentState(Model& model) {
         cout << (*this) << "\nTrigger event count " << triggerEventCount
              << "\n\n";
     }
-    if (lastViolation == 0) {
+    if (lastViolation <= allowedViolation) {
         model.tryPrintVariables();
         printStatsToWebApp(*this);
     }

@@ -11,8 +11,12 @@ static const char* NO_UNDEFINED_IN_SUBSET =
 void OpSubsetEq::reevaluateImpl(SetView& leftView, SetView& rightView, bool,
                                 bool) {
     violation = 0;
+    violatingMembers.clear();
     for (auto& hashIndexPair : leftView.hashIndexMap) {
-        violation += !rightView.hashIndexMap.count(hashIndexPair.first);
+        if (!rightView.hashIndexMap.count(hashIndexPair.first)) {
+            violation += 1;
+            violatingMembers.insert(hashIndexPair.second);
+        }
     }
 }
 
@@ -37,29 +41,40 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
 
    public:
     LeftTrigger(OpSubsetEq* op) : op(op) {}
-    inline void valueRemovedImpl(HashType hash, bool trigger) {
+    inline void valueRemovedImpl(UInt memberIndex, HashType hash,
+                                 bool trigger) {
         if (!op->right->view()
                  .checkedGet(NO_UNDEFINED_IN_SUBSET)
                  .hashIndexMap.count(hash)) {
             op->changeValue([&]() {
+                op->violatingMembers.erase(memberIndex);
                 --op->violation;
                 return trigger;
             });
         }
     }
-    void valueRemoved(UInt, HashType hash) { valueRemovedImpl(hash, true); }
-    inline void valueAddedImpl(HashType hash, bool triggering) {
+    void valueRemoved(UInt index, HashType hash) {
+        valueRemovedImpl(index, hash, true);
+    }
+
+    inline void valueAddedImpl(UInt memberIndex, HashType hash,
+                               bool triggering) {
         if (!op->right->view()
                  .checkedGet(NO_UNDEFINED_IN_SUBSET)
                  .hashIndexMap.count(hash)) {
             op->changeValue([&]() {
+                op->violatingMembers.insert(memberIndex);
                 ++op->violation;
                 return triggering;
             });
         }
     }
     void valueAdded(const AnyExprRef& member) {
-        valueAddedImpl(getHashForceDefined(member), true);
+        auto hash = getHashForceDefined(member);
+        UInt index = op->left->view()
+                         .checkedGet(NO_UNDEFINED_IN_SUBSET)
+                         .hashIndexMap.at(hash);
+        valueAddedImpl(index, hash, true);
     }
     inline void valueChanged() final {
         op->changeValue([&]() {
@@ -78,8 +93,8 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
             },
             op->left->view().checkedGet(NO_UNDEFINED_IN_SUBSET).members);
         op->changeValue([&]() {
-            valueRemovedImpl(oldHash, false);
-            valueAddedImpl(newHash, false);
+            valueRemovedImpl(index, oldHash, false);
+            valueAddedImpl(index, newHash, false);
             return true;
         });
     }
@@ -88,13 +103,16 @@ struct OperatorTrates<OpSubsetEq>::LeftTrigger : public SetTrigger {
         const std::vector<UInt>& indices,
         const std::vector<HashType>& oldHashes) final {
         op->changeValue([&]() {
-            for (HashType hash : oldHashes) {
-                valueRemovedImpl(hash, false);
+            for (size_t i = 0; i < indices.size(); i++) {
+                auto index = indices[i];
+                auto hash = oldHashes[i];
+                valueRemovedImpl(index, hash, false);
             }
             lib::visit(
                 [&](auto& members) {
                     for (UInt index : indices) {
                         valueAddedImpl(
+                            index,
                             getValueHash(members[index]->view().checkedGet(
                                 NO_UNDEFINED_IN_SUBSET)),
                             false);
@@ -121,10 +139,11 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
 
     RightTrigger(OpSubsetEq* op) : op(op) {}
     inline void valueRemovedImpl(HashType hash, bool triggering) {
-        if (op->left->view()
-                .checkedGet(NO_UNDEFINED_IN_SUBSET)
-                .hashIndexMap.count(hash)) {
+        auto& leftView = op->left->view().checkedGet(NO_UNDEFINED_IN_SUBSET);
+        auto iter = leftView.hashIndexMap.find(hash);
+        if (iter != leftView.hashIndexMap.end()) {
             op->changeValue([&]() {
+                op->violatingMembers.insert(iter->second);
                 ++op->violation;
                 return triggering;
             });
@@ -133,10 +152,11 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
     void valueRemoved(UInt, HashType hash) { valueRemovedImpl(hash, true); }
 
     inline void valueAddedImpl(HashType hash, bool triggering) {
-        if (op->left->view()
-                .checkedGet(NO_UNDEFINED_IN_SUBSET)
-                .hashIndexMap.count(hash)) {
+        auto& leftView = op->left->view().checkedGet(NO_UNDEFINED_IN_SUBSET);
+        auto iter = leftView.hashIndexMap.find(hash);
+        if (iter != leftView.hashIndexMap.end()) {
             op->changeValue([&]() {
+                op->violatingMembers.erase(iter->second);
                 --op->violation;
                 return triggering;
             });
@@ -202,7 +222,20 @@ struct OperatorTrates<OpSubsetEq>::RightTrigger : public SetTrigger {
 
 void OpSubsetEq::updateVarViolationsImpl(const ViolationContext&,
                                          ViolationContainer& vioContainer) {
-    left->updateVarViolations(violation, vioContainer);
+    auto leftView = left->getViewIfDefined();
+    if (!left->isConstant() && leftView && !violatingMembers.empty()) {
+        lib::visit(
+            [&](auto& members) {
+                for (auto index : violatingMembers) {
+                    debug_code(assert(index < members.size()));
+                    members[index]->updateVarViolations(violation,
+                                                        vioContainer);
+                }
+            },
+            leftView->members);
+    } else {
+        left->updateVarViolations(violation, vioContainer);
+    }
     right->updateVarViolations(violation, vioContainer);
 }
 
@@ -229,10 +262,17 @@ void OpSubsetEq::debugSanityCheckImpl() const {
     auto& leftView = *leftOption;
     auto& rightView = *rightOption;
     UInt checkViolation = 0;
+
     for (auto& hashIndexPair : leftView.hashIndexMap) {
-        checkViolation += !rightView.hashIndexMap.count(hashIndexPair.first);
+        if (!rightView.hashIndexMap.count(hashIndexPair.first)) {
+            checkViolation += 1;
+            sanityCheck(violatingMembers.count(hashIndexPair.second),
+                        "Missing index from violating members.");
+            ;
+        }
     }
     sanityEqualsCheck(checkViolation, violation);
+    sanityEqualsCheck(checkViolation, violatingMembers.size());
 }
 
 template <typename Op>

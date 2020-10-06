@@ -4,6 +4,7 @@
 #include "operators/simpleOperator.h"
 #include "types/bool.h"
 #include "types/set.h"
+#include "utils/fastIterableIntSet.h"
 struct OpSubsetEq;
 template <>
 struct OperatorTrates<OpSubsetEq> {
@@ -12,6 +13,8 @@ struct OperatorTrates<OpSubsetEq> {
 };
 struct OpSubsetEq
     : public SimpleBinaryOperator<BoolView, SetView, SetView, OpSubsetEq> {
+    FastIterableIntSet violatingMembers;
+
     using SimpleBinaryOperator<BoolView, SetView, SetView,
                                OpSubsetEq>::SimpleBinaryOperator;
 

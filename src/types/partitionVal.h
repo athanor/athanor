@@ -139,11 +139,11 @@ struct PartitionValue : public PartitionView, public ValBase {
             return false;
         }
     }
-
+    // returns old parts
     template <typename InnerValueType, typename Func,
               EnableIfValue<InnerValueType> = 0>
-    inline bool tryMoveMembersToPart(const std::vector<UInt>& memberIndices,
-                                     UInt destPart, Func&& func) {
+    inline lib::optional<std::vector<UInt>> tryMoveMembersToPart(
+        const std::vector<UInt>& memberIndices, UInt destPart, Func&& func) {
         debug_code(auto partInfoBackup = partInfo);
         typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
         const std::vector<UInt> oldParts =
@@ -152,12 +152,12 @@ struct PartitionValue : public PartitionView, public ValBase {
         if (func()) {
             PartitionView::notifyMembersMovedToPart(memberIndices, oldParts,
                                                     destPart);
-            return true;
+            return oldParts;
         } else {
             PartitionView::moveMembersFromPart<InnerViewType>(memberIndices,
                                                               oldParts);
             debug_code(assert(partInfoBackup == partInfo));
-            return false;
+            return lib::nullopt;
         }
     }
 

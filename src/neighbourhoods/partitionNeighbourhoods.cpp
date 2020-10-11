@@ -252,7 +252,7 @@ struct PartitionMoveParts
 
             success = val.tryMoveMembersToPart<InnerValueType>(
                 {index}, newPart,
-                [&]() { return params.parentCheck(params.vals); });
+                [&]() { return params.parentCheck(params.vals); }).has_value();
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
             debug_neighbourhood_action(
@@ -337,7 +337,7 @@ struct PartitionMergeParts
 
             success = val.tryMoveMembersToPart<InnerValueType>(
                 memberIndices, destPart,
-                [&]() { return params.parentCheck(params.vals); });
+                [&]() { return params.parentCheck(params.vals); }).has_value();
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
             debug_neighbourhood_action(
@@ -434,7 +434,7 @@ struct PartitionSplitParts
 
             success = val.tryMoveMembersToPart<InnerValueType>(
                 memberIndices, destPart,
-                [&]() { return params.parentCheck(params.vals); });
+                [&]() { return params.parentCheck(params.vals); }).has_value();
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
             debug_neighbourhood_action(
@@ -563,6 +563,127 @@ struct PartitionRemoveAndDistributePart
     }
 };
 
+template <typename InnerDomain>
+struct PartitionCollectElementsIntoNewPart
+    : public NeighbourhoodFunc<
+          PartitionDomain, 1,
+          PartitionCollectElementsIntoNewPart<InnerDomain>> {
+    typedef typename AssociatedValueType<InnerDomain>::type InnerValueType;
+    typedef typename AssociatedViewType<InnerValueType>::type InnerViewType;
+    const PartitionDomain& domain;
+    const InnerDomain& innerDomain;
+    const UInt innerDomainSize;
+    PartitionCollectElementsIntoNewPart(const PartitionDomain& domain)
+        : domain(domain),
+          innerDomain(*lib::get<shared_ptr<InnerDomain>>(domain.inner)),
+          innerDomainSize(getDomainSize(innerDomain)) {}
+    static string getName() { return "PartitionCollectElementsIntoNewPart"; }
+    static bool matches(const PartitionDomain& domain) {
+        return domain.numberParts.maxSize >
+                   1 &&  // partition with one part makes no sense here
+               !domain.regular &&
+               domain.numberParts.sizeType !=
+                   SizeAttr::SizeAttrType::EXACT_SIZE;  // allows variable
+                                                        // number of parts
+    }
+    lib::optional<vector<UInt>> findMemberIndices(
+        const PartitionValue& val,
+        ViolationContainer& vioContainerAtThisLevel) {
+        HashMap<UInt, UInt> deletionsFromPart;
+        HashSet<UInt> memberIndicesSet;
+        auto newPartSize = [&](UInt p) {
+            auto iter = deletionsFromPart.find(p);
+            UInt deletions =
+                (iter != deletionsFromPart.end()) ? iter->second : 0;
+            return val.partInfo[p].partSize - deletions;
+        };
+
+        UInt targetNumberElements =
+            min(val.numberParts(), domain.partSize.maxSize);
+        targetNumberElements =
+            max((size_t)targetNumberElements, domain.partSize.maxSize);
+
+        UInt64 failedAttempts = 0;
+        while (memberIndicesSet.size() < targetNumberElements &&
+               failedAttempts < domain.numberElements * 20) {
+            bool allowedDuplicateParts =
+                failedAttempts < domain.numberElements * 10;
+
+            auto index = vioContainerAtThisLevel.selectRandomVar(
+                domain.numberElements - 1);
+            UInt part = val.memberPartMap[index];
+            if (domain.partSize.minSize + 1 <=
+                    newPartSize(part) &&  // deleting from this part does not
+                                          // violate minSize
+                (!deletionsFromPart.count(part) ||
+                 allowedDuplicateParts)  // aim for non duplicate parts in early
+                                         // attempts
+            ) {
+                deletionsFromPart[part] += 1;
+                memberIndicesSet.insert(index);
+            } else {
+                ++failedAttempts;
+            }
+        }
+        if (memberIndicesSet.size() >= domain.partSize.minSize) {
+            return vector<UInt>(memberIndicesSet.begin(),
+                                memberIndicesSet.end());
+        } else {
+            return lib::nullopt;
+        }
+    }
+    void apply(NeighbourhoodParams& params, PartitionValue& val) {
+        if (val.numberParts() == domain.partSize.maxSize) {
+            return;
+        }
+        debug_code(assert(!val.emptyParts.empty()));
+
+        int numberTries = 0;
+        const int tryLimit = params.parentCheckTryLimit;
+
+        debug_neighbourhood_action(
+            "Looking for elements to collect into new part");
+
+        auto& vioContainerAtThisLevel =
+            params.vioContainer.childViolations(val.id);
+
+        bool success = false;
+        UInt destPart = *val.emptyParts.begin();
+        lib::optional<vector<UInt>> memberIndices;
+        lib::optional<vector<UInt>> oldParts;
+        do {
+            success = false;
+            ++params.stats.minorNodeCount;
+
+            memberIndices = findMemberIndices(val, vioContainerAtThisLevel);
+            if (!memberIndices) {
+                success = false;
+                continue;
+            }
+            oldParts = val.tryMoveMembersToPart<InnerValueType>(
+                *memberIndices, destPart,
+                [&]() { return params.parentCheck(params.vals); });
+            success = oldParts.has_value();
+        } while (!success && ++numberTries < tryLimit);
+        if (!success) {
+            debug_neighbourhood_action(
+                "Couldn't find elements to collect, number "
+                "tries="
+                << tryLimit);
+            return;
+        }
+        debug_neighbourhood_action(
+            "Elements collected into new part, memberIndices="
+            << *memberIndices << " and destPart= " << destPart
+            << " and oldParts=" << *oldParts);
+        if (!params.changeAccepted()) {
+            debug_neighbourhood_action("Change rejected");
+            val.tryMoveMembersFromPart<InnerValueType>(
+                *memberIndices, *oldParts, []() { return true; });
+        }
+    }
+};
+
 void partitionAssignRandomGen(const PartitionDomain& domain,
                               int numberValsRequired,
                               std::vector<Neighbourhood>& neighbourhoods) {
@@ -611,6 +732,8 @@ const NeighbourhoodVec<PartitionDomain> NeighbourhoodGenList<
     {1, generateForAllTypes<PartitionDomain, PartitionMergeParts>},
     {1, generateForAllTypes<PartitionDomain, PartitionSplitParts>},
     {1, generateForAllTypes<PartitionDomain, PartitionRemoveAndDistributePart>},
+    {1,
+     generateForAllTypes<PartitionDomain, PartitionCollectElementsIntoNewPart>},
 };
 
 const NeighbourhoodVec<PartitionDomain>

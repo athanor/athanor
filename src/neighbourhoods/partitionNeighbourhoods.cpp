@@ -251,8 +251,9 @@ struct PartitionMoveParts
             }
 
             success = val.tryMoveMembersToPart<InnerValueType>(
-                {index}, newPart,
-                [&]() { return params.parentCheck(params.vals); }).has_value();
+                             {index}, newPart,
+                             [&]() { return params.parentCheck(params.vals); })
+                          .has_value();
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
             debug_neighbourhood_action(
@@ -336,8 +337,9 @@ struct PartitionMergeParts
             memberIndices = val.getMembersInPart(srcPart);
 
             success = val.tryMoveMembersToPart<InnerValueType>(
-                memberIndices, destPart,
-                [&]() { return params.parentCheck(params.vals); }).has_value();
+                             memberIndices, destPart,
+                             [&]() { return params.parentCheck(params.vals); })
+                          .has_value();
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
             debug_neighbourhood_action(
@@ -433,8 +435,9 @@ struct PartitionSplitParts
             memberIndices.resize(splitSize);
 
             success = val.tryMoveMembersToPart<InnerValueType>(
-                memberIndices, destPart,
-                [&]() { return params.parentCheck(params.vals); }).has_value();
+                             memberIndices, destPart,
+                             [&]() { return params.parentCheck(params.vals); })
+                          .has_value();
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
             debug_neighbourhood_action(
@@ -504,8 +507,8 @@ struct PartitionRemoveAndDistributePart
                 inserted = true;
                 destParts.emplace_back(*iter);
                 partExtraMemberCount[*iter] += 1;
-                ++iter;
             }
+            ++iter;
         }
         shuffle(destParts.begin(), destParts.end(), globalRandomGenerator);
         return destParts;

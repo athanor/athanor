@@ -207,6 +207,11 @@ void OpPartitionParty<OperandView>::updateVarViolationsImpl(
     const ViolationContext& vioContext, ViolationContainer& vioContainer) {
     this->left->updateVarViolations(vioContext, vioContainer);
     this->right->updateVarViolations(vioContext, vioContainer);
+    if (cachedPart) {
+        for (auto& member : this->template getMembers<OperandView>()) {
+            member->updateVarViolations(vioContext, vioContainer);
+        }
+    }
 }
 template <typename OperandView>
 void OpPartitionParty<OperandView>::copy(OpPartitionParty&) const {}
@@ -242,15 +247,17 @@ void OpPartitionParty<OperandView>::debugSanityCheckImpl() const {
     auto& partition = *rightOption;
     auto& partitionMembers = partition.template getMembers<OperandView>();
     auto hash = getValueHash(partyMember);
-        auto iter = partition.hashIndexMap.find(hash);
+    auto iter = partition.hashIndexMap.find(hash);
     if (iter != partition.hashIndexMap.end()) {
-        sanityCheck(this->cachedPartitionMemberIndex.has_value(), "should have value.");
+        sanityCheck(this->cachedPartitionMemberIndex.has_value(),
+                    "should have value.");
         sanityCheck(this->cachedPart.has_value(), "should have value.");
         sanityEqualsCheck(iter->second, cachedPartitionMemberIndex.value());
         sanityEqualsCheck(partition.memberPartMap[iter->second],
                           cachedPart.value());
     } else {
-        sanityCheck(!cachedPartitionMemberIndex.has_value(), "should not have value");
+        sanityCheck(!cachedPartitionMemberIndex.has_value(),
+                    "should not have value");
         sanityCheck(!cachedPart.has_value(), "should not have value");
     }
     UInt count = 0;

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include "parsing/parserCommon.h"
+#include "types/allVals.h"
 #include "types/boolVal.h"
 #include "types/partitionVal.h"
 #include "types/setVal.h"
@@ -100,4 +101,63 @@ ParseResult parseOpApart(json& operandsExpr, ParsedModel& parsedModel) {
     auto negated = OpMaker<OpNot>::make(expr);
     negated->setConstant(expr->isConstant());
     return ParseResult(result.domain, negated, result.hasEmptyType);
+}
+
+ParseResult parseOpPartitionLit(json& partitionExpr, ParsedModel& parsedModel) {
+    vector<MultiParseResult> partitionPartsResults;
+    UInt numberElements = 0;
+    bool allConstant = true;
+    for (auto& expr : partitionExpr) {
+        partitionPartsResults.emplace_back(
+            parseAllAsSameType(expr, parsedModel));
+        numberElements += partitionPartsResults.back().numberElements();
+        allConstant |= partitionPartsResults.back().allConstant;
+    }
+    if (!allConstant) {
+        myCerr << "For partition literals, only constant elements are "
+                  "currently supported.\n";
+        myAbort();
+    }
+    if (numberElements == 0) {
+        myCerr << " not supporting empty partition literals currently.\n";
+        myAbort();
+    }
+    auto val = make<PartitionValue>();
+    auto domain = lib::visit(
+        [&](auto& exprs) {
+            typedef viewType(exprs) View;
+            typedef typename ::AssociatedValueType<View>::type Value;
+            auto innerDomain =
+                deepCopyDomain(partitionPartsResults.front().domain);
+            val->setNumberElements<Value>(numberElements);
+            UInt numberElementsProcessed = 0;
+            size_t minPartSize = partitionPartsResults.front().numberElements();
+            size_t maxPartSize = partitionPartsResults.front().numberElements();
+            for (size_t part = 0; part < partitionPartsResults.size(); part++) {
+                auto& result = partitionPartsResults[part];
+                mergeDomains(innerDomain, result.domain);
+                minPartSize = min(minPartSize, result.numberElements());
+                maxPartSize = max(maxPartSize, result.numberElements());
+
+                auto& exprs = lib::get<ExprRefVec<View>>(result.exprs);
+                for (size_t i = 0; i < exprs.size(); i++) {
+                    if (!getAs<Value>(exprs[i])) {
+                        myCerr << "Unsupported, only literals can be "
+                                  "inside partition literals.\n";
+                        myAbort();
+                    }
+                    auto member = assumeAsValue(exprs[i]);
+                    val->assignMember(numberElementsProcessed + i, part,
+                                      member);
+                }
+                numberElementsProcessed += exprs.size();
+            }
+            return make_shared<PartitionDomain>(
+                innerDomain, false, exactSize(partitionPartsResults.size()),
+                sizeRange(minPartSize, maxPartSize));
+        },
+        partitionPartsResults.front().exprs);
+    auto op = val.asExpr();
+    op->setConstant(allConstant);
+    return ParseResult(domain, op, false);
 }

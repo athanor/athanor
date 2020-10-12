@@ -29,6 +29,7 @@ typedef function<ParseResult(json&, ParsedModel&)> ParseExprFunction;
 typedef function<AnyDomainRef(json&, ParsedModel&)> ParseDomainFunction;
 
 ParseResult parseOpSetLit(json& setExpr, ParsedModel& parsedModel);
+ParseResult parseOpPartitionLit(json& partitionExpr, ParsedModel& parsedModel);
 ParseResult parseOpFunctionRange(json& functionExpr, ParsedModel& parsedModel);
 ParseResult parseOpFunctionDefined(json& functionExpr,
                                    ParsedModel& parsedModel);
@@ -379,6 +380,7 @@ optional<ParseResult> tryParseExpr(json& essenceExpr,
             {{"ConstantInt", parseConstantInt},
              {"ConstantBool", parseConstantBool},
              {"AbsLitSet", parseOpSetLit},
+             {"AbsLitPartition", parseOpPartitionLit},
              {"AbsLitSequence", parseOpSequenceLit},
              {"AbsLitMatrix", parseOpMatrixLit},
              {"AbsLitMSet", parseOpMSetLit},

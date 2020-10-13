@@ -2,6 +2,7 @@
 #include <iostream>
 #include <memory>
 #include "operators/simpleOperator.hpp"
+#include "types/intVal.h"
 #include "types/set.h"
 using namespace std;
 static const char* NO_UNDEFINED_IN_SETINTERSECT =
@@ -147,10 +148,44 @@ struct OperatorTrates<OpSetIntersect>::OperandTrigger : public SetTrigger {
     void hasBecomeDefined() final { todoImpl(); }
 };
 
-void OpSetIntersect::updateVarViolationsImpl(const ViolationContext& context,
+void OpSetIntersect::updateVarViolationsImpl(const ViolationContext& vioContext,
                                              ViolationContainer& vioContainer) {
-    left->updateVarViolations(context, vioContainer);
-    right->updateVarViolations(context, vioContainer);
+    auto* intVioContextTest =
+        dynamic_cast<const IntViolationContext*>(&vioContext);
+    bool intersectionToLarge =
+        intVioContextTest &&
+        intVioContextTest->reason == IntViolationContext::Reason::TOO_LARGE;
+    if (!intersectionToLarge) {
+        left->updateVarViolations(vioContext, vioContainer);
+        right->updateVarViolations(vioContext, vioContainer);
+    } else {
+        left->updateVarViolations(vioContext.parentViolation, vioContainer);
+        right->updateVarViolations(vioContext.parentViolation, vioContainer);
+        auto leftViewO = left->getViewIfDefined();
+        auto rightViewO = right->getViewIfDefined();
+        if (!leftViewO || !rightViewO) {
+            return;
+        }
+        auto& leftView = *leftViewO;
+        auto& rightView = *rightViewO;
+        lib::visit(
+            [&](auto& leftMembers) {
+                auto& rightMembers =
+                    lib::get<ExprRefVec<viewType(leftMembers)>>(
+                        rightView.members);
+                for (auto& hashIndexPair : this->hashIndexMap) {
+                    auto hash = hashIndexPair.first;
+                    auto leftIndex = leftView.hashIndexMap.at(hash);
+                    auto rightIndex = rightView.hashIndexMap.at(hash);
+                    leftMembers.at(leftIndex)->updateVarViolations(
+                        vioContext.parentViolation, vioContainer);
+                    rightMembers.at(rightIndex)
+                        ->updateVarViolations(vioContext.parentViolation,
+                                              vioContainer);
+                }
+            },
+            leftView.members);
+    }
 }
 
 void OpSetIntersect::copy(OpSetIntersect&) const {}

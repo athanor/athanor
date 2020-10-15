@@ -127,8 +127,16 @@ void OpTupleLit::stopTriggering() {
     }
 }
 
-void OpTupleLit::updateVarViolationsImpl(const ViolationContext&,
-                                         ViolationContainer&) {}
+void OpTupleLit::updateVarViolationsImpl(const ViolationContext& vioContext,
+                                         ViolationContainer& vioContainer) {
+    for (auto& member : this->members) {
+        lib::visit(
+            [&](auto& member) {
+                member->updateVarViolations(vioContext, vioContainer);
+            },
+            member);
+    }
+}
 
 ExprRef<TupleView> OpTupleLit::deepCopyForUnrollImpl(
     const ExprRef<TupleView>&, const AnyIterRef& iterator) const {

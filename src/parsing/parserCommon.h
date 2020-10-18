@@ -30,11 +30,13 @@ MultiParseResult parseAllAsSameType(
 template <typename Function,
           typename ReturnType = typename Function::result_type>
 lib::optional<ReturnType> stringMatch(
-    const std::vector<std::pair<std::string, Function>>& match,
-    nlohmann::json& essenceExpr, ParsedModel& parsedModel) {
-    for (auto& matchCase : match) {
-        if (essenceExpr.count(matchCase.first)) {
-            return matchCase.second(essenceExpr[matchCase.first], parsedModel);
+    const HashMap<std::string, Function>& match, nlohmann::json& essenceExpr,
+    ParsedModel& parsedModel) {
+    for (auto jsonIter = essenceExpr.begin(); jsonIter != essenceExpr.end();
+         ++jsonIter) {
+        auto iter = match.find(jsonIter.key());
+        if (iter != match.end()) {
+            return iter->second(jsonIter.value(), parsedModel);
         }
     }
     return lib::nullopt;

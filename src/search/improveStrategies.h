@@ -36,15 +36,22 @@ class HillClimbing : public SearchStrategy {
     std::shared_ptr<NeighbourhoodSelectionStrategy> selector;
     std::shared_ptr<NeighbourhoodSearchStrategy> searcher;
     const UInt64 allowedIterationsAtPeak = improveStratPeakIterations;
+    const UInt64 maxIterations;
 
    public:
     HillClimbing(std::shared_ptr<NeighbourhoodSelectionStrategy> selector,
-                 std::shared_ptr<NeighbourhoodSearchStrategy> searcher)
-        : selector(std::move(selector)), searcher(std::move(searcher)) {}
+                 std::shared_ptr<NeighbourhoodSearchStrategy> searcher,
+                 UInt64 maxIterations = 0)
+        : selector(std::move(selector)),
+          searcher(std::move(searcher)),
+          maxIterations(maxIterations) {}
 
     void run(State& state, bool isOuterMostStrategy) {
         UInt64 iterationsAtPeak = 0;
-        while (true) {
+        UInt64 startNumberIterations = state.stats.numberIterations;
+        while (maxIterations == 0 ||
+               state.stats.numberIterations - startNumberIterations <
+                   maxIterations) {
             bool allowed = false, strictImprovement = false;
             searcher->search(
                 state, selector->nextNeighbourhood(state),
@@ -173,23 +180,34 @@ class HillClimbingWithViolations : public SearchStrategy {
     static constexpr double multiplier = 1.2;
     static const int INCREASE_LIMIT = 10;
     const UInt64 allowedIterationsAtPeak = improveStratPeakIterations;
+    const UInt64 maxIterations;
     ExponentialIncrementer<UInt> violationBackOff =
         ExponentialIncrementer<UInt>(baseValue, multiplier);
 
    public:
     HillClimbingWithViolations(
         std::shared_ptr<NeighbourhoodSelectionStrategy> selector,
-        std::shared_ptr<NeighbourhoodSearchStrategy> searcher)
-        : selector(std::move(selector)), searcher(std::move(searcher)) {}
+        std::shared_ptr<NeighbourhoodSearchStrategy> searcher,
+        UInt64 maxIterations = 0)
+        : selector(std::move(selector)),
+          searcher(std::move(searcher)),
+          maxIterations(maxIterations) {}
     inline void resetExploreSize() {
         violationBackOff.reset(baseValue, multiplier);
     }
 
     inline void increaseExploreSize() { violationBackOff.increment(); }
 
-    bool explore(State& state, const Objective& objToBeat) {
+    bool hasResource(State& state, UInt64 startNumberIterations) {
+        return maxIterations == 0 ||
+               state.stats.numberIterations - startNumberIterations <=
+                   maxIterations;
+    }
+    void explore(State& state, const Objective& objToBeat,
+                 UInt64 startNumberIterations) {
         UInt64 iterationsWithoutChange = 0;
-        while (objToBeat <= state.model.getObjective()) {
+        while (hasResource(state, startNumberIterations) &&
+               objToBeat <= state.model.getObjective()) {
             bool allowed = false;
             searcher->search(state, selector->nextNeighbourhood(state),
                              [&](const auto& result) {
@@ -206,7 +224,7 @@ class HillClimbingWithViolations : public SearchStrategy {
                 ++iterationsWithoutChange;
                 if (iterationsWithoutChange >
                     allowedIterationsAtPeak / INCREASE_LIMIT) {
-                    return false;
+                    return;
                 }
             }
         }
@@ -214,7 +232,8 @@ class HillClimbingWithViolations : public SearchStrategy {
         //        std::cout << "found obj " << state.model.getObjective() << ",
         //        trying to remove violation=" << state.model.getViolation() <<
         //        "\n";
-        while (state.model.getViolation() > 0) {
+        while (hasResource(state, startNumberIterations) &&
+               state.model.getViolation() > 0) {
             bool allowed = false;
             searcher->search(state, selector->nextNeighbourhood(state),
                              [&](const auto& result) {
@@ -230,11 +249,11 @@ class HillClimbingWithViolations : public SearchStrategy {
                 ++iterationsWithoutChange;
                 if (iterationsWithoutChange >
                     allowedIterationsAtPeak / INCREASE_LIMIT) {
-                    return false;
+                    return;
                 }
             }
         }
-        return true;
+        return;
     }
 
     bool climbTo0Violation(State& state) {
@@ -263,18 +282,9 @@ class HillClimbingWithViolations : public SearchStrategy {
     }
 
     void run(State& state, bool isOuterMostStrategy) {
-        bool explorationSupported =
-            state.model.optimiseMode != OptimiseMode::NONE;
-        if (!explorationSupported) {
-            std::cout << "[warning]: This exploration strategy "
-                         "does not work "
-                         "with satisfaction "
-                         "problems.  Will not enter explore "
-                         "mode using this "
-                         "strategy.\n";
-        }
         while (true) {
-            if (climbTo0Violation(state)) {
+            bool is0violations = climbTo0Violation(state);
+            if (is0violations) {
                 break;
             } else if (isOuterMostStrategy) {
                 continue;
@@ -285,11 +295,12 @@ class HillClimbingWithViolations : public SearchStrategy {
 
         Objective objToBeat = state.model.getObjective();
         int numberIncreases = 0;
-        while (true) {
+        UInt64 startNumberIterations = state.stats.numberIterations;
+        while (hasResource(state, startNumberIterations)) {
             //            std::cout << "exploring, violation=" <<
             //            state.model.getViolation() << ", numberIterations=" <<
             //            state.stats.numberIterations << "\n";
-            explore(state, objToBeat);
+            explore(state, objToBeat, startNumberIterations);
             if (state.model.getViolation() == 0 &&
                 state.model.getObjective() < objToBeat) {
                 objToBeat = state.model.getObjective();
@@ -312,4 +323,121 @@ class HillClimbingWithViolations : public SearchStrategy {
     }
 };
 
+class MetaHillClimbing : public SearchStrategy,
+                         public UcbSelector<MetaHillClimbing> {
+    std::shared_ptr<NeighbourhoodSelectionStrategy> selector;
+    std::shared_ptr<NeighbourhoodSearchStrategy> searcher;
+
+    HillClimbing search1;
+    HillClimbingWithViolations search2;
+    const UInt64 allowedIterationsAtPeak = improveStratPeakIterations;
+    UInt64 search1Iterations = 0;
+    UInt64 search2Iterations = 0;
+    UInt64 search1Solutions = 0;
+    UInt64 search2Solutions = 0;
+    UInt64 search1Activations = 0;
+    UInt64 search2Activations = 1;  // marking this as activated as forcing UCB
+                                    // to choose other strategy first.
+
+   public:
+    MetaHillClimbing(std::shared_ptr<NeighbourhoodSelectionStrategy> selector,
+                     std::shared_ptr<NeighbourhoodSearchStrategy> searcher)
+        : UcbSelector<MetaHillClimbing>(1),
+          selector(selector),
+          searcher(searcher),
+          search1(selector, searcher, improveStratPeakIterations),
+          search2(selector, searcher, improveStratPeakIterations) {}
+
+    inline double individualCost(size_t i) {
+        return (i == 0) ? search1Activations : search2Activations;
+    }
+    inline double totalCost() {
+        return search1Activations + search2Activations;
+    }
+    inline size_t numberOptions() { return 2; }
+    inline bool wasActivated(size_t i) {
+        return (i == 0) ? search1Activations != 0 : search2Activations != 0;
+    }
+    inline double reward(size_t i) {
+        return (i == 0) ? search1Solutions : search2Solutions;
+    }
+
+    bool climbTo0Violation(State& state) {
+        UInt64 iterationsAtPeak = 0;
+        while (state.model.getViolation() > 0) {
+            bool allowed = false, strictImprovement = false;
+            searcher->search(state, selector->nextNeighbourhood(state),
+                             [&](const auto& result) {
+                                 if (result.foundAssignment) {
+                                     allowed = result.getDeltaViolation() <= 0;
+                                     strictImprovement =
+                                         result.getDeltaViolation() < 0;
+                                 }
+                                 return allowed;
+                             });
+            if (strictImprovement) {
+                iterationsAtPeak = 0;
+            } else {
+                ++iterationsAtPeak;
+                if (iterationsAtPeak > allowedIterationsAtPeak) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    void run(State& state, bool isOuterMostStrategy) {
+        while (true) {
+            bool is0violations = climbTo0Violation(state);
+            if (is0violations) {
+                break;
+            } else if (isOuterMostStrategy) {
+                continue;
+            } else {
+                return;
+            }
+        }
+        do {
+            UInt64 startNumberSolutions =
+                state.stats.numberBetterFeasibleSolutionsFound;
+            UInt64 startNumberIterations = state.stats.numberIterations;
+            auto choice = next();
+            bool endOfSearch = false;
+            try {
+                if (choice == 0) {
+                    search1.run(state, false);
+                } else {
+                    search2.run(state, false);
+                }
+            } catch (EndOfSearchException&) {
+                endOfSearch = true;
+            }
+            UInt64 numberAdditionalSolutions =
+                state.stats.numberBetterFeasibleSolutionsFound -
+                startNumberSolutions;
+            if (choice == 0) {
+                search1Iterations +=
+                    state.stats.numberIterations - startNumberIterations;
+                search1Solutions += numberAdditionalSolutions;
+                search1Activations += 1;
+            } else {
+                search2Iterations +=
+                    state.stats.numberIterations - startNumberIterations;
+                search2Solutions += numberAdditionalSolutions;
+                search2Activations += 1;
+            }
+            if (endOfSearch) {
+                signalEndOfSearch();
+            }
+        } while (isOuterMostStrategy);
+    }
+    inline void printAdditionalStats(std::ostream& os) final {
+        os << "strat,activations,solutions,iterations\n";
+        os << "climbing," << search1Activations << "," << search1Solutions
+           << "," << search1Iterations << std::endl;
+        os << "climbing with violations," << search2Activations << ","
+           << search2Solutions << "," << search2Iterations << std::endl;
+    }
+};
 #endif /* SRC_SEARCH_IMPROVESTRATEGIES_H_ */

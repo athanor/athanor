@@ -193,7 +193,11 @@ auto& saveUcbArg =
         .add<Arg<ofstream>>("path_to_file", Policy::MANDATORY,
                             "File to save results to.");
 
-enum ImproveStrategyChoice { HILL_CLIMBING, HILL_CLIMBING_WITH_VIOLATIONS, LATE_ACCEPTANCE_HILL_CLIMBING };
+enum ImproveStrategyChoice {
+    HILL_CLIMBING,
+    META_HILL_CLIMBING,
+    LATE_ACCEPTANCE_HILL_CLIMBING
+};
 enum ExploreStrategyChoice {
     VIOLATION_BACKOFF,
     RANDOM_WALK,
@@ -203,8 +207,8 @@ enum ExploreStrategyChoice {
 enum NhSearchStrategyChoice { APPLY_ONCE, FIRST_AT_LEAST_EQUAL };
 enum SelectionStrategyChoice { RANDOM, UCB, INTERACTIVE };
 
-ImproveStrategyChoice improveStrategyChoice = HILL_CLIMBING;
-ExploreStrategyChoice exploreStrategyChoice = AUTO_EXPLORE;
+ImproveStrategyChoice improveStrategyChoice = META_HILL_CLIMBING;
+ExploreStrategyChoice exploreStrategyChoice = RANDOM_WALK;
 NhSearchStrategyChoice nhSearchStrategyChoice = APPLY_ONCE;
 SelectionStrategyChoice selectionStrategyChoice = UCB;
 
@@ -219,7 +223,7 @@ auto& improveStratGroup =
     searchStrategiesGroup
         .add<ComplexFlag>("--improve", Policy::OPTIONAL,
                           "Specify the strategy used to improve on an "
-                          "assignment. (default=hc).")
+                          "assignment. (default=mhc).")
         .makeExclusiveGroup(Policy::MANDATORY);
 
 auto& hillClimbingFlag = improveStratGroup.add<Flag>(
@@ -227,8 +231,10 @@ auto& hillClimbingFlag = improveStratGroup.add<Flag>(
     [](auto&&) { improveStrategyChoice = HILL_CLIMBING; });
 
 auto& hillClimbingWithViolationsFlag = improveStratGroup.add<Flag>(
-    "hcwv", "Hill climbing with violations strategy.",
-    [](auto&&) { improveStrategyChoice = HILL_CLIMBING_WITH_VIOLATIONS; });
+    "mhc",
+    "A meta hill climbing strategy that, if required, progressively allows "
+    "discovery of beter  objectives by allowing violations.",
+    [](auto&&) { improveStrategyChoice = META_HILL_CLIMBING; });
 
 auto& lateAcceptanceHillClimbingFlag = improveStratGroup.add<ComplexFlag>(
     "lahc", "Late acceptance hill climbing strategy.",
@@ -260,7 +266,7 @@ auto& exploreStratGroup =
         .add<ComplexFlag>("--explore", Policy::OPTIONAL,
                           "Specify the strategy used to explore when the "
                           "improve strategy fails to improve on an assignment. "
-                          "(default=auto).")
+                          "(default=rw).")
         .makeExclusiveGroup(Policy::MANDATORY);
 
 auto& randomWalkFlag = exploreStratGroup.add<Flag>(
@@ -453,8 +459,8 @@ std::shared_ptr<SearchStrategy> makeImproveStrategy(
     switch (improveStrategyChoice) {
         case HILL_CLIMBING:
             return make_shared<HillClimbing>(selector, searcher);
-        case HILL_CLIMBING_WITH_VIOLATIONS:
-            return make_shared<HillClimbingWithViolations>(selector, searcher);
+        case META_HILL_CLIMBING:
+            return make_shared<MetaHillClimbing>(selector, searcher);
 
         case LATE_ACCEPTANCE_HILL_CLIMBING: {
             size_t queueSize =
@@ -702,6 +708,7 @@ int main(const int argc, const char** argv) {
                                       nhSelection));
         }
         explore->printAdditionalStats(cout);
+        improve->printAdditionalStats(cout);
         printFinalStats(state);
     } catch (nlohmann::detail::exception& e) {
         myCerr << "Error parsing JSON: " << e.what() << endl;

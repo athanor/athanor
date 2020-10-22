@@ -181,7 +181,6 @@ class ExplorationUsingRandomWalk : public SearchStrategy {
         auto objToBeat = state.model.getObjective();
         auto vioToBeat = state.model.getViolation();
         while (!finished(state)) {
-            explore(state);
             climbStrategy->run(state, false);
             if (state.model.getViolation() < vioToBeat ||
                 (vioToBeat == 0 && state.model.getViolation() == 0 &&
@@ -190,7 +189,11 @@ class ExplorationUsingRandomWalk : public SearchStrategy {
                 objToBeat = state.model.getObjective();
                 resetExploreSize();
                 numberIncreases = 0;
-            } else if (numberIncreases < INCREASE_LIMIT) {
+                continue;
+            }
+            explore(state);
+
+            if (numberIncreases < INCREASE_LIMIT) {
                 increaseExploreSize();
                 numberIncreases += 1;
             } else {
@@ -203,7 +206,6 @@ class ExplorationUsingRandomWalk : public SearchStrategy {
     }
 
     void run(State& state, bool) {
-        climbStrategy->run(state, false);
         runImpl(state,
                 [](State& state) { return state.model.getViolation() == 0; });
         resetExploreSize();

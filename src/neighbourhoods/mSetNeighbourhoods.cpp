@@ -250,9 +250,12 @@ struct MSetRemove
         ValRef<InnerValueType> removedMember(nullptr);
         bool success;
         debug_neighbourhood_action("Looking for value to remove");
+        auto& vioContainerAtThisLevel =
+            params.vioContainer.childViolations(val.id);
         do {
             ++params.stats.minorNodeCount;
-            indexToRemove = globalRandom<size_t>(0, val.numberElements() - 1);
+            indexToRemove = vioContainerAtThisLevel.selectRandomVar(
+                                                                    val.numberElements() - 1);;
             std::pair<bool, ValRef<InnerValueType>> removeStatus =
                 val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
                     return params.parentCheck(params.vals);

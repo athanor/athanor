@@ -272,9 +272,12 @@ struct SetRemove
         lib::optional<ValRef<InnerValueType>> removedMember;
         bool success = false;
         debug_neighbourhood_action("Looking for value to remove");
+        auto& vioContainerAtThisLevel =
+            params.vioContainer.childViolations(val.id);
         do {
             ++params.stats.minorNodeCount;
-            indexToRemove = globalRandom<size_t>(0, val.numberElements() - 1);
+            indexToRemove = vioContainerAtThisLevel.selectRandomVar(
+                                                                    val.numberElements() - 1);;
             debug_log("trying to remove index " << indexToRemove << " from set "
                                                 << val.view());
             removedMember = val.tryRemoveMember<InnerValueType>(

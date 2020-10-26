@@ -22,9 +22,12 @@ void OpIntEq::updateValue(IntView& leftView, IntView& rightView) {
         return true;
     });
 }
-void OpIntEq::updateVarViolationsImpl(const ViolationContext&,
+void OpIntEq::updateVarViolationsImpl(const ViolationContext& vioContext,
                                       ViolationContainer& vioContainer) {
-    if (violation == 0) {
+    auto* boolVioContextTest =
+        dynamic_cast<const BoolViolationContext*>(&vioContext);
+    bool negated = boolVioContextTest && boolVioContextTest->negated;
+    if (violation == 0 || negated) {
         return;
     } else if (allOperandsAreDefined()) {
         Int diff = left->view()->value - right->view()->value;

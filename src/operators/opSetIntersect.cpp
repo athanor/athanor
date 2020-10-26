@@ -178,9 +178,9 @@ void OpSetIntersect::updateVarViolationsImpl(const ViolationContext& vioContext,
                     auto leftIndex = leftView.hashIndexMap.at(hash);
                     auto rightIndex = rightView.hashIndexMap.at(hash);
                     leftMembers.at(leftIndex)->updateVarViolations(
-                        vioContext.parentViolation, vioContainer);
+                        1, vioContainer);
                     rightMembers.at(rightIndex)
-                        ->updateVarViolations(vioContext.parentViolation,
+                        ->updateVarViolations(1,
                                               vioContainer);
                 }
             },

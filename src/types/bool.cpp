@@ -54,13 +54,18 @@ template <>
 void normalise<BoolValue>(BoolValue&) {}
 
 template <>
-bool smallerValue<BoolView>(const BoolView& u, const BoolView& v) {
+bool smallerValueImpl<BoolView>(const BoolView& u, const BoolView& v) {
     return u.violation < v.violation;
 }
 
 template <>
-bool largerValue<BoolView>(const BoolView& u, const BoolView& v) {
+bool largerValueImpl<BoolView>(const BoolView& u, const BoolView& v) {
     return u.violation > v.violation;
+}
+
+template <>
+bool equalValueImpl<BoolView>(const BoolView& u, const BoolView& v) {
+    return u.violation == v.violation;
 }
 
 void BoolView::standardSanityChecksForThisType() const {}

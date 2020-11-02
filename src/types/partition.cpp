@@ -177,14 +177,7 @@ void stopTriggering(PartitionValue&) {}
 template <typename InnerViewType>
 void normaliseImpl(PartitionValue& partition,
                    ExprRefVec<InnerViewType>& valMembersImpl) {
-    for (auto& v : valMembersImpl) {
-        normalise(*assumeAsValue(v));
-    }
-    sort(valMembersImpl.begin(), valMembersImpl.end(),
-         [](auto& u, auto& v) { return smallerValue(u->view(), v->view()); });
-    for (size_t i = 0; i < valMembersImpl.size(); i++) {
-        partition.hashIndexMap[getValueHash(valMembersImpl[i])] = i;
-    }
+    todoImpl(partition, valMembersImpl);
 }
 
 template <>
@@ -195,19 +188,31 @@ void normalise<PartitionValue>(PartitionValue& val) {
 }
 
 template <>
-bool smallerValue<PartitionView>(const PartitionView& u,
-                                 const PartitionView& v);
+bool smallerValueImpl<PartitionView>(const PartitionView& u,
+                                     const PartitionView& v);
 template <>
-bool largerValue<PartitionView>(const PartitionView& u, const PartitionView& v);
+bool largerValueImpl<PartitionView>(const PartitionView& u,
+                                    const PartitionView& v);
+template <>
+bool equalValueImpl<PartitionView>(const PartitionView& u,
+                                   const PartitionView& v);
 
 template <>
-bool smallerValue<PartitionView>(const PartitionView&, const PartitionView&) {
-    return false;
+bool smallerValueImpl<PartitionView>(const PartitionView& u,
+                                     const PartitionView& v) {
+    todoImpl(u, v);
 }
 
 template <>
-bool largerValue<PartitionView>(const PartitionView&, const PartitionView&) {
-    return false;
+bool largerValueImpl<PartitionView>(const PartitionView& u,
+                                    const PartitionView& v) {
+    todoImpl(u, v);
+}
+
+template <>
+bool equalValueImpl<PartitionView>(const PartitionView& u,
+                                   const PartitionView& v) {
+    todoImpl(u, v);
 }
 
 void PartitionView::standardSanityChecksForThisType() const {

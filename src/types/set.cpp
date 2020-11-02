@@ -33,7 +33,7 @@ ostream& prettyPrint<SetView>(ostream& os, const SetView& v) {
 template <>
 ostream& prettyPrint<SetView>(ostream& os, const SetDomain& domain,
                               const SetView& v) {
-    os << ((domain.isRelation)? "relation (" : "{");
+    os << ((domain.isRelation) ? "relation (" : "{");
     lib::visit(
         [&](auto& membersImpl) {
             typedef
@@ -131,56 +131,42 @@ void normalise<SetValue>(SetValue& val) {
 }
 
 template <>
-bool smallerValue<SetView>(const SetView& u, const SetView& v);
+bool smallerValueImpl<SetView>(const SetView& u, const SetView& v);
 template <>
-bool largerValue<SetView>(const SetView& u, const SetView& v);
+bool largerValueImpl<SetView>(const SetView& u, const SetView& v);
 
 template <>
-bool smallerValue<SetView>(const SetView& u, const SetView& v) {
-    return lib::visit(
-        [&](auto& uMembersImpl) {
-            auto& vMembersImpl =
-                lib::get<BaseType<decltype(uMembersImpl)>>(v.members);
-            if (uMembersImpl.size() < vMembersImpl.size()) {
-                return true;
-            } else if (uMembersImpl.size() > vMembersImpl.size()) {
-                return false;
-            }
-            for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (smallerValue(uMembersImpl[i]->view(),
-                                 vMembersImpl[i]->view())) {
-                    return true;
-                } else if (largerValue(uMembersImpl[i]->view(),
-                                       vMembersImpl[i]->view())) {
-                    return false;
-                }
-            }
-            return false;
-        },
-        u.members);
+bool smallerValueImpl<SetView>(const SetView& u, const SetView& v) {
+    todoImpl(u, v);
 }
 
 template <>
-bool largerValue<SetView>(const SetView& u, const SetView& v) {
+bool largerValueImpl<SetView>(const SetView& u, const SetView& v) {
+    todoImpl(u, v);
+}
+
+template <>
+bool equalValueImpl<SetView>(const SetView& u, const SetView& v) {
     return lib::visit(
-        [&](auto& uMembersImpl) {
+        [&](const auto& uMembersImpl) {
             auto& vMembersImpl =
                 lib::get<BaseType<decltype(uMembersImpl)>>(v.members);
-            if (uMembersImpl.size() > vMembersImpl.size()) {
-                return true;
-            } else if (uMembersImpl.size() < vMembersImpl.size()) {
+            if (uMembersImpl.size() != vMembersImpl.size()) {
                 return false;
             }
-            for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (largerValue(uMembersImpl[i]->view(),
-                                vMembersImpl[i]->view())) {
-                    return true;
-                } else if (smallerValue(uMembersImpl[i]->view(),
-                                        vMembersImpl[i]->view())) {
+            for (auto& hashIndexPair : u.hashIndexMap) {
+                auto iter = v.hashIndexMap.find(hashIndexPair.first);
+                if (iter != v.hashIndexMap.end()) {
+                    return false;
+                }
+                auto& uMember = uMembersImpl[hashIndexPair.second];
+                auto& vMember = vMembersImpl[iter->second];
+                if (!equalValue(uMember->getViewIfDefined(),
+                                vMember->getViewIfDefined())) {
                     return false;
                 }
             }
-            return false;
+            return true;
         },
         u.members);
 }

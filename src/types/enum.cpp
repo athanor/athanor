@@ -47,13 +47,18 @@ void startTriggeringImpl(EnumValue&) {}
 void stopTriggering(EnumValue&) {}
 
 template <>
-bool smallerValue<EnumView>(const EnumView& u, const EnumView& v) {
+bool smallerValueImpl<EnumView>(const EnumView& u, const EnumView& v) {
     return u.value < v.value;
 }
 
 template <>
-bool largerValue<EnumView>(const EnumView& u, const EnumView& v) {
+bool largerValueImpl<EnumView>(const EnumView& u, const EnumView& v) {
     return u.value > v.value;
+}
+
+template <>
+bool equalValueImpl<EnumView>(const EnumView& u, const EnumView& v) {
+    return u.value == v.value;
 }
 
 template <>

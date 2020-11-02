@@ -121,15 +121,18 @@ void normalise<TupleValue>(TupleValue& val) {
 }
 
 template <>
-bool smallerValue<TupleView>(const TupleView& u, const TupleView& v);
+bool smallerValueImpl<TupleView>(const TupleView& u, const TupleView& v);
 template <>
-bool largerValue<TupleView>(const TupleView& u, const TupleView& v);
+bool largerValueImpl<TupleView>(const TupleView& u, const TupleView& v);
+template <>
+bool equalValueImpl<TupleView>(const TupleView& u, const TupleView& v);
+
 const AnyValRef toAnyValRef(const AnyExprRef& v) {
     return lib::visit(
         [](const auto& v) -> AnyValRef { return assumeAsValue(v); }, v);
 }
 template <>
-bool smallerValue<TupleView>(const TupleView& u, const TupleView& v) {
+bool smallerValueImpl<TupleView>(const TupleView& u, const TupleView& v) {
     if (u.members.size() < v.members.size()) {
         return true;
     } else if (u.members.size() > v.members.size()) {
@@ -146,7 +149,7 @@ bool smallerValue<TupleView>(const TupleView& u, const TupleView& v) {
 }
 
 template <>
-bool largerValue<TupleView>(const TupleView& u, const TupleView& v) {
+bool largerValueImpl<TupleView>(const TupleView& u, const TupleView& v) {
     if (u.members.size() > v.members.size()) {
         return true;
     } else if (u.members.size() < v.members.size()) {
@@ -160,6 +163,19 @@ bool largerValue<TupleView>(const TupleView& u, const TupleView& v) {
         }
     }
     return false;
+}
+
+template <>
+bool equalValueImpl<TupleView>(const TupleView& u, const TupleView& v) {
+    if (u.members.size() != v.members.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < u.members.size(); ++i) {
+        if (!equalValue(u.members[i], v.members[i])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void TupleValue::assertValidVarBases() {

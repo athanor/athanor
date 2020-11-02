@@ -6,6 +6,7 @@
 #include "utils/ignoreUnused.h"
 using namespace std;
 bool sanityCheckRepeatMode = true;
+bool hashCheckRepeatMode = true;
 int TriggerDepthTracker::globalDepth = -1;
 UInt64 triggerEventCount = 0;
 UInt LARGE_VIOLATION = ((UInt)1) << ((sizeof(UInt) * 4) - 1);
@@ -56,6 +57,17 @@ bool largerValue(const AnyExprRef& u, const AnyExprRef& v) {
                     return largerValue(*uImpl->view(), *vImpl->view());
                 },
                 u));
+}
+
+bool equalValue(const AnyExprRef& u, const AnyExprRef& v) {
+    return u.index() == v.index() &&
+           lib::visit(
+               [&v](auto& uImpl) {
+                   auto& vImpl = lib::get<BaseType<decltype(uImpl)>>(v);
+                   return equalValue(*uImpl->getViewIfDefined(),
+                                     *vImpl->getViewIfDefined());
+               },
+               u);
 }
 
 HashType getValueHash(const AnyExprRef& ref) {

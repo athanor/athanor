@@ -260,6 +260,16 @@ void Model::debugSanityCheck() const {
     sanityCheckRepeatMode = !sanityCheckRepeatMode;
 }
 
+void Model::hashChecks() const {
+    csp->hashChecks();
+    lib::visit([&](auto& objective) { objective->hashChecks(); }, objective);
+    for (auto& indexExprPair : definingExpressions) {
+        lib::visit([&](auto& expr) { expr->hashChecks(); },
+                   indexExprPair.second);
+    }
+    hashCheckRepeatMode = !hashCheckRepeatMode;
+}
+
 Objective Model::getObjective() const {
     return lib::visit(overloaded(
                           [&](const ExprRef<IntView>& e) {

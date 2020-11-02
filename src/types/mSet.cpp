@@ -135,58 +135,25 @@ void normalise<MSetValue>(MSetValue& val) {
 }
 
 template <>
-bool smallerValue<MSetView>(const MSetView& u, const MSetView& v);
+bool smallerValueImpl<MSetView>(const MSetView& u, const MSetView& v);
 template <>
-bool largerValue<MSetView>(const MSetView& u, const MSetView& v);
+bool largerValueImpl<MSetView>(const MSetView& u, const MSetView& v);
+template <>
+bool equalValueImpl<MSetView>(const MSetView& u, const MSetView& v);
 
 template <>
-bool smallerValue<MSetView>(const MSetView& u, const MSetView& v) {
-    return lib::visit(
-        [&](auto& uMembersImpl) {
-            auto& vMembersImpl =
-                lib::get<BaseType<decltype(uMembersImpl)>>(v.members);
-            if (uMembersImpl.size() < vMembersImpl.size()) {
-                return true;
-            } else if (uMembersImpl.size() > vMembersImpl.size()) {
-                return false;
-            }
-            for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (smallerValue(uMembersImpl[i]->view(),
-                                 vMembersImpl[i]->view())) {
-                    return true;
-                } else if (largerValue(uMembersImpl[i]->view(),
-                                       vMembersImpl[i]->view())) {
-                    return false;
-                }
-            }
-            return false;
-        },
-        u.members);
+bool smallerValueImpl<MSetView>(const MSetView& u, const MSetView& v) {
+    todoImpl(u, v);
 }
 
 template <>
-bool largerValue<MSetView>(const MSetView& u, const MSetView& v) {
-    return lib::visit(
-        [&](auto& uMembersImpl) {
-            auto& vMembersImpl =
-                lib::get<BaseType<decltype(uMembersImpl)>>(v.members);
-            if (uMembersImpl.size() > vMembersImpl.size()) {
-                return true;
-            } else if (uMembersImpl.size() < vMembersImpl.size()) {
-                return false;
-            }
-            for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (largerValue(uMembersImpl[i]->view(),
-                                vMembersImpl[i]->view())) {
-                    return true;
-                } else if (smallerValue(uMembersImpl[i]->view(),
-                                        vMembersImpl[i]->view())) {
-                    return false;
-                }
-            }
-            return false;
-        },
-        u.members);
+bool largerValueImpl<MSetView>(const MSetView& u, const MSetView& v) {
+    todoImpl(u, v);
+}
+
+template <>
+bool equalValueImpl<MSetView>(const MSetView& u, const MSetView& v) {
+    todoImpl(u, v);
 }
 
 void MSetValue::printVarBases() {

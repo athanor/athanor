@@ -12,13 +12,14 @@
 #include "utils/filename.h"
 #include "utils/flagSet.h"
 #include "utils/hashUtils.h"
-
+#include "utils/ignoreUnused.h"
 namespace lib {
 using std::experimental::make_optional;
 using std::experimental::nullopt;
 using std::experimental::optional;
 }  // namespace lib
 extern bool sanityCheckRepeatMode;
+extern bool hashCheckRepeatMode;
 extern bool repeatSanityCheckOfConst;
 extern bool dontSkipSanityCheckForAlreadyVisitedChildren;
 extern bool verboseSanityError;
@@ -157,8 +158,13 @@ struct ExprInterface : public Undefinable<View> {
     struct AppearsDefinedFlag;
     struct SanityCheckedOnceFlag;
     struct SanityCheckRepeatFlag;
+    struct DetectNoHashesFlag;
+    struct HashCheckedOnceFlag;
+    struct HashCheckRepeatFlag;
+
     FlagSet<EvaluatedFlag, IsConstantFlag, AppearsDefinedFlag,
-            SanityCheckedOnceFlag, SanityCheckRepeatFlag>
+            SanityCheckedOnceFlag, SanityCheckRepeatFlag, DetectNoHashesFlag,
+            HashCheckedOnceFlag, HashCheckRepeatFlag>
         flags;
 
    public:
@@ -264,22 +270,22 @@ struct ExprInterface : public Undefinable<View> {
                                                         PathExtension path) = 0;
 
     inline void debugSanityCheck() const {
-        auto sanityCheckedOnce =
-            const_cast<ExprInterface<View>&>(*this)
-                .flags.template get<SanityCheckedOnceFlag>();
-        auto sanityCheckRepeat =
-            const_cast<ExprInterface<View>&>(*this)
-                .flags.template get<SanityCheckRepeatFlag>();
-        if (!sanityCheckedOnce) {
-            sanityCheckedOnce = true;
-            sanityCheckRepeat = sanityCheckRepeatMode;
-        } else if (!repeatSanityCheckOfConst && this->isConstant()) {
+        auto sanityCheckedOnce = flags.template get<SanityCheckedOnceFlag>();
+        auto sanityCheckRepeat = flags.template get<SanityCheckRepeatFlag>();
+        // maybe don't repeat sanity checks of const expr, depending on flags
+        if (!repeatSanityCheckOfConst && sanityCheckedOnce && isConstant()) {
             return;
-        } else if (sanityCheckRepeat != sanityCheckRepeatMode ||
-                   dontSkipSanityCheckForAlreadyVisitedChildren) {
-            sanityCheckRepeat = sanityCheckRepeatMode;
-        } else {
+        }
+        // maybe don't sanity check exprs already visited in this iteration
+        if (dontSkipSanityCheckForAlreadyVisitedChildren && sanityCheckedOnce &&
+            sanityCheckRepeat == sanityCheckRepeatMode) {
             return;
+        }
+        {
+            auto& constThis = const_cast<ExprInterface<View>&>(*this);
+            constThis.flags.template get<SanityCheckedOnceFlag>() = true;
+            constThis.flags.template get<SanityCheckRepeatFlag>() =
+                sanityCheckRepeatMode;
         }
         try {
             debugSanityCheckImpl();
@@ -296,6 +302,42 @@ struct ExprInterface : public Undefinable<View> {
     }
     virtual std::string getOpName() const = 0;
     virtual inline bool isQuantifier() const { return false; }
+    virtual inline void hashChecksImpl() const { shouldNotBeCalledPanic; }
+    inline void hashChecks() const {
+        auto hashCheckedOnce = flags.template get<HashCheckedOnceFlag>();
+        auto hashCheckRepeat = flags.template get<HashCheckRepeatFlag>();
+        auto detectNoHashes = flags.template get<DetectNoHashesFlag>();
+
+        if (detectNoHashes) {
+            return;
+        }
+        // don't repeat hash checks of const
+        if (hashCheckedOnce && isConstant()) {
+            return;
+        }
+        // don't hash check exprs already visited in this iteration
+        if (hashCheckedOnce && hashCheckRepeat == hashCheckRepeatMode) {
+            return;
+        }
+        {
+            auto& constThis = const_cast<ExprInterface<View>&>(*this);
+            constThis.flags.template get<HashCheckedOnceFlag>() = true;
+            constThis.flags.template get<HashCheckRepeatFlag>() =
+                hashCheckRepeatMode;
+        }
+        try {
+            hashChecksImpl();
+        } catch (SanityCheckException& e) {
+            if (verboseSanityError && e.stateDump.empty()) {
+                std::ostringstream os;
+                this->dumpState(os);
+                e.stateDump = os.str();
+            }
+            e.report(toString("From operator ", this->getOpName(),
+                              " with value ", this->getViewIfDefined()));
+            throw e;
+        }
+    }
 };
 
 template <typename View>
@@ -376,18 +418,8 @@ inline std::ostream& operator<<(std::ostream& os,
 
 bool smallerValue(const AnyExprRef& u, const AnyExprRef& v);
 
-template <typename View>
-bool smallerValue(const OptionalRef<View>& left,
-                  const OptionalRef<View>& right) {
-    return left && right && smallerValue(*left, *right);
-}
 bool largerValue(const AnyExprRef& u, const AnyExprRef& v);
-
-template <typename View>
-bool largerValue(const OptionalRef<View>& left,
-                 const OptionalRef<View>& right) {
-    return left && right && largerValue(*left, *right);
-}
+bool equalValue(const AnyExprRef& u, const AnyExprRef& v);
 
 template <typename T>
 inline ExprRef<T> findAndReplace(ExprRef<T>& expr,

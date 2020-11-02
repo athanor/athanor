@@ -31,7 +31,7 @@ ostream& prettyPrint<SequenceView>(ostream& os, const SequenceView& v) {
                 } else {
                     os << ",";
                 }
-                prettyPrint(os, memberPtr->view());
+                prettyPrint(os, memberPtr->getViewIfDefined());
             }
         },
         v.members);
@@ -57,7 +57,7 @@ ostream& prettyPrint<SequenceView>(ostream& os, const SequenceDomain& domain,
                 } else {
                     os << ",";
                 }
-                prettyPrint(os, *domainPtr, memberPtr->view());
+                prettyPrint(os, *domainPtr, memberPtr->getViewIfDefined());
             }
         },
         v.members);
@@ -153,12 +153,17 @@ void normalise<SequenceValue>(SequenceValue& val) {
 }
 
 template <>
-bool smallerValue<SequenceView>(const SequenceView& u, const SequenceView& v);
+bool smallerValueImpl<SequenceView>(const SequenceView& u,
+                                    const SequenceView& v);
 template <>
-bool largerValue<SequenceView>(const SequenceView& u, const SequenceView& v);
+bool largerValueImpl<SequenceView>(const SequenceView& u,
+                                   const SequenceView& v);
+template <>
+bool equalValueImpl<SequenceView>(const SequenceView& u, const SequenceView& v);
 
 template <>
-bool smallerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
+bool smallerValueImpl<SequenceView>(const SequenceView& u,
+                                    const SequenceView& v) {
     return lib::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
@@ -169,11 +174,11 @@ bool smallerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (smallerValue(uMembersImpl[i]->view(),
-                                 vMembersImpl[i]->view())) {
+                if (smallerValue(uMembersImpl[i]->getViewIfDefined(),
+                                 vMembersImpl[i]->getViewIfDefined())) {
                     return true;
-                } else if (largerValue(uMembersImpl[i]->view(),
-                                       vMembersImpl[i]->view())) {
+                } else if (largerValue(uMembersImpl[i]->getViewIfDefined(),
+                                       vMembersImpl[i]->getViewIfDefined())) {
                     return false;
                 }
             }
@@ -183,7 +188,8 @@ bool smallerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
 }
 
 template <>
-bool largerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
+bool largerValueImpl<SequenceView>(const SequenceView& u,
+                                   const SequenceView& v) {
     return lib::visit(
         [&](auto& uMembersImpl) {
             auto& vMembersImpl =
@@ -194,15 +200,36 @@ bool largerValue<SequenceView>(const SequenceView& u, const SequenceView& v) {
                 return false;
             }
             for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (largerValue(uMembersImpl[i]->view(),
-                                vMembersImpl[i]->view())) {
+                if (largerValue(uMembersImpl[i]->getViewIfDefined(),
+                                vMembersImpl[i]->getViewIfDefined())) {
                     return true;
-                } else if (smallerValue(uMembersImpl[i]->view(),
-                                        vMembersImpl[i]->view())) {
+                } else if (smallerValue(uMembersImpl[i]->getViewIfDefined(),
+                                        vMembersImpl[i]->getViewIfDefined())) {
                     return false;
                 }
             }
             return false;
+        },
+        u.members);
+}
+
+template <>
+bool equalValueImpl<SequenceView>(const SequenceView& u,
+                                  const SequenceView& v) {
+    return lib::visit(
+        [&](auto& uMembersImpl) {
+            auto& vMembersImpl =
+                lib::get<BaseType<decltype(uMembersImpl)>>(v.members);
+            if (uMembersImpl.size() != vMembersImpl.size()) {
+                return false;
+            }
+            for (size_t i = 0; i < uMembersImpl.size(); ++i) {
+                if (!equalValue(uMembersImpl[i]->getViewIfDefined(),
+                                vMembersImpl[i]->getViewIfDefined())) {
+                    return false;
+                }
+            }
+            return true;
         },
         u.members);
 }
@@ -262,9 +289,10 @@ void SequenceValue::assertValidState() {
             if (injective) {
                 for (size_t i = 0; i < valMembersImpl.size(); i++) {
                     auto& member = valMembersImpl[i];
-                    HashType hash = getValueHash(member->view().get());
+                    HashType hash =
+                        getValueHash(member->getViewIfDefined().get());
                     if (!memberHashes.count(hash)) {
-                        myCerr << "Error: member " << member->view()
+                        myCerr << "Error: member " << member->getViewIfDefined()
                                << " with hash " << hash
                                << " is not in memberHashes.\n";
                         success = false;
@@ -333,7 +361,8 @@ void SequenceValue::debugSanityCheckImpl() const {
                     HashType hash = getValueHash(view);
                     sanityCheck(
                         memberHashes.count(hash),
-                        toString("member ", member->view(), " with hash ", hash,
+                        toString("member ", member->getViewIfDefined(),
+                                 " with hash ", hash,
                                  " is not in memberHashes.\nMember hashes is ",
                                  memberHashes));
                 }
@@ -404,8 +433,6 @@ UInt getSize<SequenceValue>(const SequenceValue& v) {
 AnyExprVec& SequenceValue::getChildrenOperands() { return members; }
 
 template <>
-size_t getResourceLowerBound<SequenceDomain>(
-    const SequenceDomain& domain) {
-    return domain.sizeAttr.minSize * getResourceLowerBound(domain.inner) +
-           1;
+size_t getResourceLowerBound<SequenceDomain>(const SequenceDomain& domain) {
+    return domain.sizeAttr.minSize * getResourceLowerBound(domain.inner) + 1;
 }

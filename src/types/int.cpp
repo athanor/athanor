@@ -62,15 +62,19 @@ void startTriggeringImpl(IntValue&) {}
 void stopTriggering(IntValue&) {}
 
 template <>
-bool smallerValue<IntView>(const IntView& u, const IntView& v) {
+bool smallerValueImpl<IntView>(const IntView& u, const IntView& v) {
     return u.value < v.value;
 }
 
 template <>
-bool largerValue<IntView>(const IntView& u, const IntView& v) {
+bool largerValueImpl<IntView>(const IntView& u, const IntView& v) {
     return u.value > v.value;
 }
 
+template <>
+bool equalValueImpl<IntView>(const IntView& u, const IntView& v) {
+    return u.value == v.value;
+}
 template <>
 void normalise<IntValue>(IntValue&) {}
 

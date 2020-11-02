@@ -47,19 +47,25 @@ void normalise<EmptyValue>(EmptyValue&) {
 }
 
 template <>
-bool smallerValue<EmptyView>(const EmptyView& u, const EmptyView& v);
+bool smallerValueImpl<EmptyView>(const EmptyView& u, const EmptyView& v);
 template <>
-bool largerValue<EmptyView>(const EmptyView& u, const EmptyView& v);
+bool largerValueImpl<EmptyView>(const EmptyView& u, const EmptyView& v);
 
 template <>
-bool smallerValue<EmptyView>(const EmptyView&, const EmptyView&) {
+bool smallerValueImpl<EmptyView>(const EmptyView&, const EmptyView&) {
     shouldNotBeCalledPanic;
 }
 
 template <>
-bool largerValue<EmptyView>(const EmptyView&, const EmptyView&) {
+bool largerValueImpl<EmptyView>(const EmptyView&, const EmptyView&) {
     shouldNotBeCalledPanic;
 }
+
+template <>
+bool equalValueImpl<EmptyView>(const EmptyView&, const EmptyView&) {
+    shouldNotBeCalledPanic;
+}
+
 
 void EmptyValue::debugSanityCheckImpl() const { shouldNotBeCalledPanic; }
 

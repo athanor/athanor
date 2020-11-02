@@ -4,6 +4,7 @@
 #include "base/intSize.h"
 #include "base/typesMacros.h"
 #include "common/common.h"
+#include "utils/OptionalRef.h"
 #include "utils/variantOperations.h"
 // forward declare structs
 #define declDomainsAndValues(name) \
@@ -121,9 +122,42 @@ using Variantised = lib::variant<buildForAllTypes(variantValues, MACRO_COMMA)>;
 #undef variantValues
 
 template <typename Val>
-EnableIfViewAndReturn<Val, bool> smallerValue(const Val& u, const Val& v);
+EnableIfViewAndReturn<Val, bool> smallerValueImpl(const Val& u, const Val& v);
 template <typename Val>
-EnableIfViewAndReturn<Val, bool> largerValue(const Val& u, const Val& v);
+EnableIfViewAndReturn<Val, bool> largerValueImpl(const Val& u, const Val& v);
+template <typename Val>
+EnableIfViewAndReturn<Val, bool> equalValueImpl(const Val& u, const Val& v);
+
+template <typename Val>
+EnableIfViewAndReturn<Val, bool> smallerValue(const Val& u, const Val& v) {
+    return appearsDefined(u) && appearsDefined(v) && smallerValueImpl(u, v);
+}
+template <typename Val>
+EnableIfViewAndReturn<Val, bool> largerValue(const Val& u, const Val& v) {
+    return appearsDefined(u) && appearsDefined(v) && largerValueImpl(u, v);
+}
+template <typename Val>
+EnableIfViewAndReturn<Val, bool> equalValue(const Val& u, const Val& v) {
+    return appearsDefined(u) && appearsDefined(v) && equalValueImpl(u, v);
+}
+
+template <typename View>
+EnableIfViewAndReturn<View, bool> smallerValue(const OptionalRef<View>& left,
+                                               const OptionalRef<View>& right) {
+    return left && right && smallerValue(*left, *right);
+}
+
+template <typename View>
+EnableIfViewAndReturn<View, bool> largerValue(const OptionalRef<View>& left,
+                                              const OptionalRef<View>& right) {
+    return left && right && largerValue(*left, *right);
+}
+
+template <typename View>
+EnableIfViewAndReturn<View, bool> equalValue(const OptionalRef<View>& left,
+                                             const OptionalRef<View>& right) {
+    return left && right && equalValue(*left, *right);
+}
 
 class HashType;
 template <typename View>

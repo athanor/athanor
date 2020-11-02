@@ -492,58 +492,31 @@ void normalise<FunctionValue>(FunctionValue& val) {
 }
 
 template <>
-bool smallerValue<FunctionView>(const FunctionView& u, const FunctionView& v);
+bool smallerValueImpl<FunctionView>(const FunctionView& u,
+                                    const FunctionView& v);
 template <>
-bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v);
+bool largerValueImpl<FunctionView>(const FunctionView& u,
+                                   const FunctionView& v);
 
 template <>
-bool smallerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
-    return lib::visit(
-        [&](auto& uMembersImpl) {
-            auto& vMembersImpl =
-                lib::get<BaseType<decltype(uMembersImpl)>>(v.range);
-            if (uMembersImpl.size() < vMembersImpl.size()) {
-                return true;
-            } else if (uMembersImpl.size() > vMembersImpl.size()) {
-                return false;
-            }
-            for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (smallerValue(uMembersImpl[i]->view(),
-                                 vMembersImpl[i]->view())) {
-                    return true;
-                } else if (largerValue(uMembersImpl[i]->view(),
-                                       vMembersImpl[i]->view())) {
-                    return false;
-                }
-            }
-            return false;
-        },
-        u.range);
+bool equalValueImpl<FunctionView>(const FunctionView& u, const FunctionView& v);
+
+template <>
+bool smallerValueImpl<FunctionView>(const FunctionView& u,
+                                    const FunctionView& v) {
+    todoImpl(u, v);
 }
 
 template <>
-bool largerValue<FunctionView>(const FunctionView& u, const FunctionView& v) {
-    return lib::visit(
-        [&](auto& uMembersImpl) {
-            auto& vMembersImpl =
-                lib::get<BaseType<decltype(uMembersImpl)>>(v.range);
-            if (uMembersImpl.size() > vMembersImpl.size()) {
-                return true;
-            } else if (uMembersImpl.size() < vMembersImpl.size()) {
-                return false;
-            }
-            for (size_t i = 0; i < uMembersImpl.size(); ++i) {
-                if (largerValue(uMembersImpl[i]->view(),
-                                vMembersImpl[i]->view())) {
-                    return true;
-                } else if (smallerValue(uMembersImpl[i]->view(),
-                                        vMembersImpl[i]->view())) {
-                    return false;
-                }
-            }
-            return false;
-        },
-        u.range);
+bool largerValueImpl<FunctionView>(const FunctionView& u,
+                                   const FunctionView& v) {
+    todoImpl(u, v);
+}
+
+template <>
+bool equalValueImpl<FunctionView>(const FunctionView& u,
+                                  const FunctionView& v) {
+    todoImpl(u, v);
 }
 
 void checkPreimages(const FunctionView& view) {

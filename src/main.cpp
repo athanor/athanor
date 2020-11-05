@@ -794,7 +794,15 @@ void runSolverWasm(string specJsonString, string paramJsonString) {
     UInt32 seed = (seedArg) ? seedArg.get() : random_device()();
     globalRandomGenerator.seed(seed);
     cout << "Using seed: " << seed << endl;
-    runSearch(state);
+    state.disableVarViolations = disableVioBiasFlag;
+    setSignalsAndHandlers();
+
+    auto nhSelection = makeNeighbourhoodSelectionStrategy(state);
+    auto nhSearch = makeNeighbourhoodSearchStrategy();
+    auto improve = makeImproveStrategy(nhSelection, nhSearch);
+    auto explore = makeExploreStrategy(improve);
+    search(explore, state);
+
     printFinalStats(state);
 }
 

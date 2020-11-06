@@ -41,14 +41,18 @@ def essenceToJson(essence,isParam):
         print(essence,file=tempFile)
     conjureTypeCheckCommand = [conjurePath, "type-check", tempFileName]
     conjureJsonCommand = [conjurePath, "pretty", tempFileName, "--output-format", "json"]
-    proc = subprocess.run(conjureTypeCheckCommand,capture_output=True,encoding="utf-8")
+    proc = subprocess.run(conjureTypeCheckCommand,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT)
     if proc.returncode != 0:
-        return { "status":"error", "data":removeFileNames(proc.stderr)}
-    proc = subprocess.run(conjureJsonCommand,capture_output=True,encoding="utf-8")
+        return { "status":"error", "data":removeFileNames(proc.stdout.decode('utf-8'))}
+    proc = subprocess.run(conjureJsonCommand,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT)
     if proc.returncode != 0:
-        return { "status":"error", "data":proc.stderr }
+        return { "status":"error", "data":proc.stdout.decode('udf-8') }
     
-    return {"status":"success","data":proc.stdout}
+    return {"status":"success","data":proc.stdout.decode('utf-8')}
 
 
 class Handler(SimpleHTTPRequestHandler):

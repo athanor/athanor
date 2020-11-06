@@ -205,6 +205,11 @@ struct OpMaker<OpSetLit<FunctionView>> {
     static ExprRef<SetView> make(ExprRef<FunctionView> o);
 };
 
+template <>
+struct OpMaker<OpSetLit<SequenceView>> {
+    static ExprRef<SetView> make(ExprRef<SequenceView> o);
+};
+
 struct OpPowerSet;
 template <>
 struct OpMaker<OpPowerSet> {
@@ -341,13 +346,12 @@ template <>
 struct OpMaker<OpFunctionDefined> {
     static ExprRef<SetView> make(ExprRef<FunctionView> o);
 };
-template<typename OperandView>
+template <typename OperandView>
 struct OpPartitionParty;
 template <typename OperandView>
 struct OpMaker<OpPartitionParty<OperandView>> {
     static ExprRef<SetView> make(ExprRef<OperandView> l,
                                  ExprRef<PartitionView> r);
 };
-
 
 #endif /* SRC_OPERATORS_OPERATORMAKERS_H_ */

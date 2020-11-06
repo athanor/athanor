@@ -57,7 +57,8 @@ struct ContainerTrigger<FunctionView> : public FunctionTrigger {
                 auto unrolledExpr =
                     OpMaker<OpTupleLit>::make({preimage, image});
                 unrolledExpr->evaluate();
-                op->template unroll<TupleView>({false, op->numberElements(), unrolledExpr});
+                op->template unroll<TupleView>(
+                    {false, op->numberElements(), unrolledExpr});
             },
             preimage, image);
     }

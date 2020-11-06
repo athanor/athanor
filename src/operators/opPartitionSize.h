@@ -8,7 +8,8 @@
 struct OpPartitionSize;
 template <>
 struct OperatorTrates<OpPartitionSize> {
-    typedef SimpleUnaryTrigger<OpPartitionSize, PartitionTrigger> OperandTrigger;
+    typedef SimpleUnaryTrigger<OpPartitionSize, PartitionTrigger>
+        OperandTrigger;
 };
 struct OpPartitionSize
     : public SimpleUnaryOperator<IntView, PartitionView, OpPartitionSize> {

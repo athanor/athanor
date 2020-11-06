@@ -1,4 +1,4 @@
-        #include "operators/opTogether.h"
+#include "operators/opTogether.h"
 #include "operators/simpleOperator.hpp"
 
 using namespace std;

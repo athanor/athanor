@@ -180,8 +180,7 @@ void OpSetIntersect::updateVarViolationsImpl(const ViolationContext& vioContext,
                     leftMembers.at(leftIndex)->updateVarViolations(
                         1, vioContainer);
                     rightMembers.at(rightIndex)
-                        ->updateVarViolations(1,
-                                              vioContainer);
+                        ->updateVarViolations(1, vioContainer);
                 }
             },
             leftView.members);

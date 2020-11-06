@@ -9,8 +9,8 @@ using namespace std;
 void OpPartitionSize::reevaluateImpl(PartitionView& operandView) {
     value = operandView.numberParts();
 }
-void OpPartitionSize::updateVarViolationsImpl(const ViolationContext& vioContext,
-                                             ViolationContainer& vioContainer) {
+void OpPartitionSize::updateVarViolationsImpl(
+    const ViolationContext& vioContext, ViolationContainer& vioContainer) {
     operand->updateVarViolations(vioContext, vioContainer);
 }
 

@@ -167,3 +167,22 @@ ParseResult parseOpFunctionPreimage(json& preimageOpExpr,
         },
         imageResult.domain);
 }
+
+ParseResult parseOpToSet(json& sequenceExpr, ParsedModel& parsedModel) {
+    string errorMessage =
+        "Use list comprehension as operand to  Op "
+        "ToSet: ";
+    auto parsedExpr = parseExpr(sequenceExpr[1], parsedModel);
+    auto operand = expect<SequenceView>(parsedExpr.expr, [&](auto&&) {
+        myCerr << errorMessage << sequenceExpr << endl;
+    });
+    auto& sequenceDomain =
+        *lib::get<shared_ptr<SequenceDomain>>(parsedExpr.domain);
+    bool constant = operand->isConstant();
+    auto op = OpMaker<OpSetLit<SequenceView>>::make(move(operand));
+    op->setConstant(constant);
+    return ParseResult(
+        make_shared<SetDomain>(maxSize(sequenceDomain.sizeAttr.maxSize),
+                               sequenceDomain.inner),
+        op, parsedExpr.hasEmptyType);
+}

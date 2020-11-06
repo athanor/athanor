@@ -14,6 +14,11 @@ struct OperatorTrates<OpSetLit<FunctionView>> {
     struct OperandTrigger;
 };
 
+template <>
+struct OperatorTrates<OpSetLit<SequenceView>> {
+    struct OperandTrigger;
+};
+
 template <typename OperandView>
 struct OpSetLit
     : public SimpleUnaryOperator<SetView, OperandView, OpSetLit<OperandView>> {
@@ -29,8 +34,14 @@ struct OpSetLit
         UInt focusOperandSetIndex;  // index of the operand as found in the set
                                     // view members
         HashSet<UInt> operands;     // all operands with hash h
+        friend inline std::ostream& operator<<(std::ostream& os,
+                                               const OperandGroup& og) {
+            return os << "og(focus=" << og.focusOperand
+                      << ",setIndex=" << og.focusOperandSetIndex
+                      << ",operands=" << og.operands << ")" << std::endl;
+        }
     };
-    HashMap<HashType, OperandGroup> hashIndicesMap;
+    HashMap<HashType, OperandGroup> hashOperandsMap;
     PreviousValueCache<HashType>
         cachedOperandHashes;  // map from operand index to hash.
 
@@ -44,20 +55,18 @@ struct OpSetLit
     void assertValidHashes();
 
     template <typename InnerViewType>
-    void removeMemberFromSet(const HashType& hash,
-                             OpSetLit<OperandView>::OperandGroup& operandGroup);
-    template <typename InnerViewType>
     void addReplacementToSet(ExprRefVec<InnerViewType>& operands,
-                             OperandGroup& og);
+                             OperandGroup& og,
+                             lib::optional<UInt> toBeDeletedIndex);
 
     template <typename InnerViewType>
-    bool hashNotChanged(ExprRefVec<InnerViewType>& operands, UInt index);
-    template <typename InnerViewType>
-    void removeOperandValue(ExprRefVec<InnerViewType>& operands,
-                            size_t index);
+    void removeOperandValue(ExprRefVec<InnerViewType>& operands, size_t index,
+                            bool shouldDelete);
     template <typename InnerViewType>
     void addOperandValue(ExprRefVec<InnerViewType>& operands, size_t index,
-                         bool insert = false);
+                         bool insert);
+    void shiftIndicesDown(UInt startingIndex);
+    void shiftIndicesUp(UInt startingIndex);
 
     AnyExprVec& getChildrenOperands() final;
 };

@@ -5,7 +5,7 @@
 * [Why use __ATHANOR__](#why)
 * [Using __ATHANOR__](#using)
 * [Building from source](#installation)
-* [Demo the web app version!](http://saad.ai/athanor-web-app) __ATHANOR__ can now run efficiently inside your web browser, thanks to web assembly.
+* [Demo the web app version!](http://athanor.ai) __ATHANOR__ can now run efficiently inside your web browser, thanks to web assembly.
 
 # <a name="why"></a> Why use __ATHANOR__
 

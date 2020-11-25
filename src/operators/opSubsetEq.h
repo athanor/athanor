@@ -25,5 +25,6 @@ struct OpSubsetEq
     std::ostream& dumpState(std::ostream& os) const final;
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
+    void hashChecksImpl() const final;
 };
 #endif /* SRC_OPERATORS_OPSETINTERSECT_H_ */

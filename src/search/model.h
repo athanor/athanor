@@ -38,7 +38,7 @@ struct Model {
    public:
     void tryPrintVariables() const;
     void debugSanityCheck() const;
-    void hashChecks() const;
+    void tryRunHashChecks() const;
 
    public:
     inline UInt getViolation() const { return csp->view()->violation; }

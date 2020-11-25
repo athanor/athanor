@@ -117,6 +117,13 @@ void SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
     }
 }
 
+template <typename View, typename LeftOperandView, typename RightOperandView,
+          typename Derived>
+void SimpleBinaryOperator<View, LeftOperandView, RightOperandView,
+                          Derived>::hashChecksImpl() const {
+    left->hashChecks();
+    right->hashChecks();
+}
 template <typename View, typename OperandView, typename Derived>
 void SimpleUnaryOperator<View, OperandView, Derived>::evaluateImpl() {
     operand->evaluate();
@@ -199,6 +206,11 @@ void SimpleUnaryOperator<View, OperandView,
     } else if (operand->getViewIfDefined() && !this->appearsDefined()) {
         throw SanityCheckException("operand is defined but operator is not.");
     }
+}
+
+template <typename View, typename OperandView, typename Derived>
+void SimpleUnaryOperator<View, OperandView, Derived>::hashChecksImpl() const {
+    operand->hashChecks();
 }
 
 #endif /* SRC_OPERATORS_SIMPLEOPERATOR_HPP_ */

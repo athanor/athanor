@@ -234,6 +234,7 @@ void StatsContainer::printCurrentState(Model& model) {
              << "\n\n";
     }
     if (lastViolation <= allowedViolation) {
+        model.tryRunHashChecks();
         model.tryPrintVariables();
         printStatsToWebApp(*this);
     }

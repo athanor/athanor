@@ -118,6 +118,7 @@ struct SimpleBinaryOperator : public View,
     std::pair<bool, ExprRef<View>> optimiseImpl(ExprRef<View>& self,
                                                 PathExtension path) override;
     void standardSanityDefinednessChecks() const;
+    void hashChecksImpl() const override;
 };
 
 template <typename View, typename OperandView, typename Derived>
@@ -156,6 +157,7 @@ struct SimpleUnaryOperator : public View,
     std::pair<bool, ExprRef<View>> optimiseImpl(ExprRef<View>& self,
                                                 PathExtension path) override;
     void standardSanityDefinednessChecks() const;
+    void hashChecksImpl() const override;
 };
 
 #endif /* SRC_OPERATORS_SIMPLEOPERATOR_H_ */

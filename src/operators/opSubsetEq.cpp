@@ -273,6 +273,38 @@ void OpSubsetEq::debugSanityCheckImpl() const {
     sanityEqualsCheck(checkViolation, violatingMembers.size());
 }
 
+void OpSubsetEq::hashChecksImpl() const {
+    left->hashChecks();
+    right->hashChecks();
+    auto leftOption = left->getViewIfDefined();
+    auto rightOption = right->getViewIfDefined();
+    if (!leftOption || !rightOption) {
+        return;
+    }
+    auto& leftView = *leftOption;
+    auto& rightView = *rightOption;
+    lib::visit(
+        [&](const auto& leftMembersImpl) {
+            auto& rightMembersImpl =
+                lib::get<BaseType<decltype(leftMembersImpl)>>(
+                    rightView.members);
+            for (auto& hashIndexPair : leftView.hashIndexMap) {
+                auto leftIndex = hashIndexPair.second;
+                auto rightIndex =
+                    rightView.hashIndexMap.at(hashIndexPair.first);
+                auto& leftMember = leftMembersImpl[leftIndex];
+                auto& rightMember = rightMembersImpl[rightIndex];
+                if (!equalValue(leftMember->getViewIfDefined(),
+                                rightMember->getViewIfDefined())) {
+                    hashCollision(toString("member with value ", leftMember,
+                                           " with hash ", hashIndexPair.first,
+                                           " does not match member with value ",
+                                           rightMember, " with same hash.\n"))
+                }
+            }
+        },
+        leftView.members);
+}
 template <typename Op>
 struct OpMaker;
 

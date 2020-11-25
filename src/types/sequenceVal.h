@@ -389,6 +389,7 @@ struct SequenceValue : public SequenceView, public ValBase {
     void assertValidState();
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;
+    void hashChecksImpl() const final;
 };
 
 #endif /* SRC_TYPES_SEQUENCEVAL_H_ */

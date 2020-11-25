@@ -6,6 +6,7 @@
 #include <emscripten/bind.h>
 #endif
 extern bool noPrintSolutions;
+extern bool shouldRunHashChecks;
 using namespace std;
 void ModelBuilder::createNeighbourhoods() {
     for (size_t i = 0; i < model.variables.size(); ++i) {
@@ -260,7 +261,10 @@ void Model::debugSanityCheck() const {
     sanityCheckRepeatMode = !sanityCheckRepeatMode;
 }
 
-void Model::hashChecks() const {
+void Model::tryRunHashChecks() const {
+    if (!shouldRunHashChecks) {
+        return;
+    }
     csp->hashChecks();
     lib::visit([&](auto& objective) { objective->hashChecks(); }, objective);
     for (auto& indexExprPair : definingExpressions) {

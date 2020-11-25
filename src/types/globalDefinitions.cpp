@@ -64,6 +64,7 @@ void invokeSetDefined<BoolValue>(ValRef<BoolValue>&) {}
     string name##Value::getOpName() const {                                 \
         return TypeAsString<name##Value>::value;                            \
     }                                                                       \
+    void name##Value::hashChecksImpl() const {}                             \
     template <>                                                             \
     void swapValAssignments<name##Value>(name##Value & val1,                \
                                          name##Value & val2) {              \

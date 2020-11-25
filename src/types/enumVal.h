@@ -71,6 +71,7 @@ struct EnumValue : public EnumView, ValBase {
                                                     PathExtension) final;
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;
+    void hashChecksImpl() const;
 };
 
 #endif /* SRC_TYPES_ENUMVAL_H_ */

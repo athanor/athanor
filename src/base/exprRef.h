@@ -52,6 +52,11 @@ struct SanityCheckException {
     sanityCheck(                       \
         LARGE_VIOLATION == val,        \
         toString(#val, " should be LARGE_VIOLATION but is instead ", val));
+
+#define hashCollision(message)                                                \
+    throw SanityCheckException(toString("Hash Collision assumed: ", message), \
+                               __FILENAME__, __LINE__);
+
 template <typename View>
 struct ExprInterface;
 

@@ -392,7 +392,7 @@ auto& shouldRunHashChecksFlag =
     devGroup.add<Flag>("--debug-run-hash-checks", Policy::OPTIONAL,
                        "Still in development, verify no hash collisions before "
                        "printing a solution.",
-                       [](auto&) { useShaHashing = true; });
+                       [](auto&) { shouldRunHashChecks = true; });
 
 void setTimeout(int numberSeconds, bool virtualTimer);
 void sigIntHandler(int);

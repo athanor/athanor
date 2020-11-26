@@ -14,7 +14,7 @@ struct SetDomain {
     SizeAttr sizeAttr;
     AnyDomainRef inner;
     bool isRelation = false;
-    
+
     template <typename DomainType>
     SetDomain(SizeAttr sizeAttr, DomainType&& inner)
         : sizeAttr(sizeAttr),
@@ -220,6 +220,7 @@ struct SetValue : public SetView, public ValBase {
                                                    PathExtension) final;
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;
+    void hashChecksImpl() const final;
 };
 
 #endif /* SRC_TYPES_SETVAL_H_ */

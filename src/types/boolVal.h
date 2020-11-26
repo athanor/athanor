@@ -27,6 +27,7 @@ struct BoolValue : public BoolView, ValBase {
                                                     PathExtension) final;
     void debugSanityCheckImpl() const final;
     std::string getOpName() const final;
+    void hashChecksImpl() const final;
 };
 
 #endif /* SRC_TYPES_BOOLVAL_H_ */

@@ -303,7 +303,7 @@ void OpSubsetEq::hashChecksImpl() const {
                 }
             }
         },
-        rightView.members);
+        leftView.members);
 }
 template <typename Op>
 struct OpMaker;

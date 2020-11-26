@@ -30,6 +30,7 @@ struct OpSequenceLit : public SequenceView {
     std::string getOpName() const final;
     void debugSanityCheckImpl() const final;
     AnyExprVec& getChildrenOperands() final;
+    void hashChecksImpl() const final;
 };
 
 #endif /* SRC_OPERATORS_OPSEQUENCELIT_H_ */

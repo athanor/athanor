@@ -156,7 +156,7 @@ bool equalValueImpl<SetView>(const SetView& u, const SetView& v) {
             }
             for (auto& hashIndexPair : u.hashIndexMap) {
                 auto iter = v.hashIndexMap.find(hashIndexPair.first);
-                if (iter != v.hashIndexMap.end()) {
+                if (iter == v.hashIndexMap.end()) {
                     return false;
                 }
                 auto& uMember = uMembersImpl[hashIndexPair.second];

@@ -185,6 +185,16 @@ void OpSequenceLit::debugSanityCheckImpl() const {
     this->standardSanityChecksForThisType();
 }
 
+void OpSequenceLit::hashChecksImpl() const {
+    lib::visit(
+        [&](auto& members) {
+            for (auto& member : members) {
+                member->hashChecks();
+            }
+        },
+        members);
+}
+
 AnyExprVec& OpSequenceLit::getChildrenOperands() { return members; }
 
 template <typename Op>

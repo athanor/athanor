@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include "operators/iterator.h"
 #include "search/endOfSearchException.h"
 #include "search/model.h"
 #include "search/searchStrategies.h"
@@ -44,6 +45,23 @@ class State {
     template <typename ParentStrategy>
     void runNeighbourhood(size_t nhIndex, ParentStrategy&& strategy) {
         testForTermination();
+        auto timeSpentCopying = stats.getRealTime();
+
+        auto fakeIter = std::make_shared<Iterator<BoolView>>(
+            std::numeric_limits<UInt>().max(), nullptr);
+        ExprRef<BoolView> cspBackup = model.csp;
+        AnyExprRef objBackup = model.objective;
+        model.csp = model.csp->deepCopyForUnroll(model.csp, fakeIter);
+        lib::visit(
+            [&](auto& obj) {
+                typedef viewType(obj) View;
+                auto fakeIter = std::make_shared<Iterator<View>>(
+                    std::numeric_limits<UInt>().max(), nullptr);
+                obj = obj->deepCopyForUnroll(obj, fakeIter);
+            },
+            model.objective);
+        stats.timeSpentDeepCopying += (stats.getRealTime() - timeSpentCopying);
+
         Neighbourhood& neighbourhood = model.neighbourhoods[nhIndex];
         debug_code(if (debugLogAllowed) {
             debug_log("Iteration count: "
@@ -57,6 +75,8 @@ class State {
         auto statsMarkPoint = stats.getMarkPoint();
         bool solutionAccepted = false, changeMade = false;
         AcceptanceCallBack callback = [&]() {
+            model.csp->evaluate();
+            lib::visit([&](auto& obj) { obj->evaluate(); }, model.objective);
             if (runSanityChecks &&
                 stats.numberIterations % sanityCheckInterval == 0) {
                 model.debugSanityCheck();
@@ -64,6 +84,10 @@ class State {
             changeMade = true;
             solutionAccepted = strategy(
                 NeighbourhoodResult(model, nhIndex, true, statsMarkPoint));
+            if (!solutionAccepted) {
+                model.csp = cspBackup;
+                model.objective = objBackup;
+            }
             return solutionAccepted;
         };
         ParentCheckCallBack alwaysTrueFunc(alwaysTrue);

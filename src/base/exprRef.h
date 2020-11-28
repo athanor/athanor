@@ -243,6 +243,7 @@ struct ExprInterface : public Undefinable<View> {
         }
     }
     void startTriggering() {
+        return;
         if (!isConstant()) {
             this->startTriggeringImpl();
         }
@@ -264,6 +265,7 @@ struct ExprInterface : public Undefinable<View> {
 
         ExprRef<View> copy = deepCopyForUnrollImpl(self, iterator);
         copy->flags = flags;
+        copy->flags.template get<EvaluatedFlag>() = false;
         return copy;
     }
     virtual void findAndReplaceSelf(const FindAndReplaceFunction&,

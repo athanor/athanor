@@ -262,7 +262,8 @@ ostream& operator<<(ostream& os, const StatsContainer& stats) {
     os << "Number solutions: " << stats.numberBetterFeasibleSolutionsFound
        << endl;
     os << "Number iterations: " << stats.numberIterations << endl;
-    os << "Minor node count: " << stats.minorNodeCount;
+    os << "Minor node count: " << stats.minorNodeCount << endl;
+    os << "Time spent deep copying: " << stats.timeSpentDeepCopying << endl;
     return os;
 }
 

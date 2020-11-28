@@ -94,7 +94,7 @@ struct StatsContainer {
     lib::optional<Objective> bestObjective;
     lib::optional<Objective> lastObjective;
     std::vector<NeighbourhoodStats> neighbourhoodStats;
-
+    double timeSpentDeepCopying;
     StatsContainer(Model& model);
 
     inline StatsMarkPoint getMarkPoint() {

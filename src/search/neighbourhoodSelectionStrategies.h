@@ -11,15 +11,21 @@
 #include "search/ucbSelector.h"
 #include "utils/random.h"
 void signalEndOfSearch();
+enum class SearchMode {
+    LOOKING_FOR_VIO_IMPROVEMENT,
+    LOOKING_FOR_RAW_OBJ_IMPROVEMENT,
+    LOOKING_FOR_VALID_OBJ_IMPROVEMENT
+};
 
 class NeighbourhoodSelectionStrategy {
    public:
-    virtual size_t nextNeighbourhood(const State& state) = 0;
+    virtual size_t nextNeighbourhood(const State& state,
+                                     SearchMode searchMode) = 0;
     virtual ~NeighbourhoodSelectionStrategy() {}
 };
 class InteractiveNeighbourhoodSelector : public NeighbourhoodSelectionStrategy {
    public:
-    inline size_t nextNeighbourhood(const State& state) {
+    inline size_t nextNeighbourhood(const State& state, SearchMode) {
         while (true) {
             std::cout << "select a neighbourhood, choices are:\n";
             for (size_t i = 0; i < state.model.neighbourhoods.size(); i++) {
@@ -48,7 +54,7 @@ class InteractiveNeighbourhoodSelector : public NeighbourhoodSelectionStrategy {
 
 class RandomNeighbourhood : public NeighbourhoodSelectionStrategy {
    public:
-    inline size_t nextNeighbourhood(const State& state) {
+    inline size_t nextNeighbourhood(const State& state, SearchMode) {
         if (state.vioContainer.getTotalViolation() == 0) {
             return globalRandom<size_t>(0,
                                         state.model.neighbourhoods.size() - 1);
@@ -74,6 +80,7 @@ class RandomNeighbourhood : public NeighbourhoodSelectionStrategy {
 class UcbNeighbourhoodSelector : public UcbSelector<UcbNeighbourhoodSelector>,
                                  public NeighbourhoodSelectionStrategy {
     const State& state;
+    SearchMode searchMode = SearchMode::LOOKING_FOR_VIO_IMPROVEMENT;
     bool includeMinorNodeCount;
     bool includeTriggerEventCount;
 
@@ -96,8 +103,14 @@ class UcbNeighbourhoodSelector : public UcbSelector<UcbNeighbourhoodSelector>,
 
     inline double reward(size_t i) {
         auto& s = nhStats(i);
-        return (optimising()) ? s.numberObjImprovements
-                              : s.numberVioImprovements;
+        switch (searchMode) {
+            case SearchMode::LOOKING_FOR_VIO_IMPROVEMENT:
+                return s.numberVioImprovements;
+            case SearchMode::LOOKING_FOR_VALID_OBJ_IMPROVEMENT:
+                return s.numberValidObjImprovements;
+            case SearchMode::LOOKING_FOR_RAW_OBJ_IMPROVEMENT:
+                return s.numberRawObjImprovements;
+        }
     }
     inline double individualCost(size_t i) {
         auto& s = nhStats(i);
@@ -106,7 +119,14 @@ class UcbNeighbourhoodSelector : public UcbSelector<UcbNeighbourhoodSelector>,
         vioCost += int(includeMinorNodeCount) * s.vioMinorNodeCount;
         cost += int(includeTriggerEventCount) * s.triggerEventCount;
         vioCost += int(includeTriggerEventCount) * s.vioTriggerEventCount;
-        return (optimising()) ? cost - vioCost : vioCost;
+        switch (searchMode) {
+            case SearchMode::LOOKING_FOR_VIO_IMPROVEMENT:
+                return vioCost;
+            case SearchMode::LOOKING_FOR_VALID_OBJ_IMPROVEMENT:
+                return cost - vioCost;
+            case SearchMode::LOOKING_FOR_RAW_OBJ_IMPROVEMENT:
+                return cost;
+        }
     }
     inline double totalCost() {
         UInt64 cost = state.stats.numberIterations,
@@ -116,18 +136,34 @@ class UcbNeighbourhoodSelector : public UcbSelector<UcbNeighbourhoodSelector>,
         cost += int(includeTriggerEventCount) * triggerEventCount;
         vioCost +=
             int(includeTriggerEventCount) * state.stats.vioTriggerEventCount;
-        return (optimising()) ? cost - vioCost : vioCost;
+        switch (searchMode) {
+            case SearchMode::LOOKING_FOR_VIO_IMPROVEMENT:
+                return vioCost;
+            case SearchMode::LOOKING_FOR_VALID_OBJ_IMPROVEMENT:
+                return cost - vioCost;
+            case SearchMode::LOOKING_FOR_RAW_OBJ_IMPROVEMENT:
+                return cost;
+        }
     }
     inline bool wasActivated(size_t i) {
         auto& s = nhStats(i);
-        return (optimising()) ? s.numberActivations - s.numberVioActivations > 0
-                              : s.numberVioActivations > 0;
+        switch (searchMode) {
+            case SearchMode::LOOKING_FOR_VIO_IMPROVEMENT:
+                return s.numberVioActivations > 0;
+            case SearchMode::LOOKING_FOR_VALID_OBJ_IMPROVEMENT:
+                return s.numberActivations - s.numberVioActivations > 0;
+            case SearchMode::LOOKING_FOR_RAW_OBJ_IMPROVEMENT:
+                return s.numberActivations > 0;
+        }
     }
     inline size_t numberOptions() {
         return state.stats.neighbourhoodStats.size();
     }
 
-    inline size_t nextNeighbourhood(const State&) { return next(); }
+    inline size_t nextNeighbourhood(const State&, SearchMode searchMode) {
+        this->searchMode = searchMode;
+        return next();
+    }
 };
 
 #endif /* SRC_SEARCH_NEIGHBOURHOODSELECTIONSTRATEGIES_H_ */

@@ -33,7 +33,9 @@ class RandomWalk : public SearchStrategy {
         UInt64 numberIterations = 0;
         while (numberIterations <= numberMovesToTake) {
             state.runNeighbourhood(
-                nhSelector->nextNeighbourhood(state), [&](const auto& result) {
+                nhSelector->nextNeighbourhood(
+                    state, SearchMode::LOOKING_FOR_VIO_IMPROVEMENT),
+                [&](const auto& result) {
                     if (!result.foundAssignment) {
                         return false;
                     }
@@ -71,7 +73,8 @@ class ExplorationUsingViolationBackOff : public SearchStrategy {
         while (objToBeat <= state.model.getObjective()) {
             bool allowed = false;
             state.runNeighbourhood(
-                exploreStrategy.nextNeighbourhood(state),
+                exploreStrategy.nextNeighbourhood(
+                    state, SearchMode::LOOKING_FOR_RAW_OBJ_IMPROVEMENT),
                 [&](const auto& result) {
                     if (!result.foundAssignment) {
                         return false;
@@ -92,7 +95,8 @@ class ExplorationUsingViolationBackOff : public SearchStrategy {
         while (state.model.getViolation() > 0) {
             bool allowed = false;
             state.runNeighbourhood(
-                exploreStrategy.nextNeighbourhood(state),
+                exploreStrategy.nextNeighbourhood(
+                    state, SearchMode::LOOKING_FOR_VIO_IMPROVEMENT),
                 [&](const auto& result) {
                     if (!result.foundAssignment) {
                         return false;

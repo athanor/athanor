@@ -59,7 +59,8 @@ struct NeighbourhoodStats {
     UInt64 numberVioActivations = 0;
     UInt64 vioMinorNodeCount = 0;
     UInt64 vioTriggerEventCount = 0;
-    UInt64 numberObjImprovements = 0;
+    UInt64 numberValidObjImprovements = 0;
+    UInt64 numberRawObjImprovements = 0;
     UInt64 numberVioImprovements = 0;
 
     NeighbourhoodStats(const std::string& name) : name(name) {}

@@ -53,8 +53,12 @@ class HillClimbing : public SearchStrategy {
                state.stats.numberIterations - startNumberIterations <
                    maxIterations) {
             bool allowed = false, strictImprovement = false;
+            SearchMode searchMode =
+                (state.model.getViolation() > 0)
+                    ? SearchMode::LOOKING_FOR_VIO_IMPROVEMENT
+                    : SearchMode::LOOKING_FOR_VALID_OBJ_IMPROVEMENT;
             searcher->search(
-                state, selector->nextNeighbourhood(state),
+                state, selector->nextNeighbourhood(state, searchMode),
                 [&](const auto& result) {
                     if (result.foundAssignment) {
                         if (result.statsMarkPoint.lastViolation != 0) {
@@ -119,9 +123,12 @@ class LateAcceptanceHillClimbing : public SearchStrategy {
         Objective bestObjective = state.model.getObjective();
         UInt bestViolation = state.model.getViolation();
         while (true) {
-            bool wasViolating = state.model.getViolation();
+            bool wasViolating = state.model.getViolation() > 0;
+            SearchMode searchMode =
+                (wasViolating) ? SearchMode::LOOKING_FOR_VIO_IMPROVEMENT
+                               : SearchMode::LOOKING_FOR_VALID_OBJ_IMPROVEMENT;
             searcher->search(
-                state, selector->nextNeighbourhood(state),
+                state, selector->nextNeighbourhood(state, searchMode),
                 [&](const auto& result) {
                     bool allowed = false;
                     if (result.foundAssignment) {
@@ -209,17 +216,19 @@ class HillClimbingWithViolations : public SearchStrategy {
         while (hasResource(state, startNumberIterations) &&
                objToBeat <= state.model.getObjective()) {
             bool allowed = false;
-            searcher->search(state, selector->nextNeighbourhood(state),
-                             [&](const auto& result) {
-                                 if (!result.foundAssignment) {
-                                     return false;
-                                 }
-                                 allowed =
-                                     result.model.getViolation() <=
-                                         violationBackOff.getValue() &&
-                                     result.model.getObjective() <= objToBeat;
-                                 return allowed;
-                             });
+            searcher->search(
+                state,
+                selector->nextNeighbourhood(
+                    state, SearchMode::LOOKING_FOR_RAW_OBJ_IMPROVEMENT),
+                [&](const auto& result) {
+                    if (!result.foundAssignment) {
+                        return false;
+                    }
+                    allowed = result.model.getViolation() <=
+                                  violationBackOff.getValue() &&
+                              result.model.getObjective() <= objToBeat;
+                    return allowed;
+                });
             if (!(state.model.getObjective() < objToBeat)) {
                 ++iterationsWithoutChange;
                 if (iterationsWithoutChange >
@@ -235,16 +244,18 @@ class HillClimbingWithViolations : public SearchStrategy {
         while (hasResource(state, startNumberIterations) &&
                state.model.getViolation() > 0) {
             bool allowed = false;
-            searcher->search(state, selector->nextNeighbourhood(state),
-                             [&](const auto& result) {
-                                 if (!result.foundAssignment) {
-                                     return false;
-                                 }
-                                 allowed =
-                                     result.getDeltaViolation() <= 0 &&
-                                     result.model.getObjective() < objToBeat;
-                                 return allowed;
-                             });
+            searcher->search(
+                state,
+                selector->nextNeighbourhood(
+                    state, SearchMode::LOOKING_FOR_VIO_IMPROVEMENT),
+                [&](const auto& result) {
+                    if (!result.foundAssignment) {
+                        return false;
+                    }
+                    allowed = result.getDeltaViolation() <= 0 &&
+                              result.model.getObjective() < objToBeat;
+                    return allowed;
+                });
             if (!allowed) {
                 ++iterationsWithoutChange;
                 if (iterationsWithoutChange >
@@ -260,15 +271,17 @@ class HillClimbingWithViolations : public SearchStrategy {
         UInt64 iterationsAtPeak = 0;
         while (state.model.getViolation() > 0) {
             bool allowed = false, strictImprovement = false;
-            searcher->search(state, selector->nextNeighbourhood(state),
-                             [&](const auto& result) {
-                                 if (result.foundAssignment) {
-                                     allowed = result.getDeltaViolation() <= 0;
-                                     strictImprovement =
-                                         result.getDeltaViolation() < 0;
-                                 }
-                                 return allowed;
-                             });
+            searcher->search(
+                state,
+                selector->nextNeighbourhood(
+                    state, SearchMode::LOOKING_FOR_VIO_IMPROVEMENT),
+                [&](const auto& result) {
+                    if (result.foundAssignment) {
+                        allowed = result.getDeltaViolation() <= 0;
+                        strictImprovement = result.getDeltaViolation() < 0;
+                    }
+                    return allowed;
+                });
             if (strictImprovement) {
                 iterationsAtPeak = 0;
             } else {
@@ -366,15 +379,17 @@ class MetaHillClimbing : public SearchStrategy,
         UInt64 iterationsAtPeak = 0;
         while (state.model.getViolation() > 0) {
             bool allowed = false, strictImprovement = false;
-            searcher->search(state, selector->nextNeighbourhood(state),
-                             [&](const auto& result) {
-                                 if (result.foundAssignment) {
-                                     allowed = result.getDeltaViolation() <= 0;
-                                     strictImprovement =
-                                         result.getDeltaViolation() < 0;
-                                 }
-                                 return allowed;
-                             });
+            searcher->search(
+                state,
+                selector->nextNeighbourhood(
+                    state, SearchMode::LOOKING_FOR_VIO_IMPROVEMENT),
+                [&](const auto& result) {
+                    if (result.foundAssignment) {
+                        allowed = result.getDeltaViolation() <= 0;
+                        strictImprovement = result.getDeltaViolation() < 0;
+                    }
+                    return allowed;
+                });
             if (strictImprovement) {
                 iterationsAtPeak = 0;
             } else {

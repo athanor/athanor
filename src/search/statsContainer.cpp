@@ -34,9 +34,12 @@ ostream& operator<<(ostream& os, const NeighbourhoodStats& stats) {
     os << indent << "value,total,average\n";
     os << indent << "Number activations," << stats.numberActivations << ","
        << ((stats.numberActivations == 0) ? 0 : 1) << endl;
-    os << indent << "Number objective improvements,"
-       << stats.numberObjImprovements << ","
-       << stats.getAverage(stats.numberObjImprovements) << endl;
+    os << indent << "Number non-violating objective improvements,"
+       << stats.numberValidObjImprovements << ","
+       << stats.getAverage(stats.numberValidObjImprovements) << endl;
+    os << indent << "Number raw objective improvements,"
+       << stats.numberRawObjImprovements << ","
+       << stats.getAverage(stats.numberRawObjImprovements) << endl;
     os << indent << "Number violation improvements,"
        << stats.numberVioImprovements << ","
        << stats.getAverage(stats.numberVioImprovements) << endl;
@@ -154,9 +157,11 @@ void StatsContainer::reportResult(bool solutionAccepted,
         triggerEventCountDiff;
     double timeDiff = getRealTime() - result.statsMarkPoint.realTime;
     neighbourhoodStats[result.neighbourhoodIndex].totalRealTime += timeDiff;
-    neighbourhoodStats[result.neighbourhoodIndex].numberObjImprovements +=
+    neighbourhoodStats[result.neighbourhoodIndex].numberValidObjImprovements +=
         (result.statsMarkPoint.lastViolation == 0 &&
          result.model.getViolation() == 0 && result.objectiveStrictlyBetter());
+    neighbourhoodStats[result.neighbourhoodIndex].numberRawObjImprovements +=
+        result.objectiveStrictlyBetter();
     if (result.statsMarkPoint.lastViolation > 0) {
         ++numberVioIterations;
         vioMinorNodeCount += minorNodeCountDiff;
@@ -267,26 +272,24 @@ ostream& operator<<(ostream& os, const StatsContainer& stats) {
 }
 
 void StatsContainer::printNeighbourhoodStats(std::ostream& os) const {
-    csvRow(os, "name", "activations", "objImprovements",
-           "objImprovementsAverage", "vioImprovements",
-           "vioImprovementsAverage", "minorNodes", "minorNodesAverage",
-           "triggerEvents", "triggerEventsAverage", "realTime",
-           "realTimeAverage");
+    csvRow(os, "name", "activations",                              //
+           "validObjImprovements", "validObjImprovementsAverage",  //
+           "rawObjImprovements", "rawObjImprovementsAverage",      //
+           "vioImprovements",
+           "vioImprovementsAverage",                 //
+           "minorNodes", "minorNodesAverage",        //
+           "triggerEvents", "triggerEventsAverage",  //
+           "realTime", "realTimeAverage");
     for (auto& s : neighbourhoodStats) {
-        double averageObjImprovements =
-            (s.numberObjImprovements == 0)
-                ? 0
-                : ((double)s.numberObjImprovements) /
-                      (s.numberActivations - s.numberVioActivations);
-        double averageVioImprovements =
-            (s.numberVioImprovements == 0)
-                ? 0
-                : ((double)s.numberVioImprovements) / s.numberVioActivations;
-        csvRow(os, s.name, s.numberActivations, s.numberObjImprovements,
-               averageObjImprovements, s.numberVioImprovements,
-               averageVioImprovements, s.minorNodeCount,
-               s.getAverage(s.minorNodeCount), s.triggerEventCount,
-               s.getAverage(s.triggerEventCount), s.totalRealTime,
-               s.getAverage(s.totalRealTime));
+        csvRow(os, s.name, s.numberActivations,  //
+               s.numberValidObjImprovements,
+               s.getAverage(s.numberValidObjImprovements),  //
+               s.numberRawObjImprovements,
+               s.getAverage(s.numberRawObjImprovements),  //
+               s.numberVioImprovements,
+               s.getAverage(s.numberVioImprovements),                   //
+               s.minorNodeCount, s.getAverage(s.minorNodeCount),        //
+               s.triggerEventCount, s.getAverage(s.triggerEventCount),  //
+               s.totalRealTime, s.getAverage(s.totalRealTime));
     }
 }

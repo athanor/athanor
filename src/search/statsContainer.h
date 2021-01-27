@@ -12,14 +12,13 @@ struct StatsMarkPoint {
     double realTime;
     UInt bestViolation;
     UInt lastViolation;
-    lib::optional<Objective> bestObjective;
-    lib::optional<Objective> lastObjective;
+    Objective bestObjective = Objective::Undefined();
+    Objective lastObjective = Objective::Undefined();
 
     StatsMarkPoint(UInt64 numberIterations, UInt64 minorNodeCount,
                    UInt64 triggerEventCount, double realTime,
                    UInt bestViolation, UInt lastViolation,
-                   lib::optional<Objective> bestObjective,
-                   lib::optional<Objective> lastObjective)
+                   Objective bestObjective, Objective lastObjective)
         : numberIterations(numberIterations),
           minorNodeCount(minorNodeCount),
           triggerEventCount(triggerEventCount),
@@ -92,8 +91,8 @@ struct StatsContainer {
     double vioTotalTime = 0;
     UInt bestViolation;
     UInt lastViolation;
-    lib::optional<Objective> bestObjective;
-    lib::optional<Objective> lastObjective;
+    Objective bestObjective = Objective::Undefined();
+    Objective lastObjective = Objective::Undefined();
     std::vector<NeighbourhoodStats> neighbourhoodStats;
 
     StatsContainer(Model& model);

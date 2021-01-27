@@ -5,8 +5,12 @@ using namespace std;
 static const char* NO_OBJ_UNDEFINED =
     "Error: trying to build an objective from an undefined value.\n";
 Objective::Objective(OptimiseMode mode, const ExprRef<IntView>& expr)
-    : mode(mode),
-      value(expr->getViewIfDefined().checkedGet(NO_OBJ_UNDEFINED).value) {}
+    : mode(mode), value(Objective::Undefined()) {
+    auto view = expr->getViewIfDefined();
+    if (view) {
+        value = view->value;
+    }
+}
 
 template <typename Array>
 void assignElements(const TupleView& tuple, Array& array) {
@@ -25,28 +29,31 @@ inline void assign(TupleView& tuple, std::array<Int, i>& array) {
 }
 
 Objective::Objective(OptimiseMode mode, const ExprRef<TupleView>& expr)
-    : mode(mode) {
-    auto& tupleView = expr->getViewIfDefined().checkedGet(NO_OBJ_UNDEFINED);
-    switch (tupleView.members.size()) {
-        case 1: {
-            assign(tupleView, value.emplace<std::array<Int, 1>>());
-            break;
-        }
-        case 2: {
-            assign(tupleView, value.emplace<std::array<Int, 2>>());
-            break;
-        }
-        case 3: {
-            assign(tupleView, value.emplace<std::array<Int, 3>>());
-            break;
-        }
-        case 0:
-            myCerr << "Error, cannot build objective value from empty tuple\n";
-            myAbort();
-        default: {
-            assignElements(tupleView, value.emplace<vector<Int>>(
-                                          tupleView.members.size(), 0));
-            break;
+    : mode(mode), value(Objective::Undefined()) {
+    auto tupleView = expr->getViewIfDefined();
+    if (tupleView) {
+        switch (tupleView->members.size()) {
+            case 1: {
+                assign(*tupleView, value.emplace<std::array<Int, 1>>());
+                break;
+            }
+            case 2: {
+                assign(*tupleView, value.emplace<std::array<Int, 2>>());
+                break;
+            }
+            case 3: {
+                assign(*tupleView, value.emplace<std::array<Int, 3>>());
+                break;
+            }
+            case 0:
+                myCerr
+                    << "Error, cannot build objective value from empty tuple\n";
+                myAbort();
+            default: {
+                assignElements(*tupleView, value.emplace<vector<Int>>(
+                                               tupleView->members.size(), 0));
+                break;
+            }
         }
     }
 }
@@ -54,40 +61,56 @@ Objective::Objective(OptimiseMode mode, const ExprRef<TupleView>& expr)
 bool Objective::operator<(const Objective& other) const {
     debug_code(assert(mode == other.mode));
     return lib::visit(
-        [&](const auto& value) {
-            const auto& otherValue =
-                lib::get<BaseType<decltype(value)>>(other.value);
-            return (mode == OptimiseMode::MINIMISE) ? value < otherValue
-                                                    : otherValue < value;
-        },
+        overloaded([&](const Objective::Undefined&) { return false; },
+                   [&](const auto& value) {
+                       if (lib::get_if<Objective::Undefined>(&other.value)) {
+                           return true;
+                       }
+                       const auto& otherValue =
+                           lib::get<BaseType<decltype(value)>>(other.value);
+                       return (mode == OptimiseMode::MINIMISE)
+                                  ? value < otherValue
+                                  : otherValue < value;
+                   }),
         value);
 }
 
 bool Objective::operator<=(const Objective& other) const {
     debug_code(assert(mode == other.mode));
     return lib::visit(
-        [&](const auto& value) {
-            const auto& otherValue =
-                lib::get<BaseType<decltype(value)>>(other.value);
-            return (mode == OptimiseMode::MINIMISE) ? value <= otherValue
-                                                    : otherValue <= value;
-        },
+        overloaded([&](const Objective::Undefined&) { return false; },
+                   [&](const auto& value) {
+                       if (lib::get_if<Objective::Undefined>(&other.value)) {
+                           return true;
+                       }
+                       const auto& otherValue =
+                           lib::get<BaseType<decltype(value)>>(other.value);
+                       return (mode == OptimiseMode::MINIMISE)
+                                  ? value <= otherValue
+                                  : otherValue <= value;
+                   }),
         value);
 }
 
 bool Objective::operator==(const Objective& other) const {
     debug_code(assert(mode == other.mode));
     return lib::visit(
-        [&](const auto& value) {
-            const auto& otherValue =
-                lib::get<BaseType<decltype(value)>>(other.value);
-            return value == otherValue;
-        },
+        overloaded([&](const Objective::Undefined&) { return false; },
+                   [&](const auto& value) {
+                       if (lib::get_if<Objective::Undefined>(&other.value)) {
+                           return false;
+                       }
+
+                       const auto& otherValue =
+                           lib::get<BaseType<decltype(value)>>(other.value);
+                       return value == otherValue;
+                   }),
         value);
 }
 
 ostream& operator<<(ostream& os, const Objective& o) {
-    lib::visit(overloaded([&](Int value) { os << value; },
+    lib::visit(overloaded([&](Objective::Undefined) { os << "undefined"; },
+                          [&](Int value) { os << value; },
                           [&](const auto& value) {
                               os << "(";
                               bool first = true;

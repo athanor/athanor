@@ -15,15 +15,15 @@ Int NeighbourhoodResult::getDeltaViolation() const {
 }
 
 bool NeighbourhoodResult::objectiveStrictlyBetter() const {
-    return model.getObjective() < *statsMarkPoint.lastObjective;
+    return model.getObjective() < statsMarkPoint.lastObjective;
 }
 bool NeighbourhoodResult::objectiveBetterOrEqual() const {
-    return model.getObjective() <= *statsMarkPoint.lastObjective;
+    return model.getObjective() <= statsMarkPoint.lastObjective;
 }
 
 Int NeighbourhoodResult::getDeltaDefinedness() const {
     bool currentDefined = model.objectiveDefined();
-    bool wasDefined = statsMarkPoint.lastObjective.has_value();
+    bool wasDefined = statsMarkPoint.lastObjective.isDefined();
     return currentDefined - wasDefined;
 }
 
@@ -53,7 +53,9 @@ ostream& operator<<(ostream& os, const NeighbourhoodStats& stats) {
 }
 
 StatsContainer::StatsContainer(Model& model)
-    : optimiseMode(model.optimiseMode), bestObjective(), lastObjective() {
+    : optimiseMode(model.optimiseMode),
+      bestObjective(Objective::Undefined()),
+      lastObjective(Objective::Undefined()) {
     for (auto& neighbourhood : model.neighbourhoods) {
         neighbourhoodStats.emplace_back(neighbourhood.name);
     }
@@ -136,8 +138,9 @@ void printStatsToWebApp(const StatsContainer& stats) {
         stats.numberBetterFeasibleSolutionsFound, stats.getRealTime(),
         stats.numberIterations, stats.bestViolation,
         stats.optimiseMode != OptimiseMode::NONE &&
-            stats.bestObjective.has_value(),
-        ((stats.bestObjective) ? toString(*stats.bestObjective) : ""));
+            stats.bestObjective.isDefined(),
+        ((stats.bestObjective.isDefined()) ? toString(stats.bestObjective)
+                                           : ""));
     val::global().call<void>("printStats", solutionStats);
 
 #endif
@@ -189,11 +192,12 @@ void StatsContainer::reportResult(bool solutionAccepted,
     if (result.model.objectiveDefined()) {
         lastObjective = result.model.getObjective();
     } else {
-        lastObjective = lib::nullopt;
+        lastObjective = Objective::Undefined();
     }
     bool vioImproved = lastViolation < bestViolation;
     bool objImproved =
-        lastObjective && (!bestObjective || *lastObjective < *bestObjective);
+        lastObjective.isDefined() &&
+        (!bestObjective.isDefined() || lastObjective < bestObjective);
     checkForBestSolution(vioImproved, objImproved, result.model);
 }
 
@@ -258,7 +262,7 @@ ostream& operator<<(ostream& os, const StatsContainer& stats) {
     os << "Stats:\n";
     os << "Best violation: " << stats.bestViolation << endl;
     os << "Best objective: "
-       << ((stats.bestObjective) ? toString(*stats.bestObjective) : "undefined")
+       << ((stats.bestObjective.isDefined()) ? toString(stats.bestObjective) : "undefined")
        << endl;
     os << "CPU time till best solution: " << stats.cpuTimeTillBestSolution
        << endl;

@@ -1,24 +1,2 @@
-
-
-
-Strategies:
-Defaults to a new Exploration search strategy "auto", aims to avoid worst case performance of the other supported explore strategies, using dynamic learning to switch between them.
-Experimental new strategies:
-added support for strategy late acceptance hill climbing [alpha], basic hill climbing is still preferred and is the default.
-Added neighbourhood search strategy: "search for  first solution that is at least as good" [alpha], still not preferred over the default.
-
-
-New supported constraints constraints:
-subsetEq for multi sets (subsetEq for sets already supported),
-strict subset for sets and multi sets,
-equality for sets and multi sets,
-function range and  function pre image.
-
-New types:
-Basic support for relations, relation projections stil to come.
-
-Miscellaneous:
-Better handling of subsetEq quantifiers by rewriting the expression to already well supported constraints.
-
-Athanor supports new Conjure APIs for converting Essence to JSON, old APIs will be supported until new official Conjure release.
-
+New and improved search strategy.
+Many constraints added

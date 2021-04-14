@@ -164,7 +164,9 @@ struct OpFlattenOneLevel<SequenceInnerType>::OperandTrigger
                 : op->numberElements() - op->startingIndices[indexBeingRemoved];
         for (size_t i = indexBeingRemoved; i < op->startingIndices.size() - 1;
              i++) {
-            op->startingIndices[i] -= diff;
+            if (op->startingIndices[i] != 0) {
+                op->startingIndices[i] -= diff;
+            }
         }
         op->startingIndices.pop_back();
         return diff;
@@ -344,7 +346,7 @@ void OpFlattenOneLevel<SequenceInnerType>::updateVarViolationsImpl(
 template <typename SequenceInnerType>
 std::ostream& OpFlattenOneLevel<SequenceInnerType>::dumpState(
     std::ostream& os) const {
-    os << "OpFlattenOneLevel<SequenceInnerType>: value=";
+    os << getOpName() << "(value=";
     prettyPrint(os, this->view().checkedGet(OP_FLATTEN_DEFAULT_ERROR));
     os << "\nstartingIndices: " << startingIndices;
     debug_code(assertValidStartingIndices());

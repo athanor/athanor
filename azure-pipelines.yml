@@ -70,7 +70,7 @@ jobs:
       #releaseNotes: "Automated release" # Optional
       assets: '$(Build.SourcesDirectory)/ReleaseAssets/*'
       #assetUploadMode: 'delete' # Optional. Options: delete, replace
-      isDraft: true # Optional
+      isDraft: false # Optional
       #isPreRelease: false # Optional
       #addChangeLog: true # Optional
       #compareWith: 'lastFullRelease' # Required when addChangeLog == True. Options: lastFullRelease, lastRelease, lastReleaseByTag

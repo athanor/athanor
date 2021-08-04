@@ -25,8 +25,8 @@ include_directories( include/flat_hash_map)
 #allow includes relative to src
 include_directories( src )
 
-#use c++ 14
-set(CMAKE_CXX_STANDARD 14)
+#use c++ 17
+set(CMAKE_CXX_STANDARD 17)
 message("")
 message("")
 #Configure CCache if available

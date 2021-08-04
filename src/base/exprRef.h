@@ -7,17 +7,12 @@
 #include <utility>
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
-#include "optional.hpp"
+#include <optional>
 #include "utils/OptionalRef.h"
 #include "utils/filename.h"
 #include "utils/flagSet.h"
 #include "utils/hashUtils.h"
 #include "utils/ignoreUnused.h"
-namespace lib {
-using std::experimental::make_optional;
-using std::experimental::nullopt;
-using std::experimental::optional;
-}  // namespace lib
 extern bool sanityCheckRepeatMode;
 extern bool hashCheckRepeatMode;
 extern bool repeatSanityCheckOfConst;

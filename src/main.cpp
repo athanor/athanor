@@ -1,10 +1,12 @@
 #include <autoArgParse/argParser.h>
 #include <sys/time.h>
+
 #include <csignal>
 #include <fstream>
 #include <iostream>
 #include <json.hpp>
 #include <unordered_map>
+
 #include "common/common.h"
 #include "gitRevision.h"
 #include "parsing/jsonModelParser.h"
@@ -215,6 +217,7 @@ SelectionStrategyChoice selectionStrategyChoice = UCB;
 size_t DEFAULT_LAHC_QUEUE_SIZE = 100;
 UInt64 improveStratPeakIterations = 5000;
 double DEFAULT_UCB_EXPLORATION_BIAS = 1;
+bool USE_ITERATIONS_FOR_META_CLIMBER = false;
 
 auto& searchStrategiesGroup = argParser.makePrintGroup(
     "strategies", "Selecting search and neighbourhood selection strategies...");
@@ -230,11 +233,15 @@ auto& hillClimbingFlag = improveStratGroup.add<Flag>(
     "hc", "Hill climbing strategy.",
     [](auto&&) { improveStrategyChoice = HILL_CLIMBING; });
 
-auto& hillClimbingWithViolationsFlag = improveStratGroup.add<Flag>(
+auto& hillClimbingWithViolationsFlag = improveStratGroup.add<ComplexFlag>(
     "mhc",
     "A meta hill climbing strategy that, if required, progressively allows "
     "discovery of beter  objectives by allowing violations.",
     [](auto&&) { improveStrategyChoice = META_HILL_CLIMBING; });
+
+auto& useIterationsAsCostFlag = hillClimbingWithViolationsFlag.add<Flag>(
+    "--bug-fix-1", Policy::OPTIONAL, "Enable a test bug fix for mhc",
+    [](auto&&) { USE_ITERATIONS_FOR_META_CLIMBER = true; });
 
 auto& lateAcceptanceHillClimbingFlag = improveStratGroup.add<ComplexFlag>(
     "lahc", "Late acceptance hill climbing strategy.",
@@ -468,7 +475,8 @@ std::shared_ptr<SearchStrategy> makeImproveStrategy(
         case HILL_CLIMBING:
             return make_shared<HillClimbing>(selector, searcher);
         case META_HILL_CLIMBING:
-            return make_shared<MetaHillClimbing>(selector, searcher);
+            return make_shared<MetaHillClimbing>(selector, searcher,
+                                                 useIterationsAsCostFlag);
 
         case LATE_ACCEPTANCE_HILL_CLIMBING: {
             size_t queueSize =

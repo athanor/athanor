@@ -3,6 +3,7 @@
 #define SRC_SEARCH_IMPROVESTRATEGIES_H_
 #include <cmath>
 #include <deque>
+
 #include "search/model.h"
 #include "search/neighbourhoodSearchStrategies.h"
 #include "search/neighbourhoodSelectionStrategies.h"
@@ -351,22 +352,27 @@ class MetaHillClimbing : public SearchStrategy,
     UInt64 search1Activations = 0;
     UInt64 search2Activations = 1;  // marking this as activated as forcing UCB
                                     // to choose other strategy first.
+    bool useIterationsAsCost;
 
    public:
     MetaHillClimbing(std::shared_ptr<NeighbourhoodSelectionStrategy> selector,
-                     std::shared_ptr<NeighbourhoodSearchStrategy> searcher)
+                     std::shared_ptr<NeighbourhoodSearchStrategy> searcher,
+                     bool useIterationsAsCost)
         : UcbSelector<MetaHillClimbing>(1),
           selector(selector),
           searcher(searcher),
           search1(selector, searcher, improveStratPeakIterations),
-          search2(selector, searcher, improveStratPeakIterations) {}
+          search2(selector, searcher, improveStratPeakIterations),
+          useIterationsAsCost(useIterationsAsCost) {}
 
     inline double individualCost(size_t i) {
-        return (i == 0) ? search1Activations : search2Activations;
+        if (useIterationsAsCost) {
+            return (i == 0) ? search1Activations : search2Activations;
+        } else {
+            return (i == 0) ? search1Iterations : search2Iterations;
+        }
     }
-    inline double totalCost() {
-        return search1Activations + search2Activations;
-    }
+    inline double totalCost() { return individualCost(0) + individualCost(1); }
     inline size_t numberOptions() { return 2; }
     inline bool wasActivated(size_t i) {
         return (i == 0) ? search1Activations != 0 : search2Activations != 0;

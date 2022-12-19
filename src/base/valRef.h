@@ -1,15 +1,13 @@
 
 #ifndef SRC_BASE_VALREF_H_
 #define SRC_BASE_VALREF_H_
-#include "base/exprRef.h"
-#include "utils/ignoreUnused.h"
-#include "utils/variantOperations.h"
-
 #include <vector>
+
+#include "base/exprRef.h"
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
-
 #include "common/common.h"
+#include "utils/ignoreUnused.h"
 #include "utils/variantOperations.h"
 template <typename Value>
 struct ValRef : public StandardSharedPtr<Value> {

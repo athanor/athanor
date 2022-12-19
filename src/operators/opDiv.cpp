@@ -1,4 +1,5 @@
 #include "operators/opDiv.h"
+
 #include "operators/simpleOperator.hpp"
 using namespace std;
 void OpDiv::reevaluateImpl(IntView& leftView, IntView& rightView, bool, bool) {

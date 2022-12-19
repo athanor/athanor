@@ -5,6 +5,7 @@
 #include <memory>
 #include <sstream>
 #include <utility>
+
 #include "base/standardSharedPtr.h"
 #include "base/typeDecls.h"
 #include "optional.hpp"

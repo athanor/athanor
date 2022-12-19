@@ -1,5 +1,6 @@
 #include <cassert>
 #include <numeric>
+
 #include "common/common.h"
 #include "types/tupleVal.h"
 #include "utils/ignoreUnused.h"

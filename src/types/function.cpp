@@ -2,6 +2,7 @@
 #include <cassert>
 #include <tuple>
 #include <utility>
+
 #include "common/common.h"
 #include "types/boolVal.h"
 #include "types/enumVal.h"
@@ -307,8 +308,8 @@ ostream& prettyPrint<FunctionView>(ostream& os, const FunctionView& v) {
                 }
                 lib::visit(
                     [&](auto& preimageDomain) {
-                        typedef typename BaseType<decltype(
-                            preimageDomain)>::element_type Domain;
+                        typedef typename BaseType<
+                            decltype(preimageDomain)>::element_type Domain;
                         auto from = v.indexToPreimage<Domain>(i);
                         prettyPrint(os, from->view());
                     },
@@ -340,8 +341,8 @@ ostream& prettyPrint<FunctionView>(ostream& os, const FunctionDomain& domain,
                 if (!domain.isMatrixDomain) {
                     lib::visit(
                         [&](auto& preimageDomain) {
-                            typedef typename BaseType<decltype(
-                                preimageDomain)>::element_type Domain;
+                            typedef typename BaseType<
+                                decltype(preimageDomain)>::element_type Domain;
                             auto from = v.indexToPreimage<Domain>(i);
                             prettyPrint(os, *preimageDomain, from->view());
                         },
@@ -441,8 +442,9 @@ void matchInnerType(const FunctionValue& src, FunctionValue& target) {
 void matchInnerType(const FunctionDomain& domain, FunctionValue& target) {
     lib::visit(
         [&](auto& rangeDomain) {
-            typedef typename AssociatedViewType<typename BaseType<decltype(
-                rangeDomain)>::element_type>::type RangeView;
+            typedef typename AssociatedViewType<
+                typename BaseType<decltype(rangeDomain)>::element_type>::type
+                RangeView;
             target.range.emplace<ExprRefVec<RangeView>>();
         },
         domain.to);
@@ -452,8 +454,8 @@ void matchInnerType(const FunctionDomain& domain, FunctionValue& target) {
     } else {
         lib::visit(
             [&](auto& preimageDomain) {
-                typedef typename AssociatedViewType<typename BaseType<decltype(
-                    preimageDomain)>::element_type>::type PreimageView;
+                typedef typename AssociatedViewType<typename BaseType<
+                    decltype(preimageDomain)>::element_type>::type PreimageView;
                 target.preimages.emplace<ExplicitPreimageContainer>()
                     .preimages.emplace<ExprRefVec<PreimageView>>();
             },

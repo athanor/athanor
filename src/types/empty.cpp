@@ -1,4 +1,5 @@
 #include <cassert>
+
 #include "common/common.h"
 #include "types/emptyVal.h"
 #include "utils/ignoreUnused.h"
@@ -65,7 +66,6 @@ template <>
 bool equalValueImpl<EmptyView>(const EmptyView&, const EmptyView&) {
     shouldNotBeCalledPanic;
 }
-
 
 void EmptyValue::debugSanityCheckImpl() const { shouldNotBeCalledPanic; }
 

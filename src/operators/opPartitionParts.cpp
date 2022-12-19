@@ -1,9 +1,9 @@
 #include "operators/opPartitionParts.h"
+
 #include <cassert>
 #include <cstdlib>
 
 #include "operators/simpleOperator.hpp"
-
 #include "utils/ignoreUnused.h"
 using namespace std;
 

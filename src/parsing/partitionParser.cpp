@@ -1,4 +1,5 @@
 #include <algorithm>
+
 #include "parsing/parserCommon.h"
 #include "types/allVals.h"
 #include "types/boolVal.h"

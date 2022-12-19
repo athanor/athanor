@@ -4,6 +4,7 @@
 #define SRC_NEIGHBOURHOODS_NEIGHBOURHOODS_H_
 #include <functional>
 #include <vector>
+
 #include "base/base.h"
 #include "common/common.h"
 #include "search/violationContainer.h"
@@ -102,9 +103,11 @@ struct NeighbourhoodGenList;
         static const NeighbourhoodVec<name##Domain> value;               \
         static const NeighbourhoodVec<name##Domain> mergeNeighbourhoods; \
         static const NeighbourhoodVec<name##Domain> splitNeighbourhoods; \
-    };
+    };                                                                   \
+    Neighbourhood generateRandomReassignNeighbourhood(const name##Domain&);
 buildForAllTypes(makeGeneratorDecls, )
 #undef makeGeneratorDecls
+
     template <typename DomainPtrType>
     inline void generateNeighbourhoodsImpl(
         int maxNumberVals, const DomainPtrType& domainImpl,
@@ -128,6 +131,16 @@ inline void generateNeighbourhoods(int maxNumberVals, const AnyDomainRef domain,
         },
         domain);
 }
+
+inline Neighbourhood generateRandomReassignNeighbourhood(
+    const AnyDomainRef domain) {
+    return lib::visit(
+        [&](auto& domainImpl) {
+            return generateRandomReassignNeighbourhood(*domainImpl);
+        },
+        domain);
+}
+
 class NeighbourhoodResourceTracker;
 template <typename Domain>
 bool assignRandomValueInDomain(const Domain& domain,

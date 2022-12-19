@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+
 #include "search/endOfSearchException.h"
 #include "search/model.h"
 #include "search/searchStrategies.h"

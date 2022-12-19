@@ -1,7 +1,9 @@
 #include "operators/opProd.h"
+
 #include <algorithm>
 #include <cassert>
 #include <unordered_map>
+
 #include "operators/flatten.h"
 #include "operators/previousValueCache.h"
 #include "operators/shiftViolatingIndices.h"

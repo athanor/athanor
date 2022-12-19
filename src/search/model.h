@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+
 #include "base/base.h"
 #include "common/common.h"
 #include "neighbourhoods/neighbourhoods.h"
@@ -24,6 +25,7 @@ struct Model {
     std::vector<std::pair<AnyDomainRef, AnyValRef>> variables;
     std::vector<std::string> variableNames;
     std::vector<Neighbourhood> neighbourhoods;
+    std::vector<Neighbourhood> randomReassignNeighbourhoods;
     std::vector<int> neighbourhoodVarMapping;
     std::vector<std::vector<int>> varNeighbourhoodMapping;
     ExprRef<BoolView> csp = nullptr;
@@ -56,6 +58,7 @@ class ModelBuilder {
     std::vector<AnyValRef> varsToBeDefined;
 
     void createNeighbourhoods();
+    void createRandomReassignNeighbourhoods();
     void substituteVarsToBeDefined();
     FindAndReplaceFunction makeFindReplaceFunc(AnyValRef& var,
                                                AnyExprRef& expr);

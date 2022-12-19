@@ -1,6 +1,8 @@
 #include "operators/opSetIndexInternal.h"
+
 #include <iostream>
 #include <memory>
+
 #include "operators/emptyOrViolatingOptional.h"
 #include "triggers/allTriggers.h"
 #include "types/set.h"

@@ -1,6 +1,7 @@
 #ifndef SRC_TYPES_FUNCTION_H_
 #define SRC_TYPES_FUNCTION_H_
 #include <vector>
+
 #include "base/base.h"
 #include "common/common.h"
 #include "triggers/functionTrigger.h"

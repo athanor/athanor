@@ -2,6 +2,7 @@
 #define SRC_TYPES_PARTITION_H_
 #include <unordered_map>
 #include <vector>
+
 #include "base/base.h"
 #include "common/common.h"
 #include "triggers/partitionTrigger.h"

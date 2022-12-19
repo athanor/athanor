@@ -1,7 +1,6 @@
 #ifndef SRC_OPERATORS_OPPARTITIONPARTS_H_
 #define SRC_OPERATORS_OPPARTITIONPARTS_H_
 #include "base/base.h"
-
 #include "operators/simpleOperator.hpp"
 #include "types/partition.h"
 #include "types/setVal.h"

@@ -1,5 +1,6 @@
 #include <cmath>
 #include <random>
+
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
 #include "types/sequenceVal.h"
@@ -224,7 +225,8 @@ struct SequenceRemove
         do {
             ++params.stats.minorNodeCount;
             indexToRemove = vioContainerAtThisLevel.selectRandomVar(
-                                                                    val.numberElements() - 1);;
+                val.numberElements() - 1);
+            ;
             std::pair<bool, ValRef<InnerValueType>> removeStatus =
                 val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
                     return params.parentCheck(params.vals);
@@ -827,6 +829,17 @@ struct SequenceAssignRandom
     }
 };
 
+Neighbourhood generateRandomReassignNeighbourhood(
+    const SequenceDomain& domain) {
+    return lib::visit(
+        [&](auto& innerDomainImpl) {
+            typedef typename BaseType<decltype(innerDomainImpl)>::element_type
+                InnerDomainType;
+            return Neighbourhood("SequenceAssignRandomDedicated", 1,
+                                 SequenceAssignRandom<InnerDomainType>(domain));
+        },
+        domain.inner);
+}
 const NeighbourhoodVec<SequenceDomain>
     NeighbourhoodGenList<SequenceDomain>::value = {
         {1, sequenceLiftSingleGen},

@@ -1,5 +1,6 @@
 #include <cmath>
 #include <random>
+
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
 #include "types/tupleVal.h"
@@ -43,6 +44,41 @@ bool assignRandomValueInDomain<TupleDomain>(
     return true;
 }
 
+void tupleAssignRandomNeighbourhoodImpl(const TupleDomain& domain,
+                                        NeighbourhoodParams& params) {
+    auto& val = *(params.getVals<TupleValue>().front());
+    int numberTries = 0;
+    const int tryLimit = params.parentCheckTryLimit;
+    debug_neighbourhood_action("Assigning random value: original value is "
+                               << asView(val));
+    auto backup = deepCopy(val);
+    backup->container = val.container;
+    auto newValue = constructValueFromDomain(domain);
+    newValue->container = val.container;
+    bool success;
+    NeighbourhoodResourceAllocator allocator(domain);
+    do {
+        auto resource = allocator.requestLargerResource();
+        success = assignRandomValueInDomain(domain, *newValue, resource);
+        params.stats.minorNodeCount += resource.getResourceConsumed();
+        success = success && val.tryAssignNewValue(*newValue, [&]() {
+            return params.parentCheck(params.vals);
+        });
+        if (success) {
+            debug_neighbourhood_action("New value is " << asView(val));
+        }
+    } while (!success && ++numberTries < tryLimit);
+    if (!success) {
+        debug_neighbourhood_action(
+            "Couldn't find value, number tries=" << tryLimit);
+        return;
+    }
+    if (!params.changeAccepted()) {
+        debug_neighbourhood_action("Change rejected");
+        deepCopy(*backup, val);
+    }
+}
+
 void tupleAssignRandomGen(const TupleDomain& domain, int numberValsRequired,
                           std::vector<Neighbourhood>& neighbourhoods) {
     for (auto& inner : domain.inners) {
@@ -52,42 +88,11 @@ void tupleAssignRandomGen(const TupleDomain& domain, int numberValsRequired,
             return;
         }
     }
-    neighbourhoods.emplace_back(
-        "TupleAssignRandom", numberValsRequired,
-        [&domain](NeighbourhoodParams& params) {
-            auto& val = *(params.getVals<TupleValue>().front());
-            int numberTries = 0;
-            const int tryLimit = params.parentCheckTryLimit;
-            debug_neighbourhood_action(
-                "Assigning random value: original value is " << asView(val));
-            auto backup = deepCopy(val);
-            backup->container = val.container;
-            auto newValue = constructValueFromDomain(domain);
-            newValue->container = val.container;
-            bool success;
-            NeighbourhoodResourceAllocator allocator(domain);
-            do {
-                auto resource = allocator.requestLargerResource();
-                success =
-                    assignRandomValueInDomain(domain, *newValue, resource);
-                params.stats.minorNodeCount += resource.getResourceConsumed();
-                success = success && val.tryAssignNewValue(*newValue, [&]() {
-                    return params.parentCheck(params.vals);
-                });
-                if (success) {
-                    debug_neighbourhood_action("New value is " << asView(val));
-                }
-            } while (!success && ++numberTries < tryLimit);
-            if (!success) {
-                debug_neighbourhood_action(
-                    "Couldn't find value, number tries=" << tryLimit);
-                return;
-            }
-            if (!params.changeAccepted()) {
-                debug_neighbourhood_action("Change rejected");
-                deepCopy(*backup, val);
-            }
-        });
+    neighbourhoods.emplace_back("TupleAssignRandom", numberValsRequired,
+                                [&domain](NeighbourhoodParams& params) {
+                                    tupleAssignRandomNeighbourhoodImpl(domain,
+                                                                       params);
+                                });
 }
 
 template <typename InnerDomainPtrType>
@@ -220,6 +225,13 @@ void tupleLiftSingleTwoVarsGen(const TupleDomain& domain,
             },
             domain.inners[i]);
     }
+}
+
+Neighbourhood generateRandomReassignNeighbourhood(const TupleDomain& domain) {
+    return Neighbourhood("TupleAssignRandomDedicated", 1,
+                         [&domain](NeighbourhoodParams& params) {
+                             tupleAssignRandomNeighbourhoodImpl(domain, params);
+                         });
 }
 
 const NeighbourhoodVec<TupleDomain> NeighbourhoodGenList<TupleDomain>::value = {

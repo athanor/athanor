@@ -1,9 +1,9 @@
 #include <cassert>
 #include <random>
+
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
 #include "search/ucbSelector.h"
-
 #include "types/intVal.h"
 #include "utils/random.h"
 using namespace std;
@@ -146,6 +146,11 @@ void intAssignRandomGen(const IntDomain& domain, int numberValsRequired,
                         std::vector<Neighbourhood>& neighbourhoods) {
     neighbourhoods.emplace_back("intAssignRandom", numberValsRequired,
                                 IntAssignRandom(domain));
+}
+
+Neighbourhood generateRandomReassignNeighbourhood(const IntDomain& domain) {
+    return Neighbourhood("intAssignRandomDedicated", 1,
+                         IntAssignRandom(domain));
 }
 
 const NeighbourhoodVec<IntDomain> NeighbourhoodGenList<IntDomain>::value = {

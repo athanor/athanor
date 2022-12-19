@@ -1,5 +1,7 @@
 #include "search/model.h"
+
 #include <iostream>
+
 #include "search/endOfSearchException.h"
 #include "search/statsContainer.h"
 #ifdef WASM_TARGET
@@ -33,6 +35,14 @@ void ModelBuilder::createNeighbourhoods() {
     }
     if (model.neighbourhoods.empty()) {
         cout << "Could not create any neighbourhoods\n";
+    }
+}
+
+void ModelBuilder::createRandomReassignNeighbourhoods() {
+    for (size_t i = 0; i < model.variables.size(); ++i) {
+        auto& domain = model.variables[i].first;
+        Neighbourhood nh = generateRandomReassignNeighbourhood(domain);
+        model.randomReassignNeighbourhoods.emplace_back(nh);
     }
 }
 

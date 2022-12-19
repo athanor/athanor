@@ -1,4 +1,5 @@
 #include "search/violationContainer.h"
+
 #include <algorithm>
 using namespace std;
 

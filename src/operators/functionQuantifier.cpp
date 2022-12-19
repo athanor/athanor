@@ -21,8 +21,8 @@ struct InitialUnroller<FunctionView> {
                 for (size_t i = 0; i < membersImpl.size(); i++) {
                     lib::visit(
                         [&](auto& preimageDomain) {
-                            typedef typename BaseType<decltype(
-                                preimageDomain)>::element_type Domain;
+                            typedef typename BaseType<
+                                decltype(preimageDomain)>::element_type Domain;
                             auto tupleFirstMember =
                                 containerView.template indexToPreimage<Domain>(
                                     i);
@@ -152,8 +152,8 @@ struct ContainerSanityChecker<FunctionView> {
             sanityEqualsCheck(2, view->members.size());
             lib::visit(
                 [&](const auto& preimageDomain) {
-                    typedef typename BaseType<decltype(
-                        preimageDomain)>::element_type Domain;
+                    typedef typename BaseType<
+                        decltype(preimageDomain)>::element_type Domain;
                     typedef typename AssociatedValueType<Domain>::type Value;
                     typedef typename AssociatedViewType<Value>::type View;
                     auto tupleFirstMember =

@@ -1,5 +1,6 @@
 #include <cmath>
 #include <random>
+
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
 #include "types/boolVal.h"
@@ -1058,6 +1059,18 @@ struct PreimageDomainGetter {
         return domain.from;
     }
 };
+
+Neighbourhood generateRandomReassignNeighbourhood(
+    const FunctionDomain& domain) {
+    return lib::visit(
+        [&](auto& innerDomainImpl) {
+            typedef typename BaseType<decltype(innerDomainImpl)>::element_type
+                InnerDomainType;
+            return Neighbourhood("FunctionAssignRandomDedicated", 1,
+                                 FunctionAssignRandom<InnerDomainType>(domain));
+        },
+        domain.to);
+}
 
 const NeighbourhoodVec<FunctionDomain>
     NeighbourhoodGenList<FunctionDomain>::value = {

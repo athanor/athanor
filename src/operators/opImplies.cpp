@@ -1,4 +1,5 @@
 #include "operators/opImplies.h"
+
 #include "operators/simpleOperator.hpp"
 using namespace std;
 

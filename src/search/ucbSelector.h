@@ -4,6 +4,7 @@
 #include <cassert>
 #include <climits>
 #include <vector>
+
 #include "search/endOfSearchException.h"
 #include "utils/random.h"
 void signalEndOfSearch();

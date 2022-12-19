@@ -2,9 +2,9 @@
 
 #include <iostream>
 #include <memory>
-#include "triggers/allTriggers.h"
 
 #include "operators/simpleOperator.hpp"
+#include "triggers/allTriggers.h"
 
 using namespace std;
 static const char* NO_PREIMAGE_UNDEFINED =

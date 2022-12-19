@@ -1,4 +1,5 @@
 #include <algorithm>
+
 #include "parsing/parserCommon.h"
 #include "types/intVal.h"
 #include "types/sequenceVal.h"

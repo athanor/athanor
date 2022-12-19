@@ -1,6 +1,7 @@
 #ifndef SRC_UTILS_HASHUTILS_H_
 #define SRC_UTILS_HASHUTILS_H_
 #include <iostream>
+
 #include "base/intSize.h"
 class HashType;
 

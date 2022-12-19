@@ -4,10 +4,10 @@
 #include <numeric>
 #include <utility>
 #include <vector>
-#include "triggers/intTrigger.h"
-#include "utils/ignoreUnused.h"
 
 #include "base/base.h"
+#include "triggers/intTrigger.h"
+#include "utils/ignoreUnused.h"
 
 struct IntView : public ExprInterface<IntView>,
                  public TriggerContainer<IntView> {

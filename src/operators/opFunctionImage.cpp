@@ -1,6 +1,8 @@
 #include "operators/opFunctionImage.h"
+
 #include <iostream>
 #include <memory>
+
 #include "triggers/allTriggers.h"
 #include "types/tuple.h"
 #include "utils/ignoreUnused.h"

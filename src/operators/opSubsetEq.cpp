@@ -1,6 +1,8 @@
 #include "operators/opSubsetEq.h"
+
 #include <iostream>
 #include <memory>
+
 #include "operators/simpleOperator.hpp"
 #include "types/set.h"
 using namespace std;

@@ -1,5 +1,7 @@
 #include "operators/definedVarHelper.h"
+
 #include <algorithm>
+
 #include "operators/definedVarHelper.hpp"
 #include "operators/opBoolEq.h"
 #include "operators/opEnumEq.h"

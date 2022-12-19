@@ -1,6 +1,8 @@
 #include "operators/opSequenceLit.h"
+
 #include <cassert>
 #include <cstdlib>
+
 #include "operators/simpleOperator.hpp"
 #include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"

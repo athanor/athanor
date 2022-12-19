@@ -3,6 +3,7 @@
 #define SRC_SEARCH_EXPLORESTRATEGIES_H_
 #include <cmath>
 #include <deque>
+
 #include "search/endOfSearchException.h"
 #include "search/improveStrategies.h"
 #include "search/model.h"

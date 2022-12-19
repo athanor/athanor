@@ -1,7 +1,9 @@
 
 #include "operators/opOr.h"
+
 #include <algorithm>
 #include <cassert>
+
 #include "operators/flatten.h"
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"

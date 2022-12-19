@@ -1,5 +1,7 @@
 #include "operators/opAbs.h"
+
 #include <cmath>
+
 #include "operators/simpleOperator.hpp"
 using namespace std;
 void OpAbs::reevaluateImpl(IntView& view) { this->value = llabs(view.value); }

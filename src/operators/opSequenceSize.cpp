@@ -1,6 +1,8 @@
 #include "operators/opSequenceSize.h"
+
 #include <iostream>
 #include <memory>
+
 #include "operators/simpleOperator.hpp"
 #include "types/sequence.h"
 

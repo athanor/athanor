@@ -2,6 +2,7 @@
 #ifndef SRC_OPERATORS_SHIFTVIOLATINGINDICES_H_
 #define SRC_OPERATORS_SHIFTVIOLATINGINDICES_H_
 #include <vector>
+
 #include "utils/fastIterableIntSet.h"
 inline void shiftIndicesUp(UInt fromIndex, UInt newNumberElements,
                            FastIterableIntSet& indexSet) {

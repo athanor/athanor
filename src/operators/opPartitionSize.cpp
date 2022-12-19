@@ -1,6 +1,8 @@
 #include "operators/opPartitionSize.h"
+
 #include <iostream>
 #include <memory>
+
 #include "operators/simpleOperator.hpp"
 #include "types/partition.h"
 

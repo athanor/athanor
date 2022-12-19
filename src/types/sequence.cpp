@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+
 #include "common/common.h"
 #include "types/sequenceVal.h"
 #include "utils/ignoreUnused.h"
@@ -112,8 +113,8 @@ void matchInnerType(const SequenceDomain& domain, SequenceValue& target) {
     lib::visit(
         [&](auto& innerDomainImpl) {
             target.setInnerType<typename AssociatedViewType<
-                typename AssociatedValueType<typename BaseType<decltype(
-                    innerDomainImpl)>::element_type>::type>::type>();
+                typename AssociatedValueType<typename BaseType<
+                    decltype(innerDomainImpl)>::element_type>::type>::type>();
             target.injective = domain.injective;
         },
         domain.inner);

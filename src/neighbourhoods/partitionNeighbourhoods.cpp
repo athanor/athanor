@@ -1,5 +1,6 @@
 #include <cmath>
 #include <random>
+
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
 #include "types/partitionVal.h"
@@ -687,45 +688,57 @@ struct PartitionCollectElementsIntoNewPart
     }
 };
 
+void partitionAssignRandomNeighbourhoodImpl(const PartitionDomain& domain,
+                                            NeighbourhoodParams& params) {
+    auto& val = *(params.getVals<PartitionValue>().front());
+    int numberTries = 0;
+    const int tryLimit = params.parentCheckTryLimit;
+    debug_neighbourhood_action("Assigning random value: original value is "
+                               << asView(val));
+    auto backup = deepCopy(val);
+    backup->container = val.container;
+    auto newValue = constructValueFromDomain(domain);
+    newValue->container = val.container;
+    bool success;
+    NeighbourhoodResourceAllocator allocator(domain);
+    do {
+        auto resource = allocator.requestLargerResource();
+        success = assignRandomValueInDomain(domain, *newValue, resource);
+        params.stats.minorNodeCount += resource.getResourceConsumed();
+        success = success && val.tryAssignNewValue(*newValue, [&]() {
+            return params.parentCheck(params.vals);
+        });
+        if (success) {
+            debug_neighbourhood_action("New value is " << asView(val));
+        }
+    } while (!success && ++numberTries < tryLimit);
+    if (!success) {
+        debug_neighbourhood_action(
+            "Couldn't find value, number tries=" << tryLimit);
+        return;
+    }
+    if (!params.changeAccepted()) {
+        debug_neighbourhood_action("Change rejected");
+        deepCopy(*backup, val);
+    }
+}
 void partitionAssignRandomGen(const PartitionDomain& domain,
                               int numberValsRequired,
                               std::vector<Neighbourhood>& neighbourhoods) {
-    neighbourhoods.emplace_back(
-        "partitionAssignRandom", numberValsRequired,
-        [&domain](NeighbourhoodParams& params) {
-            auto& val = *(params.getVals<PartitionValue>().front());
-            int numberTries = 0;
-            const int tryLimit = params.parentCheckTryLimit;
-            debug_neighbourhood_action(
-                "Assigning random value: original value is " << asView(val));
-            auto backup = deepCopy(val);
-            backup->container = val.container;
-            auto newValue = constructValueFromDomain(domain);
-            newValue->container = val.container;
-            bool success;
-            NeighbourhoodResourceAllocator allocator(domain);
-            do {
-                auto resource = allocator.requestLargerResource();
-                success =
-                    assignRandomValueInDomain(domain, *newValue, resource);
-                params.stats.minorNodeCount += resource.getResourceConsumed();
-                success = success && val.tryAssignNewValue(*newValue, [&]() {
-                    return params.parentCheck(params.vals);
-                });
-                if (success) {
-                    debug_neighbourhood_action("New value is " << asView(val));
-                }
-            } while (!success && ++numberTries < tryLimit);
-            if (!success) {
-                debug_neighbourhood_action(
-                    "Couldn't find value, number tries=" << tryLimit);
-                return;
-            }
-            if (!params.changeAccepted()) {
-                debug_neighbourhood_action("Change rejected");
-                deepCopy(*backup, val);
-            }
-        });
+    neighbourhoods.emplace_back("partitionAssignRandom", numberValsRequired,
+                                [&domain](NeighbourhoodParams& params) {
+                                    partitionAssignRandomNeighbourhoodImpl(
+                                        domain, params);
+                                });
+}
+
+Neighbourhood generateRandomReassignNeighbourhood(
+    const PartitionDomain& domain) {
+    return Neighbourhood("PartitionAssignRandomDedicated", 1,
+                         [&domain](NeighbourhoodParams& params) {
+                             partitionAssignRandomNeighbourhoodImpl(domain,
+                                                                    params);
+                         });
 }
 
 const NeighbourhoodVec<PartitionDomain> NeighbourhoodGenList<

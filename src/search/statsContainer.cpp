@@ -1,5 +1,7 @@
 #include "search/statsContainer.h"
+
 #include <iostream>
+
 #include "search/model.h"
 #ifdef WASM_TARGET
 #include <emscripten/bind.h>
@@ -262,7 +264,8 @@ ostream& operator<<(ostream& os, const StatsContainer& stats) {
     os << "Stats:\n";
     os << "Best violation: " << stats.bestViolation << endl;
     os << "Best objective: "
-       << ((stats.bestObjective.isDefined()) ? toString(stats.bestObjective) : "undefined")
+       << ((stats.bestObjective.isDefined()) ? toString(stats.bestObjective)
+                                             : "undefined")
        << endl;
     os << "CPU time till best solution: " << stats.cpuTimeTillBestSolution
        << endl;

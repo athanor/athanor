@@ -1,5 +1,6 @@
 #include <cmath>
 #include <random>
+
 #include "neighbourhoods/neighbourhoods.h"
 #include "search/statsContainer.h"
 #include "types/setVal.h"
@@ -277,7 +278,8 @@ struct SetRemove
         do {
             ++params.stats.minorNodeCount;
             indexToRemove = vioContainerAtThisLevel.selectRandomVar(
-                                                                    val.numberElements() - 1);;
+                val.numberElements() - 1);
+            ;
             debug_log("trying to remove index " << indexToRemove << " from set "
                                                 << val.view());
             removedMember = val.tryRemoveMember<InnerValueType>(
@@ -512,6 +514,16 @@ struct SetAssignRandom
     }
 };
 
+Neighbourhood generateRandomReassignNeighbourhood(const SetDomain& domain) {
+    return lib::visit(
+        [&](auto& innerDomainImpl) {
+            typedef typename BaseType<decltype(innerDomainImpl)>::element_type
+                InnerDomainType;
+            return Neighbourhood("SetAssignRandomDedicated", 1,
+                                 SetAssignRandom<InnerDomainType>(domain));
+        },
+        domain.inner);
+}
 const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::value = {
     {1, setLiftSingleGen},                             //
     {1, setLiftMultipleGen},                           //

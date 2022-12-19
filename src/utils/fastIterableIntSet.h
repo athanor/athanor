@@ -2,6 +2,7 @@
 #define SRC_UTILS_FASTITERABLEINTSET_H_
 #include <iostream>
 #include <vector>
+
 #include "base/intSize.h"
 #include "common/common.h"
 #include "utils/random.h"

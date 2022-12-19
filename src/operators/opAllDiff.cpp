@@ -1,7 +1,9 @@
 #include "operators/opAllDiff.h"
+
 #include <algorithm>
 #include <cassert>
 #include <unordered_map>
+
 #include "operators/shiftViolatingIndices.h"
 #include "operators/simpleOperator.hpp"
 #include "utils/ignoreUnused.h"

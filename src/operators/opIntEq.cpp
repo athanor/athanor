@@ -1,4 +1,5 @@
 #include "operators/opIntEq.h"
+
 #include "operators/definedVarHelper.hpp"
 #include "operators/opAnd.h"
 #include "operators/simpleOperator.hpp"

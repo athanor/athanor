@@ -1,4 +1,5 @@
 #include "operators/opNot.h"
+
 #include "operators/simpleOperator.hpp"
 using namespace std;
 void OpNot::reevaluateImpl(BoolView& view) {

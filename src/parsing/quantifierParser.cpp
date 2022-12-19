@@ -1,9 +1,9 @@
 #include <algorithm>
+
 #include "operators/opPowerSet.h"
 #include "operators/opTupleIndex.h"
 #include "operators/quantifier.h"
 #include "parsing/parserCommon.h"
-
 #include "types/allVals.h"
 using namespace std;
 using namespace lib;
@@ -253,8 +253,9 @@ ParseResult makeFlatten(ParseResult sequenceExpr) {
     auto& expr = lib::get<ExprRef<SequenceView>>(sequenceExpr.expr);
     return lib::visit(
         [&](auto& innerDomain) {
-            typedef typename AssociatedValueType<typename BaseType<decltype(
-                innerDomain)>::element_type>::type ValueType;
+            typedef typename AssociatedValueType<
+                typename BaseType<decltype(innerDomain)>::element_type>::type
+                ValueType;
             typedef typename AssociatedViewType<ValueType>::type View;
             return ParseResult(sequenceExpr.domain,
                                OpMaker<OpFlattenOneLevel<View>>::make(expr),
@@ -392,7 +393,7 @@ optional<ParseResult> parseComprehensionImpl(json& comprExpr,
                 quantifyingOver.hasEmptyType, generatorIndex, parsedModel);
         },
 
-        [&](auto &&) -> ParseResult {
+        [&](auto&&) -> ParseResult {
             myCerr << "Error, not yet handling quantifier for "
                       "this type: "
                    << generatorExpr << endl;
@@ -504,8 +505,9 @@ ParseResult quantifyOverSet(shared_ptr<SetDomain>& domain,
     auto quant = make_shared<Quantifier<SetView>>(expr);
     return lib::visit(
         [&](auto& innerDomain) {
-            typedef typename AssociatedValueType<typename BaseType<decltype(
-                innerDomain)>::element_type>::type InnerValueType;
+            typedef typename AssociatedValueType<
+                typename BaseType<decltype(innerDomain)>::element_type>::type
+                InnerValueType;
             typedef
                 typename AssociatedViewType<InnerValueType>::type InnerViewType;
             quant->setExpression(

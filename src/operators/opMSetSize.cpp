@@ -1,6 +1,8 @@
 #include "operators/opMSetSize.h"
+
 #include <iostream>
 #include <memory>
+
 #include "operators/simpleOperator.hpp"
 #include "types/mSet.h"
 

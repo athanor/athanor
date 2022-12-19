@@ -2,6 +2,7 @@
 #ifndef SRC_OPERATORS_SIMPLETRIGGER_H_
 #define SRC_OPERATORS_SIMPLETRIGGER_H_
 #include <memory>
+
 #include "base/base.h"
 
 template <typename Op>

@@ -5,6 +5,7 @@
 #include <cassert>
 #include <climits>
 #include <vector>
+
 #include "search/model.h"
 #include "search/solver.h"
 #include "search/statsContainer.h"

@@ -1,6 +1,8 @@
 #include "operators/opIn.h"
+
 #include <iostream>
 #include <memory>
+
 #include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"
 using namespace std;

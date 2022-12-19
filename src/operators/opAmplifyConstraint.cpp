@@ -1,4 +1,5 @@
 #include "operators/opAmplifyConstraint.h"
+
 #include "operators/simpleOperator.hpp"
 using namespace std;
 void OpAmplifyConstraint::reevaluateImpl(BoolView& view) {

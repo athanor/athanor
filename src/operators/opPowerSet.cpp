@@ -2,8 +2,10 @@
 // this operator is no longer intended to be part of the AST during search. The
 // parser should detect it and re-write it into a different expression.
 #include "operators/opPowerSet.h"
+
 #include <iostream>
 #include <memory>
+
 #include "operators/simpleOperator.hpp"
 #include "types/set.h"
 

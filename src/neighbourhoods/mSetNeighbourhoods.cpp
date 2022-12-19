@@ -255,7 +255,8 @@ struct MSetRemove
         do {
             ++params.stats.minorNodeCount;
             indexToRemove = vioContainerAtThisLevel.selectRandomVar(
-                                                                    val.numberElements() - 1);;
+                val.numberElements() - 1);
+            ;
             std::pair<bool, ValRef<InnerValueType>> removeStatus =
                 val.tryRemoveMember<InnerValueType>(indexToRemove, [&]() {
                     return params.parentCheck(params.vals);
@@ -328,6 +329,16 @@ struct MSetAssignRandom
     }
 };
 
+Neighbourhood generateRandomReassignNeighbourhood(const MSetDomain& domain) {
+    return lib::visit(
+        [&](auto& innerDomainImpl) {
+            typedef typename BaseType<decltype(innerDomainImpl)>::element_type
+                InnerDomainType;
+            return Neighbourhood("MSetAssignRandomDedicated", 1,
+                                 MSetAssignRandom<InnerDomainType>(domain));
+        },
+        domain.inner);
+}
 const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::value = {
     {1, mSetLiftSingleGen},
     {1, mSetLiftMultipleGen},

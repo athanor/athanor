@@ -2,6 +2,7 @@
 #ifndef SRC_UTILS_SIMPLECACHE_H_
 #define SRC_UTILS_SIMPLECACHE_H_
 #include <utility>
+
 #include "base/base.h"
 #include "common/common.h"
 template <typename T>

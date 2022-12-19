@@ -1,6 +1,7 @@
 #ifndef SRC_TYPES_FUNCTIONVAL_H_
 #define SRC_TYPES_FUNCTIONVAL_H_
 #include <vector>
+
 #include "base/base.h"
 #include "common/common.h"
 #include "types/function.h"

@@ -2,6 +2,7 @@
 #ifndef SRC_UTILS_SAFEPOW_H_
 #define SRC_UTILS_SAFEPOW_H_
 #include <optional.hpp>
+
 #include "base/intSize.h"
 
 template <typename T,

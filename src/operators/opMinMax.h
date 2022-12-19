@@ -2,6 +2,7 @@
 #ifndef SRC_OPERATORS_OPOR_H_
 #define SRC_OPERATORS_OPOR_H_
 #include <vector>
+
 #include "operators/simpleOperator.h"
 #include "types/int.h"
 #include "types/sequence.h"

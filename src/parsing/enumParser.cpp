@@ -1,4 +1,5 @@
 #include <algorithm>
+
 #include "parsing/parserCommon.h"
 #include "search/model.h"
 #include "types/allVals.h"

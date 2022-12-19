@@ -1,4 +1,5 @@
 #include "operators/opBoolEq.h"
+
 #include "operators/definedVarHelper.hpp"
 #include "operators/simpleOperator.hpp"
 #include "types/boolVal.h"

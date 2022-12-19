@@ -1,6 +1,7 @@
 #ifndef SRC_TYPES_SEQUENCEVAL_H_
 #define SRC_TYPES_SEQUENCEVAL_H_
 #include <vector>
+
 #include "common/common.h"
 #include "types/sequence.h"
 #include "types/sizeAttr.h"

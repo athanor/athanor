@@ -2,6 +2,7 @@
 #define SRC_SEARCH_OBJECTIVE_H_
 #include <algorithm>
 #include <cassert>
+
 #include "base/base.h"
 #include "common/common.h"
 enum class OptimiseMode { NONE, MAXIMISE, MINIMISE };

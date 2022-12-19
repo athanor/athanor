@@ -1,6 +1,8 @@
 #include "operators/opSetLit.h"
+
 #include <cassert>
 #include <cstdlib>
+
 #include "operators/opSetIndexInternal.h"
 #include "operators/simpleOperator.hpp"
 #include "triggers/allTriggers.h"

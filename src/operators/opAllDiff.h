@@ -2,6 +2,7 @@
 #ifndef SRC_OPERATORS_OPALLDIFF_H_
 #define SRC_OPERATORS_OPALLDIFF_H_
 #include <vector>
+
 #include "operators/simpleOperator.h"
 #include "types/bool.h"
 #include "types/sequence.h"

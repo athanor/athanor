@@ -3,6 +3,7 @@
 #define SRC_UTILS_RANDOM_H_
 #include <cassert>
 #include <random>
+
 #include "common/common.h"
 
 extern std::mt19937 globalRandomGenerator;

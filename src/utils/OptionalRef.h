@@ -10,6 +10,7 @@
  * pointer.
  */
 #include <cassert>
+
 #include "common/common.h"
 
 class EmptyOptional {};

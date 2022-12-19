@@ -2,6 +2,7 @@
 #define SRC_SEARCH_STATSCONTAINER_H_
 #include <chrono>
 #include <iostream>
+
 #include "base/base.h"
 #include "search/objective.h"
 struct Model;

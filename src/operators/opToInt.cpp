@@ -1,6 +1,8 @@
 #include "operators/opToInt.h"
+
 #include <iostream>
 #include <memory>
+
 #include "operators/simpleOperator.hpp"
 #include "types/int.h"
 

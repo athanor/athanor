@@ -1,6 +1,8 @@
 
 #include "operators/opPower.h"
+
 #include <cmath>
+
 #include "operators/simpleOperator.hpp"
 #include "utils/safePow.h"
 

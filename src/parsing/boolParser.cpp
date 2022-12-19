@@ -1,4 +1,5 @@
 #include <algorithm>
+
 #include "operators/opSetLit.h"
 #include "parsing/parserCommon.h"
 #include "types/allVals.h"
@@ -78,7 +79,7 @@ ParseResult parseOpSubsetEq(json& operandsExpr, ParsedModel& parsedModel) {
                     op->setConstant(constant);
                     return ParseResult(fakeBoolDomain, op, false);
                 },
-                [&](auto&& left, auto &&) -> ParseResult {
+                [&](auto&& left, auto&&) -> ParseResult {
                     myCerr << "Error, not yet handling OpSubsetEq "
                               "with operands of "
                               "type "
@@ -147,7 +148,7 @@ ParseResult parseOpSubset(json& operandsExpr, ParsedModel& parsedModel) {
 
                     return ParseResult(fakeBoolDomain, op, false);
                 },
-                [&](auto&& left, auto &&) -> ParseResult {
+                [&](auto&& left, auto&&) -> ParseResult {
                     myCerr << "Error, not yet handling OpSubsetEq "
                               "with operands of "
                               "type "
@@ -236,7 +237,7 @@ ParseResult parseOpEq(json& operandsExpr, ParsedModel& parsedModel) {
                     return ParseResult(fakeBoolDomain, op, false);
                 },
 
-                [&](auto&& left, auto &&) -> ParseResult {
+                [&](auto&& left, auto&&) -> ParseResult {
                     myCerr << "Error, not yet handling OpEq "
                               "with operands of "
                               "type "

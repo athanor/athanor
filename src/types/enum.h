@@ -4,6 +4,7 @@
 #include <numeric>
 #include <utility>
 #include <vector>
+
 #include "base/base.h"
 #include "triggers/enumTrigger.h"
 #include "utils/ignoreUnused.h"

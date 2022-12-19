@@ -1,4 +1,5 @@
 #include "operators/opMinus.h"
+
 #include "operators/simpleOperator.hpp"
 using namespace std;
 

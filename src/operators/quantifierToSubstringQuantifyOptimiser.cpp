@@ -1,6 +1,7 @@
 
 // This file is horible, my apologies.#include "operators/quantifier.h"
 #include <vector>
+
 #include "operators/intRange.h"
 #include "operators/opAnd.h"
 #include "operators/opImplies.h"

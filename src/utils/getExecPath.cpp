@@ -1,8 +1,11 @@
 #include "utils/getExecPath.h"
+
 #include <libgen.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
+
 #include "utils/ignoreUnused.h"
 #ifndef WASM_TARGET
 #ifdef __linux__

@@ -1,6 +1,8 @@
 #include "utils/hashUtils.h"
+
 #include <iostream>
 #include <utility>
+
 #include "MurmurHash3.h"
 #include "base/intSize.h"
 #include "picosha2.h"

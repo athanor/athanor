@@ -2,9 +2,9 @@
 #ifndef SRC_OPERATORS_OPAND_H_
 #define SRC_OPERATORS_OPAND_H_
 #include <vector>
+
 #include "operators/previousValueCache.h"
 #include "operators/shiftViolatingIndices.h"
-
 #include "operators/simpleOperator.h"
 #include "types/bool.h"
 #include "types/sequence.h"

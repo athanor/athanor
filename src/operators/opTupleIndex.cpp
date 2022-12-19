@@ -1,6 +1,8 @@
 #include "operators/opTupleIndex.h"
+
 #include <iostream>
 #include <memory>
+
 #include "operators/emptyOrViolatingOptional.h"
 #include "triggers/allTriggers.h"
 #include "types/tuple.h"

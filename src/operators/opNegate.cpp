@@ -1,4 +1,5 @@
 #include "operators/opNegate.h"
+
 #include "operators/simpleOperator.hpp"
 using namespace std;
 void OpNegate::reevaluateImpl(IntView& view) { this->value = -view.value; }

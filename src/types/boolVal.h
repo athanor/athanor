@@ -2,6 +2,7 @@
 #define SRC_TYPES_BOOLVAL_H_
 #include <utility>
 #include <vector>
+
 #include "types/bool.h"
 struct BoolDomain {
     inline std::shared_ptr<BoolDomain> deepCopy(std::shared_ptr<BoolDomain>&) {

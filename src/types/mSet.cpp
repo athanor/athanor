@@ -102,8 +102,8 @@ void matchInnerType(const MSetDomain& domain, MSetValue& target) {
     lib::visit(
         [&](auto& innerDomainImpl) {
             target.setInnerType<typename AssociatedViewType<
-                typename AssociatedValueType<typename BaseType<decltype(
-                    innerDomainImpl)>::element_type>::type>::type>();
+                typename AssociatedValueType<typename BaseType<
+                    decltype(innerDomainImpl)>::element_type>::type>::type>();
         },
         domain.inner);
 }

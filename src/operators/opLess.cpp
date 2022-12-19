@@ -1,4 +1,5 @@
 #include "operators/opLess.h"
+
 #include "operators/simpleOperator.hpp"
 using namespace std;
 void OpLess::reevaluateImpl(IntView& leftView, IntView& rightView, bool, bool) {

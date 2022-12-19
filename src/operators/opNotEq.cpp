@@ -1,6 +1,8 @@
 #include "operators/opNotEq.h"
+
 #include <iostream>
 #include <memory>
+
 #include "operators/simpleOperator.hpp"
 #include "triggers/allTriggers.h"
 

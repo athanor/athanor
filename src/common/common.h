@@ -8,6 +8,7 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
+
 #include "hash.h"
 #include "toString.h"
 #include "tupleForEach.h"

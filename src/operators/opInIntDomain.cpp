@@ -1,7 +1,9 @@
 #include "operators/opInIntDomain.h"
+
 #include <iostream>
 #include <memory>
 #include <tuple>
+
 #include "operators/simpleOperator.hpp"
 
 using namespace std;

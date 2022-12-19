@@ -1,6 +1,7 @@
 #ifndef SRC_OPERATORS_QUANTIFIER_HPP_
 #define SRC_OPERATORS_QUANTIFIER_HPP_
 #include <vector>
+
 #include "operators/definedVarHelper.h"
 #include "operators/quantifier.h"
 #include "operators/quantifierTriggers.h"

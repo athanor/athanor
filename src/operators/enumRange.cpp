@@ -1,6 +1,8 @@
 #include "operators/enumRange.h"
+
 #include <iostream>
 #include <memory>
+
 #include "types/enumVal.h"
 
 using namespace std;

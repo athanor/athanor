@@ -3,6 +3,7 @@
  * using macros to do the specialisation to avoid having to include this file,
  * which includes all the types */
 #include <utility>
+
 #include "search/violationContainer.h"
 #include "types/allVals.h"
 #define quote(x) #x

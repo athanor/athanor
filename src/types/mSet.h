@@ -121,7 +121,7 @@ struct MSetView : public ExprInterface<MSetView>,
     inline void memberChangedAndNotify(size_t index) {
         HashType oldHash = indexHashMap[index];
         memberChanged<InnerViewType>(index);
-        notifyMemberChanged(index,oldHash);
+        notifyMemberChanged(index, oldHash);
     }
     virtual inline AnyExprVec& getChildrenOperands() { shouldNotBeCalledPanic; }
     template <typename InnerViewType, EnableIfView<InnerViewType> = 0>

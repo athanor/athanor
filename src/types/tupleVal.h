@@ -1,6 +1,7 @@
 #ifndef SRC_TYPES_TUPLEVAL_H_
 #define SRC_TYPES_TUPLEVAL_H_
 #include <vector>
+
 #include "common/common.h"
 #include "types/tuple.h"
 #include "utils/hashUtils.h"

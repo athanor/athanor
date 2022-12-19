@@ -1,4 +1,5 @@
 #include "operators/opUndefined.h"
+
 #include "operators/emptyOrViolatingOptional.h"
 #include "triggers/allTriggers.h"
 #include "types/tuple.h"

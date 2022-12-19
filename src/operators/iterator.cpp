@@ -1,6 +1,8 @@
 #include "operators/iterator.h"
+
 #include <iostream>
 #include <memory>
+
 #include "triggers/allTriggers.h"
 #include "utils/ignoreUnused.h"
 

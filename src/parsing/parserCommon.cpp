@@ -1,5 +1,7 @@
 #include "parsing/parserCommon.h"
+
 #include <algorithm>
+
 #include "types/allVals.h"
 using namespace std;
 using namespace lib;

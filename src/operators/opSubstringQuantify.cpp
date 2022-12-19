@@ -1,7 +1,9 @@
 
 #include "operators/opSubstringQuantify.h"
+
 #include <iostream>
 #include <memory>
+
 #include "operators/emptyOrViolatingOptional.h"
 #include "operators/opTupleLit.h"
 #include "triggers/allTriggers.h"

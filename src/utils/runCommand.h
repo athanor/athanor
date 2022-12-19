@@ -4,12 +4,14 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
 #include <array>
 #include <cstdio>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
+
 #include "ignoreUnused.h"
 namespace RunCommandDetail {
 inline char* toStr(char* str) { return str; }

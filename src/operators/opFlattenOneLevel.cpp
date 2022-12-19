@@ -1,6 +1,8 @@
 #include "operators/opFlattenOneLevel.h"
+
 #include <iostream>
 #include <memory>
+
 #include "types/sequence.h"
 #include "utils/ignoreUnused.h"
 

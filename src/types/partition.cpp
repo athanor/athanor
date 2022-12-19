@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cassert>
+
 #include "common/common.h"
 #include "types/partitionVal.h"
 #include "utils/ignoreUnused.h"
@@ -159,8 +160,8 @@ void matchInnerType(const PartitionDomain& domain, PartitionValue& target) {
     lib::visit(
         [&](auto& innerDomainImpl) {
             target.setInnerType<typename AssociatedViewType<
-                typename AssociatedValueType<typename BaseType<decltype(
-                    innerDomainImpl)>::element_type>::type>::type>();
+                typename AssociatedValueType<typename BaseType<
+                    decltype(innerDomainImpl)>::element_type>::type>::type>();
         },
         domain.inner);
 }

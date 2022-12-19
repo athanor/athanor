@@ -1,4 +1,5 @@
 #include <cassert>
+
 #include "common/common.h"
 #include "types/enumVal.h"
 using namespace std;

@@ -32,10 +32,10 @@ struct StatsMarkPoint {
 
 struct NeighbourhoodResult {
     Model& model;
-    size_t neighbourhoodIndex;
+    lib::optional<size_t> neighbourhoodIndex;
     bool foundAssignment;
     StatsMarkPoint statsMarkPoint;
-    NeighbourhoodResult(Model& model, size_t neighbourhoodIndex,
+    NeighbourhoodResult(Model& model, lib::optional<size_t> neighbourhoodIndex,
                         bool foundAssignment,
                         const StatsMarkPoint& statsMarkPoint)
         : model(model),

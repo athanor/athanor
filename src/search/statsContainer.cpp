@@ -155,33 +155,44 @@ void StatsContainer::reportResult(bool solutionAccepted,
     UInt64 triggerEventCountDiff =
         triggerEventCount - result.statsMarkPoint.triggerEventCount;
     ++numberIterations;
-    ++neighbourhoodStats[result.neighbourhoodIndex].numberActivations;
-    neighbourhoodStats[result.neighbourhoodIndex].minorNodeCount +=
-        minorNodeCountDiff;
-    neighbourhoodStats[result.neighbourhoodIndex].triggerEventCount +=
-        triggerEventCountDiff;
     double timeDiff = getRealTime() - result.statsMarkPoint.realTime;
-    neighbourhoodStats[result.neighbourhoodIndex].totalRealTime += timeDiff;
-    neighbourhoodStats[result.neighbourhoodIndex].numberValidObjImprovements +=
-        (result.statsMarkPoint.lastViolation == 0 &&
-         result.model.getViolation() == 0 && result.objectiveStrictlyBetter());
-    neighbourhoodStats[result.neighbourhoodIndex].numberRawObjImprovements +=
-        result.objectiveStrictlyBetter();
+    if (result.neighbourhoodIndex.has_value()) {
+        ++neighbourhoodStats[*result.neighbourhoodIndex].numberActivations;
+        neighbourhoodStats[*result.neighbourhoodIndex].minorNodeCount +=
+            minorNodeCountDiff;
+        neighbourhoodStats[*result.neighbourhoodIndex].triggerEventCount +=
+            triggerEventCountDiff;
+
+        neighbourhoodStats[*result.neighbourhoodIndex].totalRealTime +=
+            timeDiff;
+        neighbourhoodStats[*result.neighbourhoodIndex]
+            .numberValidObjImprovements +=
+            (result.statsMarkPoint.lastViolation == 0 &&
+             result.model.getViolation() == 0 &&
+             result.objectiveStrictlyBetter());
+        neighbourhoodStats[*result.neighbourhoodIndex]
+            .numberRawObjImprovements += result.objectiveStrictlyBetter();
+    }
     if (result.statsMarkPoint.lastViolation > 0) {
         ++numberVioIterations;
         vioMinorNodeCount += minorNodeCountDiff;
         vioTriggerEventCount += triggerEventCountDiff;
-        ++neighbourhoodStats[result.neighbourhoodIndex].numberVioActivations;
-        neighbourhoodStats[result.neighbourhoodIndex].vioMinorNodeCount +=
-            minorNodeCountDiff;
-        neighbourhoodStats[result.neighbourhoodIndex].vioTriggerEventCount +=
-            triggerEventCountDiff;
-        neighbourhoodStats[result.neighbourhoodIndex].vioTotalRealTime +=
-            timeDiff;
+        if (result.neighbourhoodIndex) {
+            ++neighbourhoodStats[*result.neighbourhoodIndex]
+                  .numberVioActivations;
+            neighbourhoodStats[*result.neighbourhoodIndex].vioMinorNodeCount +=
+                minorNodeCountDiff;
+            neighbourhoodStats[*result.neighbourhoodIndex]
+                .vioTriggerEventCount += triggerEventCountDiff;
+            neighbourhoodStats[*result.neighbourhoodIndex].vioTotalRealTime +=
+                timeDiff;
+        }
         vioTotalTime += timeDiff;
     }
-    neighbourhoodStats[result.neighbourhoodIndex].numberVioImprovements +=
-        (result.getDeltaViolation() < 0);
+    if (result.neighbourhoodIndex) {
+        neighbourhoodStats[*result.neighbourhoodIndex].numberVioImprovements +=
+            (result.getDeltaViolation() < 0);
+    }
 #ifdef WASM_TARGET
     if (numberIterations % WEB_STATS_REPORT_INTERVAL == 0) {
         printStatsToWebApp(*this);

@@ -116,7 +116,7 @@ void deepCopyImpl(const PartitionValue& src,
 
     for (size_t i = 0; i < srcMembersImpl.size(); i++) {
         target.assignMember(i, src.memberPartMap[i],
-                            assumeAsValue(srcMembersImpl[i]));
+                            deepCopy(*assumeAsValue(srcMembersImpl[i])));
     }
     debug_code(target.debugSanityCheck());
     target.notifyEntireValueChanged();

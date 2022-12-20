@@ -22,6 +22,7 @@ extern bool runSanityChecks;
 extern UInt64 sanityCheckInterval;
 
 inline bool alwaysTrue(const AnyValVec&) { return true; }
+inline bool alwaysTrueStrategy(const NeighbourhoodResult&) { return true; }
 
 class State {
    public:
@@ -41,11 +42,20 @@ class State {
             },
             val);
     }
-
     template <typename ParentStrategy>
     void runNeighbourhood(size_t nhIndex, ParentStrategy&& strategy) {
-        testForTermination();
         Neighbourhood& neighbourhood = model.neighbourhoods[nhIndex];
+        auto& var = model.variables[model.neighbourhoodVarMapping[nhIndex]];
+        runNeighbourhood(var, neighbourhood, nhIndex, std::move(strategy));
+    }
+
+    template <typename ParentStrategy>
+    void runNeighbourhood(std::pair<AnyDomainRef, AnyValRef>& var,
+                          Neighbourhood& neighbourhood,
+                          lib::optional<size_t> nhIndex,
+                          ParentStrategy&& strategy) {
+        testForTermination();
+
         debug_code(if (debugLogAllowed) {
             debug_log("Iteration count: "
                       << stats.numberIterations
@@ -54,7 +64,6 @@ class State {
         });
         debug_neighbourhood_action(
             "Applying neighbourhood: " << neighbourhood.name << ":");
-        auto& var = model.variables[model.neighbourhoodVarMapping[nhIndex]];
         auto statsMarkPoint = stats.getMarkPoint();
         bool solutionAccepted = false, changeMade = false;
         AcceptanceCallBack callback = [&]() {
@@ -125,6 +134,18 @@ class State {
         }
         model.csp->updateVarViolations(0, vioContainer);
     }
+
+    inline void runAllRandomReassignNeighbourhoods() {
+        for (size_t i = 0; i < model.variables.size(); i++) {
+            auto& var = model.variables[i];
+            if (valBase(var.second).container == &inlinedPool) {
+                continue;
+            }
+            runNeighbourhood(model.variables[i],
+                             model.randomReassignNeighbourhoods[i],
+                             lib::nullopt, alwaysTrueStrategy);
+        }
+    }
 };
 
 void dumpVarViolations(const ViolationContainer& vioContainer) {
@@ -143,6 +164,7 @@ void dumpVarViolations(const ViolationContainer& vioContainer) {
         }
     }
 }
+
 inline void assignRandomValueToVariables(State& state) {
     for (auto& var : state.model.variables) {
         if (valBase(var.second).container == &inlinedPool) {

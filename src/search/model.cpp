@@ -113,6 +113,7 @@ Model ModelBuilder::build() {
         make_shared<OpAnd>(make_shared<OpSequenceLit>(move(constraints)));
     optimiseExpr(model.csp);
     createNeighbourhoods();
+    createRandomReassignNeighbourhoods();
 
     clock_t endBuildTime = clock();
     cout << "Model build time (CPU): "

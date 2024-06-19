@@ -61,7 +61,7 @@ if(FLAGS)
 endif()
 
 #release flags
-#choosing not to inherit the previous release flags as don't want -ndebug 
+#choosing not to inherit the previous release flags as don't want -ndebug
 if(FLAGS)
 set(CMAKE_CXX_FLAGS_RELEASE "${FLAGS}")
 else()
@@ -77,22 +77,30 @@ endif()
 
 
 #default build type:
-if(NOT CMAKE_BUILD_TYPE) 
+if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif(NOT CMAKE_BUILD_TYPE)
 
 if(WASM_TARGET)
-    if("${CMAKE_BUILD_TYPE}" STREQUAL "Release") 
+    if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
         set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} --bind -s \"BINARYEN_TRAP_MODE='clamp'\" -s ALLOW_MEMORY_GROWTH=1 -DWASM_TARGET")
     else()
         set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} --bind -s \"BINARYEN_TRAP_MODE='clamp'\" -s ALLOW_MEMORY_GROWTH=1 -DWASM_TARGET")
-    endif() 
-endif() 
+    endif()
+endif()
 
+option(REDUCED_NEIGHBOURHOODS "Only use a minimal set of neighbourhoods" false)
+if(REDUCED_NEIGHBOURHOODS)
+    if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DREDUCED_NS")
+    else()
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DREDUCED_NS")
+    endif()
+endif()
 
 #print info on build type and flags
 message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
-if("${CMAKE_BUILD_TYPE}" STREQUAL "Release") 
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
         message("To switch to a debug build run ``cmake . -DCMAKE_BUILD_TYPE=Debug''")
         message("")
         message("Using flags: ${CMAKE_CXX_FLAGS_RELEASE}")
@@ -105,7 +113,7 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
 endif()
 if(NOT FLAGS)
 message("To override these flags, run cmake . -DFLAGS='put flags here'")
-endif() 
+endif()
 message("")
 
 target_link_libraries(athanor mpark_variant)

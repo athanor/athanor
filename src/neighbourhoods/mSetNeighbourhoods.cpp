@@ -341,7 +341,9 @@ Neighbourhood generateRandomReassignNeighbourhood(const MSetDomain& domain) {
 }
 const NeighbourhoodVec<MSetDomain> NeighbourhoodGenList<MSetDomain>::value = {
     {1, mSetLiftSingleGen},
+#ifndef REDUCED_NS
     {1, mSetLiftMultipleGen},
+#endif
     {1, generateForAllTypes<MSetDomain, MSetAdd>},    //
     {1, generateForAllTypes<MSetDomain, MSetRemove>}  //
     //    {1, generateForAllTypes<MSetDomain, MSetAssignRandom>}  //

@@ -237,7 +237,9 @@ Neighbourhood generateRandomReassignNeighbourhood(const TupleDomain& domain) {
 const NeighbourhoodVec<TupleDomain> NeighbourhoodGenList<TupleDomain>::value = {
     {1, tupleAssignRandomGen},      //
     {1, tupleLiftSingleGen},        //
+#ifndef REDUCED_NS
     {2, tupleLiftSingleTwoVarsGen}  //
+#endif
 };
 
 const NeighbourhoodVec<TupleDomain>

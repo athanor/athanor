@@ -679,7 +679,11 @@ static vector<nlohmann::json> getInputs() {
 }
 
 int main(const int argc, const char** argv) {
+#ifdef REDUCED_NS
+    cout << "ATHANOR REDUCED NEIGHBOURHOODS\n";
+#else
     cout << "ATHANOR\n";
+#endif
 
     if (GIT_REVISION != string("GITDIR-NOTFOUND")) {
         cout << "Git revision: " << GIT_REVISION << endl << endl;

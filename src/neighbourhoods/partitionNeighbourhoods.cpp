@@ -743,13 +743,17 @@ Neighbourhood generateRandomReassignNeighbourhood(
 
 const NeighbourhoodVec<PartitionDomain> NeighbourhoodGenList<
     PartitionDomain>::value = {
+#ifndef REDUCED_NS
     {1, generateForAllTypes<PartitionDomain, PartitionSwapParts>},
+#endif
     {1, generateForAllTypes<PartitionDomain, PartitionMoveParts>},
     {1, generateForAllTypes<PartitionDomain, PartitionMergeParts>},
     {1, generateForAllTypes<PartitionDomain, PartitionSplitParts>},
+#ifndef REDUCED_NS
     {1, generateForAllTypes<PartitionDomain, PartitionRemoveAndDistributePart>},
     {1,
      generateForAllTypes<PartitionDomain, PartitionCollectElementsIntoNewPart>},
+#endif
 };
 
 const NeighbourhoodVec<PartitionDomain>

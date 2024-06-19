@@ -526,11 +526,15 @@ Neighbourhood generateRandomReassignNeighbourhood(const SetDomain& domain) {
 }
 const NeighbourhoodVec<SetDomain> NeighbourhoodGenList<SetDomain>::value = {
     {1, setLiftSingleGen},                             //
+#ifndef REDUCED_NS
     {1, setLiftMultipleGen},                           //
+#endif
     {1, generateForAllTypes<SetDomain, SetAdd>},       //
     {1, generateForAllTypes<SetDomain, SetRemove>},    //
+#ifndef REDUCED_NS
     {2, generateForAllTypes<SetDomain, SetMove>},      //
     {2, generateForAllTypes<SetDomain, SetCrossover>}  //
+#endif
     //    {1, generateForAllTypes<SetDomain, SetAssignRandom>}  //
 };
 

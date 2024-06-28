@@ -83,8 +83,6 @@ bool assignRandomValueInDomain<IntDomain>(
     return true;
 }
 struct IntAssignRandom {
-    StandardUcbSelector selector =
-        StandardUcbSelector(2, DEFAULT_UCB_EXPLORATION_BIAS);
     const IntDomain& domain;
     IntAssignRandom(const IntDomain& domain) : domain(domain) {}
 
@@ -97,19 +95,66 @@ struct IntAssignRandom {
         auto backup = val.value;
         UInt varViolation = params.vioContainer.varViolation(val.id);
         bool success;
-        size_t selectedOption;
         do {
             ++params.stats.minorNodeCount;
             success = val.changeValue([&]() {
-                if (varViolation == 0 || selector.next() == 0) {
-                    selectedOption = 0;
+                    Int old_value = val.value;
+                    Int counter = 50;
+                    while(val.value == old_value && --counter) {
+                        val.value = getRandomValueInDomain(domain);
+                    }
+                if (params.parentCheck(params.vals)) {
+                    return true;
+                } else {
+                    val.value = backup;
+                    return false;
+                }
+            });
+            if (success) {
+                debug_neighbourhood_action("New value is " << asView(val));
+            }
+        } while (!success && ++numberTries < tryLimit);
+        if (!success) {
+            debug_neighbourhood_action(
+                "Couldn't find value, number tries=" << tryLimit);
+            return;
+        }
+
+        if (params.changeAccepted()) {
+
+        } else {
+            debug_neighbourhood_action("Change rejected");
+            val.changeValue([&]() {
+                val.value = backup;
+                return true;
+            });
+        }
+    }
+};
+
+struct IntAssignRandomViolation {
+    const IntDomain& domain;
+    IntAssignRandomViolation(const IntDomain& domain) : domain(domain) {}
+
+    void operator()(NeighbourhoodParams& params) {
+        auto& val = *(params.getVals<IntValue>().front());
+        int numberTries = 00;
+        const int tryLimit = params.parentCheckTryLimit;
+        debug_neighbourhood_action("Assigning random value with violations: original value is "
+                                   << asView(val));
+        auto backup = val.value;
+        UInt varViolation = params.vioContainer.varViolation(val.id);
+        bool success;
+        do {
+            ++params.stats.minorNodeCount;
+            success = val.changeValue([&]() {
+                if (varViolation == 0) {
                     Int old_value = val.value;
                     Int counter = 50;
                     while(val.value == old_value && --counter) {
                         val.value = getRandomValueInDomain(domain);
                     }
                 } else {
-                    selectedOption = 1;
                     Int old_value = val.value;
                     Int counter = 50;
                     while(val.value == old_value && --counter) {
@@ -127,8 +172,6 @@ struct IntAssignRandom {
             });
             if (success) {
                 debug_neighbourhood_action("New value is " << asView(val));
-            } else {
-                selector.reportResult(selectedOption, 0, 1);
             }
         } while (!success && ++numberTries < tryLimit);
         if (!success) {
@@ -138,9 +181,9 @@ struct IntAssignRandom {
         }
 
         if (params.changeAccepted()) {
-            selector.reportResult(selectedOption, 1, 1);
+
         } else {
-            selector.reportResult(selectedOption, 0, 1);
+
             debug_neighbourhood_action("Change rejected");
             val.changeValue([&]() {
                 val.value = backup;
@@ -156,13 +199,20 @@ void intAssignRandomGen(const IntDomain& domain, int numberValsRequired,
                                 IntAssignRandom(domain));
 }
 
+void intAssignRandomGenViolation(const IntDomain& domain, int numberValsRequired,
+                        std::vector<Neighbourhood>& neighbourhoods) {
+    neighbourhoods.emplace_back("intAssignRandomViolation", numberValsRequired,
+                                IntAssignRandomViolation(domain));
+}
+
 Neighbourhood generateRandomReassignNeighbourhood(const IntDomain& domain) {
     return Neighbourhood("intAssignRandomDedicated", 1,
                          IntAssignRandom(domain));
 }
 
 const NeighbourhoodVec<IntDomain> NeighbourhoodGenList<IntDomain>::value = {
-    {1, intAssignRandomGen}};
+    {1, intAssignRandomGen},
+    {1, intAssignRandomGenViolation}};
 
 const NeighbourhoodVec<IntDomain>
     NeighbourhoodGenList<IntDomain>::mergeNeighbourhoods = {};

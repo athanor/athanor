@@ -32,7 +32,11 @@ void enumAssignRandomNeighbourhoodImpl(const EnumDomain& domain,
     bool success;
     do {
         success = val.changeValue([&]() {
-            val.value = getRandomValueInDomain(domain);
+            UInt old_value = val.value;
+            Int counter = 50;
+            while(val.value == old_value && --counter) {
+                val.value = getRandomValueInDomain(domain);
+            }
             ++params.stats.minorNodeCount;
             if (params.parentCheck(params.vals)) {
                 return true;

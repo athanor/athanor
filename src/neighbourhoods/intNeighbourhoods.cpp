@@ -103,12 +103,20 @@ struct IntAssignRandom {
             success = val.changeValue([&]() {
                 if (varViolation == 0 || selector.next() == 0) {
                     selectedOption = 0;
-                    val.value = getRandomValueInDomain(domain);
+                    Int old_value = val.value;
+                    Int counter = 50;
+                    while(val.value == old_value && --counter) {
+                        val.value = getRandomValueInDomain(domain);
+                    }
                 } else {
                     selectedOption = 1;
-                    val.value =
-                        getRandomValueInDomain(domain, val.value - varViolation,
-                                               val.value + varViolation);
+                    Int old_value = val.value;
+                    Int counter = 50;
+                    while(val.value == old_value && --counter) {
+                        val.value =
+                            getRandomValueInDomain(domain, val.value - varViolation,
+                                                   val.value + varViolation);
+                    }
                 }
                 if (params.parentCheck(params.vals)) {
                     return true;

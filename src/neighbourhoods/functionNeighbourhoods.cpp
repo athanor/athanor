@@ -1075,15 +1075,20 @@ Neighbourhood generateRandomReassignNeighbourhood(
 const NeighbourhoodVec<FunctionDomain>
     NeighbourhoodGenList<FunctionDomain>::value = {
         {1, functionLiftImageSingleGen},       //
+#ifndef REDUCED_NS
         {1, functionLiftImageMultipleGen},     //
+#endif
         {1, functionLiftPreimageSingleGen},    //
+#ifndef REDUCED_NS
         {1, functionLiftPreimageMultipleGen},  //
+#endif
         {1, generateForAllTypes<FunctionDomain, FunctionImagesSwap,
                                 ImageDomainGetter>},  //
         {1, generateForAllTypes<FunctionDomain, FunctionAdd,
                                 PreimageDomainGetter>},  //
         {1, generateForAllTypes<FunctionDomain, FunctionRemove,
                                 PreimageDomainGetter>},  //
+#ifndef REDUCED_NS
         {1, generateForAllTypes<FunctionDomain, FunctionImagesSwapAlongAxis,
                                 ImageDomainGetter>},  //
         {2, generateForAllTypes<FunctionDomain, FunctionCrossover,
@@ -1096,4 +1101,5 @@ const NeighbourhoodVec<FunctionDomain>
                      ImageDomainGetter>},  //
         {1, generate<FunctionDomain, FunctionSplitImages<BoolDomain>,
                      ImageDomainGetter>},  //
+#endif
 };

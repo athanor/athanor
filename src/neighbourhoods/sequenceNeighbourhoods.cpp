@@ -845,13 +845,14 @@ const NeighbourhoodVec<SequenceDomain>
         {1, sequenceLiftSingleGen},
         {1, generateForAllTypes<SequenceDomain, SequenceAdd>},
         {1, generateForAllTypes<SequenceDomain, SequenceRemove>},
+#ifndef REDUCED_NS
         {1, generateForAllTypes<SequenceDomain, SequencePositionsSwap>},
         {1, generateForAllTypes<SequenceDomain, SequenceReverseSub>},
         //{1, generateForAllTypes<SequenceDomain, SequenceShuffleSub>},
         {1, generateForAllTypes<SequenceDomain, SequenceRelaxSub>},
         {2, generateForAllTypes<SequenceDomain, SequenceMove>},
         {2, generateForAllTypes<SequenceDomain, SequenceCrossover>},
-
+#endif
 };
 
 const NeighbourhoodVec<SequenceDomain>

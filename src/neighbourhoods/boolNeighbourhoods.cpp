@@ -30,7 +30,11 @@ void boolAssignRandomNeighbourhoodImpl(const BoolDomain& domain,
     bool success;
     do {
         success = val.changeValue([&]() {
-            val.violation = getRandomValueInDomain(domain);
+            if(val.violation) {
+                val.violation = 0;
+            } else {
+                val.violation = 1;
+            }
             ++params.stats.minorNodeCount;
             if (params.parentCheck(params.vals)) {
                 return true;

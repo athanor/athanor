@@ -204,6 +204,14 @@ void generate(const Domain& domain, int numberValsRequired,
 
 static const int NUMBER_TRIES_CONSTANT_MULTIPLIER = 2;
 
+// Gives us a simple way to globally adjust how tryLimit is used
+template<typename T, typename U>
+bool tryLimitCheck(T numberTries, U tryLimit)
+{
+    return numberTries < 50;
+    //return numberTries < tryLimit;
+}
+
 // how many times to attempt inserting a value into a set (any set, not essence
 // set), based on the number of elements in the set and the maximum allowed
 inline int calcNumberInsertionAttempts(UInt numberMembers, UInt domainSize) {

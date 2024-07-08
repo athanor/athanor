@@ -487,7 +487,7 @@ struct FunctionAdd
                         newMember->member<PreimageValueType>(0),
                         newMember->member<ImageValueType>(1),
                         [&]() { return params.parentCheck(params.vals); });
-                } while (!success && ++numberTries < tryLimit);
+                } while (!success && tryLimitCheck(++numberTries, tryLimit));
                 if (!success) {
                     debug_neighbourhood_action(
                         "Couldn't find value, number tries=" << tryLimit);
@@ -539,6 +539,7 @@ struct FunctionRemove
                     removedMember;
                 bool success = false;
                 debug_neighbourhood_action("Looking for value to remove");
+                auto tryLimit = params.parentCheckTryLimit;
                 do {
                     ++params.stats.minorNodeCount;
                     indexToRemove =
@@ -556,7 +557,7 @@ struct FunctionRemove
                                                    << *removedMember);
                     }
                 } while (!success &&
-                         ++numberTries < params.parentCheckTryLimit);
+                         tryLimitCheck(++numberTries, tryLimit));
                 if (!success) {
                     debug_neighbourhood_action(
                         "Couldn't find value, number tries=" << numberTries);
@@ -614,7 +615,7 @@ struct FunctionImagesSwap
             success = val.trySwapImages<InnerValueType>(index1, index2, [&]() {
                 return params.parentCheck(params.vals);
             });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find positions to swap, number tries=" << tryLimit);
@@ -691,7 +692,7 @@ struct FunctionImagesSwapAlongAxis
             success = val.trySwapImages<InnerValueType>(index1, index2, [&]() {
                 return params.parentCheck(params.vals);
             });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find positions to swap, number tries=" << tryLimit);
@@ -803,7 +804,7 @@ struct FunctionUnifyImages
                     return false;
                 }
             });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find images to unify, number tries=" << tryLimit);
@@ -894,7 +895,7 @@ struct FunctionSplitImages
                 }
                 return allowed;
             });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find images to split, number tries=" << tryLimit);
@@ -954,7 +955,7 @@ struct FunctionAssignRandom
             if (success) {
                 debug_neighbourhood_action("New value is " << asView(val));
             }
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << tryLimit);
@@ -1027,7 +1028,7 @@ struct FunctionCrossover
             success = performCrossOver(
                 fromVal, toVal, indexToCrossOver, member1, member2,
                 [&]() { return params.parentCheck(params.vals); });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
 
         if (!success) {
             debug_neighbourhood_action(

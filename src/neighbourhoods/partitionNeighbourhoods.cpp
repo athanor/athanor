@@ -164,7 +164,7 @@ struct PartitionSwapParts
             success = val.trySwapContainingParts<InnerValueType>(
                 index1, index2,
                 [&]() { return params.parentCheck(params.vals); });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find containing parts to swap, number tries="
@@ -255,7 +255,7 @@ struct PartitionMoveParts
                              {index}, newPart,
                              [&]() { return params.parentCheck(params.vals); })
                           .has_value();
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find member to move from one part to another, number "
@@ -341,7 +341,7 @@ struct PartitionMergeParts
                              memberIndices, destPart,
                              [&]() { return params.parentCheck(params.vals); })
                           .has_value();
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find parts to merge, number "
@@ -439,7 +439,7 @@ struct PartitionSplitParts
                              memberIndices, destPart,
                              [&]() { return params.parentCheck(params.vals); })
                           .has_value();
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find parts to split, number "
@@ -548,7 +548,7 @@ struct PartitionRemoveAndDistributePart
             success = val.tryMoveMembersFromPart<InnerValueType>(
                 memberIndices, *destParts,
                 [&]() { return params.parentCheck(params.vals); });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find part to redistribute, number "
@@ -668,7 +668,7 @@ struct PartitionCollectElementsIntoNewPart
                 *memberIndices, destPart,
                 [&]() { return params.parentCheck(params.vals); });
             success = oldParts.has_value();
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find elements to collect, number "
@@ -711,7 +711,7 @@ void partitionAssignRandomNeighbourhoodImpl(const PartitionDomain& domain,
         if (success) {
             debug_neighbourhood_action("New value is " << asView(val));
         }
-    } while (!success && ++numberTries < tryLimit);
+    } while (!success && tryLimitCheck(++numberTries, tryLimit));
     if (!success) {
         debug_neighbourhood_action(
             "Couldn't find value, number tries=" << tryLimit);

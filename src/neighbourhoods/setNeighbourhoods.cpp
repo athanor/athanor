@@ -88,7 +88,7 @@ struct SetAdd : public NeighbourhoodFunc<SetDomain, 1, SetAdd<InnerDomain>> {
             success = success && val.tryAddMember(newMember, [&]() {
                 return params.parentCheck(params.vals);
             });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << tryLimit);
@@ -163,7 +163,7 @@ struct SetCrossover
                             }
                         });
                 });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
 
         if (!success) {
             debug_neighbourhood_action(
@@ -234,7 +234,7 @@ struct SetMove : public NeighbourhoodFunc<SetDomain, 2, SetMove<InnerDomain>> {
                         [&]() { return params.parentCheck(params.vals); })
                     .has_value();
             });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << tryLimit);
@@ -275,6 +275,7 @@ struct SetRemove
         debug_neighbourhood_action("Looking for value to remove");
         auto& vioContainerAtThisLevel =
             params.vioContainer.childViolations(val.id);
+        auto tryLimit = params.parentCheckTryLimit;
         do {
             ++params.stats.minorNodeCount;
             indexToRemove = vioContainerAtThisLevel.selectRandomVar(
@@ -289,7 +290,7 @@ struct SetRemove
             if (success) {
                 debug_neighbourhood_action("Removed " << *removedMember);
             }
-        } while (!success && ++numberTries < params.parentCheckTryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << numberTries);
@@ -501,7 +502,7 @@ struct SetAssignRandom
             if (success) {
                 debug_neighbourhood_action("New value is " << asView(val));
             }
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << tryLimit);

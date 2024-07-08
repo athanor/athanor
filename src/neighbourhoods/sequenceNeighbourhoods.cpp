@@ -178,7 +178,7 @@ struct SequenceAdd
                 success && val.tryAddMember(indexOfNewMember, newMember, [&]() {
                     return params.parentCheck(params.vals);
                 });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << tryLimit);
@@ -222,6 +222,7 @@ struct SequenceRemove
         debug_neighbourhood_action("Looking for value to remove");
         auto& vioContainerAtThisLevel =
             params.vioContainer.childViolations(val.id);
+        auto tryLimit = params.parentCheckTryLimit;
         do {
             ++params.stats.minorNodeCount;
             indexToRemove = vioContainerAtThisLevel.selectRandomVar(
@@ -236,7 +237,7 @@ struct SequenceRemove
                 removedMember = std::move(removeStatus.second);
                 debug_neighbourhood_action("Removed " << removedMember);
             }
-        } while (!success && ++numberTries < params.parentCheckTryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << numberTries);
@@ -413,7 +414,7 @@ struct SequenceRelaxSub
                     }
                     return false;
                 });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
 
         if (!success) {
             debug_neighbourhood_action(
@@ -473,7 +474,7 @@ struct SequenceReverseSub
             success = val.trySubsequenceReverse<InnerValueType>(
                 index1, index2,
                 [&]() { return params.parentCheck(params.vals); });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find subsequence to reverse, number tries="
@@ -534,7 +535,7 @@ struct SequenceShuffleSub
             success = val.trySubsequenceShuffle<InnerValueType>(
                 index1, swaps,
                 [&]() { return params.parentCheck(params.vals); });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find subsequence to Shuffle, number tries="
@@ -592,7 +593,7 @@ struct SequencePositionsSwap
             success = val.trySwapPositions<InnerValueType>(
                 index1, index2,
                 [&]() { return params.parentCheck(params.vals); });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find positions to swap, number tries=" << tryLimit);
@@ -651,7 +652,7 @@ struct SequenceMove
                         [&]() { return params.parentCheck(params.vals); })
                     .first;
             });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << tryLimit);
@@ -756,7 +757,7 @@ struct SequenceCrossover
                 fromVal, toVal, indexToCrossOver, fromValMemberHashes,
                 toValMemberHashes, member1, member2,
                 [&]() { return params.parentCheck(params.vals); });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
 
         if (!success) {
             debug_neighbourhood_action(
@@ -816,7 +817,7 @@ struct SequenceAssignRandom
             if (success) {
                 debug_neighbourhood_action("New value is " << asView(val));
             }
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << tryLimit);

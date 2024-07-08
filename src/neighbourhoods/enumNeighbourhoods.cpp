@@ -48,7 +48,7 @@ void enumAssignRandomNeighbourhoodImpl(const EnumDomain& domain,
         if (success) {
             debug_neighbourhood_action("New value is " << asView(val));
         }
-    } while (!success && ++numberTries < tryLimit);
+    } while (!success && tryLimitCheck(++numberTries, tryLimit));
     if (!success) {
         debug_neighbourhood_action(
             "Couldn't find value, number tries=" << tryLimit);

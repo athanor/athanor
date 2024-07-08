@@ -213,7 +213,7 @@ struct MSetAdd : public NeighbourhoodFunc<MSetDomain, 1, MSetAdd<InnerDomain>> {
             success = success && val.tryAddMember(newMember, [&]() {
                 return params.parentCheck(params.vals);
             });
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << tryLimit);
@@ -252,6 +252,7 @@ struct MSetRemove
         debug_neighbourhood_action("Looking for value to remove");
         auto& vioContainerAtThisLevel =
             params.vioContainer.childViolations(val.id);
+        auto tryLimit = params.parentCheckTryLimit;
         do {
             ++params.stats.minorNodeCount;
             indexToRemove = vioContainerAtThisLevel.selectRandomVar(
@@ -266,7 +267,7 @@ struct MSetRemove
                 removedMember = std::move(removeStatus.second);
                 debug_neighbourhood_action("Removed " << removedMember);
             }
-        } while (!success && ++numberTries < params.parentCheckTryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << numberTries);
@@ -316,7 +317,7 @@ struct MSetAssignRandom
             if (success) {
                 debug_neighbourhood_action("New value is " << asView(val));
             }
-        } while (!success && ++numberTries < tryLimit);
+        } while (!success && tryLimitCheck(++numberTries, tryLimit));
         if (!success) {
             debug_neighbourhood_action(
                 "Couldn't find value, number tries=" << tryLimit);

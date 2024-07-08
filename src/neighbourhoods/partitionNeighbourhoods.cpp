@@ -750,9 +750,10 @@ const NeighbourhoodVec<PartitionDomain> NeighbourhoodGenList<
     {1, generateForAllTypes<PartitionDomain, PartitionMergeParts>},
     {1, generateForAllTypes<PartitionDomain, PartitionSplitParts>},
 #ifndef REDUCED_NS
-    {1, generateForAllTypes<PartitionDomain, PartitionRemoveAndDistributePart>},
-    {1,
-     generateForAllTypes<PartitionDomain, PartitionCollectElementsIntoNewPart>},
+    // These are currently disabled as they do not ever seem to be useful
+    //{1, generateForAllTypes<PartitionDomain, PartitionRemoveAndDistributePart>},
+    //{1,
+    // generateForAllTypes<PartitionDomain, PartitionCollectElementsIntoNewPart>},
 #endif
 };
 
